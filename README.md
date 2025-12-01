@@ -1,11 +1,11 @@
-<div style="display: flex; justify-content: space-between; align-items: center;">
-  <h1 style="margin: 0;">BeWER</h1>
-  <span style="font-size: 16px; font-style: italic;">
-    Beyond Word Error Rate &nbsp; → &nbsp; BeWER &nbsp; (/ˈbiːvər/) &nbsp; 🦫
+<div style="width:100%; text-align: right;">
+  <span style="float:left; font-size:32px; font-weight:700; line-height:1;">
+    BeWER
+  </span>
+  <span style="font-style:italic; white-space:nowrap; line-height:1;">
+    Beyond Word Error Rate → BeWER (/ˈbiːvər/) 🦫
   </span>
 </div>
-
-<br/>
 
 ---
 
@@ -16,29 +16,41 @@
 
 __Contents__ | [Installation](#installation) | [Quickstart](#quickstart) |
 
-Template for creating Python packages. Put your short project description here.
 
-To configure this package and create an Azure Pipeline, see [this Notion page](https://www.notion.so/cortihome/Creating-a-new-GitHub-repository-with-CI-pipeline-9241fb356ead448b941a9d4cfa4daf73).
+<a name="installation">
 
 ## Installation
 
-### For development purposes
-
+For development:
 ```bash
 make install
 ```
 
-## Run tests
-
-```bash
-make test
-make pre-commit
+As a dependency:
+```toml
+bewer = { git = "ssh://git@github.com/corticph/bewer.git", tag="v0.1.0a1"}
 ```
 
-### As a dependency
+## Quickstart
 
-Add the following line to your `pyproject.toml` file:
+Instantiate a Dataset object:
+```python
+from bewer.core import Dataset
 
-```toml
-python-package-template = { git = "ssh://git@github.com/corticph/python-package-template.git", tag="vX.Y.Z"}
+dataset = Dataset()
+```
+
+Add evaluation data from a file:
+```python
+dataset.load_csv(
+    "data.csv",
+    ref_col="gold_transcripts",
+    hyp_col="model_transcripts",
+)
+```
+
+Add evaluation examples manually:
+```python
+for ref, hyp in iterator:
+    dataset.add(ref=ref, hyp=hyp)
 ```
