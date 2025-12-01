@@ -1,15 +1,7 @@
 
-<p style="font-size:32px; font-weight:700;">
-BeWER
-</p>
+# BeWER
 
----
-
-<p style="font-style:italic;">
-Beyond Word Error Rate → BeWER (/ˈbiːvər/) 🦫
-</p>
-
----
+*Beyond Word Error Rate → BeWER (/ˈbiːvər/) 🦫*
 
 **BeWER is an evaluation and analysis framework for automatic speech recognition in Python.** It defines a transparent YAML-based approach for configuring evaluation pipelines and makes it easy to inspect and analyze individual examples through a web-based interface. The built-in preprocessing pipeline and metrics collection are designed to cover all conventional use cases and then some, while still being fully extensible.
 
