@@ -1,11 +1,14 @@
-<div style="width:100%; text-align: right;">
-  <span style="float:left; font-size:32px; font-weight:700; line-height:1;">
-    BeWER
-  </span>
-  <span style="font-style:italic; white-space:nowrap; line-height:1;">
-    Beyond Word Error Rate → BeWER (/ˈbiːvər/) 🦫
-  </span>
-</div>
+
+<span style="font-size:32px; font-weight:700; line-height:1;">
+BeWER
+</span>
+
+---
+
+<span style="font-style:italic; white-space:nowrap; line-height:1;">
+Beyond Word Error Rate → BeWER (/ˈbiːvər/) 🦫
+</span>
+
 
 ---
 
