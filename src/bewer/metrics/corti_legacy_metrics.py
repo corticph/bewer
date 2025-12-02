@@ -180,7 +180,7 @@ class _KeywordAggregator(ExampleMetric):
         return Levenshtein.distance(term, best_match)
 
 
-@METRIC_REGISTRY.register("_corti_kwa")
+@METRIC_REGISTRY.register("_legacy_kwa")
 class KeywordAggregator(Metric):
     short_name = "kwa"
     long_name = "Keyword Aggregator"
@@ -190,7 +190,7 @@ class KeywordAggregator(Metric):
     def __init__(
         self,
         src: "Dataset",
-        name: str = "_corti_kwa",
+        name: str = "_legacy_kwa",
         cer_threshold: float = 0.2,
         standardizer: str = "default",
         tokenizer: str = "legacy",
@@ -325,7 +325,7 @@ class _HallucinationAggregator(ExampleMetric):
         return self._insertion_metrics["insertions"]
 
 
-@METRIC_REGISTRY.register("_corti_hlcn")
+@METRIC_REGISTRY.register("_legacy_hlcn")
 class HallucinationAggregator(Metric):
     short_name = "Hallucination Insertions"
     long_name = "Hallucination Insertions"
@@ -335,7 +335,7 @@ class HallucinationAggregator(Metric):
     def __init__(
         self,
         src: "Dataset",
-        name: str = "_corti_hlcn",
+        name: str = "_legacy_hlcn",
         threshold: int = 2,
     ):
         self.threshold = threshold
