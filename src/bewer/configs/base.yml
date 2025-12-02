@@ -1,4 +1,4 @@
-text_normalizers:
+standardizers:
   default:
     bewer.preprocessing.normalization.nfc:
 
@@ -6,9 +6,18 @@ tokenizers:
   default:
     bewer.preprocessing.tokenization.whitespace_strip_symbols_and_custom:
       split_on: "-/"
+  legacy:
+    bewer.preprocessing.tokenization.whitespace:
 
-token_normalizers:
+normalizers:
   default:
     bewer.preprocessing.normalization.lowercase:
     bewer.preprocessing.normalization.transliterate_latin_letters:
     bewer.preprocessing.normalization.transliterate_symbols:
+  legacy:
+    bewer.preprocessing.normalization.nfc:
+  legacy_uncased:
+    bewer.preprocessing.normalization.lowercase:
+  legacy_uncased_no_punct:
+    bewer.preprocessing.normalization.lowercase:
+    bewer.preprocessing.normalization.remove_symbols:

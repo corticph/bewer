@@ -18,38 +18,38 @@ if TYPE_CHECKING:
 
 METRIC_REGISTRY.register_metric(
     WER,
-    "corti_wer",
+    "legacy_wer",
     tokenizer="legacy",
     normalizer="legacy",
 )
 METRIC_REGISTRY.register_metric(
     WER,
-    "corti_wer_uncased",
+    "legacy_wer_uncased",
     tokenizer="legacy",
     normalizer="legacy_uncased",
 )
 METRIC_REGISTRY.register_metric(
     WER,
-    "corti_wer_uncased_no_punct",
+    "legacy_wer_uncased_no_punct",
     tokenizer="legacy",
     normalizer="legacy_uncased_no_punct",
 )
 
 METRIC_REGISTRY.register_metric(
     CER,
-    "corti_cer",
+    "legacy_cer",
     tokenizer="legacy",
     normalizer="legacy",
 )
 METRIC_REGISTRY.register_metric(
     CER,
-    "corti_cer_uncased",
+    "legacy_cer_uncased",
     tokenizer="legacy",
     normalizer="legacy_uncased",
 )
 METRIC_REGISTRY.register_metric(
     CER,
-    "corti_cer_uncased_no_punct",
+    "legacy_cer_uncased_no_punct",
     tokenizer="legacy",
     normalizer="legacy_uncased_no_punct",
 )
@@ -234,7 +234,7 @@ class KeywordAggregator(Metric):
         )
 
 
-@METRIC_REGISTRY.register("corti_medical_word_accuracy")
+@METRIC_REGISTRY.register("legacy_medical_word_accuracy")
 class MTR(Metric):
     short_name = "MTR"
     long_name = "Medical Term Recall"
@@ -251,7 +251,7 @@ class MTR(Metric):
         return self._src_dataset.metrics._corti_kwa.match_count / self._src_dataset.metrics._corti_kwa.total_terms
 
 
-@METRIC_REGISTRY.register("corti_relaxed_medical_word_accuracy")
+@METRIC_REGISTRY.register("legacy_relaxed_medical_word_accuracy")
 class RMTR(Metric):
     short_name = "Relaxed MTR"
     long_name = "Relaxed Medical Term Recall"
@@ -271,7 +271,7 @@ class RMTR(Metric):
         )
 
 
-@METRIC_REGISTRY.register("corti_keyword_cer")
+@METRIC_REGISTRY.register("legacy_keyword_cer")
 class KeywordCER(Metric):
     short_name = "Keyword CER"
     long_name = "Keyword Character Error Rate"
@@ -342,7 +342,7 @@ class HallucinationAggregator(Metric):
         super().__init__(src, name)
 
 
-@METRIC_REGISTRY.register("corti_deletions")
+@METRIC_REGISTRY.register("legacy_deletions")
 class Insertions(Metric):
     short_name = "Hallucination Insertions"
     long_name = "Hallucination Insertions"
@@ -358,7 +358,7 @@ class Insertions(Metric):
         return sum([get_insertions(example) for example in self._src_dataset]) / len(self._src_dataset)
 
 
-@METRIC_REGISTRY.register("corti_del_hallucinations")
+@METRIC_REGISTRY.register("legacy_del_hallucinations")
 class DeletionHallucinations(Metric):
     short_name = "Insertion Hallucinations"
     long_name = "Insertion Hallucinations"
