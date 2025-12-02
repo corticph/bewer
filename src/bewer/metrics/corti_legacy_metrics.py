@@ -246,9 +246,9 @@ class MTR(Metric):
     @cached_property
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src_dataset.metrics._corti_kwa.total_terms == 0:
+        if self._src_dataset.metrics._legacy_kwa.total_terms == 0:
             return 1.0
-        return self._src_dataset.metrics._corti_kwa.match_count / self._src_dataset.metrics._corti_kwa.total_terms
+        return self._src_dataset.metrics._legacy_kwa.match_count / self._src_dataset.metrics._legacy_kwa.total_terms
 
 
 @METRIC_REGISTRY.register("legacy_relaxed_medical_word_accuracy")
@@ -264,10 +264,11 @@ class RMTR(Metric):
     @cached_property
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src_dataset.metrics._corti_kwa.total_terms == 0:
+        if self._src_dataset.metrics._legacy_kwa.total_terms == 0:
             return 1.0
         return (
-            self._src_dataset.metrics._corti_kwa.relaxed_match_count / self._src_dataset.metrics._corti_kwa.total_terms
+            self._src_dataset.metrics._legacy_kwa.relaxed_match_count
+            / self._src_dataset.metrics._legacy_kwa.total_terms
         )
 
 
@@ -283,9 +284,9 @@ class KeywordCER(Metric):
     @cached_property
     def value(self) -> float:
         """Get the medical character error rate."""
-        if self._src_dataset.metrics._corti_kwa.total_length == 0:
+        if self._src_dataset.metrics._legacy_kwa.total_length == 0:
             return 1.0
-        return self._src_dataset.metrics._corti_kwa.total_distance / self._src_dataset.metrics._corti_kwa.total_length
+        return self._src_dataset.metrics._legacy_kwa.total_distance / self._src_dataset.metrics._legacy_kwa.total_length
 
 
 class _HallucinationAggregator(ExampleMetric):
@@ -353,7 +354,7 @@ class Insertions(Metric):
         """Get the number of hallucinated medical term insertions."""
 
         def get_insertions(example: "Example") -> int:
-            return int(example.metrics._corti_hlcn.insertions)
+            return int(example.metrics._legacy_hlcn.insertions)
 
         return sum([get_insertions(example) for example in self._src_dataset]) / len(self._src_dataset)
 
@@ -369,6 +370,6 @@ class DeletionHallucinations(Metric):
         """Get the number of examples with hallucinated deletions."""
 
         def get_int_value(example: "Example") -> int:
-            return int(example.metrics._corti_hlcn.has_contiguous_insertions)
+            return int(example.metrics._legacy_hlcn.has_contiguous_insertions)
 
         return sum([get_int_value(example) for example in self._src_dataset]) / len(self._src_dataset)
