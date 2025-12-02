@@ -1,28 +1,68 @@
-# <auto-title>PYTHON PACKAGE TEMPLATE</auto-title>
 
-Template for creating Python packages. Put your short project description here.
+# BeWER
 
-To configure this package and create an Azure Pipeline, see [this Notion page](https://www.notion.so/cortihome/Creating-a-new-GitHub-repository-with-CI-pipeline-9241fb356ead448b941a9d4cfa4daf73).
+*Beyond Word Error Rate → BeWER (/ˈbiːvər/) 🦫*
+
+**BeWER is an evaluation and analysis framework for automatic speech recognition in Python.** It defines a transparent YAML-based approach for configuring evaluation pipelines and makes it easy to inspect and analyze individual examples through a web-based interface. The built-in preprocessing pipeline and metrics collection are designed to cover all conventional use cases and then some, while still being fully extensible.
+
+
+
+
+__Contents__ | [Installation](#installation) | [Quickstart](#quickstart) |
+
+
+<a name="installation">
 
 ## Installation
 
-### For development purposes
-
+For development:
 ```bash
 make install
 ```
 
-## Run tests
-
-```bash
-make test
-make pre-commit
+As a dependency:
+```toml
+bewer = { git = "ssh://git@github.com/corticph/bewer.git", tag="v0.1.0a1"}
 ```
 
-### As a dependency
+## Quickstart
 
-Add the following line to your `pyproject.toml` file:
+**Create a Dataset**
 
-```toml
-python-package-template = { git = "ssh://git@github.com/corticph/python-package-template.git", tag="vX.Y.Z"}
+```python
+from bewer.core import Dataset
+
+dataset = Dataset()
+```
+
+**Add data**
+
+From a file:
+```python
+dataset.load_csv(
+    "data.csv",
+    ref_col="reference",
+    hyp_col="hypothesis",
+)
+```
+
+Or manually:
+```python
+for reference, hypothesis in iterator:
+    dataset.add(ref=ref, hyp=hyp)
+```
+
+**Compute metrics lazily**
+
+```python
+print(f"WER: {dataset.metrics.wer.value:.4f}"
+```
+
+**List available metrics**
+
+```python
+from bewer.metrics import list_registered_metrics
+
+for metric_name in list_registered_metrics():
+    print(meric_name)
 ```
