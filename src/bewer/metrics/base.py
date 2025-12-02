@@ -238,3 +238,8 @@ class MetricRegistry:
 
 
 METRIC_REGISTRY = MetricRegistry()
+
+
+def list_registered_metrics() -> list[str]:
+    """List all registered metric names."""
+    return [metric for metric in METRIC_REGISTRY.metrics.keys() if not metric.startswith("_")]

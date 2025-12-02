@@ -180,7 +180,7 @@ class _KeywordAggregator(ExampleMetric):
         return Levenshtein.distance(term, best_match)
 
 
-@METRIC_REGISTRY.register("corti_kwa")
+@METRIC_REGISTRY.register("_corti_kwa")
 class KeywordAggregator(Metric):
     short_name = "kwa"
     long_name = "Keyword Aggregator"
@@ -190,7 +190,7 @@ class KeywordAggregator(Metric):
     def __init__(
         self,
         src: "Dataset",
-        name: str = "corti_kwa",
+        name: str = "_corti_kwa",
         cer_threshold: float = 0.2,
         standardizer: str = "default",
         tokenizer: str = "legacy",
@@ -234,39 +234,41 @@ class KeywordAggregator(Metric):
         )
 
 
-@METRIC_REGISTRY.register("corti_medical_term_recall")
+@METRIC_REGISTRY.register("corti_medical_word_accuracy")
 class MTR(Metric):
     short_name = "MTR"
     long_name = "Medical Term Recall"
     description = (
         "Medical Term Recall (MTR) is computed as the number of correctly recognized medical terms "
-        "divided by the total number of medical terms in the reference texts."
+        "divided by the total number of medical terms in the reference transcripts."
     )
 
     @cached_property
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src_dataset.metrics.corti_kwa.total_terms == 0:
+        if self._src_dataset.metrics._corti_kwa.total_terms == 0:
             return 1.0
-        return self._src_dataset.metrics.corti_kwa.match_count / self._src_dataset.metrics.corti_kwa.total_terms
+        return self._src_dataset.metrics._corti_kwa.match_count / self._src_dataset.metrics._corti_kwa.total_terms
 
 
-@METRIC_REGISTRY.register("corti_relaxed_medical_term_recall")
+@METRIC_REGISTRY.register("corti_relaxed_medical_word_accuracy")
 class RMTR(Metric):
     short_name = "Relaxed MTR"
     long_name = "Relaxed Medical Term Recall"
     description = (
-        "Relaxed Medical Term Recall (RMTR) is computed as the number of terms recognized with relaxed criteria "
+        "Relaxed Medical Term Recall (RMTR) is computed as the number of terms recognized with a relaxed criteria "
         "(i.e., within a certain character error rate threshold) divided by the total number of medical terms in the "
-        "reference texts."
+        "reference transcripts."
     )
 
     @cached_property
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src_dataset.metrics.corti_kwa.total_terms == 0:
+        if self._src_dataset.metrics._corti_kwa.total_terms == 0:
             return 1.0
-        return self._src_dataset.metrics.corti_kwa.relaxed_match_count / self._src_dataset.metrics.corti_kwa.total_terms
+        return (
+            self._src_dataset.metrics._corti_kwa.relaxed_match_count / self._src_dataset.metrics._corti_kwa.total_terms
+        )
 
 
 @METRIC_REGISTRY.register("corti_keyword_cer")
@@ -281,9 +283,9 @@ class KeywordCER(Metric):
     @cached_property
     def value(self) -> float:
         """Get the medical character error rate."""
-        if self._src_dataset.metrics.corti_kwa.total_length == 0:
+        if self._src_dataset.metrics._corti_kwa.total_length == 0:
             return 1.0
-        return self._src_dataset.metrics.corti_kwa.total_distance / self._src_dataset.metrics.corti_kwa.total_length
+        return self._src_dataset.metrics._corti_kwa.total_distance / self._src_dataset.metrics._corti_kwa.total_length
 
 
 class _HallucinationAggregator(ExampleMetric):
@@ -323,14 +325,19 @@ class _HallucinationAggregator(ExampleMetric):
         return self._insertion_metrics["insertions"]
 
 
-@METRIC_REGISTRY.register("corti_hlcn")
+@METRIC_REGISTRY.register("_corti_hlcn")
 class HallucinationAggregator(Metric):
     short_name = "Hallucination Insertions"
     long_name = "Hallucination Insertions"
     description = "Number of insertions that appear in "
     example_cls = _HallucinationAggregator
 
-    def __init__(self, src, name, threshold: int = 2):
+    def __init__(
+        self,
+        src: "Dataset",
+        name: str = "_corti_hlcn",
+        threshold: int = 2,
+    ):
         self.threshold = threshold
         super().__init__(src, name)
 
@@ -346,7 +353,7 @@ class Insertions(Metric):
         """Get the number of hallucinated medical term insertions."""
 
         def get_insertions(example: "Example") -> int:
-            return int(example.metrics.get("corti_hlcn").insertions)
+            return int(example.metrics._corti_hlcn.insertions)
 
         return sum([get_insertions(example) for example in self._src_dataset]) / len(self._src_dataset)
 
@@ -362,6 +369,6 @@ class DeletionHallucinations(Metric):
         """Get the number of examples with hallucinated deletions."""
 
         def get_int_value(example: "Example") -> int:
-            return int(example.metrics.get("corti_hlcn").has_contiguous_insertions)
+            return int(example.metrics._corti_hlcn.has_contiguous_insertions)
 
         return sum([get_int_value(example) for example in self._src_dataset]) / len(self._src_dataset)

@@ -27,24 +27,42 @@ bewer = { git = "ssh://git@github.com/corticph/bewer.git", tag="v0.1.0a1"}
 
 ## Quickstart
 
-Instantiate a Dataset object:
+**Create a Dataset**
+
 ```python
 from bewer.core import Dataset
 
 dataset = Dataset()
 ```
 
-Add evaluation data from a file:
+**Add data**
+
+From a file:
 ```python
 dataset.load_csv(
     "data.csv",
-    ref_col="gold_transcripts",
-    hyp_col="model_transcripts",
+    ref_col="reference",
+    hyp_col="hypothesis",
 )
 ```
 
-Add evaluation examples manually:
+Or manually:
 ```python
-for ref, hyp in iterator:
+for reference, hypothesis in iterator:
     dataset.add(ref=ref, hyp=hyp)
+```
+
+**Compute metrics lazily**
+
+```python
+print(f"WER: {dataset.metrics.wer.value:.4f}"
+```
+
+**List available metrics**
+
+```python
+from bewer.metrics import list_registered_metrics
+
+for metric_name in list_registered_metrics():
+    print(meric_name)
 ```
