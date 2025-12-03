@@ -30,13 +30,12 @@ class Dataset(object):
     Attributes:
         config (...): ...
         examples (list[Example]): A list of Example objects.
-        metrics (MetricCollection): A collection of metrics for the dataset.
+        metrics (MetricCollection): A metrics collection for the dataset.
         refs (TextList): The reference texts in the dataset.
         hyps (TextList): The hypothesis texts in the dataset.
-        ops (OpList): The operations in the dataset.
     """
 
-    def __init__(self, config_path: str | None = None):
+    def __init__(self, config: str | None = None):
         """Initialize the Dataset.
 
         The dataset must be populated using one of the load_* methods or manually using the add() method.
@@ -44,7 +43,7 @@ class Dataset(object):
         Args:
             config_path (str | None): Path to the configuration file. If None, uses the default configuration.
         """
-        self.config_path = self.get_config_path(config_path)
+        self.config_path = self.get_config_path(config)
         self.config = OmegaConf.load(self.config_path)
         self.pipelines = resolve_pipelines(self.config)
         self.examples = []
@@ -73,19 +72,6 @@ class Dataset(object):
         """Add an example to the dataset."""
         example = Example(ref, hyp, keywords=keywords, src_dataset=self, index=len(self))
         self.examples.append(example)
-
-    def _infer_keyword_column(self, series: pd.Series) -> set:
-        """Infer the keyword terms from a pandas Series."""
-        if series.map(is_list_literal).all():
-            series = series.apply(ast.literal_eval)
-            return series
-        elif series.map(lambda x: isinstance(x, str)).all():
-            series = series.apply(lambda x: [x])
-            return series
-        elif series.map(lambda x: isinstance(x, list)).all():
-            return series
-        else:
-            raise ValueError(f"Column {series.name} is not a list (or literal) or string")
 
     def load_dataset(self, dataset, ref_col="ref", hyp_col="hyp", keyword_cols: list = []) -> None:
         """Load a Hugging Face dataset."""
@@ -125,6 +111,19 @@ class Dataset(object):
             with resources.path("bewer.configs", f"{config_path}.yml") as config_path:
                 return config_path
         return Path(config_path).resolve()
+
+    def _infer_keyword_column(self, series: pd.Series) -> set:
+        """Infer the keyword terms from a pandas Series."""
+        if series.map(is_list_literal).all():
+            series = series.apply(ast.literal_eval)
+            return series
+        elif series.map(lambda x: isinstance(x, str)).all():
+            series = series.apply(lambda x: [x])
+            return series
+        elif series.map(lambda x: isinstance(x, list)).all():
+            return series
+        else:
+            raise ValueError(f"Column {series.name} is not a list (or literal) or string")
 
     def __len__(self) -> int:
         """Get the number of examples in the dataset."""

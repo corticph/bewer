@@ -18,38 +18,38 @@ if TYPE_CHECKING:
 
 METRIC_REGISTRY.register_metric(
     WER,
-    "corti_wer",
+    "legacy_wer",
     tokenizer="legacy",
     normalizer="legacy",
 )
 METRIC_REGISTRY.register_metric(
     WER,
-    "corti_wer_uncased",
+    "legacy_wer_uncased",
     tokenizer="legacy",
     normalizer="legacy_uncased",
 )
 METRIC_REGISTRY.register_metric(
     WER,
-    "corti_wer_uncased_no_punct",
+    "legacy_wer_uncased_no_punct",
     tokenizer="legacy",
     normalizer="legacy_uncased_no_punct",
 )
 
 METRIC_REGISTRY.register_metric(
     CER,
-    "corti_cer",
+    "legacy_cer",
     tokenizer="legacy",
     normalizer="legacy",
 )
 METRIC_REGISTRY.register_metric(
     CER,
-    "corti_cer_uncased",
+    "legacy_cer_uncased",
     tokenizer="legacy",
     normalizer="legacy_uncased",
 )
 METRIC_REGISTRY.register_metric(
     CER,
-    "corti_cer_uncased_no_punct",
+    "legacy_cer_uncased_no_punct",
     tokenizer="legacy",
     normalizer="legacy_uncased_no_punct",
 )
@@ -180,7 +180,7 @@ class _KeywordAggregator(ExampleMetric):
         return Levenshtein.distance(term, best_match)
 
 
-@METRIC_REGISTRY.register("_corti_kwa")
+@METRIC_REGISTRY.register("_legacy_kwa")
 class KeywordAggregator(Metric):
     short_name = "kwa"
     long_name = "Keyword Aggregator"
@@ -190,7 +190,7 @@ class KeywordAggregator(Metric):
     def __init__(
         self,
         src: "Dataset",
-        name: str = "_corti_kwa",
+        name: str = "_legacy_kwa",
         cer_threshold: float = 0.2,
         standardizer: str = "default",
         tokenizer: str = "legacy",
@@ -234,7 +234,7 @@ class KeywordAggregator(Metric):
         )
 
 
-@METRIC_REGISTRY.register("corti_medical_word_accuracy")
+@METRIC_REGISTRY.register("legacy_medical_word_accuracy")
 class MTR(Metric):
     short_name = "MTR"
     long_name = "Medical Term Recall"
@@ -246,12 +246,12 @@ class MTR(Metric):
     @cached_property
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src_dataset.metrics._corti_kwa.total_terms == 0:
+        if self._src_dataset.metrics._legacy_kwa.total_terms == 0:
             return 1.0
-        return self._src_dataset.metrics._corti_kwa.match_count / self._src_dataset.metrics._corti_kwa.total_terms
+        return self._src_dataset.metrics._legacy_kwa.match_count / self._src_dataset.metrics._legacy_kwa.total_terms
 
 
-@METRIC_REGISTRY.register("corti_relaxed_medical_word_accuracy")
+@METRIC_REGISTRY.register("legacy_relaxed_medical_word_accuracy")
 class RMTR(Metric):
     short_name = "Relaxed MTR"
     long_name = "Relaxed Medical Term Recall"
@@ -264,14 +264,15 @@ class RMTR(Metric):
     @cached_property
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src_dataset.metrics._corti_kwa.total_terms == 0:
+        if self._src_dataset.metrics._legacy_kwa.total_terms == 0:
             return 1.0
         return (
-            self._src_dataset.metrics._corti_kwa.relaxed_match_count / self._src_dataset.metrics._corti_kwa.total_terms
+            self._src_dataset.metrics._legacy_kwa.relaxed_match_count
+            / self._src_dataset.metrics._legacy_kwa.total_terms
         )
 
 
-@METRIC_REGISTRY.register("corti_keyword_cer")
+@METRIC_REGISTRY.register("legacy_keyword_cer")
 class KeywordCER(Metric):
     short_name = "Keyword CER"
     long_name = "Keyword Character Error Rate"
@@ -283,9 +284,9 @@ class KeywordCER(Metric):
     @cached_property
     def value(self) -> float:
         """Get the medical character error rate."""
-        if self._src_dataset.metrics._corti_kwa.total_length == 0:
+        if self._src_dataset.metrics._legacy_kwa.total_length == 0:
             return 1.0
-        return self._src_dataset.metrics._corti_kwa.total_distance / self._src_dataset.metrics._corti_kwa.total_length
+        return self._src_dataset.metrics._legacy_kwa.total_distance / self._src_dataset.metrics._legacy_kwa.total_length
 
 
 class _HallucinationAggregator(ExampleMetric):
@@ -325,7 +326,7 @@ class _HallucinationAggregator(ExampleMetric):
         return self._insertion_metrics["insertions"]
 
 
-@METRIC_REGISTRY.register("_corti_hlcn")
+@METRIC_REGISTRY.register("_legacy_hlcn")
 class HallucinationAggregator(Metric):
     short_name = "Hallucination Insertions"
     long_name = "Hallucination Insertions"
@@ -335,14 +336,14 @@ class HallucinationAggregator(Metric):
     def __init__(
         self,
         src: "Dataset",
-        name: str = "_corti_hlcn",
+        name: str = "_legacy_hlcn",
         threshold: int = 2,
     ):
         self.threshold = threshold
         super().__init__(src, name)
 
 
-@METRIC_REGISTRY.register("corti_deletions")
+@METRIC_REGISTRY.register("legacy_deletions")
 class Insertions(Metric):
     short_name = "Hallucination Insertions"
     long_name = "Hallucination Insertions"
@@ -353,12 +354,12 @@ class Insertions(Metric):
         """Get the number of hallucinated medical term insertions."""
 
         def get_insertions(example: "Example") -> int:
-            return int(example.metrics._corti_hlcn.insertions)
+            return int(example.metrics._legacy_hlcn.insertions)
 
         return sum([get_insertions(example) for example in self._src_dataset]) / len(self._src_dataset)
 
 
-@METRIC_REGISTRY.register("corti_del_hallucinations")
+@METRIC_REGISTRY.register("legacy_del_hallucinations")
 class DeletionHallucinations(Metric):
     short_name = "Insertion Hallucinations"
     long_name = "Insertion Hallucinations"
@@ -369,6 +370,6 @@ class DeletionHallucinations(Metric):
         """Get the number of examples with hallucinated deletions."""
 
         def get_int_value(example: "Example") -> int:
-            return int(example.metrics._corti_hlcn.has_contiguous_insertions)
+            return int(example.metrics._legacy_hlcn.has_contiguous_insertions)
 
         return sum([get_int_value(example) for example in self._src_dataset]) / len(self._src_dataset)
