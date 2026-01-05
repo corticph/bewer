@@ -90,7 +90,7 @@ class Example:
         for name, terms in keywords.items():
             validated_terms = []
             for term in terms:
-                if term not in self.ref.raw:
+                if term.lower() not in self.ref.raw.lower():
                     warnings.warn(
                         f"Keyword '{term}' not found in reference for example {self._index}. Will not be included.",
                         KeywordNotFoundWarning,
