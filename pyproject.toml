@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bewer"
-version = "0.1.0a2"
+version = "0.0.0"  # placeholder; overridden at build time
 description = "Evaluation and analysis framework for automatic speech recognition in Python."
 authors = ["Lasse Borgholt <lb@corti.ai>"]
 license = "MIT"
@@ -24,6 +24,11 @@ readme = "README.md"
 packages = [
     { include = 'bewer', from = 'src' },
 ]
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "pep440"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.14"
@@ -60,5 +65,5 @@ requests = "^2.31.0"
 typeguard = "^4.4.2"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core", "poetry-dynamic-versioning"]
 build-backend = "poetry.core.masonry.api"

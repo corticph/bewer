@@ -1,0 +1,41 @@
+name: Build (tagged)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  poetry_version: "2.1.2"
+  python_version: "3.12"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.python_version }}
+
+      - name: Install Poetry
+        run: |
+          pipx ensurepath
+          pipx install poetry==${{ env.poetry_version }} --python python${{ env.python_version }}
+
+      - name: Show resolved version (sanity)
+        run: |
+          git describe --tags --always
+          poetry version
+
+      - name: Build
+        run: poetry build
