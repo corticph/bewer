@@ -159,7 +159,7 @@ class _KeywordAggregator(ExampleMetric):
         ngrams = list(chain.from_iterable(ngram_matrix[:n]))
 
         # Find the best match using fuzzy matching
-        best_match, _ = process.extractOne(term, ngrams, scorer=fuzz.ratio)
+        best_match, _ = process.extractOne(term, ngrams, scorer=fuzz.ratio) if ngrams else ("", 0)
 
         # Define punctuation for the check as all punctuation except the ones we want to retain
         punct_to_remove = string.punctuation
