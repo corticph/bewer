@@ -66,4 +66,4 @@ typeguard = "^4.4.2"
 
 [build-system]
 requires = ["poetry-core", "poetry-dynamic-versioning"]
-build-backend = "poetry.core.masonry.api"
+build-backend = "poetry_dynamic_versioning.backend"
