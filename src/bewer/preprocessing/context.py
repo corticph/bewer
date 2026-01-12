@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-from bewer.core.flags import DEFAULT
+from bewer.flags import DEFAULT
 
 # Define the context variables with default value "default"
 STANDARDIZER_NAME = ContextVar("STANDARDIZER", default=DEFAULT)

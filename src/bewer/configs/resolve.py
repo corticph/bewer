@@ -4,7 +4,7 @@ from importlib import import_module
 
 from omegaconf import OmegaConf
 
-from bewer.core.flags import NORMALIZERS, STANDARDIZERS, TOKENIZERS
+from bewer.flags import NORMALIZERS, STANDARDIZERS, TOKENIZERS
 from bewer.preprocessing.normalization import Normalizer
 from bewer.preprocessing.tokenization import Tokenizer
 
