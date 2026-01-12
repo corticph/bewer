@@ -1,9 +1,6 @@
 import warnings
-from functools import lru_cache
 from typing import TYPE_CHECKING, Optional
 
-from bewer.core.alignment import LevenshteinAlignment
-from bewer.core.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
 
@@ -16,13 +13,6 @@ class KeywordNotFoundWarning(UserWarning):
 
 
 warnings.filterwarnings("always", category=KeywordNotFoundWarning)
-
-
-@lru_cache(maxsize=None)
-def _get_alignment(example: "Example", method: str, standardizer: str, tokenizer: str, normalizer: str):
-    if method == "levenshtein":
-        return LevenshteinAlignment(example, standardizer, tokenizer, normalizer)
-    raise ValueError(f"Unknown alignment method: {method}")
 
 
 class Example:
@@ -48,6 +38,10 @@ class Example:
         Args:
             ref (str): Reference text.
             hyp (str): Hypothesis text.
+            keywords (dict[str, list[str]], optional): Keywords associated with the example. The keywords must be
+                present in the reference text, otherwise they will be ignored. Defaults to None.
+            src_dataset (Dataset, optional): The source Dataset object. Defaults to None.
+            index (int, optional): The index of the example in the dataset. Defaults to None.
         """
         self._src_dataset = src_dataset
         self._index = index
@@ -64,22 +58,6 @@ class Example:
     @property
     def src(self) -> Optional["Dataset"]:
         return self._src_dataset
-
-    @property
-    def levenshtein(self) -> LevenshteinAlignment:
-        """
-        Get the Levenshtein alignment object.
-
-        Returns:
-            LevenshteinAlignment: The Levenshtein alignment object.
-        """
-        return _get_alignment(
-            self,
-            method="levenshtein",
-            standardizer=STANDARDIZER_NAME.get(),
-            tokenizer=TOKENIZER_NAME.get(),
-            normalizer=NORMALIZER_NAME.get(),
-        )
 
     def _prepare_and_validate_keywords(self, keywords: dict[str, list[str]] | None) -> dict[str, list[str]]:
         """Prepare keywords dictionary by converting terms to Text objects."""

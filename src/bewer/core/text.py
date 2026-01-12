@@ -1,7 +1,7 @@
 from enum import StrEnum
 from typing import TYPE_CHECKING, Optional, Union
 
-from bewer.core.context import STANDARDIZER_NAME, TOKENIZER_NAME
+from bewer.preprocessing.context import STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
     from bewer.core.example import Example

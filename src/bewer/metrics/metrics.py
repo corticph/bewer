@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from bewer.core.flags import DEFAULT
+from bewer.flags import DEFAULT
 from bewer.metrics import example_helpers
 from bewer.metrics.base import METRIC_REGISTRY, Metric
 
@@ -89,3 +89,23 @@ class CER(Metric):
         if self.ref_length == 0:
             return float(self.num_edits)
         return self.num_edits / self.ref_length
+
+
+@METRIC_REGISTRY.register("levenshtein")
+class Levenshtein(Metric):
+    short_name = "Levenshtein"
+    long_name = "Levenshtein Alignment"
+    description = "Levenshtein alignment between hypothesis and reference texts."
+    example_cls = example_helpers.Levenshtein
+
+    def __init__(
+        self,
+        src: "Dataset",
+        name: str = "levenshtein",
+        standardizer: str = DEFAULT,
+        tokenizer: str = DEFAULT,
+        normalizer: str = DEFAULT,
+    ):
+        """Initialize the Levenshtein Metric object."""
+        self.pipeline = (standardizer, tokenizer, normalizer)
+        super().__init__(src, name)

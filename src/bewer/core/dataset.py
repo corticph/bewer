@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Union
 import pandas as pd
 from omegaconf import OmegaConf
 
+from bewer.configs.resolve import resolve_pipelines
 from bewer.core.example import Example
-from bewer.core.resolve import resolve_pipelines
 from bewer.core.text import TokenList
 from bewer.metrics.base import MetricCollection
 

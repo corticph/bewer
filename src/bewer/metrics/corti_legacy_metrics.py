@@ -8,9 +8,9 @@ from error_align.utils import OpType
 from fuzzywuzzy import fuzz, process
 from rapidfuzz.distance import Levenshtein
 
-from bewer.core.context import set_pipeline
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric
 from bewer.metrics.metrics import CER, WER
+from bewer.preprocessing.context import set_pipeline
 
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
