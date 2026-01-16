@@ -1,5 +1,4 @@
 import string
-from functools import cached_property
 from itertools import chain
 from typing import TYPE_CHECKING
 
@@ -8,12 +7,11 @@ from error_align.utils import OpType
 from fuzzywuzzy import fuzz, process
 from rapidfuzz.distance import Levenshtein
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric
-from bewer.metrics.metrics import CER, WER
-from bewer.preprocessing.context import set_pipeline
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
+from bewer.metrics.cer import CER
+from bewer.metrics.wer import WER
 
 if TYPE_CHECKING:
-    from bewer.core.dataset import Dataset
     from bewer.core.example import Example
 
 METRIC_REGISTRY.register_metric(
@@ -56,81 +54,80 @@ METRIC_REGISTRY.register_metric(
 
 
 class _KeywordAggregator(ExampleMetric):
-    @cached_property
+    @metric_value
     def cer_keyword(self) -> float:
         """Get the character error rate for medical terms."""
         return self._keyword_metrics["cer_keyword"]
 
-    @cached_property
+    @metric_value
     def total_distance(self) -> float:
         """Get the total Levenshtein distance for medical terms."""
         return self._keyword_metrics["total_distance"]
 
-    @cached_property
+    @metric_value
     def total_length(self) -> float:
         """Get the total length of medical terms."""
         return self._keyword_metrics["total_length"]
 
-    @cached_property
+    @metric_value
     def match_count(self) -> int:
         """Get the number of exactly matched medical terms."""
         return self._keyword_metrics["match_count"]
 
-    @cached_property
+    @metric_value
     def relaxed_match_count(self) -> int:
         """Get the number of medical terms matched with relaxed criteria."""
         return self._keyword_metrics["relaxed_match_count"]
 
-    @cached_property
+    @metric_value
     def total_terms(self) -> int:
         """Get the total number of medical terms."""
         return self._keyword_metrics["total_terms"]
 
-    @cached_property
+    @metric_value
     def correct_terms(self) -> list[str]:
         """Get the list of correctly matched medical terms."""
         return self._keyword_metrics["correct_terms"]
 
-    @cached_property
+    @metric_value
     def _keyword_metrics(self) -> dict[str, float]:
         """Calculate keyword-focused metrics for medical terms."""
 
-        with set_pipeline(*self.src_metric.pipeline):
-            total_distance = 0
-            total_length = 0
-            match_count = 0
-            relaxed_match_count = 0
-            correct_terms = []
+        total_distance = 0
+        total_length = 0
+        match_count = 0
+        relaxed_match_count = 0
+        correct_terms = []
 
-            if "medical_terms" not in self.example.keywords:
-                return dict(
-                    cer_keyword=0.0,
-                    total_distance=0.0,
-                    total_length=0.0,
-                    match_count=0,
-                    relaxed_match_count=0,
-                    total_terms=0,
-                    correct_terms=[],
-                )
+        if "medical_terms" not in self.example.keywords:
+            return dict(
+                cer_keyword=0.0,
+                total_distance=0.0,
+                total_length=0.0,
+                match_count=0,
+                relaxed_match_count=0,
+                total_terms=0,
+                correct_terms=[],
+            )
 
-            medical_terms = self.example.keywords["medical_terms"]
-            max_n = max((len(term.tokens) for term in medical_terms), default=0)
-            words = self.example.hyp.tokens.normalized
-            ngram_matrix = [self._get_ngrams(words, n) for n in range(1, max_n + 1)]
+        medical_terms = self.example.keywords["medical_terms"]
+        max_n = max((len(term.tokens) for term in medical_terms), default=0)
+        words = self.example.hyp.tokens.normalized
+        ngram_matrix = [self._get_ngrams(words, n) for n in range(1, max_n + 1)]
 
-            for term in medical_terms:
-                term = term.joined(normalized=True)
-                distance = self._term_distance(term, ngram_matrix=ngram_matrix)
-                cer_score = distance / max(len(term), 1)  # Avoid division by zero
-                if distance == 0:
-                    match_count += 1
-                    correct_terms.append(term)
-                if cer_score <= self.src_metric.cer_threshold:
-                    relaxed_match_count += 1
-                total_distance += distance
-                total_length += max(len(term), 1)
+        for term in medical_terms:
+            term = term.joined(normalized=True)
+            distance = self._term_distance(term, ngram_matrix=ngram_matrix)
+            cer_score = distance / max(len(term), 1)  # Avoid division by zero
+            if distance == 0:
+                match_count += 1
+                correct_terms.append(term)
+            if cer_score <= self.src_metric.cer_threshold:
+                relaxed_match_count += 1
+            total_distance += distance
+            total_length += max(len(term), 1)
 
-            cer_keyword = total_distance / total_length if total_length > 0 else 0
+        cer_keyword = total_distance / total_length if total_length > 0 else 0
 
         return dict(
             cer_keyword=cer_keyword,
@@ -180,7 +177,7 @@ class _KeywordAggregator(ExampleMetric):
         return Levenshtein.distance(term, best_match)
 
 
-@METRIC_REGISTRY.register("_legacy_kwa")
+@METRIC_REGISTRY.register("_legacy_kwa", standardizer="default", tokenizer="legacy", normalizer="legacy_uncased")
 class KeywordAggregator(Metric):
     short_name = "kwa"
     long_name = "Keyword Aggregator"
@@ -189,44 +186,39 @@ class KeywordAggregator(Metric):
 
     def __init__(
         self,
-        src: "Dataset",
         name: str = "_legacy_kwa",
         cer_threshold: float = 0.2,
-        standardizer: str = "default",
-        tokenizer: str = "legacy",
-        normalizer: str = "legacy_uncased",
     ):
         """Initialize the CER Metric object."""
-        self.pipeline = (standardizer, tokenizer, normalizer)
         self.cer_threshold = cer_threshold
-        super().__init__(src, name)
+        super().__init__(name)
 
-    @cached_property
+    @metric_value
     def match_count(self) -> int:
         """Get the total number of exactly matched medical terms."""
         return sum([example.metrics.get(self.name).match_count for example in self._src_dataset])
 
-    @cached_property
+    @metric_value
     def relaxed_match_count(self) -> int:
         """Get the total number of medical terms matched with relaxed criteria."""
         return sum([example.metrics.get(self.name).relaxed_match_count for example in self._src_dataset])
 
-    @cached_property
+    @metric_value
     def total_terms(self) -> int:
         """Get the total number of medical terms."""
         return sum([example.metrics.get(self.name).total_terms for example in self._src_dataset])
 
-    @cached_property
+    @metric_value
     def total_length(self) -> float:
         """Get the total length of medical terms."""
         return sum([example.metrics.get(self.name).total_length for example in self._src_dataset])
 
-    @cached_property
+    @metric_value
     def total_distance(self) -> float:
         """Get the total Levenshtein distance of medical terms."""
         return sum([example.metrics.get(self.name).total_distance for example in self._src_dataset])
 
-    @cached_property
+    @metric_value
     def correct_terms(self) -> list[str]:
         """Get the list of correctly matched medical terms."""
         return list(
@@ -243,7 +235,7 @@ class MTR(Metric):
         "divided by the total number of medical terms in the reference transcripts."
     )
 
-    @cached_property
+    @metric_value(main=True)
     def value(self) -> float:
         """Get the medical term recall."""
         if self._src_dataset.metrics._legacy_kwa.total_terms == 0:
@@ -261,7 +253,7 @@ class RMTR(Metric):
         "reference transcripts."
     )
 
-    @cached_property
+    @metric_value(main=True)
     def value(self) -> float:
         """Get the medical term recall."""
         if self._src_dataset.metrics._legacy_kwa.total_terms == 0:
@@ -281,7 +273,7 @@ class KeywordCER(Metric):
         "between the reference and hypothesis terms."
     )
 
-    @cached_property
+    @metric_value(main=True)
     def value(self) -> float:
         """Get the medical character error rate."""
         if self._src_dataset.metrics._legacy_kwa.total_length == 0:
@@ -290,7 +282,7 @@ class KeywordCER(Metric):
 
 
 class _HallucinationAggregator(ExampleMetric):
-    @cached_property
+    @metric_value
     def _insertion_metrics(self) -> int:
         """Get the number of hallucinated medical term insertions for this example."""
         ref = self.example.ref.joined(normalized=True)
@@ -315,12 +307,12 @@ class _HallucinationAggregator(ExampleMetric):
             insertions=insertions,
         )
 
-    @cached_property
+    @metric_value
     def has_contiguous_insertions(self) -> bool:
         """Check if there are contiguous hallucinated medical term insertions."""
         return self._insertion_metrics["has_contiguous_insertions"]
 
-    @cached_property
+    @metric_value
     def insertions(self) -> int:
         """Get the number of hallucinated medical term insertions."""
         return self._insertion_metrics["insertions"]
@@ -335,12 +327,11 @@ class HallucinationAggregator(Metric):
 
     def __init__(
         self,
-        src: "Dataset",
         name: str = "_legacy_hlcn",
         threshold: int = 2,
     ):
         self.threshold = threshold
-        super().__init__(src, name)
+        super().__init__(name)
 
 
 @METRIC_REGISTRY.register("legacy_deletions")
@@ -349,7 +340,7 @@ class Insertions(Metric):
     long_name = "Hallucination Insertions"
     description = "Average number of insertions per example."
 
-    @cached_property
+    @metric_value(main=True)
     def value(self) -> int:
         """Get the number of hallucinated medical term insertions."""
 
@@ -365,7 +356,7 @@ class DeletionHallucinations(Metric):
     long_name = "Insertion Hallucinations"
     description = "Fraction of examples for which more than N consecutive insertions are observed."
 
-    @cached_property
+    @metric_value(main=True)
     def value(self) -> int:
         """Get the number of examples with hallucinated deletions."""
 

@@ -330,23 +330,48 @@ files = [
 
 [[package]]
 name = "error-align"
-version = "0.1.0b3"
+version = "0.1.0b6"
 description = "Text-to-text alignment algorithm for speech recognition error analysis."
 optional = false
-python-versions = "<3.14,>=3.11"
+python-versions = "<3.15,>=3.11"
 groups = ["main"]
 files = [
-    {file = "error_align-0.1.0b3-py3-none-any.whl", hash = "sha256:ec77475905b5f14b5c264bf432e6da154b7046335d880fc7f179db5fbfdb2170"},
-    {file = "error_align-0.1.0b3.tar.gz", hash = "sha256:9e9f3d13cb24d67c2c323a5a3d11250e93176ee3e77c01e4dd2cc8a70497c706"},
+    {file = "error_align-0.1.0b6-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:591143e59f94c6f3c7b52e71ad33d9dec8c2181ac17a96450ba0996f57c0e5bf"},
+    {file = "error_align-0.1.0b6-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:6ffc999a499849348c1732499ebe45b88636170374b6bc57b8bd2785523725c9"},
+    {file = "error_align-0.1.0b6-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:4363c797a483f9018cfb52f829a9465c533fc80061f182fca61e4fe3c29b1ac2"},
+    {file = "error_align-0.1.0b6-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:24707e4355e7a987c8a1d2d6708e39a74bccabe77dbd418004f1df29baaa7312"},
+    {file = "error_align-0.1.0b6-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:cd847fb3735d18de1dcf41ba3b61aa0b98deae5805298029023dd628b1751c14"},
+    {file = "error_align-0.1.0b6-cp311-cp311-win32.whl", hash = "sha256:00bd3cc071b5fd413197235ae2a35e6fef44ffa34cf32798e430802bc3cff87b"},
+    {file = "error_align-0.1.0b6-cp311-cp311-win_amd64.whl", hash = "sha256:25748d766d323b826c2ef2e6f3e57aa0540c702a15f7d3427d3ad9f1bb694ae8"},
+    {file = "error_align-0.1.0b6-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:c9d1832d2b71305db75dfd3b46d91d6325dacdd55f39b39bfc24ea1531b3159b"},
+    {file = "error_align-0.1.0b6-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:5198110f5ecbbe4585df4105e18c6166a5d67a5a36246ed8fdc7f3f2eccf253d"},
+    {file = "error_align-0.1.0b6-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:94e66b68ef1cc4c0414121af564f529847b396aec4b595741c69e292acdd925c"},
+    {file = "error_align-0.1.0b6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:3da9607b36f2b2d435105546e87162de900f90ade1abeeca65c949675b0b9ce0"},
+    {file = "error_align-0.1.0b6-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:040fd80ee586e829b0a6ab15660171f37dea550ada604b0eb069b8d93234ff25"},
+    {file = "error_align-0.1.0b6-cp312-cp312-win32.whl", hash = "sha256:41ac3a9638e078c99d68f80014d14cfe7108596fa2a5f04b3de5cccfb1e1302d"},
+    {file = "error_align-0.1.0b6-cp312-cp312-win_amd64.whl", hash = "sha256:46093472ba95625953bff064c5e06027089bfd53d8d5d772c99101e73bf35055"},
+    {file = "error_align-0.1.0b6-cp313-cp313-macosx_10_13_universal2.whl", hash = "sha256:26f2b3e1a20a22dfd2d0b83dc7800feb02dfed31c66cf0b297ea02624bb019d7"},
+    {file = "error_align-0.1.0b6-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:262e7849e4d5cb9864f0a2d61d4ff17d126c876cb90e2773a1ceda98a5763b98"},
+    {file = "error_align-0.1.0b6-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:9ec9ac7b1540a6244b0515274ff9a91e257df77acfe9a63fdff3ce530088b2d0"},
+    {file = "error_align-0.1.0b6-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:6fa6acf5a31da349987fd1f70e12ec66faef5c79ce2fc0e32da6ffdae6e98e8a"},
+    {file = "error_align-0.1.0b6-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:ebb6969a6e7f1eeb2a0b71957adbdbecc4aae7c762d9c5619e9dbeb75c3bb48f"},
+    {file = "error_align-0.1.0b6-cp313-cp313-win32.whl", hash = "sha256:d597051ef5067ad1b03d113fe0e018ae47602038d0f6966429989002793374cb"},
+    {file = "error_align-0.1.0b6-cp313-cp313-win_amd64.whl", hash = "sha256:b3b62ca0fd7e8f6d2a31ae1772b2769fc6e8ffc2d67e07ee3f2f5ddfc1c49dfd"},
+    {file = "error_align-0.1.0b6-cp314-cp314-macosx_10_15_universal2.whl", hash = "sha256:f3f879ba762d20d37e7d0c81b223a11df33fce257cb4ad806b044e2d0202375c"},
+    {file = "error_align-0.1.0b6-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:75b3a7a8d189774d514e54d9d1bad54d58646f416a863566ed6cafdef2c3ca42"},
+    {file = "error_align-0.1.0b6-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:fa141e650148c1173ba09859de8e8ee3623979c1cb8682d0708b1918e5473b1f"},
+    {file = "error_align-0.1.0b6-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:94d185cb81a4ad215f45e1c1589d57cc33809047272b38851c169e4bf7c640c0"},
+    {file = "error_align-0.1.0b6-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:2e8e1b852bd0121e65d15355b4ddf930eec9786e3a447b9fab8191888065ecee"},
+    {file = "error_align-0.1.0b6.tar.gz", hash = "sha256:e919765db17c45927da582fb0d39bc94867b60abd180b3ce1408ad6578dce98a"},
 ]
 
 [package.dependencies]
-regex = ">=2025.9.18,<2026.0.0"
-tqdm = ">=4.67.1,<5.0.0"
-unidecode = ">=1.4.0,<2.0.0"
+regex = ">=2025.9.18"
+tqdm = ">=4.67.1"
+unidecode = ">=1.4.0"
 
 [package.extras]
-evaluation = ["backoff (>=2.2.1,<3.0.0) ; python_version == \"3.12\"", "click (>=8.2.1,<9.0.0) ; python_version == \"3.12\"", "datasets (>=3.3.2,<4.0.0) ; python_version == \"3.12\"", "gitpython (>=3.1.45,<4.0.0) ; python_version == \"3.12\"", "librosa (>=0.11.0,<0.12.0) ; python_version == \"3.12\"", "matplotlib (>=3.10.6,<4.0.0) ; python_version == \"3.12\"", "nemo-toolkit[all] (>=2.4.0,<3.0.0) ; python_version == \"3.12\"", "num2words (>=0.5.14,<0.6.0) ; python_version == \"3.12\"", "numpy (>=1.22,<2.0) ; python_version == \"3.12\"", "pandas (>=2.3.1,<3.0.0) ; python_version == \"3.12\"", "pyphen (>=0.17.2,<0.18.0) ; python_version == \"3.12\"", "rapidfuzz (>=3.13.0,<4.0.0) ; python_version == \"3.12\"", "scipy (>=1.16.1,<2.0.0) ; python_version == \"3.12\"", "soundfile (>=0.13.1,<0.14.0) ; python_version == \"3.12\"", "textgrid (>=1.6.1,<2.0.0) ; python_version == \"3.12\"", "transformers (>=4.51.3,<5.0.0) ; python_version == \"3.12\""]
+evaluation = ["backoff (>=2.2.1) ; python_version == \"3.12\"", "click (>=8.2.1) ; python_version == \"3.12\"", "datasets (>=3.3.2) ; python_version == \"3.12\"", "gitpython (>=3.1.45) ; python_version == \"3.12\"", "librosa (>=0.11.0) ; python_version == \"3.12\"", "matplotlib (>=3.10.6) ; python_version == \"3.12\"", "nemo-toolkit[all] (>=2.4.0) ; python_version == \"3.12\"", "num2words (>=0.5.14) ; python_version == \"3.12\"", "numpy (>=1.22,<2.0) ; python_version == \"3.12\"", "pandas (>=2.3.1) ; python_version == \"3.12\"", "pyphen (>=0.17.2) ; python_version == \"3.12\"", "rapidfuzz (>=3.13.0) ; python_version == \"3.12\"", "scipy (>=1.16.1) ; python_version == \"3.12\"", "soundfile (>=0.13.1) ; python_version == \"3.12\"", "textgrid (>=1.6.1) ; python_version == \"3.12\"", "transformers (>=4.51.3) ; python_version == \"3.12\""]
 
 [[package]]
 name = "executing"
