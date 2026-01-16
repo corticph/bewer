@@ -44,7 +44,7 @@ class ErrorAlign_(ExampleMetric):
 
     @metric_value(main=True)
     def ops(self) -> Alignment:
-        """Get the Levenshtein distance between the hypothesis and reference text."""
+        """Get the error alignment operations between the hypothesis and reference text."""
         return self._get_ops()
 
     def _get_ops(self) -> list[Op]:
