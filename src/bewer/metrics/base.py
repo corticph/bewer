@@ -4,7 +4,7 @@ import inspect
 from abc import ABC, abstractmethod
 from collections.abc import Hashable
 from functools import cached_property, update_wrapper
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from bewer.flags import DEFAULT
 from bewer.preprocessing.context import set_pipeline
@@ -396,48 +396,15 @@ METRIC_REGISTRY = MetricRegistry()
 
 
 def list_registered_metrics(show_private: bool = False) -> list[str]:
-    """List all registered metric names."""
+    """List all registered metric names.
+
+    Args:
+        show_private (bool): Whether to include private metrics (those starting with an underscore).
+
+    Returns:
+        list[str]: List of registered metric names.
+    """
     if show_private:
         return list(METRIC_REGISTRY.metric_factories.keys())
     else:
         return [name for name in METRIC_REGISTRY.metric_factories.keys() if not name.startswith("_")]
-
-
-def get_registered_metrics_table_row_values(metric_type: Literal["dataset", "example"]):
-    """Print all registered metric names."""
-
-    if metric_type == "dataset":
-        metric_registry = METRIC_REGISTRY.metric_classes
-    else:
-        metric_registry = {
-            name: cls.example_cls for name, cls in METRIC_REGISTRY.metric_classes.items() if cls.example_cls is not None
-        }
-
-    table_rows = []
-    for register_name, metric in metric_registry.items():
-        # Skip private metrics
-        if register_name.startswith("_"):
-            continue
-
-        # Skip metrics without metric values
-        if not hasattr(metric, "_values"):
-            continue
-
-        # Get main metric value
-        main_value = [name for name, is_main in metric._values.items() if is_main]
-        if len(main_value) > 1:
-            raise ValueError(f"Multiple main metric values found for metric '{metric}'.")
-        elif len(main_value) == 1:
-            main_value = main_value[0]
-        else:
-            main_value = "-"
-
-        # Get other metric values
-        other_values = ", ".join([name for name in metric._values.keys() if name != main_value])
-        if other_values == "":
-            other_values = "-"
-
-        # table_rows.append((register_name, main_value, other_values))
-        table_rows.append((register_name, main_value, other_values))
-
-    return table_rows

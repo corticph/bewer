@@ -9,7 +9,6 @@ def print_metric_table(
     Print a table of metric values.
 
     Args:
-        title (str): The title of the table.
         rows (list[tuple[tuple[str, str, str], tuple[str, str, str] | None]]): The rows of the table. Two rows per
             metric: one for the main metric and one for the example metric (if any). Each triple contains the name,
             main value, and other values as a single comma-separated string.
