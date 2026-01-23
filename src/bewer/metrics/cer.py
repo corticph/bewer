@@ -1,0 +1,55 @@
+from __future__ import annotations
+
+from rapidfuzz.distance import Levenshtein
+
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
+
+
+class CER_(ExampleMetric):
+    @metric_value
+    def num_edits(self) -> int:
+        """Get the number of edits between the hypothesis and reference text."""
+        return Levenshtein.distance(
+            self.example.hyp.joined(normalized=True),
+            self.example.ref.joined(normalized=True),
+        )
+
+    @metric_value
+    def ref_length(self) -> int:
+        """Get the number of characters in the reference text."""
+        return len(self.example.ref.joined(normalized=True))
+
+    @metric_value(main=True)
+    def value(self) -> float:
+        """Get the example-level character error rate."""
+        if self.ref_length == 0:
+            return float(self.num_edits)
+        return self.num_edits / self.ref_length
+
+
+@METRIC_REGISTRY.register("cer")
+class CER(Metric):
+    short_name = "CER"
+    long_name = "Character Error Rate"
+    description = (
+        "Character Error Rate (CER) is computed as the character-level edit distance between the normalized reference "
+        "and hypothesis texts, divided by the total number of characters in the reference texts."
+    )
+    example_cls = CER_
+
+    @metric_value
+    def num_edits(self) -> int:
+        """Get the number of edits between the hypothesis and reference texts."""
+        return sum([example.metrics.get(self.name).num_edits for example in self._src_dataset])
+
+    @metric_value
+    def ref_length(self) -> int:
+        """Get the number of characters in the reference texts."""
+        return sum([example.metrics.get(self.name).ref_length for example in self._src_dataset])
+
+    @metric_value(main=True)
+    def value(self) -> float:
+        """Get the character error rate."""
+        if self.ref_length == 0:
+            return float(self.num_edits)
+        return self.num_edits / self.ref_length

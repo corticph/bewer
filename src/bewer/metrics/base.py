@@ -3,16 +3,91 @@ from __future__ import annotations
 import inspect
 from abc import ABC, abstractmethod
 from collections.abc import Hashable
-from functools import partial
-from typing import TYPE_CHECKING, Optional
+from functools import cached_property, update_wrapper
+from typing import TYPE_CHECKING, Any, Optional, Union
+
+from bewer.flags import DEFAULT
+from bewer.preprocessing.context import set_pipeline
+from bewer.style.tables import print_metric_table
 
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
     from bewer.core.example import Example
 
 
+class metric_value(cached_property):
+    def __init__(self, func=None, *, main: bool = False):
+        self.main = main
+        if func is not None:
+            super().__init__(func)
+            update_wrapper(self, func)
+
+    def __call__(self, func):
+        super().__init__(func)
+        update_wrapper(self, func)
+        return self
+
+    def __set_name__(self, owner: type, name: str):
+        super().__set_name__(owner, name)
+
+        # Create or get the _metric_values dict on the owner class
+        metric_values = owner.__dict__.get("_metric_values")
+        if metric_values is None:
+            metric_values = {"other": [], "main": None}
+            owner._metric_values = metric_values
+
+        # Update the metric values
+        if self.main:
+            if metric_values["main"] is not None:
+                raise ValueError(f"Multiple main metric values defined in {owner.__name__}.")
+            metric_values["main"] = name
+        else:
+            metric_values["other"].append(name)
+
+    def __get__(self, obj: Optional[Any], objtype: Optional[type] = None) -> Any:
+        if obj is None:
+            return self
+
+        # TODO: Figure out if this is necessary given cached_property behavior
+        name = self.attrname
+        if name in obj.__dict__:
+            return obj.__dict__[name]
+
+        with set_pipeline(*obj.pipeline):
+            value = self.func(obj)
+
+        obj.__dict__[name] = value
+        return value
+
+
+def _get_metric_values(cls) -> dict[str, Union[str, list[str]]]:
+    """Get the metric values defined in the class and its bases."""
+    main_value = None
+    other_values = []
+    for base in reversed(cls.__mro__):
+        _metric_values = base.__dict__.get("_metric_values")
+        if _metric_values:
+            main_value = _metric_values["main"] or main_value
+            other_values.extend(_metric_values["other"])
+    metric_values = {"main": main_value, "other": list(set(other_values))}
+    return metric_values
+
+
+def _get_metric_table_row_values(metric: "Metric") -> tuple[str, str, str]:
+    metric_values = metric.metric_values()
+    main_value = "-" if metric_values["main"] is None else metric_values["main"]
+    other_values = "-" if len(metric_values["other"]) == 0 else ", ".join(metric_values["other"])
+    return (main_value, other_values)
+
+
 class Metric(ABC):
-    def __init__(self, src: "Dataset", name: str, key: Optional[Hashable] = None):
+    example_cls: type["ExampleMetric"] | None = None
+
+    def __init__(
+        self,
+        name: str,
+        key: Optional[Hashable] = None,
+    ):
         """Initialize the Metric object.
 
         Args:
@@ -20,9 +95,13 @@ class Metric(ABC):
         """
         self.name = name
         self.key = key
-        self._src_dataset = src
+        self._src_dataset = None
         self._examples = {}
         self._members = {}
+
+        self._standardizer = DEFAULT
+        self._tokenizer = DEFAULT
+        self._normalizer = DEFAULT
 
     @property
     @abstractmethod
@@ -43,9 +122,43 @@ class Metric(ABC):
         pass
 
     @property
-    def example_cls(self) -> type["ExampleMetric"] | None:
-        """Get the ExampleMetric class associated with this Metric."""
-        return None
+    def pipeline(self) -> tuple[str, str, str]:
+        """Get the preprocessing pipeline for the metric. Cached property to ensure immutability."""
+        return (self._standardizer, self._tokenizer, self._normalizer)
+
+    @classmethod
+    def metric_values(cls) -> dict[str, Union[str, list[str]]]:
+        """Get the metric values defined in the class and its bases."""
+        return _get_metric_values(cls)
+
+    @classmethod
+    def _get_row_values(cls) -> tuple[str, str, str] | None:
+        """Get the table row values for the main and example metric."""
+        metric_row_values = _get_metric_table_row_values(cls)
+        if cls.example_cls is not None:
+            example_metric_row_values = _get_metric_table_row_values(cls.example_cls)
+        else:
+            example_metric_row_values = None
+        return (metric_row_values, example_metric_row_values)
+
+    def set_source(self, src: "Dataset"):
+        """Set the source dataset for the metric."""
+        self._src_dataset = src
+
+    def set_standardizer(self, standardizer: str):
+        """Set the standardizer for the metric."""
+        # TODO: Validate standardizer
+        self._standardizer = standardizer
+
+    def set_tokenizer(self, tokenizer: str):
+        """Set the tokenizer for the metric."""
+        # TODO: Validate tokenizer
+        self._tokenizer = tokenizer
+
+    def set_normalizer(self, normalizer: str):
+        """Set the normalizer for the metric."""
+        # TODO: Validate normalizer
+        self._normalizer = normalizer
 
     def _get_example_metric(self, example: "Example") -> "ExampleMetric":
         """Get the ExampleMetric object for a given example index."""
@@ -88,6 +201,16 @@ class ExampleMetric(ABC):
         self.key = key
         self._members = {}
 
+    @property
+    def pipeline(self) -> tuple[str, str, str]:
+        """Get the preprocessing pipeline for the metric."""
+        return self.src_metric.pipeline
+
+    @classmethod
+    def metric_values(cls) -> dict[str, Union[str, list[str]]]:
+        """Get the metric values defined in the class and its bases."""
+        return _get_metric_values(cls)
+
 
 class MetricCollection(object):
     """Collection of metrics for a dataset or an example.
@@ -106,6 +229,15 @@ class MetricCollection(object):
         self._src = src
         self._cache = {}
 
+    def list_metrics(self, show_private: bool = False) -> None:
+        """Print all registered example metric and their values."""
+        metric_rows = []
+        for metric_name, metric_cls in METRIC_REGISTRY.metric_classes.items():
+            if not show_private and metric_name.startswith("_"):
+                continue
+            metric_rows.append((metric_name, metric_cls._get_row_values()))
+        print_metric_table(metric_rows)
+
     def get(self, name: str) -> Metric:
         """Get a metric by name.
 
@@ -113,9 +245,10 @@ class MetricCollection(object):
         """
         if name in self._cache:
             return self._cache[name]
-        elif name in METRIC_REGISTRY.metrics:
-            metric_factory = METRIC_REGISTRY.metrics[name]
-            metric_instance = metric_factory(self._src)
+        elif name in METRIC_REGISTRY.metric_factories:
+            metric_factory = METRIC_REGISTRY.metric_factories[name]
+            metric_instance = metric_factory()
+            metric_instance.set_source(self._src)
             self._cache[name] = metric_instance
             return metric_instance
         else:
@@ -148,7 +281,7 @@ class ExampleMetricCollection(object):
         """
         if name in self._cache:
             return self._cache[name]
-        elif name in METRIC_REGISTRY.metrics:
+        elif name in METRIC_REGISTRY.metric_factories:
             metric = self._src_collection.__getattr__(name)
             example_metric_instance = metric._get_example_metric(self._src_example)
             self._cache[name] = example_metric_instance
@@ -166,14 +299,18 @@ class ExampleMetricCollection(object):
 
 
 class MetricRegistry:
-    def __init__(self):
-        self.metrics = {}
+    def __init__(self) -> None:
+        self.metric_factories = {}
+        self.metric_classes = {}
 
     def register_metric(
         self,
         metric_cls: type["Metric"],
         name: str | None = None,
         allow_override: bool = False,
+        standardizer: str = DEFAULT,
+        tokenizer: str = DEFAULT,
+        normalizer: str = DEFAULT,
         **kwargs,
     ):
         """
@@ -195,28 +332,39 @@ class MetricRegistry:
             raise TypeError("Metric name must be a string or None.")
 
         # Register metric based on its type.
-        if name in self.metrics and not allow_override:
+        if name in self.metric_factories and not allow_override:
             raise ValueError(f"Metric '{name}' already registered.")
-        metric_factory = partial(metric_cls, name=name, **kwargs) if kwargs else partial(metric_cls, name=name)
-        self.metrics[name] = metric_factory
+
+        def metric_factory():
+            metric = metric_cls(name=name, **kwargs)
+            metric.set_standardizer(standardizer)
+            metric.set_tokenizer(tokenizer)
+            metric.set_normalizer(normalizer)
+            return metric
 
         # Validate that all parameters (except the first) have default values.
         sig = inspect.signature(metric_factory)
         params = list(sig.parameters.values())  # NOTE: `self` not included when wrapped with partial.
-        if len(params) == 0 or params[0].default is not inspect.Parameter.empty:
-            raise ValueError("Metric '__init__' must have 'src' as the first parameter without a default value.")
-        for param in params[1:]:
+        for param in params:
             if param.default is inspect.Parameter.empty:
                 raise ValueError(f"Parameter '{param.name}' for metric '{name}' must have a default value.")
 
-    def register(self, name: str | None = None, allow_override: bool = False, **kwargs):
+        self.metric_factories[name] = metric_factory
+        self.metric_classes[name] = metric_cls
+
+    def register(
+        self,
+        name: str | None = None,
+        allow_override: bool = False,
+        standardizer: str = DEFAULT,
+        tokenizer: str = DEFAULT,
+        normalizer: str = DEFAULT,
+        **kwargs,
+    ):
         """
         Decorator version of 'register_metric'.
 
         Usage:
-            @registry.register()
-            class Foo(...): ...
-
             @registry.register("foo")
             class Foo(...): ...
 
@@ -230,6 +378,9 @@ class MetricRegistry:
                 metric_cls=metric_cls,
                 name=name,
                 allow_override=allow_override,
+                standardizer=standardizer,
+                tokenizer=tokenizer,
+                normalizer=normalizer,
                 **kwargs,
             )
             return metric_cls
@@ -240,6 +391,16 @@ class MetricRegistry:
 METRIC_REGISTRY = MetricRegistry()
 
 
-def list_registered_metrics() -> list[str]:
-    """List all registered metric names."""
-    return [metric for metric in METRIC_REGISTRY.metrics.keys() if not metric.startswith("_")]
+def list_registered_metrics(show_private: bool = False) -> list[str]:
+    """List all registered metric names.
+
+    Args:
+        show_private (bool): Whether to include private metrics (those starting with an underscore).
+
+    Returns:
+        list[str]: List of registered metric names.
+    """
+    if show_private:
+        return list(METRIC_REGISTRY.metric_factories.keys())
+    else:
+        return [name for name in METRIC_REGISTRY.metric_factories.keys() if not name.startswith("_")]

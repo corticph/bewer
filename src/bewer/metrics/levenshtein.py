@@ -1,19 +1,14 @@
 from __future__ import annotations
 
-from functools import cached_property
-from typing import TYPE_CHECKING
-
 from rapidfuzz.distance import Levenshtein as RFLevenshtein
 
 from bewer.alignment.op import Alignment, Op, OpType
-from bewer.metrics.base import ExampleMetric
-from bewer.preprocessing.context import set_pipeline
-
-if TYPE_CHECKING:
-    pass
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
 
 
-class Levenshtein(ExampleMetric):
+class Levenshtein_(ExampleMetric):
+    """Compute Levenshtein edit operations between hypothesis and reference text using RapidFuzz."""
+
     OPS_MAP = {
         "match": OpType.MATCH,
         "replace": OpType.SUBSTITUTE,
@@ -21,36 +16,35 @@ class Levenshtein(ExampleMetric):
         "delete": OpType.DELETE,
     }
 
-    @cached_property
-    def ops(self) -> int:
-        """Get the Levenshtein distance between the hypothesis and reference text."""
-        with set_pipeline(*self.src_metric.pipeline):
-            return self._get_ops()
-
-    @cached_property
+    @metric_value
     def num_substitutions(self) -> int:
         """Get the number of substitutions."""
         return len([op for op in self.ops if op.type == OpType.SUBSTITUTE])
 
-    @cached_property
+    @metric_value
     def num_insertions(self) -> int:
         """Get the number of insertions."""
         return len([op for op in self.ops if op.type == OpType.INSERT])
 
-    @cached_property
+    @metric_value
     def num_deletions(self) -> int:
         """Get the number of deletions."""
         return len([op for op in self.ops if op.type == OpType.DELETE])
 
-    @cached_property
+    @metric_value
     def num_edits(self) -> int:
         """Get the number of edits."""
         return self.num_insertions + self.num_deletions + self.num_substitutions
 
-    @cached_property
+    @metric_value
     def num_matches(self) -> int:
         """Get the number of matches."""
         return len(self.ops) - self.num_edits
+
+    @metric_value(main=True)
+    def ops(self) -> Alignment:
+        """Get the Levenshtein distance between the hypothesis and reference text."""
+        return self._get_ops()
 
     def _get_ops(self) -> list[Op]:
         """
@@ -86,24 +80,24 @@ class Levenshtein(ExampleMetric):
                     type=self.OPS_MAP[op_type],
                     hyp=hyp_tokens[hyp_idx],
                     ref=ref_tokens[ref_idx],
-                    hyp_idx=hyp_idx,
-                    ref_idx=ref_idx,
+                    hyp_token_idx=hyp_idx,
+                    ref_token_idx=ref_idx,
+                    ref_span=self.example.ref.tokens[ref_idx].slice,
+                    hyp_span=self.example.hyp.tokens[hyp_idx].slice,
                 )
             elif op_type == "delete":
                 op = Op(
                     type=self.OPS_MAP[op_type],
-                    hyp=None,
                     ref=ref_tokens[ref_idx],
-                    hyp_idx=None,
-                    ref_idx=ref_idx,
+                    ref_token_idx=ref_idx,
+                    ref_span=self.example.ref.tokens[ref_idx].slice,
                 )
             elif op_type == "insert":
                 op = Op(
                     type=self.OPS_MAP[op_type],
                     hyp=hyp_tokens[hyp_idx],
-                    ref=None,
-                    hyp_idx=hyp_idx,
-                    ref_idx=None,
+                    hyp_token_idx=hyp_idx,
+                    hyp_span=self.example.hyp.tokens[hyp_idx].slice,
                 )
             else:
                 raise ValueError(f"Unknown operation type: {op_type}")
@@ -112,49 +106,9 @@ class Levenshtein(ExampleMetric):
         return Alignment(bewer_ops)
 
 
-class WER(ExampleMetric):
-    @cached_property
-    def num_edits(self) -> int:
-        """Get the number of edits between the hypothesis and reference text."""
-        with set_pipeline(*self.src_metric.pipeline):
-            return RFLevenshtein.distance(
-                self.example.ref.tokens.normalized,
-                self.example.hyp.tokens.normalized,
-            )
-
-    @cached_property
-    def ref_length(self) -> int:
-        """Get the number of tokens in the reference text."""
-        with set_pipeline(*self.src_metric.pipeline):
-            return len(self.example.ref.tokens.normalized)
-
-    @cached_property
-    def value(self) -> float:
-        """Get the example-level word error rate."""
-        if self.ref_length == 0:
-            return float(self.num_edits)
-        return self.num_edits / self.ref_length
-
-
-class CER(ExampleMetric):
-    @cached_property
-    def num_edits(self) -> int:
-        """Get the number of edits between the hypothesis and reference text."""
-        with set_pipeline(*self.src_metric.pipeline):
-            return RFLevenshtein.distance(
-                self.example.hyp.joined(normalized=True),
-                self.example.ref.joined(normalized=True),
-            )
-
-    @cached_property
-    def ref_length(self) -> int:
-        """Get the number of characters in the reference text."""
-        with set_pipeline(*self.src_metric.pipeline):
-            return len(self.example.ref.joined(normalized=True))
-
-    @cached_property
-    def value(self) -> float:
-        """Get the example-level character error rate."""
-        if self.ref_length == 0:
-            return float(self.num_edits)
-        return self.num_edits / self.ref_length
+@METRIC_REGISTRY.register("levenshtein")
+class Levenshtein(Metric):
+    short_name = "Levenshtein"
+    long_name = "Levenshtein Alignment"
+    description = "Levenshtein alignment between hypothesis and reference texts."
+    example_cls = Levenshtein_
