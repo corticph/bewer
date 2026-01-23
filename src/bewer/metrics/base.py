@@ -136,12 +136,7 @@ class Metric(ABC):
         """Get the table row values for the main and example metric."""
         metric_row_values = _get_metric_table_row_values(cls)
         if cls.example_cls is not None:
-            try:
-                example_metric_row_values = _get_metric_table_row_values(cls.example_cls)
-            except Exception:
-                import IPython
-
-                IPython.embed(using=False, header="DEBUG METRIC ROW VALUES")
+            example_metric_row_values = _get_metric_table_row_values(cls.example_cls)
         else:
             example_metric_row_values = None
         return (metric_row_values, example_metric_row_values)
@@ -304,8 +299,9 @@ class ExampleMetricCollection(object):
 
 
 class MetricRegistry:
-    metric_factories = {}
-    metric_classes = {}
+    def __init__(self) -> None:
+        self.metric_factories = {}
+        self.metric_classes = {}
 
     def register_metric(
         self,

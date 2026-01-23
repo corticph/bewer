@@ -54,7 +54,6 @@ class ErrorAlign_(ExampleMetric):
         Returns:
             list[Op]: List of BeWER operations.
         """
-        # import IPython; IPython.embed(using=False, header="Debugging error_align.py")
         ea_ops = []
         ref_idx = 0
         for ea_op in error_align(self.example.ref.standardized, self.example.hyp.standardized):
