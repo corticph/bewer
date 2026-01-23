@@ -189,7 +189,7 @@ class Metric(ABC):
         raise AttributeError(f"'{key}' is not a valid key for this metric.")
 
 
-class ExampleMetric(ABC):  # , metaclass=MetricMeta):
+class ExampleMetric(ABC):
     def __init__(
         self,
         example: "Example",
