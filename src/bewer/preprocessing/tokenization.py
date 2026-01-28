@@ -24,7 +24,7 @@ def whitespace() -> str:
     return r"\S+"
 
 
-def whitespace_strip_symbols_and_custom(split_on: str) -> str:
+def whitespace_strip_symbols_and_custom(split_on: str | None = None) -> str:
     """Return a regex pattern that matches tokens without internal whitespace or punctuation per specified characters.
 
     Args:
@@ -33,9 +33,12 @@ def whitespace_strip_symbols_and_custom(split_on: str) -> str:
     Returns:
         str: The regex pattern. Not compiled.
     """
-    split_on = re.escape(split_on)
+    if split_on is not None:
+        split_on = re.escape(split_on)
     letters_digits = r"\p{L}\p{N}"
     symbols_punctuation_marks = r"\p{S}\p{P}\p{M}"
+    if split_on is None:
+        return re.compile(rf"[{letters_digits}]+([[{symbols_punctuation_marks}]]+[{letters_digits}]+)*", re.V1)
     return re.compile(
         rf"[{letters_digits}]+([[{symbols_punctuation_marks}]--[{split_on}]]+[{letters_digits}]+)*", re.V1
     )
