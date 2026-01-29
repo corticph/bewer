@@ -15,32 +15,32 @@ if TYPE_CHECKING:
     from bewer.core.text import Text
 
 
-def whitespace() -> str:
-    """Return a regex pattern that matches non-whitespace sequences.
+def whitespace() -> re.Pattern:
+    """Return a regex pattern that matches sequences of non-whitespace characters.
 
     Returns:
-        str: The regex pattern. Not compiled.
+        re.Pattern: The compiled regex pattern.
     """
-    return r"\S+"
+    return re.compile(r"\S+")
 
 
-def whitespace_strip_symbols_and_custom(split_on: str | None = None) -> str:
+def whitespace_strip_symbols_and_custom(split_on: str | None = None) -> re.Pattern:
     """Return a regex pattern that matches tokens without internal whitespace or punctuation per specified characters.
 
     Args:
         split_on (str): A string of characters to split on in addition to whitespace. Will be escaped.
 
     Returns:
-        str: The regex pattern. Not compiled.
+        re.Pattern: The compiled regex pattern.
     """
     if split_on is not None:
-        split_on = re.escape(split_on)
+        escaped_split_on = re.escape(split_on)
     letters_digits = r"\p{L}\p{N}"
     symbols_punctuation_marks = r"\p{S}\p{P}\p{M}"
     if split_on is None:
         return re.compile(rf"[{letters_digits}]+([[{symbols_punctuation_marks}]]+[{letters_digits}]+)*", re.V1)
     return re.compile(
-        rf"[{letters_digits}]+([[{symbols_punctuation_marks}]--[{split_on}]]+[{letters_digits}]+)*", re.V1
+        rf"[{letters_digits}]+([[{symbols_punctuation_marks}]--[{escaped_split_on}]]+[{letters_digits}]+)*", re.V1
     )
 
 
