@@ -12,7 +12,7 @@ from bewer.alignment.op import Alignment, Op, OpType
 class TestOpType:
     """Tests for OpType enum."""
 
-    def test_opttype_values(self):
+    def test_optype_values(self):
         """Test OpType enum values."""
         assert OpType.MATCH == 0
         assert OpType.INSERT == 1
