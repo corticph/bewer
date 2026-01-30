@@ -17,41 +17,40 @@ class TestWhitespace:
         """Test that whitespace() returns a regex pattern string."""
         pattern = whitespace()
         assert isinstance(pattern, re.Pattern)
-        assert pattern == r"\S+"
 
     def test_pattern_matches_words(self):
         """Test that the pattern matches non-whitespace sequences."""
-        pattern = re.compile(whitespace())
+        pattern = whitespace()
         matches = pattern.findall("hello world")
         assert matches == ["hello", "world"]
 
     def test_pattern_handles_multiple_spaces(self):
         """Test pattern with multiple consecutive spaces."""
-        pattern = re.compile(whitespace())
+        pattern = whitespace()
         matches = pattern.findall("hello   world")
         assert matches == ["hello", "world"]
 
     def test_pattern_handles_tabs_and_newlines(self):
         """Test pattern with tabs and newlines."""
-        pattern = re.compile(whitespace())
+        pattern = whitespace()
         matches = pattern.findall("hello\tworld\ntest")
         assert matches == ["hello", "world", "test"]
 
     def test_pattern_empty_string(self):
         """Test pattern with empty string."""
-        pattern = re.compile(whitespace())
+        pattern = whitespace()
         matches = pattern.findall("")
         assert matches == []
 
     def test_pattern_whitespace_only(self):
         """Test pattern with whitespace only."""
-        pattern = re.compile(whitespace())
+        pattern = whitespace()
         matches = pattern.findall("   \t\n   ")
         assert matches == []
 
     def test_pattern_includes_punctuation(self):
         """Test that punctuation is included in tokens."""
-        pattern = re.compile(whitespace())
+        pattern = whitespace()
         matches = pattern.findall("hello, world!")
         assert matches == ["hello,", "world!"]
 
