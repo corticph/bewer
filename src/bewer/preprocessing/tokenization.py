@@ -33,12 +33,11 @@ def whitespace_strip_symbols_and_custom(split_on: str | None = None) -> re.Patte
     Returns:
         re.Pattern: The compiled regex pattern.
     """
-    if split_on is not None:
-        escaped_split_on = re.escape(split_on)
     letters_digits = r"\p{L}\p{N}"
     symbols_punctuation_marks = r"\p{S}\p{P}\p{M}"
     if split_on is None:
         return re.compile(rf"[{letters_digits}]+([[{symbols_punctuation_marks}]]+[{letters_digits}]+)*", re.V1)
+    escaped_split_on = re.escape(split_on)
     return re.compile(
         rf"[{letters_digits}]+([[{symbols_punctuation_marks}]--[{escaped_split_on}]]+[{letters_digits}]+)*", re.V1
     )
