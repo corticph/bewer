@@ -2,16 +2,10 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from enum import IntEnum
 from pathlib import Path
 from typing import Union
 
-
-class OpType(IntEnum):
-    MATCH = 0
-    INSERT = 1
-    DELETE = 2
-    SUBSTITUTE = 3
+from bewer.alignment.op_type import OpType
 
 
 @dataclass
