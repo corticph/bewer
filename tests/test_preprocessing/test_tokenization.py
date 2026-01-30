@@ -16,7 +16,7 @@ class TestWhitespace:
     def test_returns_pattern(self):
         """Test that whitespace() returns a regex pattern string."""
         pattern = whitespace()
-        assert isinstance(pattern, str)
+        assert isinstance(pattern, re.Pattern)
         assert pattern == r"\S+"
 
     def test_pattern_matches_words(self):
