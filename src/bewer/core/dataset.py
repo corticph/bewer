@@ -94,6 +94,8 @@ class Dataset(object):
                 keywords = {}
                 for col in keyword_cols:
                     keywords[col] = getattr(row, col)
+            else:
+                keywords = None
             self.add(ref, hyp, keywords=keywords)
         return self
 
