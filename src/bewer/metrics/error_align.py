@@ -72,7 +72,10 @@ class ErrorAlign_(ExampleMetric):
             if not ref_empty:
                 ref_idx += 1
             ea_ops.append(op)
-        return Alignment(ea_ops)
+
+        alignment = Alignment(ea_ops)
+        alignment.set_source(self.example)
+        return alignment
 
 
 @METRIC_REGISTRY.register("error_align")

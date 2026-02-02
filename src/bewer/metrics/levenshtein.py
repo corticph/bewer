@@ -103,7 +103,9 @@ class Levenshtein_(ExampleMetric):
                 raise ValueError(f"Unknown operation type: {op_type}")
             bewer_ops.append(op)
 
-        return Alignment(bewer_ops)
+        alignment = Alignment(bewer_ops)
+        alignment.set_source(self.example)
+        return alignment
 
 
 @METRIC_REGISTRY.register("levenshtein")

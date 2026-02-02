@@ -122,6 +122,11 @@ class Metric(ABC):
         pass
 
     @property
+    def dataset(self) -> "Dataset":
+        """Get the dataset for the metric."""
+        return self._src_dataset
+
+    @property
     def pipeline(self) -> tuple[str, str, str]:
         """Get the preprocessing pipeline for the metric. Cached property to ensure immutability."""
         return (self._standardizer, self._tokenizer, self._normalizer)
@@ -166,7 +171,8 @@ class Metric(ABC):
             return self._examples[example._index]
         if self.example_cls is None:
             return None
-        example_metric = self.example_cls(example, self)
+        example_metric = self.example_cls(self)
+        example_metric.set_source(example)
         self._examples[example._index] = example_metric
         return example_metric
 
@@ -187,7 +193,6 @@ class Metric(ABC):
 class ExampleMetric(ABC):
     def __init__(
         self,
-        example: "Example",
         src_metric: "Metric",
         key: Optional[Hashable] = None,
     ):
@@ -196,15 +201,25 @@ class ExampleMetric(ABC):
         Args:
             src (Example): The Example to compute the metric for.
         """
-        self.example = example
+
         self.src_metric = src_metric
         self.key = key
+        self._src_example = None
         self._members = {}
+
+    @property
+    def example(self) -> "Example":
+        """Get the example for the metric."""
+        return self._src_example
 
     @property
     def pipeline(self) -> tuple[str, str, str]:
         """Get the preprocessing pipeline for the metric."""
         return self.src_metric.pipeline
+
+    def set_source(self, src: "Example"):
+        """Set the source example for the metric."""
+        self._src_example = src
 
     @classmethod
     def metric_values(cls) -> dict[str, Union[str, list[str]]]:
