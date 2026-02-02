@@ -25,10 +25,10 @@ class Op:
         hyp_token_idx (int | None): The index of the token in the hypothesis text (for word-level alignments).
         ref_span (slice | None): The index span in the reference text.
         hyp_span (slice | None): The index span in the hypothesis text.
-        hyp_left_partial (bool): Whether the hypothesis token is part of a left partial.
-        hyp_right_partial (bool): Whether the hypothesis token is part of a right partial.
-        ref_left_partial (bool): Whether the reference token is part of a left partial.
-        ref_right_partial (bool): Whether the reference token is part of a right partial.
+        hyp_left_partial (bool): Whether the hypothesis token is a partial word, cropped on the left.
+        hyp_right_partial (bool): Whether the hypothesis token is a partial word, cropped on the right.
+        ref_left_partial (bool): Whether the reference token is a partial word, cropped on the left.
+        ref_right_partial (bool): Whether the reference token is a partial word, cropped on the right.
     """
 
     type: OpType
