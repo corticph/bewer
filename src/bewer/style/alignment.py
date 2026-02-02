@@ -41,7 +41,7 @@ class DefaultColorScheme(ColorScheme):
     MATCH = "default"
 
 
-def get_padding(length: int, color_scheme: ColorScheme = DefaultColorScheme) -> str:
+def get_padding(length: int, color_scheme: ColorScheme = DefaultColorScheme) -> Text:
     """Get a padding string of spaces of the specified length.
 
     Args:
@@ -53,7 +53,7 @@ def get_padding(length: int, color_scheme: ColorScheme = DefaultColorScheme) -> 
     return Text(" " * length, style=f"on {color_scheme.PAD}")
 
 
-def format_match_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -> tuple[str, str, int]:
+def format_match_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -> tuple[Text, Text, int]:
     """Format a match operation for display."""
     len_ref = len(op.ref)
     len_hyp = len(op.hyp)
@@ -68,7 +68,7 @@ def format_match_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) ->
     return ref_str, hyp_str, length
 
 
-def format_substitute_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -> tuple[str, str, int]:
+def format_substitute_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -> tuple[Text, Text, int]:
     """Format a substitute operation for display."""
     len_ref = len(op.ref)
     len_hyp = len(op.hyp)
@@ -82,7 +82,7 @@ def format_substitute_op(op: "Op", color_scheme: ColorScheme = DefaultColorSchem
     return ref_str, hyp_str, length
 
 
-def format_insert_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -> tuple[str, str, int]:
+def format_insert_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -> tuple[Text, Text, int]:
     """Format an insert operation for display."""
     len_hyp = len(op.hyp)
     hyp_str = Text(op.hyp, style=color_scheme.INS)
@@ -90,7 +90,7 @@ def format_insert_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -
     return ref_str, hyp_str, len_hyp
 
 
-def format_delete_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -> tuple[str, str, int]:
+def format_delete_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -> tuple[Text, Text, int]:
     """Format a delete operation for display."""
     len_ref = len(op.ref)
     ref_str = Text(op.ref, style=color_scheme.DEL)
@@ -98,7 +98,7 @@ def format_delete_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -
     return ref_str, hyp_str, len_ref
 
 
-def format_alignment_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -> tuple[str, str, int]:
+def format_alignment_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme) -> tuple[Text, Text, int]:
     """Format an alignment operation for display.
 
     Args:
@@ -118,7 +118,7 @@ def format_alignment_op(op: "Op", color_scheme: ColorScheme = DefaultColorScheme
     raise ValueError(f"Unknown operation type: {op.type}")
 
 
-def get_line_prefixes(line_number: int) -> tuple[str, str]:
+def get_line_prefixes(line_number: int) -> tuple[Text, Text]:
     """Get the line prefixes for reference and hypothesis lines."""
     str_num = str(line_number).rjust(4)
 
