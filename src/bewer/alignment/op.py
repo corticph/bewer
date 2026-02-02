@@ -108,7 +108,7 @@ class Alignment(list[Op]):
     _src_example: "Example" | None = None
 
     def set_source(self, src: "Example"):
-        """Set the source dataset for the metric."""
+        """Set the source example for the alignment."""
         self._src_example = src
 
     def to_dicts(self) -> list[dict]:
