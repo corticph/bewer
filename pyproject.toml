@@ -1,10 +1,10 @@
 [build-system]
-requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
-build-backend = "poetry_dynamic_versioning.backend"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [project]
 name = "bewer"
-version = "0.0.0"  # placeholder; overridden at build time by poetry-dynamic-versioning
+dynamic = ["version"]
 description = "Evaluation and analysis framework for automatic speech recognition in Python."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -46,12 +46,19 @@ Repository = "https://github.com/corticph/bewer"
 # --- Poetry-specific configuration ---
 
 [tool.poetry]
+version = "0.0.0"  # Placeholder for Poetry; actual version is managed by hatch-vcs
 packages = [{ include = "bewer", from = "src" }]
 
-[tool.poetry-dynamic-versioning]
-enable = true
-vcs = "git"
-style = "pep440"
+# --- Hatch configuration ---
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bewer"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/bewer"]
 
 # --- Dev/test groups (Poetry-specific) ---
 
