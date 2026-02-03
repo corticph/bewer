@@ -1,11 +1,16 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
 name = "bewer"
-version = "0.0.0"  # placeholder; overridden at build time
+dynamic = ["version"]
 description = "Evaluation and analysis framework for automatic speech recognition in Python."
-authors = ["Lasse Borgholt <lb@corti.ai>"]
-license = "MIT"
-urls = { "Homepage" = "https://github.com/corticph/bewer" }
-keywords = ["speech-recognition", "evaluation"]
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "Lasse Borgholt", email = "lb@corti.ai" }]
+keywords = ["speech-recognition", "evaluation", "ASR", "NLP", "WER"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -19,39 +24,56 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
 ]
-readme = "README.md"
-
-packages = [
-    { include = 'bewer', from = 'src' },
+dependencies = [
+    "regex>=2024.0.0",
+    "pandas>=2.0.0",
+    "rich>=13.0.0",
+    "unidecode>=1.3.0",
+    "pyyaml>=6.0.0",
+    "rapidfuzz>=3.0.0",
+    "hydra-core>=1.3.0",
+    "omegaconf>=2.3.0",
+    "error-align>=0.1.0b8",
+    # Temporarily required until Corti-specific metrics are replaced
+    "fuzzywuzzy>=0.18.0",
+    "levenshtein>=0.20.0",
 ]
 
-[tool.poetry-dynamic-versioning]
-enable = true
-vcs = "git"
-style = "pep440"
+[project.urls]
+Homepage = "https://github.com/corticph/bewer"
+Repository = "https://github.com/corticph/bewer"
 
-[tool.poetry.dependencies]
-python = ">=3.11,<3.14"
-regex = "^2025.10.23"
-pandas = "^2.3.3"
-rich = "^14.2.0"
-unidecode = "^1.4.0"
-pyyaml = "^6.0.3"
-rapidfuzz = "^3.14.3"
-hydra-core = "^1.3.2"
-error-align = "^0.1.0b3"
+# --- Poetry-specific configuration ---
 
-# These dependencies are temporarily required until we have replaced all usages for Corti specific metrics.
-fuzzywuzzy = "^0.18.0"
-levenshtein = "^0.27.3"
+[tool.poetry]
+version = "0.0.0"  # Placeholder for Poetry; actual version is managed by hatch-vcs
+packages = [{ include = "bewer", from = "src" }]
+
+# --- Hatch configuration ---
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bewer"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/bewer"]
+
+# --- Dev/test groups (Poetry-specific) ---
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-ipython = "9.3.0"
+ipython = "^9.3.0"
 pre-commit = "^4.2.0"
 ruff = ">=0.1,<0.13"
+build = "^1.0.0"
+twine = "^6.0.0"
 
 [tool.poetry.group.test]
 optional = true
@@ -63,7 +85,3 @@ pytest-cov = "^6.1.1"
 pytest-mock = "^3.14.0"
 requests = "^2.31.0"
 typeguard = "^4.4.2"
-
-[build-system]
-requires = ["poetry-core", "poetry-dynamic-versioning"]
-build-backend = "poetry_dynamic_versioning.backend"
