@@ -63,5 +63,5 @@ dataset.metrics.list_metrics()
 **Compute metrics lazily**
 
 ```python
-print(f"WER: {dataset.metrics.wer.value:.4f}"
+print(f"WER: {dataset.metrics.wer.value:.4f}")
 ```
