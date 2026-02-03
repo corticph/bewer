@@ -11,19 +11,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required for poetry-dynamic-versioning to read tags
+          fetch-depth: 0  # Required for hatch-vcs to read tags
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install poetry
-        run: |
-          pip install poetry poetry-dynamic-versioning
+      - name: Install build tools
+        run: pip install build
 
       - name: Build package
-        run: poetry build
+        run: python -m build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

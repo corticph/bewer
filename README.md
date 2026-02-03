@@ -54,17 +54,14 @@ for reference, hypothesis in iterator:
     dataset.add(ref=ref, hyp=hyp)
 ```
 
+**List available metrics**
+
+```python
+dataset.metrics.list_metrics()
+```
+
 **Compute metrics lazily**
 
 ```python
 print(f"WER: {dataset.metrics.wer.value:.4f}"
-```
-
-**List available metrics**
-
-```python
-from bewer.metrics import list_registered_metrics
-
-for metric_name in list_registered_metrics():
-    print(meric_name)
 ```

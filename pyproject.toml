@@ -33,7 +33,7 @@ dependencies = [
     "rapidfuzz>=3.0.0",
     "hydra-core>=1.3.0",
     "omegaconf>=2.3.0",
-    "error-align>=0.1.0b3",
+    "error-align>=0.1.0b8",
     # Temporarily required until Corti-specific metrics are replaced
     "fuzzywuzzy>=0.18.0",
     "levenshtein>=0.20.0",
@@ -53,6 +53,9 @@ packages = [{ include = "bewer", from = "src" }]
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bewer"]
