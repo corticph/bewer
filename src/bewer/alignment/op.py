@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from enum import IntEnum
 from pathlib import Path
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
+from bewer.alignment.op_type import OpType
+from bewer.style.alignment import DefaultColorScheme, display_basic_aligned
 
-class OpType(IntEnum):
-    MATCH = 0
-    INSERT = 1
-    DELETE = 2
-    SUBSTITUTE = 3
+if TYPE_CHECKING:
+    from bewer.core.example import Example
+    from bewer.style.alignment import ColorScheme
 
 
 @dataclass
@@ -26,10 +25,10 @@ class Op:
         hyp_token_idx (int | None): The index of the token in the hypothesis text (for word-level alignments).
         ref_span (slice | None): The index span in the reference text.
         hyp_span (slice | None): The index span in the hypothesis text.
-        hyp_left_partial (bool): Whether the hypothesis token is part of a left partial.
-        hyp_right_partial (bool): Whether the hypothesis token is part of a right partial.
-        ref_left_partial (bool): Whether the reference token is part of a left partial.
-        ref_right_partial (bool): Whether the reference token is part of a right partial.
+        hyp_left_partial (bool): Whether the hypothesis token is a partial word, cropped on the left.
+        hyp_right_partial (bool): Whether the hypothesis token is a partial word, cropped on the right.
+        ref_left_partial (bool): Whether the reference token is a partial word, cropped on the left.
+        ref_right_partial (bool): Whether the reference token is a partial word, cropped on the right.
     """
 
     type: OpType
@@ -106,6 +105,12 @@ class Alignment(list[Op]):
         ops (list[Op]): List of operations.
     """
 
+    _src_example: "Example" | None = None
+
+    def set_source(self, src: "Example"):
+        """Set the source example for the alignment."""
+        self._src_example = src
+
     def to_dicts(self) -> list[dict]:
         """Dump the alignment to a list of dictionaries.
 
@@ -135,6 +140,20 @@ class Alignment(list[Op]):
             with open(path, "w") as f:
                 f.write(json_str)
         return json_str
+
+    def display(
+        self,
+        max_line_length: int | None = None,
+        color_scheme: ColorScheme = DefaultColorScheme,
+    ) -> None:
+        """Display the alignment in the console.
+
+        Args:
+            max_line_length (int | None): Maximum line length for display. If None, uses default.
+            color_scheme (ColorScheme): Color scheme for display.
+        """
+        title = None if self._src_example is None else f"   > Example {self._src_example.index}"
+        display_basic_aligned(self, max_line_length=max_line_length, title=title, color_scheme=color_scheme)
 
     def __getitem__(self, index: int) -> Union[Op, "Alignment"]:
         if isinstance(index, slice):
