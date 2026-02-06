@@ -6,11 +6,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
 from bewer.alignment.op_type import OpType
-from bewer.style.alignment import DefaultColorScheme, display_basic_aligned
+from bewer.style.html.alignment import generate_alignment_html
+from bewer.style.html.color_schemes import HTMLDefaultAlignmentColors
+from bewer.style.python.alignment import DefaultColorScheme, display_basic_aligned
 
 if TYPE_CHECKING:
     from bewer.core.example import Example
-    from bewer.style.alignment import ColorScheme
+    from bewer.style.html.color_schemes import HTMLAlignmentColors
+    from bewer.style.python.alignment import ColorScheme
 
 
 @dataclass
@@ -141,9 +144,31 @@ class Alignment(list[Op]):
                 f.write(json_str)
         return json_str
 
+    def to_html(
+        self,
+        max_line_length: int = 200,
+        color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+    ) -> str:
+        """Render the alignment as an HTML string.
+
+        Args:
+            max_line_length (int): Maximum line length for wrapping. Defaults to 100.
+            color_scheme (type[HTMLAlignmentColors]): Color scheme for display.
+
+        Returns:
+            str: HTML string representing the alignment visualization.
+        """
+        title = None if self._src_example is None else f"   Example {self._src_example.index}"
+        return generate_alignment_html(
+            self,
+            max_line_length=max_line_length,
+            title=title,
+            color_scheme=color_scheme,
+        )
+
     def display(
         self,
-        max_line_length: int | None = None,
+        max_line_length: int | float = 0.5,
         color_scheme: ColorScheme = DefaultColorScheme,
     ) -> None:
         """Display the alignment in the console.
@@ -152,7 +177,7 @@ class Alignment(list[Op]):
             max_line_length (int | None): Maximum line length for display. If None, uses default.
             color_scheme (ColorScheme): Color scheme for display.
         """
-        title = None if self._src_example is None else f"   > Example {self._src_example.index}"
+        title = None if self._src_example is None else f"   Example {self._src_example.index}"
         display_basic_aligned(self, max_line_length=max_line_length, title=title, color_scheme=color_scheme)
 
     def __getitem__(self, index: int) -> Union[Op, "Alignment"]:

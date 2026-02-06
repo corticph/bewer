@@ -37,6 +37,7 @@ dependencies = [
     # Temporarily required until Corti-specific metrics are replaced
     "fuzzywuzzy>=0.18.0",
     "levenshtein>=0.20.0",
+    "jinja2>=3.1.6,<4.0.0",
 ]
 
 [project.urls]

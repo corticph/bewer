@@ -1,0 +1,26 @@
+    <div class="alignment-container">
+        <table class="alignment-table">
+            <colgroup>
+                <col style="width: 3ch;">
+                <col style="width: 4ch;">
+                <col style="width: 100%;">
+            </colgroup>
+            {%- if title %}
+            <tr>
+                <th colspan="3">{{title | safe}}</th>
+            </tr>
+            {%- endif %}
+            {%- for ref_line, hyp_line in alignment_lines %}
+            <tr class="alignment-row">
+                <td class="alignment-table-lines">{{loop.index}}</td>
+                <td class="alignment-table-names">Ref.</td>
+                <td>{{ ref_line | safe }}</td>
+            </tr>
+            <tr class="alignment-row">
+                <td class="alignment-table-lines"></td>
+                <td class="alignment-table-names">Hyp.</td>
+                <td>{{ hyp_line | safe }}</td>
+            </tr>
+            {%- endfor %}
+        </table>
+    </div>

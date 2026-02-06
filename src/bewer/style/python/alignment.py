@@ -20,8 +20,6 @@ from bewer.alignment.op_type import OpType
 if TYPE_CHECKING:
     from bewer.alignment.op import Alignment, Op
 
-# TODO: []
-
 
 class ColorScheme:
     """Base class for color schemes used in alignment display."""
@@ -122,8 +120,8 @@ def get_line_prefixes(line_number: int) -> tuple[Text, Text]:
     """Get the line prefixes for reference and hypothesis lines."""
     str_num = str(line_number).rjust(4)
 
-    ref_prefix = Text(f"{str_num} | REF: ", style="bright_black")
-    hyp_prefix = Text("     | HYP: ", style="bright_black")
+    ref_prefix = Text(f"{str_num}  Ref.  ", style="bright_black")
+    hyp_prefix = Text("      Hyp.  ", style="bright_black")
     return ref_prefix, hyp_prefix
 
 
@@ -173,9 +171,9 @@ def display_basic_aligned(
 
     # Build and print output.
     output = Text()
-    separator = Text("     |", style="bright_black")
+    separator = Text("", style="bright_black")
     if title:
-        output.append(Text(title + "\n", style="bold bright_black"))  # type: ignore
+        output.append(Text(title + "\n\n", style="bold bright_black"))  # type: ignore
     for i, (ref, hyp) in enumerate(lines):
         ref.rstrip()
         hyp.rstrip()

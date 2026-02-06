@@ -7,7 +7,7 @@ from rich.text import Text
 
 from bewer.alignment.op import Alignment, Op
 from bewer.alignment.op_type import OpType
-from bewer.style.alignment import (
+from bewer.style.python.alignment import (
     ColorScheme,
     DefaultColorScheme,
     display_basic_aligned,

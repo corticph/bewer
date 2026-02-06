@@ -32,7 +32,7 @@ pip install bewer
 **Create a Dataset**
 
 ```python
-from bewer.core import Dataset
+from bewer import Dataset
 
 dataset = Dataset()
 ```
