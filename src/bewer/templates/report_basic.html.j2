@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title | default('Speech Recognition Performance Report', true) }}</title>
+    <style>
+        body {
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 14px;
+            background-color: {{ base_color_scheme.BG_COLOR }};
+            color: {{ base_color_scheme.TEXT_COLOR }};
+            min-width: 1000px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        body > div,
+        body > table {
+            display: block;
+            overflow-x: auto;
+        }
+        h1 {
+            color: {{ base_color_scheme.TABLE_HEADER_BG }};
+            margin: 60px 0px 30px 0px;
+            text-align: center;
+        }
+        .report-metadata {
+            text-align: center;
+            color: {{ base_color_scheme.DIV_TEXT_COLOR }};
+            margin: 0px 0px 30px 0px;  /* Bottom margin to maintain spacing */
+            font-style: italic;  /* Optional: makes it look more like metadata */
+        }
+        .keyword-box {
+            position: relative;
+            display: inline;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0);
+        }
+
+        /* Add "padding" visually without moving text */
+        .keyword-box::before {
+            content: "";
+            position: absolute;
+            top: -2px;
+            bottom: -2px;
+            left: -4px;
+            right: -4px;
+            border: 1px solid rgb(0, 162, 255);
+            pointer-events: none;
+        }
+        .tables-side-by-side {
+            display: flex;
+            gap: 50px;  /* Space between tables */
+        }
+        .divider-title {
+            font-size: 24px;
+            color: {{ base_color_scheme.DIV_TEXT_COLOR }};
+            margin: 60px 0px 30px 0px;
+        }
+        .list-values-container {
+            border-radius: 5px;
+        }
+        .list-values-table {
+            background-color: {{ base_color_scheme.DIV_BG_COLOR }};
+            border-radius: 5px;
+            border-collapse: separate;
+            border: 1px solid {{ base_color_scheme.TABLE_HEADER_BG }};
+            border-spacing: 0;
+            margin-bottom: 15px;
+        }
+        .list-values-table td,
+        .list-values-table th {
+            padding: 10px 20px;
+        }
+        .list-values-table tr.value-row:not(:last-child) td {
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .list-values-table th {
+            font-weight: normal;
+            background-color: {{ base_color_scheme.TABLE_HEADER_BG }};
+            color: #ffffff;
+        }
+        .list-values-table tr.value-row td:nth-child(2) {
+            font-weight: 600;
+        }
+        .list-values-table tr.value-row:first-child td {
+            padding-top: 15px;
+        }
+        .list-values-table tr.value-row:last-child td {
+            padding-bottom: 15px;
+        }
+        .alignment-gallery {
+            overflow: visible; /* The legend will stop sticking when this container scrolls out of view */
+        }
+        .alignment-container {
+            border-radius: 5px;
+        }
+        .alignment-table {
+            background-color: {{ base_color_scheme.DIV_BG_COLOR }};
+            color: {{ base_color_scheme.DIV_TEXT_COLOR }};
+            border-radius: 5px;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+        .alignment-table {
+            background-color: {{ base_color_scheme.DIV_BG_COLOR }};
+            color: {{ base_color_scheme.DIV_TEXT_COLOR }};
+            border-radius: 5px;
+            border-collapse: separate;
+            border: 1px solid {{ base_color_scheme.TABLE_HEADER_BG }};
+            border-spacing: 0;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+        .alignment-table-lines {
+            text-align: right;
+            padding-left: 10px;
+        }
+        .alignment-table-names {
+            text-align: left;
+            font-weight: normal;
+            padding: 0px 10px;
+        }
+        .alignment-table th {
+            font-weight: normal;
+            text-align: left;
+            background-color: {{ base_color_scheme.TABLE_HEADER_BG }};
+            color: white;
+            padding: 10px 10px;
+        }
+        .alignment-table tr.alignment-row:nth-child(even) td {   /* odd rows starting from row 3 */
+            padding-top: 15px;
+            padding-bottom: 5px;
+        }
+        .alignment-table tr:nth-child(odd) td {   /* odd rows starting from row 3 */
+            padding-top: 5px;
+            padding-bottom: 15px;
+        }
+        .legend-container {
+            margin-top: 15px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid {{ base_color_scheme.TABLE_HEADER_BG }};
+            border-radius: 5px;
+            position: sticky;
+            top: 0;
+            background-color: {{ base_color_scheme.DIV_BG_COLOR }};
+            z-index: 10;
+        }
+        .legend-container-item {
+            display: inline-block;
+            margin: 0px 10px;
+        }
+        .icon {
+            position: absolute;
+            top: 40px;
+            left: 80px;
+        }
+        .icon svg {
+            width: 75px;
+            height: 75px;
+        }
+        .icon svg path {
+            fill: #00000013;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>{{ title | default('Speech Recognition Performance Report', true) }}</h1>
+    <p class="report-metadata">Created: {{ creation_date }}</p>
+
+    <div class="icon">
+    {% set icon_svg %}
+    {% include 'icons/corti-orb.svg' %}
+    {% endset %}
+    {{ icon_svg | indent_tabs(2) | safe }}
+    </div>
+
+    <div class="divider-title">Summary</div>
+
+    <div class="tables-side-by-side">
+{% set metrics_content %}
+{% with title="Dataset Metrics", values=metrics %}
+{% include 'table_list_values.html.j2' %}
+{% endwith %}
+{% endset %}
+{{ metrics_content | indent_tabs(2) | safe }}
+
+
+{% set summary_content %}
+{% with title="Dataset Summary", values=summary %}
+{% include 'table_list_values.html.j2' %}
+{% endwith %}
+{% endset %}
+{{ summary_content | indent_tabs(2) | safe }}
+    </div>
+    <div class="divider-title">Examples</div>
+
+
+{% set alignment_gallery -%}
+{%- with example_iterator=dataset, color_scheme=alignment_color_scheme, alignment_type=alignment_type -%}
+{%- include 'alignment_gallery.html.j2' -%}
+{%- endwith -%}
+{%- endset -%}
+{{- alignment_gallery | indent_tabs(2) | safe }}
+
+
+</body>
+</html>

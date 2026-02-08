@@ -6,19 +6,7 @@ class HTMLAlignmentColors:
     INS: str
     SUB: str
     MATCH: str
-
-    @classmethod
-    def to_html(cls) -> str:
-        return f"""\
-    <div class="legend-container">
-        Alignment color codes:
-        <span class="legend-container-item"><span style="color: {cls.MATCH};">■</span> Match</span>
-        <span class="legend-container-item"><span style="color: {cls.SUB};">■</span> Substitution</span>
-        <span class="legend-container-item"><span style="color: {cls.INS};">■</span> Insertion</span>
-        <span class="legend-container-item"><span style="color: {cls.DEL};">■</span> Deletion</span>
-        <span class="legend-container-item"><span style="color: {cls.PAD};">■</span> Padding</span>
-    </div>\
-    """
+    KEYWORD: str
 
 
 class HTMLDefaultAlignmentColors(HTMLAlignmentColors):
@@ -29,12 +17,14 @@ class HTMLDefaultAlignmentColors(HTMLAlignmentColors):
     INS = "#17a2b8"
     SUB = "#c46f01"
     MATCH = "#212529"
+    KEYWORD = "#00a2ff"
 
 
 class HTMLBaseColors:
     """Color scheme constants for HTML reports."""
 
-    TEXT_COLOR = "#212529"
-    BG_COLOR = "#ffffff"
+    TABLE_HEADER_BG = "#595959"
+    TEXT_COLOR = "#000000"
+    BG_COLOR = "#faf9f5"
     DIV_TEXT_COLOR = "#acacac"
-    DIV_BG_COLOR = "#f7f7f7"
+    DIV_BG_COLOR = "#ffffff"

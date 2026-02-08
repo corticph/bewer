@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
 from bewer.alignment.op_type import OpType
-from bewer.style.html.alignment import generate_alignment_html
+from bewer.style.html.alignment import generate_alignment_html_lines as _generate_alignment_html_lines
 from bewer.style.html.color_schemes import HTMLDefaultAlignmentColors
 from bewer.style.python.alignment import DefaultColorScheme, display_basic_aligned
 
@@ -144,28 +144,6 @@ class Alignment(list[Op]):
                 f.write(json_str)
         return json_str
 
-    def to_html(
-        self,
-        max_line_length: int = 200,
-        color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
-    ) -> str:
-        """Render the alignment as an HTML string.
-
-        Args:
-            max_line_length (int): Maximum line length for wrapping. Defaults to 100.
-            color_scheme (type[HTMLAlignmentColors]): Color scheme for display.
-
-        Returns:
-            str: HTML string representing the alignment visualization.
-        """
-        title = None if self._src_example is None else f"   Example {self._src_example.index}"
-        return generate_alignment_html(
-            self,
-            max_line_length=max_line_length,
-            title=title,
-            color_scheme=color_scheme,
-        )
-
     def display(
         self,
         max_line_length: int | float = 0.5,
@@ -179,6 +157,20 @@ class Alignment(list[Op]):
         """
         title = None if self._src_example is None else f"   Example {self._src_example.index}"
         display_basic_aligned(self, max_line_length=max_line_length, title=title, color_scheme=color_scheme)
+
+    def _to_html_lines(
+        self,
+        color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+    ) -> list[tuple[str, str]]:
+        """Render the alignment as an HTML string.
+
+        Args:
+            color_scheme (type[HTMLAlignmentColors]): Color scheme for display.
+
+        Returns:
+            list[tuple[str, str]]: List of tuples containing HTML strings representing the alignment visualization.
+        """
+        return _generate_alignment_html_lines(self, color_scheme=color_scheme)
 
     def __getitem__(self, index: int) -> Union[Op, "Alignment"]:
         if isinstance(index, slice):

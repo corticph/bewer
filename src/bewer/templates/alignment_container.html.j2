@@ -1,0 +1,25 @@
+<div class="alignment-container">
+    <table class="alignment-table">
+        <colgroup>
+            <col style="width: 3ch;">
+            <col style="width: 4ch;">
+            <col style="width: 100%;">
+        </colgroup>
+        <tr>
+            <th colspan="3">Example {{ title_index | default('-', true) }}</th>
+        </tr>
+
+        {%- for ref_line, hyp_line in example.metrics.get(alignment_type).ops._to_html_lines(color_scheme=color_scheme) %}
+        <tr class="alignment-row">
+            <td class="alignment-table-lines">{{loop.index}}</td>
+            <td class="alignment-table-names">Ref.</td>
+            <td>{{ ref_line | safe }}</td>
+        </tr>
+        <tr class="alignment-row">
+            <td class="alignment-table-lines"></td>
+            <td class="alignment-table-names">Hyp.</td>
+            <td>{{ hyp_line | safe }}</td>
+        </tr>
+        {%- endfor %}
+    </table>
+</div>

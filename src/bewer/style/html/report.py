@@ -1,5 +1,6 @@
 """Module for generating HTML reports from datasets."""
 
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -19,23 +20,21 @@ def indent_tabs(text: str, width: int = 1) -> str:
 
 def render_report_html(
     dataset: "Dataset",
-    template: str = "basic",
+    template: str = "report_basic",
     title: str | None = None,
     base_color_scheme: type[HTMLBaseColors] = HTMLBaseColors,
     alignment_type: str = "levenshtein",
-    alignment_max_line_length: int = 100,
     alignment_color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
 ) -> str:
     """Render an HTML report with alignment visualizations for all examples in a dataset.
 
     Args:
         dataset: The dataset to generate the report for.
-        template: The template name to use (e.g., "basic"). Templates are looked up
-            in the bewer.templates package.
+        template: The template name to use (e.g., "report_basic"). Templates are looked up in the bewer.templates
+            package.
         title: An optional title for the report.
         base_color_scheme: The base color scheme to use for the report.
         alignment_type: The alignment metric to use (default: "levenshtein").
-        alignment_max_line_length: The maximum character length per line for wrapping.
         alignment_color_scheme: The color scheme to use for alignment display.
 
     Returns:
@@ -49,15 +48,22 @@ def render_report_html(
     html = jinja_template.render(
         dataset=dataset,
         title=title,
+        creation_date=datetime.now().strftime("%B %d, %Y"),
         base_color_scheme=base_color_scheme,
+        metrics=[
+            {"name": dataset.metrics.wer.long_name, "value": f"{dataset.metrics.wer.value:.2%}"},
+            {"name": dataset.metrics.cer.long_name, "value": f"{dataset.metrics.cer.value:.2%}"},
+            {"name": "Medical Term Recall", "value": f"{dataset.metrics.legacy_medical_word_accuracy.value:.2%}"},
+        ],
         summary=[
-            {"name": "total_examples", "value": len(dataset.examples)},
+            {"name": "Number of examples", "value": f"{dataset.metrics.summary.num_examples:,.0f}"},
+            {"name": "Number of reference words", "value": f"{dataset.metrics.summary.num_ref_words:,.0f}"},
+            {"name": "Number of reference characters", "value": f"{dataset.metrics.summary.num_ref_chars:,.0f}"},
+            {"name": "Number of hypothesis words", "value": f"{dataset.metrics.summary.num_hyp_words:,.0f}"},
+            {"name": "Number of hypothesis characters", "value": f"{dataset.metrics.summary.num_hyp_chars:,.0f}"},
         ],
         alignment_type=alignment_type,
-        alignment_kwargs={
-            "max_line_length": alignment_max_line_length,
-            "color_scheme": alignment_color_scheme,
-        },
+        alignment_color_scheme=alignment_color_scheme,
     )
 
     return html
@@ -67,11 +73,10 @@ def generate_report(
     dataset: "Dataset",
     path: str | Path | None,
     allow_overwrite: bool,
-    template: str = "basic",
+    template: str = "report_basic",
     title: str | None = None,
     base_color_scheme: type[HTMLBaseColors] = HTMLBaseColors,
     alignment_type: str = "levenshtein",
-    alignment_max_line_length: int = 100,
     alignment_color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
 ) -> str:
     """Generate an HTML report with alignment visualizations for all examples.
@@ -80,12 +85,11 @@ def generate_report(
         dataset: The dataset to generate the report for.
         path: If provided, write the HTML to this file.
         allow_overwrite: If True, overwrite the file if it exists.
-        template: The template name to use (e.g., "basic"). Templates are looked up
+        template: The template name to use (e.g., "report_basic"). Templates are looked up
             in the bewer.templates package.
         title: An optional title for the report.
         base_color_scheme: The base color scheme to use for the report.
         alignment_type: The alignment metric to use (default: "levenshtein").
-        alignment_max_line_length: The maximum character length per line for wrapping.
         alignment_color_scheme: The color scheme to use for alignment display.
 
     Returns:
@@ -97,7 +101,6 @@ def generate_report(
         title=title,
         base_color_scheme=base_color_scheme,
         alignment_type=alignment_type,
-        alignment_max_line_length=alignment_max_line_length,
         alignment_color_scheme=alignment_color_scheme,
     )
 

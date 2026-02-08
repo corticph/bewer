@@ -1,12 +1,12 @@
-<div class="summary-container">
-    <table class="summary-table">
+<div class="list-values-container">
+    <table class="list-values-table">
         {%- if title %}
         <tr>
             <th colspan="2">{{title | safe}}</th>
         </tr>
         {%- endif %}
-        {%- for entry in summary %}
-        <tr class="metric-row">
+        {%- for entry in values %}
+        <tr class="value-row">
             <td>{{entry["name"] | safe}}</td>
             <td>{{entry["value"] | safe}}</td>
         </tr>
