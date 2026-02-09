@@ -1,6 +1,8 @@
 from enum import StrEnum
 from typing import TYPE_CHECKING, Optional, Union
 
+import regex as re
+
 from bewer.preprocessing.context import STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
@@ -12,6 +14,16 @@ class TextType(StrEnum):
     REF = "ref"
     HYP = "hyp"
     KEYWORD = "keyword"
+
+
+def _find_word_slices(text, term, whole_word=True, case_sensitive=False) -> list[slice]:
+    """Find all slices where word appears in text."""
+    if whole_word:
+        pattern = r"\b" + re.escape(term) + r"\b"
+    else:
+        pattern = re.escape(term)
+    flags = 0 if case_sensitive else re.IGNORECASE
+    return [slice(m.start(), m.end()) for m in re.finditer(pattern, text, flags)]
 
 
 def _join_tokens(tokens: "TokenList", normalized: bool = True) -> str:
@@ -135,6 +147,26 @@ class Text:
             normalized (bool): Whether to use normalized tokens.
         """
         return _join_tokens(self.tokens, normalized=normalized)
+
+    def get_keyword_span(self) -> list[slice]:
+        """Get the span of a keyword in the text.
+
+        Args:
+            keyword (str): The keyword to find.
+
+        Returns:
+            list[slice]: The span of the keyword in the text.
+        """
+        if self._text_type != TextType.KEYWORD:
+            raise ValueError("get_keyword_span can only be called on Text objects of type KEYWORD.")
+        if self._src_example is None:
+            raise ValueError("Source example is None, cannot get keyword span.")
+        return _find_word_slices(
+            self._src_example.ref.standardized,
+            self.standardized,
+            whole_word=True,
+            case_sensitive=False,
+        )
 
     def __hash__(self):
         return hash((self.raw, self._text_type))

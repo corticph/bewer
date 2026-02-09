@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Optional
 import regex as re
 
 from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
-from bewer.style.utils import highlight_span
+from bewer.reporting.python.utils import highlight_span
 
 if TYPE_CHECKING:
     from bewer.alignment.op import Op

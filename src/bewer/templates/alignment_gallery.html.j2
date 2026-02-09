@@ -1,0 +1,19 @@
+
+
+<div class="alignment-gallery">
+{% set legend_content -%}
+{%- with color_scheme=color_scheme -%}
+{%- include 'alignment_legend.html.j2' -%}
+{%- endwith -%}
+{%- endset -%}
+{{- legend_content | indent_tabs(2) | safe }}
+
+{% for example in example_iterator -%}
+{% set alignment_content -%}
+{%- with example=example, alignment_type=alignment_type, color_scheme=color_scheme, title_index=loop.index -%}
+{%- include 'alignment_container.html.j2' -%}
+{%- endwith -%}
+{%- endset -%}
+{{- alignment_content | indent_tabs(2) | safe }}
+{%- endfor %}
+</div>

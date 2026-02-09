@@ -1,0 +1,15 @@
+<div class="list-values-container">
+    <table class="list-values-table">
+        {%- if title %}
+        <tr>
+            <th colspan="2">{{title}}</th>
+        </tr>
+        {%- endif %}
+        {%- for entry in values %}
+        <tr class="value-row">
+            <td>{{entry["name"]}}</td>
+            <td>{{entry["value"]}}</td>
+        </tr>
+        {%- endfor %}
+    </table>
+</div>

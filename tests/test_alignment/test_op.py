@@ -6,7 +6,7 @@ import tempfile
 
 import pytest
 
-from bewer.alignment.op import Alignment, Op, OpType
+from bewer.alignment import Alignment, Op, OpType
 
 
 class TestOpType:

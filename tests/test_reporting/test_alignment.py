@@ -1,13 +1,12 @@
-"""Tests for bewer.style.alignment module."""
+"""Tests for bewer.reporting.alignment module."""
 
 from unittest.mock import patch
 
 import pytest
 from rich.text import Text
 
-from bewer.alignment.op import Alignment, Op
-from bewer.alignment.op_type import OpType
-from bewer.style.alignment import (
+from bewer.alignment import Alignment, Op, OpType
+from bewer.reporting.python.alignment import (
     ColorScheme,
     DefaultColorScheme,
     display_basic_aligned,
@@ -230,12 +229,12 @@ class TestGetLinePrefixes:
     def test_get_line_prefixes_contains_ref_label(self):
         """Test that ref prefix contains REF label."""
         ref_prefix, _ = get_line_prefixes(1)
-        assert "REF" in ref_prefix.plain
+        assert "Ref." in ref_prefix.plain
 
     def test_get_line_prefixes_contains_hyp_label(self):
         """Test that hyp prefix contains HYP label."""
         _, hyp_prefix = get_line_prefixes(1)
-        assert "HYP" in hyp_prefix.plain
+        assert "Hyp." in hyp_prefix.plain
 
     def test_get_line_prefixes_contains_line_number(self):
         """Test that ref prefix contains line number."""
@@ -259,7 +258,7 @@ class TestDisplayBasicAligned:
         ]
         alignment = Alignment(ops)
         # Should not raise
-        with patch("bewer.style.alignment.Console") as mock_console:
+        with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment)
             mock_console.return_value.print.assert_called_once()
 
@@ -272,7 +271,7 @@ class TestDisplayBasicAligned:
             Op(type=OpType.DELETE, ref="sat", hyp=None),
         ]
         alignment = Alignment(ops)
-        with patch("bewer.style.alignment.Console") as mock_console:
+        with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment)
             mock_console.return_value.print.assert_called_once()
 
@@ -280,7 +279,7 @@ class TestDisplayBasicAligned:
         """Test display_basic_aligned with a title."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
         alignment = Alignment(ops)
-        with patch("bewer.style.alignment.Console") as mock_console:
+        with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment, title="Test Title")
             mock_console.return_value.print.assert_called_once()
             # Verify the output contains the title
@@ -292,7 +291,7 @@ class TestDisplayBasicAligned:
         """Test display_basic_aligned with integer max_line_length."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
         alignment = Alignment(ops)
-        with patch("bewer.style.alignment.Console") as mock_console:
+        with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment, max_line_length=80)
             mock_console.return_value.print.assert_called_once()
 
@@ -300,7 +299,7 @@ class TestDisplayBasicAligned:
         """Test display_basic_aligned with float max_line_length (fraction of terminal)."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
         alignment = Alignment(ops)
-        with patch("bewer.style.alignment.Console") as mock_console:
+        with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment, max_line_length=0.5)
             mock_console.return_value.print.assert_called_once()
 
@@ -318,7 +317,7 @@ class TestDisplayBasicAligned:
         # Create a long alignment that should wrap
         ops = [Op(type=OpType.MATCH, ref=f"word{i}", hyp=f"word{i}") for i in range(20)]
         alignment = Alignment(ops)
-        with patch("bewer.style.alignment.Console") as mock_console:
+        with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment, max_line_length=50)
             mock_console.return_value.print.assert_called_once()
 
@@ -329,14 +328,14 @@ class TestDisplayBasicAligned:
             Op(type=OpType.MATCH, ref="ing", hyp="ing"),
         ]
         alignment = Alignment(ops)
-        with patch("bewer.style.alignment.Console") as mock_console:
+        with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment)
             mock_console.return_value.print.assert_called_once()
 
     def test_display_basic_aligned_empty_alignment(self):
         """Test display_basic_aligned with empty alignment."""
         alignment = Alignment()
-        with patch("bewer.style.alignment.Console") as mock_console:
+        with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment)
             mock_console.return_value.print.assert_called_once()
 
@@ -348,7 +347,7 @@ class TestAlignmentDisplayMethod:
         """Test that Alignment.display() calls display_basic_aligned."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
         alignment = Alignment(ops)
-        with patch("bewer.alignment.op.display_basic_aligned") as mock_display:
+        with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display()
             mock_display.assert_called_once()
 
@@ -356,7 +355,7 @@ class TestAlignmentDisplayMethod:
         """Test that Alignment.display() passes max_line_length parameter."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
         alignment = Alignment(ops)
-        with patch("bewer.alignment.op.display_basic_aligned") as mock_display:
+        with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display(max_line_length=100)
             mock_display.assert_called_once()
             call_kwargs = mock_display.call_args[1]
@@ -366,7 +365,7 @@ class TestAlignmentDisplayMethod:
         """Test that Alignment.display() passes color_scheme parameter."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
         alignment = Alignment(ops)
-        with patch("bewer.alignment.op.display_basic_aligned") as mock_display:
+        with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display(color_scheme=DefaultColorScheme)
             mock_display.assert_called_once()
 
@@ -380,7 +379,7 @@ class TestAlignmentDisplayMethod:
             index = 42
 
         alignment.set_source(MockExample())
-        with patch("bewer.alignment.op.display_basic_aligned") as mock_display:
+        with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display()
             call_kwargs = mock_display.call_args[1]
             assert "42" in call_kwargs["title"]

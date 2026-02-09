@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" style="margin-left:5px;">
 </p>
 
-> **Note:** This project is not production ready and is still in early development.
+**⚠️ Important:** This project is not production ready and is still in early development. Breaking changes may occur, and backwards compatibility between alpha versions is not guaranteed.
 
 **BeWER is an evaluation and analysis framework for automatic speech recognition in Python.** It defines a transparent YAML-based approach for configuring evaluation pipelines and makes it easy to inspect and analyze individual examples through a web-based interface. The built-in preprocessing pipeline and metrics collection are designed to cover all conventional use cases and then some, while still being fully extensible.
 
@@ -32,7 +32,7 @@ pip install bewer
 **Create a Dataset**
 
 ```python
-from bewer.core import Dataset
+from bewer import Dataset
 
 dataset = Dataset()
 ```
@@ -50,7 +50,7 @@ dataset.load_csv(
 
 Or manually:
 ```python
-for reference, hypothesis in iterator:
+for ref, hyp in iterator:
     dataset.add(ref=ref, hyp=hyp)
 ```
 
@@ -63,5 +63,5 @@ dataset.metrics.list_metrics()
 **Compute metrics lazily**
 
 ```python
-print(f"WER: {dataset.metrics.wer.value:.4f}")
+print(f"WER: {dataset.metrics.wer.value:.2%}")
 ```
