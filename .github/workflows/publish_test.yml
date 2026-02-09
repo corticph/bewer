@@ -21,6 +21,8 @@ on:
 jobs:
   create-tag:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       tag_name: ${{ steps.create_tag.outputs.tag_name }}
     steps:
@@ -37,6 +39,9 @@ jobs:
 
           # Remove 'v' prefix and parse version
           VERSION=${LATEST_TAG#v}
+
+          # Strip any pre-release suffix (dev, a, b, rc and anything after)
+          VERSION=$(echo "$VERSION" | sed 's/\(dev\|alpha\|a\|beta\|b\|rc\).*//')
 
           # Split version into components
           IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
