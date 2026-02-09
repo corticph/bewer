@@ -112,7 +112,7 @@ def generate_report(
             raise FileExistsError(f"File {path} already exists.")
         if not path.parent.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(html)
 
     return html
