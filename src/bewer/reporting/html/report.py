@@ -71,8 +71,8 @@ def render_report_html(
 
 def generate_report(
     dataset: "Dataset",
-    path: str | Path | None,
-    allow_overwrite: bool,
+    path: str | Path | None = None,
+    allow_overwrite: bool = False,
     template: str = "report_basic",
     title: str | None = None,
     base_color_scheme: type[HTMLBaseColors] = HTMLBaseColors,
