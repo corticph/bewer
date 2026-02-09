@@ -69,8 +69,9 @@ class Alignment(list["Op"]):
     def extend(self, iterable: Iterable["Op"]) -> None:
         if self._src_example is not None:
             raise ValueError("Cannot modify Alignment after source example is set.")
-        super().extend(iterable)
-        self._count_operations(iterable)
+        ops = list(iterable)
+        super().extend(ops)
+        self._count_operations(ops)
 
     def _count_operations(self, ops: Iterable["Op"]) -> None:
         """Count operation types and store as attributes."""
