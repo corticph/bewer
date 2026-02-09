@@ -152,9 +152,8 @@ def set_keyword_indicators(alignment: "Alignment") -> None:
 def generate_alignment_html_lines(
     alignment: "Alignment",
     max_line_length: int = 100,
-    title: str | None = None,
     color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
-) -> str:
+) -> list[tuple[str, str]]:
     """Render the alignment as an HTML table.
 
     This function generates only the inner content of the alignment container,
@@ -164,11 +163,10 @@ def generate_alignment_html_lines(
     Args:
         alignment: The alignment to render.
         max_line_length: The maximum character length per line for wrapping.
-        title: An optional title to display above the alignment.
         color_scheme: The color scheme to use for display.
 
     Returns:
-        A string containing the rendered content.
+        A list of tuples, each containing the reference and hypothesis HTML strings for each line.
     """
     ref_line, hyp_line = "", ""
     current_length = 0
@@ -195,75 +193,3 @@ def generate_alignment_html_lines(
 
     lines.append((ref_line, hyp_line))
     return lines
-
-
-# def render_alignment_html(
-#     alignment: "Alignment",
-#     max_line_length: int = 200,
-#     title: str | None = None,
-#     color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
-# ) -> str:
-#     """Render the alignment as a complete HTML document.
-
-#     Args:
-#         alignment: The alignment to render.
-#         max_line_length: The maximum character length per line for wrapping.
-#         title: An optional title to display above the alignment.
-#         color_scheme: The color scheme to use for display.
-
-#     Returns:
-#         A complete HTML document string that can be saved to a file.
-#     """
-#     container = render_alignment_container_html(
-#         alignment,
-#         max_line_length=max_line_length,
-#         title=title,
-#         color_scheme=color_scheme,
-#     )
-
-#     legend = container.color_scheme._generate_legend()
-
-#     html = f"""<!DOCTYPE html>
-# <html lang="en">
-# <head>
-#     <meta charset="UTF-8">
-#     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-#     <title>Alignment Visualization</title>
-#     <style>
-#         body {{
-#             font-family: 'Courier New', Consolas, monospace;
-#             background-color: {HTMLBaseColors.BG_COLOR};
-#             color: {HTMLBaseColors.TEXT_COLOR};
-#             padding: 20px;
-#             line-height: 0.7;
-#         }}
-#         .alignment-container {{
-#             background-color: {HTMLBaseColors.DIV_BG_COLOR};
-#             white-space: pre;
-#             overflow-x: auto;
-#             border-radius: 10px;
-#             margin-bottom: 15px;
-#         }}
-#         .legend {{
-#             margin-top: 20px;
-#             margin-bottom: 20px;
-#             padding: 10px;
-#             border: 1px solid #ededed;
-#             border-radius: 4px;
-#         }}
-#         .legend-item {{
-#             display: inline-block;
-#             margin-right: 20px;
-#         }}
-#     </style>
-# </head>
-# <body>
-#     {legend}
-#     <div class="alignment-container">
-# {container.title}
-# {container.content}
-#     </div>
-# </body>
-# </html>"""
-
-#     return html
