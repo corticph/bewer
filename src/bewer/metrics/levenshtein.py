@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rapidfuzz.distance import Levenshtein as RFLevenshtein
 
-from bewer.alignment.op import Alignment, Op, OpType
+from bewer.alignment import Alignment, Op, OpType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
 
 
@@ -19,17 +19,17 @@ class Levenshtein_(ExampleMetric):
     @metric_value
     def num_substitutions(self) -> int:
         """Get the number of substitutions."""
-        return len([op for op in self.ops if op.type == OpType.SUBSTITUTE])
+        return len([op for op in self.alignment if op.type == OpType.SUBSTITUTE])
 
     @metric_value
     def num_insertions(self) -> int:
         """Get the number of insertions."""
-        return len([op for op in self.ops if op.type == OpType.INSERT])
+        return len([op for op in self.alignment if op.type == OpType.INSERT])
 
     @metric_value
     def num_deletions(self) -> int:
         """Get the number of deletions."""
-        return len([op for op in self.ops if op.type == OpType.DELETE])
+        return len([op for op in self.alignment if op.type == OpType.DELETE])
 
     @metric_value
     def num_edits(self) -> int:
@@ -39,10 +39,10 @@ class Levenshtein_(ExampleMetric):
     @metric_value
     def num_matches(self) -> int:
         """Get the number of matches."""
-        return len(self.ops) - self.num_edits
+        return len(self.alignment) - self.num_edits
 
     @metric_value(main=True)
-    def ops(self) -> Alignment:
+    def alignment(self) -> Alignment:
         """Get the Levenshtein distance between the hypothesis and reference text."""
         return self._get_ops()
 

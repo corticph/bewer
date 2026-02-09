@@ -5,8 +5,7 @@ from unittest.mock import patch
 import pytest
 from rich.text import Text
 
-from bewer.alignment.op import Alignment, Op
-from bewer.alignment.op_type import OpType
+from bewer.alignment import Alignment, Op, OpType
 from bewer.reporting.python.alignment import (
     ColorScheme,
     DefaultColorScheme,
@@ -348,7 +347,7 @@ class TestAlignmentDisplayMethod:
         """Test that Alignment.display() calls display_basic_aligned."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
         alignment = Alignment(ops)
-        with patch("bewer.alignment.op.display_basic_aligned") as mock_display:
+        with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display()
             mock_display.assert_called_once()
 
@@ -356,7 +355,7 @@ class TestAlignmentDisplayMethod:
         """Test that Alignment.display() passes max_line_length parameter."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
         alignment = Alignment(ops)
-        with patch("bewer.alignment.op.display_basic_aligned") as mock_display:
+        with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display(max_line_length=100)
             mock_display.assert_called_once()
             call_kwargs = mock_display.call_args[1]
@@ -366,7 +365,7 @@ class TestAlignmentDisplayMethod:
         """Test that Alignment.display() passes color_scheme parameter."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
         alignment = Alignment(ops)
-        with patch("bewer.alignment.op.display_basic_aligned") as mock_display:
+        with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display(color_scheme=DefaultColorScheme)
             mock_display.assert_called_once()
 
@@ -380,7 +379,7 @@ class TestAlignmentDisplayMethod:
             index = 42
 
         alignment.set_source(MockExample())
-        with patch("bewer.alignment.op.display_basic_aligned") as mock_display:
+        with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display()
             call_kwargs = mock_display.call_args[1]
             assert "42" in call_kwargs["title"]
