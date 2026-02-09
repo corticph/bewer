@@ -43,19 +43,19 @@ class DatasetSummary(Metric):
     @metric_value
     def num_ref_words(self) -> int:
         """The total number of tokens in the reference texts."""
-        return sum([example.metrics.get(self.name).num_ref_words for example in self._src_dataset])
+        return sum(example.metrics.get(self.name).num_ref_words for example in self._src_dataset)
 
     @metric_value
     def num_ref_chars(self) -> int:
         """The total number of characters in the reference texts."""
-        return sum([example.metrics.get(self.name).num_ref_chars for example in self._src_dataset])
+        return sum(example.metrics.get(self.name).num_ref_chars for example in self._src_dataset)
 
     @metric_value
     def num_hyp_words(self) -> int:
         """The total number of tokens in the hypothesis texts."""
-        return sum([example.metrics.get(self.name).num_hyp_words for example in self._src_dataset])
+        return sum(example.metrics.get(self.name).num_hyp_words for example in self._src_dataset)
 
     @metric_value
     def num_hyp_chars(self) -> int:
         """The total number of characters in the hypothesis texts."""
-        return sum([example.metrics.get(self.name).num_hyp_chars for example in self._src_dataset])
+        return sum(example.metrics.get(self.name).num_hyp_chars for example in self._src_dataset)
