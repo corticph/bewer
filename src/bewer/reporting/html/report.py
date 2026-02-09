@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from jinja2 import Environment, PackageLoader
 
-from bewer.style.html.color_schemes import HTMLAlignmentColors, HTMLBaseColors, HTMLDefaultAlignmentColors
+from bewer.reporting.html.color_schemes import HTMLAlignmentColors, HTMLBaseColors, HTMLDefaultAlignmentColors
 
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset

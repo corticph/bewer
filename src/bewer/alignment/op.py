@@ -6,14 +6,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
 from bewer.alignment.op_type import OpType
-from bewer.style.html.alignment import generate_alignment_html_lines as _generate_alignment_html_lines
-from bewer.style.html.color_schemes import HTMLDefaultAlignmentColors
-from bewer.style.python.alignment import DefaultColorScheme, display_basic_aligned
+from bewer.reporting.html.alignment import generate_alignment_html_lines as _generate_alignment_html_lines
+from bewer.reporting.html.color_schemes import HTMLDefaultAlignmentColors
+from bewer.reporting.python.alignment import DefaultColorScheme, display_basic_aligned
 
 if TYPE_CHECKING:
     from bewer.core.example import Example
-    from bewer.style.html.color_schemes import HTMLAlignmentColors
-    from bewer.style.python.alignment import ColorScheme
+    from bewer.reporting.html.color_schemes import HTMLAlignmentColors
+    from bewer.reporting.python.alignment import ColorScheme
 
 
 @dataclass

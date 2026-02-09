@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 
 from bewer.flags import DEFAULT
 from bewer.preprocessing.context import set_pipeline
-from bewer.style.python.tables import print_metric_table
+from bewer.reporting.python.tables import print_metric_table
 
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset

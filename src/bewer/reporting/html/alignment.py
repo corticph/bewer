@@ -8,7 +8,7 @@ from html import escape
 from typing import TYPE_CHECKING
 
 from bewer.alignment.op_type import OpType
-from bewer.style.html.color_schemes import (
+from bewer.reporting.html.color_schemes import (
     HTMLAlignmentColors,
     HTMLDefaultAlignmentColors,
 )

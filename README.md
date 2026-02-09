@@ -50,7 +50,7 @@ dataset.load_csv(
 
 Or manually:
 ```python
-for reference, hypothesis in iterator:
+for ref, hyp in iterator:
     dataset.add(ref=ref, hyp=hyp)
 ```
 
@@ -63,5 +63,5 @@ dataset.metrics.list_metrics()
 **Compute metrics lazily**
 
 ```python
-print(f"WER: {dataset.metrics.wer.value:.4f}")
+print(f"WER: {dataset.metrics.wer.value:.2%}")
 ```
