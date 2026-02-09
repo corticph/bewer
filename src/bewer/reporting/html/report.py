@@ -41,7 +41,7 @@ def render_report_html(
         The rendered HTML report string.
     """
     # Load and render the Jinja template
-    env = Environment(loader=PackageLoader("bewer", "templates"))
+    env = Environment(loader=PackageLoader("bewer", "templates"), autoescape=True)
     env.filters["indent_tabs"] = indent_tabs
     jinja_template = env.get_template(f"{template}.html.j2")
 
