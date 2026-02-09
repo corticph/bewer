@@ -55,6 +55,11 @@ class Alignment(list["Op"]):
         """Get the number of deletion operations."""
         return self._op_counts[OpType.DELETE]
 
+    @property
+    def num_edits(self) -> int:
+        """Get the total number of edit operations (substitutions, insertions, deletions)."""
+        return self.num_substitutions + self.num_insertions + self.num_deletions
+
     def append(self, op: "Op") -> None:
         if self._src_example is not None:
             raise ValueError("Cannot modify Alignment after source example is set.")

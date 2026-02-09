@@ -20,27 +20,27 @@ class ErrorAlign_(ExampleMetric):
     @metric_value
     def num_substitutions(self) -> int:
         """Get the number of substitutions."""
-        return len([op for op in self.alignment if op.type == OpType.SUBSTITUTE])
+        return self.alignment.num_substitutions
 
     @metric_value
     def num_insertions(self) -> int:
         """Get the number of insertions."""
-        return len([op for op in self.alignment if op.type == OpType.INSERT])
+        return self.alignment.num_insertions
 
     @metric_value
     def num_deletions(self) -> int:
         """Get the number of deletions."""
-        return len([op for op in self.alignment if op.type == OpType.DELETE])
+        return self.alignment.num_deletions
 
     @metric_value
     def num_edits(self) -> int:
         """Get the number of edits."""
-        return self.num_insertions + self.num_deletions + self.num_substitutions
+        return self.alignment.num_edits
 
     @metric_value
     def num_matches(self) -> int:
         """Get the number of matches."""
-        return len(self.alignment) - self.num_edits
+        return self.alignment.num_matches
 
     @metric_value(main=True)
     def alignment(self) -> Alignment:
@@ -73,8 +73,7 @@ class ErrorAlign_(ExampleMetric):
                 ref_idx += 1
             ea_ops.append(op)
 
-        alignment = Alignment(ea_ops)
-        alignment.set_source(self.example)
+        alignment = Alignment(ea_ops, src_example=self.example)
         return alignment
 
 
