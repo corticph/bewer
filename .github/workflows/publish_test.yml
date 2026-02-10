@@ -1,4 +1,4 @@
-name: Publish to TestPyPI
+name: Publish (test-index)
 
 on:
   workflow_dispatch:
@@ -128,3 +128,15 @@ jobs:
         with:
           repository-url: https://test.pypi.org/legacy/
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+
+  cleanup-tag:
+    needs: [create-tag, publish]
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Delete test tag from remote
+        run: git push origin --delete "${{ needs.create-tag.outputs.tag_name }}"
