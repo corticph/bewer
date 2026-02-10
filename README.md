@@ -4,7 +4,7 @@
 *Beyond Word Error Rate → BeWER (/ˈbiːvər/) 🦫*
 
 <p align="left">
-  <img src="https://img.shields.io/badge/python-%203.11%20|%203.12%20|%203.13-green" alt="Python Versions">
+  <img src="https://img.shields.io/badge/python-%203.10%20|%203.11%20|%203.12%20|%203.13|%203.14-green" alt="Python Versions">
   <img src="https://codecov.io/gh/corticph/bewer/graph/badge.svg?token=4QBH8TD4T4" alt="Coverage" style="margin-left:5px;">
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" style="margin-left:5px;">
 </p>
