@@ -19,19 +19,15 @@ on:
         type: string
 
 jobs:
-  create-tag:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      tag_name: ${{ steps.create_tag.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Create unique test tag
-        id: create_tag
+      - name: Compute test version
+        id: version
         run: |
           # Get the latest version tag
           LATEST_TAG=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || echo "v0.0.0")
@@ -74,27 +70,9 @@ jobs:
             SUFFIX_NUM=$(date +%Y%m%d%H%M%S)
           fi
 
-          # Create PEP 440 compliant tag
-          TAG_NAME="v${BASE_VERSION}${SUFFIX}${SUFFIX_NUM}"
-
-          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
-          echo "Creating test tag: ${TAG_NAME}"
-          echo "This will create version: ${BASE_VERSION}${SUFFIX}${SUFFIX_NUM}"
-
-          # Create and push the tag
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "${TAG_NAME}" -m "Test release ${TAG_NAME}"
-          git push origin "${TAG_NAME}"
-
-  build:
-    needs: create-tag
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ needs.create-tag.outputs.tag_name }}
+          TEST_VERSION="${BASE_VERSION}${SUFFIX}${SUFFIX_NUM}"
+          echo "test_version=${TEST_VERSION}" >> $GITHUB_OUTPUT
+          echo "Test version: ${TEST_VERSION}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -105,6 +83,8 @@ jobs:
         run: pip install build
 
       - name: Build package
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ steps.version.outputs.test_version }}
         run: python -m build
 
       - name: Upload artifacts
@@ -114,7 +94,7 @@ jobs:
           path: dist/
 
   publish:
-    needs: [create-tag, build]
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
@@ -128,15 +108,3 @@ jobs:
         with:
           repository-url: https://test.pypi.org/legacy/
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-
-  cleanup-tag:
-    needs: [create-tag, publish]
-    runs-on: ubuntu-latest
-    if: always()
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Delete test tag from remote
-        run: git push origin --delete "${{ needs.create-tag.outputs.tag_name }}"
