@@ -3,7 +3,7 @@ from functools import cached_property
 from importlib import resources
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Iterable, Union
 
 import pandas as pd
 from omegaconf import OmegaConf
@@ -47,7 +47,7 @@ class Dataset(object):
         self.config = OmegaConf.load(self.config_path)
         self.pipelines = resolve_pipelines(self.config)
         self.examples = []
-        self.vocabs = {}
+        self.keyword_vocabs = {}
         self.metrics = MetricCollection(self)
 
     @cached_property
@@ -82,9 +82,9 @@ class Dataset(object):
         if not isinstance(df, pd.DataFrame):
             raise TypeError("df must be a pandas DataFrame")
 
-        # Prepare and add vocabulary phrases to the tokenizer
         for col in keyword_cols:
             df[col] = self._infer_keyword_column(df[col])
+            self._update_keyword_vocab(col, set(chain.from_iterable(df[col])))
 
         # Add examples to the dataset
         for row in df.itertuples(index=False):
@@ -104,6 +104,15 @@ class Dataset(object):
         df = pd.read_csv(csv_file, **kwargs)
         self.load_pandas(df, ref_col, hyp_col, keyword_cols)
         return self
+
+    def add_keyword_list(self, name: str, keywords: Iterable[str]) -> None:
+        """Add keywords to the dataset."""
+        keywords = set(keywords)
+        self._update_keyword_vocab(name, keywords)
+
+        # Traverse already added examples and add keywords if they are present in the reference text
+        for example in self.examples:
+            example._prepare_and_validate_keywords({name: list(keywords)}, _raise_warning=False)
 
     @staticmethod
     def get_config_path(config_path: str | None) -> str:
@@ -126,6 +135,13 @@ class Dataset(object):
             return series
         else:
             raise ValueError(f"Column {series.name} is not a list (or literal) or string")
+
+    def _update_keyword_vocab(self, name: str, keywords: set[str]) -> None:
+        """Update the keyword vocabulary with new keywords."""
+        if name in self.keyword_vocabs:
+            self.keyword_vocabs[name].update(keywords)
+        else:
+            self.keyword_vocabs[name] = set(keywords)
 
     def __len__(self) -> int:
         """Get the number of examples in the dataset."""
