@@ -1,4 +1,4 @@
-name: Publish (test-index)
+name: Publish to TestPyPI
 
 on:
   workflow_dispatch:
