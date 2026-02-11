@@ -1,4 +1,4 @@
-from enum import StrEnum
+from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, Optional, Union
 
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from bewer.core.token import Token
 
 
-class TextType(StrEnum):
+class TextType(str, Enum):
     REF = "ref"
     HYP = "hyp"
     KEYWORD = "keyword"
