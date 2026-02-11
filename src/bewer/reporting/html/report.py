@@ -7,9 +7,43 @@ from typing import TYPE_CHECKING
 from jinja2 import Environment, PackageLoader
 
 from bewer.reporting.html.color_schemes import HTMLAlignmentColors, HTMLBaseColors, HTMLDefaultAlignmentColors
+from bewer.reporting.html.labels import HTMLAlignmentLabels
 
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
+
+
+class ReportMetric:
+    """Specification for a metric to include in the report."""
+
+    def __init__(self, name: str, label: str | None = None, format: str = ".2%"):
+        self.name = name  # metric registry name (e.g. "wer")
+        self.label = label  # display label override (default: metric.long_name)
+        self.format = format  # format spec for the value
+
+
+class ReportSummaryItem:
+    """Specification for a summary item to include in the report."""
+
+    def __init__(self, name: str, label: str | None = None, format: str = ",.0f"):
+        self.name = name  # summary attribute name (e.g. "num_examples")
+        self.label = label  # display label override
+        self.format = format  # format spec
+
+
+DEFAULT_REPORT_METRICS = [
+    ReportMetric("wer"),
+    ReportMetric("cer"),
+    ReportMetric("legacy_medical_word_accuracy", label="Medical Term Recall"),
+]
+
+DEFAULT_REPORT_SUMMARY_ITEMS = [
+    ReportSummaryItem("num_examples", label="Number of examples"),
+    ReportSummaryItem("num_ref_words", label="Number of reference words"),
+    ReportSummaryItem("num_ref_chars", label="Number of reference characters"),
+    ReportSummaryItem("num_hyp_words", label="Number of hypothesis words"),
+    ReportSummaryItem("num_hyp_chars", label="Number of hypothesis characters"),
+]
 
 
 def indent_tabs(text: str, width: int = 1) -> str:
@@ -25,6 +59,9 @@ def render_report_html(
     base_color_scheme: type[HTMLBaseColors] = HTMLBaseColors,
     alignment_type: str = "levenshtein",
     alignment_color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+    alignment_labels: type[HTMLAlignmentLabels] = HTMLAlignmentLabels,
+    report_metrics: list[ReportMetric] | None = None,
+    report_summary: list[ReportSummaryItem] | None = None,
 ) -> str:
     """Render an HTML report with alignment visualizations for all examples in a dataset.
 
@@ -36,10 +73,34 @@ def render_report_html(
         base_color_scheme: The base color scheme to use for the report.
         alignment_type: The alignment metric to use (default: "levenshtein").
         alignment_color_scheme: The color scheme to use for alignment display.
+        alignment_labels: The labels and tooltips to use for alignment display.
+        report_metrics: List of ReportMetric specs controlling which metrics appear. Defaults to
+            DEFAULT_REPORT_METRICS.
+        report_summary: List of ReportSummaryItem specs controlling the summary section. Defaults to
+            DEFAULT_REPORT_SUMMARY_ITEMS.
 
     Returns:
         The rendered HTML report string.
     """
+    if report_metrics is None:
+        report_metrics = DEFAULT_REPORT_METRICS
+    if report_summary is None:
+        report_summary = DEFAULT_REPORT_SUMMARY_ITEMS
+
+    # Resolve metrics against the dataset
+    resolved_metrics = []
+    for spec in report_metrics:
+        metric = dataset.metrics.get(spec.name)
+        label = spec.label if spec.label is not None else metric.long_name
+        resolved_metrics.append({"name": label, "value": f"{metric.value:{spec.format}}"})
+
+    # Resolve summary items against the dataset summary
+    resolved_summary = []
+    for spec in report_summary:
+        value = getattr(dataset.metrics.summary, spec.name)
+        label = spec.label if spec.label is not None else spec.name
+        resolved_summary.append({"name": label, "value": f"{value:{spec.format}}"})
+
     # Load and render the Jinja template
     env = Environment(loader=PackageLoader("bewer", "templates"), autoescape=True)
     env.filters["indent_tabs"] = indent_tabs
@@ -50,20 +111,11 @@ def render_report_html(
         title=title,
         creation_date=datetime.now().strftime("%B %d, %Y"),
         base_color_scheme=base_color_scheme,
-        metrics=[
-            {"name": dataset.metrics.wer.long_name, "value": f"{dataset.metrics.wer.value:.2%}"},
-            {"name": dataset.metrics.cer.long_name, "value": f"{dataset.metrics.cer.value:.2%}"},
-            {"name": "Medical Term Recall", "value": f"{dataset.metrics.legacy_medical_word_accuracy.value:.2%}"},
-        ],
-        summary=[
-            {"name": "Number of examples", "value": f"{dataset.metrics.summary.num_examples:,.0f}"},
-            {"name": "Number of reference words", "value": f"{dataset.metrics.summary.num_ref_words:,.0f}"},
-            {"name": "Number of reference characters", "value": f"{dataset.metrics.summary.num_ref_chars:,.0f}"},
-            {"name": "Number of hypothesis words", "value": f"{dataset.metrics.summary.num_hyp_words:,.0f}"},
-            {"name": "Number of hypothesis characters", "value": f"{dataset.metrics.summary.num_hyp_chars:,.0f}"},
-        ],
+        metrics=resolved_metrics,
+        summary=resolved_summary,
         alignment_type=alignment_type,
         alignment_color_scheme=alignment_color_scheme,
+        alignment_labels=alignment_labels,
     )
 
     return html
@@ -78,6 +130,9 @@ def generate_report(
     base_color_scheme: type[HTMLBaseColors] = HTMLBaseColors,
     alignment_type: str = "levenshtein",
     alignment_color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+    alignment_labels: type[HTMLAlignmentLabels] = HTMLAlignmentLabels,
+    report_metrics: list[ReportMetric] | None = None,
+    report_summary: list[ReportSummaryItem] | None = None,
 ) -> str:
     """Generate an HTML report with alignment visualizations for all examples.
 
@@ -91,6 +146,11 @@ def generate_report(
         base_color_scheme: The base color scheme to use for the report.
         alignment_type: The alignment metric to use (default: "levenshtein").
         alignment_color_scheme: The color scheme to use for alignment display.
+        alignment_labels: The labels and tooltips to use for alignment display.
+        report_metrics: List of ReportMetric specs controlling which metrics appear. Defaults to
+            DEFAULT_REPORT_METRICS.
+        report_summary: List of ReportSummaryItem specs controlling the summary section. Defaults to
+            DEFAULT_REPORT_SUMMARY_ITEMS.
 
     Returns:
         The rendered HTML report string.
@@ -102,6 +162,9 @@ def generate_report(
         base_color_scheme=base_color_scheme,
         alignment_type=alignment_type,
         alignment_color_scheme=alignment_color_scheme,
+        alignment_labels=alignment_labels,
+        report_metrics=report_metrics,
+        report_summary=report_summary,
     )
 
     if path is not None:

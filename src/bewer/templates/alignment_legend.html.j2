@@ -1,9 +1,9 @@
 <div class="legend-container">
     Highlight colors:
-    <span class="legend-container-item"><span style="color: {{color_scheme.MATCH}};">■</span> Match</span>
-    <span class="legend-container-item"><span style="color: {{color_scheme.SUB}};">■</span> Substitution</span>
-    <span class="legend-container-item"><span style="color: {{color_scheme.INS}};">■</span> Insertion</span>
-    <span class="legend-container-item"><span style="color: {{color_scheme.DEL}};">■</span> Deletion</span>
-    <span class="legend-container-item"><span style="color: {{color_scheme.PAD}};">■</span> Padding</span>
-    <span class="legend-container-item"><span class="keyword-box">Keyword</span></span>
+    <span class="legend-container-item"{% if labels.MATCH_TOOLTIP %} data-tooltip="{{ labels.MATCH_TOOLTIP }}"{% endif %}><span style="color: {{color_scheme.MATCH}};">■</span> {{ labels.MATCH }}</span>
+    <span class="legend-container-item"{% if labels.SUBSTITUTION_TOOLTIP %} data-tooltip="{{ labels.SUBSTITUTION_TOOLTIP }}"{% endif %}><span style="color: {{color_scheme.SUB}};">■</span> {{ labels.SUBSTITUTION }}</span>
+    <span class="legend-container-item"{% if labels.INSERTION_TOOLTIP %} data-tooltip="{{ labels.INSERTION_TOOLTIP }}"{% endif %}><span style="color: {{color_scheme.INS}};">■</span> {{ labels.INSERTION }}</span>
+    <span class="legend-container-item"{% if labels.DELETION_TOOLTIP %} data-tooltip="{{ labels.DELETION_TOOLTIP }}"{% endif %}><span style="color: {{color_scheme.DEL}};">■</span> {{ labels.DELETION }}</span>
+    <span class="legend-container-item"{% if labels.PADDING_TOOLTIP %} data-tooltip="{{ labels.PADDING_TOOLTIP }}"{% endif %}><span style="color: {{color_scheme.PAD}};">■</span> {{ labels.PADDING }}</span>
+    <span class="legend-container-item"{% if labels.KEYWORD_TOOLTIP %} data-tooltip="{{ labels.KEYWORD_TOOLTIP }}"{% endif %}><span class="keyword-box">{{ labels.KEYWORD }}</span></span>
 </div>
