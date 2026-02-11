@@ -52,7 +52,7 @@ class TestExamplePrepareAndValidateKeywords:
         example = sample_dataset[-1]
         assert "animals" in example.keywords
         assert len(example.keywords["animals"]) == 1
-        assert isinstance(example.keywords["animals"][0], Text)
+        assert isinstance(example.keywords["animals"].pop(), Text)
 
     def test_keyword_not_in_ref_warns(self, sample_dataset):
         """Test that keyword not in reference issues warning."""
