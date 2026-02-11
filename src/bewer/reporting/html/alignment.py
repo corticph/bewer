@@ -14,7 +14,8 @@ from bewer.reporting.html.color_schemes import (
 )
 
 if TYPE_CHECKING:
-    from bewer.alignment.op import Alignment, Op
+    from bewer.alignment.alignment import Alignment
+    from bewer.alignment.op import Op
 
 
 def get_html_padding(length: int, color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors) -> str:

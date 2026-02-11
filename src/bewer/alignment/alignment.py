@@ -89,7 +89,7 @@ class Alignment(list["Op"]):
             char_index (int): The character index to look up.
 
         Returns:
-            Optional[Op]: The token that starts at the given character index, or None if not found.
+            Optional[Op]: The op that starts at the given character index, or None if not found.
         """
         op_index = self._start_index_mapping.get(char_index, None)
         if op_index is not None:

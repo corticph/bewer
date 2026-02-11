@@ -123,10 +123,7 @@ class Text:
 
     @property
     def standardized(self) -> str:
-        """Get the standardized text using a specified standardizer.
-
-        Args:
-            standardizer (str): The name of the text standardization function to apply.
+        """Get the standardized text using the active standardizer.
 
         Returns:
             str: The standardized string.
@@ -154,13 +151,10 @@ class Text:
         return _join_tokens(self.tokens, normalized=normalized)
 
     def get_keyword_span(self) -> list[slice]:
-        """Get the span of a keyword in the text.
-
-        Args:
-            keyword (str): The keyword to find.
+        """Get the span of this keyword in the source example's reference text.
 
         Returns:
-            list[slice]: The span of the keyword in the text.
+            list[slice]: The spans where this keyword appears in the reference text.
         """
         if self._text_type != TextType.KEYWORD:
             raise ValueError("get_keyword_span can only be called on Text objects of type KEYWORD.")

@@ -41,7 +41,7 @@ class Dataset(object):
         The dataset must be populated using one of the load_* methods or manually using the add() method.
 
         Args:
-            config_path (str | None): Path to the configuration file. If None, uses the default configuration.
+            config (str | None): Path to the configuration file. If None, uses the default configuration.
         """
         self.config_path = self.get_config_path(config)
         self.config = OmegaConf.load(self.config_path)
@@ -74,14 +74,16 @@ class Dataset(object):
         example = Example(ref, hyp, keywords=keywords, src_dataset=self, index=len(self))
         self.examples.append(example)
 
-    def load_dataset(self, dataset, ref_col="ref", hyp_col="hyp", keyword_cols: list = []) -> None:
+    def load_dataset(self, dataset, ref_col="ref", hyp_col="hyp", keyword_cols: list | None = None) -> None:
         """Load a Hugging Face dataset."""
         raise NotImplementedError("load_dataset() method not implemented.")
 
-    def load_pandas(self, df, ref_col="ref", hyp_col="hyp", keyword_cols: list = []) -> None:
+    def load_pandas(self, df, ref_col="ref", hyp_col="hyp", keyword_cols: list | None = None) -> None:
         """Add a pandas DataFrame to the dataset."""
         if not isinstance(df, pd.DataFrame):
             raise TypeError("df must be a pandas DataFrame")
+        if keyword_cols is None:
+            keyword_cols = []
 
         for col in keyword_cols:
             df[col] = self._infer_keyword_column(df[col])
@@ -100,14 +102,21 @@ class Dataset(object):
             self.add(ref, hyp, keywords=keywords)
         return self
 
-    def load_csv(self, csv_file: str, ref_col="ref", hyp_col="hyp", keyword_cols: list = [], **kwargs) -> None:
+    def load_csv(self, csv_file: str, ref_col="ref", hyp_col="hyp", keyword_cols: list | None = None, **kwargs) -> None:
         """Add a CSV file to the dataset."""
         df = pd.read_csv(csv_file, **kwargs)
         self.load_pandas(df, ref_col, hyp_col, keyword_cols)
         return self
 
     def add_keyword_list(self, name: str, keywords: Iterable[str]) -> None:
-        """Add keywords to the dataset."""
+        """Add a named keyword vocabulary to the dataset.
+
+        Keywords are matched against the reference text of each example (including already added examples).
+
+        Args:
+            name (str): The name of the keyword vocabulary.
+            keywords (Iterable[str]): The keywords to add.
+        """
         keywords = set(keywords)
         self._update_dynamic_keyword_vocab(name, keywords)
 
@@ -124,7 +133,7 @@ class Dataset(object):
                 return config_path
         return Path(config_path).resolve()
 
-    def _infer_keyword_column(self, series: pd.Series) -> set:
+    def _infer_keyword_column(self, series: pd.Series) -> pd.Series:
         """Infer the keyword terms from a pandas Series."""
         if series.map(is_list_literal).all():
             series = series.apply(ast.literal_eval)

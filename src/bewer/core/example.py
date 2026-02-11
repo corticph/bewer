@@ -72,9 +72,9 @@ class Example:
         if keywords is None:
             return
 
-        for vocab_name, keywords in keywords.items():
+        for vocab_name, vocab_keywords in keywords.items():
             validated_keywords = []
-            for keyword in keywords:
+            for keyword in vocab_keywords:
                 # Check if keyword is present in reference text (case-insensitive)
                 if keyword.lower() not in self.ref.raw.lower():
                     if _raise_warning:

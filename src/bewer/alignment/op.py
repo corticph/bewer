@@ -54,7 +54,6 @@ class Op:
         self.ref_right_partial = ref_right_partial
         self._src_alignment = _src_alignment
 
-    def __post_init__(self):
         if self.type == OpType.MATCH:
             if self.ref is None or self.hyp is None:
                 raise ValueError("MATCH operation must have non-empty ref or hyp.")
@@ -92,7 +91,7 @@ class Op:
         if self._ref_span is not None:
             return self._ref_span
         if self.ref_token_idx is not None:
-            if self._src_alignment._src_example is None:
+            if self._src_alignment is None or self._src_alignment._src_example is None:
                 return None
             return self._src_alignment._src_example.ref.tokens[self.ref_token_idx].slice
         return None
@@ -103,7 +102,7 @@ class Op:
         if self._hyp_span is not None:
             return self._hyp_span
         if self.hyp_token_idx is not None:
-            if self._src_alignment._src_example is None:
+            if self._src_alignment is None or self._src_alignment._src_example is None:
                 return None
             return self._src_alignment._src_example.hyp.tokens[self.hyp_token_idx].slice
         return None
