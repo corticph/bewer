@@ -142,6 +142,24 @@
         .legend-container-item {
             display: inline-block;
             margin: 0px 10px;
+            position: relative;
+        }
+        .legend-container-item[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            min-width: 200px;
+            max-width: 400px;
+            white-space: normal;
+            word-wrap: break-word;
+            z-index: 20;
         }
         .icon {
             position: absolute;
@@ -191,7 +209,7 @@
 
 
 {% set alignment_gallery -%}
-{%- with example_iterator=dataset, color_scheme=alignment_color_scheme, alignment_type=alignment_type -%}
+{%- with example_iterator=dataset, color_scheme=alignment_color_scheme, alignment_type=alignment_type, labels=alignment_labels -%}
 {%- include 'alignment_gallery.html.j2' -%}
 {%- endwith -%}
 {%- endset -%}
