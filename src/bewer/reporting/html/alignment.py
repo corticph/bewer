@@ -112,41 +112,24 @@ def format_alignment_op_html(
     raise ValueError(f"Unknown operation type: {op.type}")
 
 
-def get_ref_span(op: "Op", alignment: "Alignment") -> slice | None:
-    """Get the reference span for an operation."""
-    if op.ref_span is not None:
-        return op.ref_span
-    if op.ref_token_idx is not None:
-        if alignment._src_example is None:
-            return None
-        return alignment._src_example.ref.tokens[op.ref_token_idx].slice
-    return None
-
-
 def set_keyword_indicators(alignment: "Alignment") -> None:
     """Set indicators on alignment operations that correspond to keywords in the reference text."""
+
     example = alignment._src_example
-
-    if example.keywords is None:
+    if not example.keywords:
         return
-    if "medical_terms" not in example.keywords:
-        return
-
-    medical_terms = example.keywords["medical_terms"]
-    for term in medical_terms:
-        term_spans = term.get_keyword_span()
-        if not term_spans:
-            continue
-        for term_span in term_spans:
-            for op in alignment:
-                ref_span = get_ref_span(op, alignment)
-                if ref_span is None:
+    for keywords in example.keywords.values():
+        for keyword in keywords:
+            keyword_spans = keyword.get_keyword_span()
+            if not keyword_spans:
+                continue
+            for keyword_span in keyword_spans:
+                start_op = alignment.start_index_to_op(keyword_span.start)
+                end_op = alignment.end_index_to_op(keyword_span.stop)
+                if start_op is None or end_op is None:
                     continue
-                if ref_span.start == term_span.start:
-                    setattr(op, "keyword_start", True)
-                if ref_span.stop == term_span.stop:
-                    setattr(op, "keyword_end", True)
-                    break
+                setattr(start_op, "keyword_start", True)
+                setattr(end_op, "keyword_end", True)
 
 
 def generate_alignment_html_lines(

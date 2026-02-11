@@ -52,6 +52,8 @@ class Example:
         self.hyp = Text(hyp, src_example=self, text_type=TextType.HYP)
         self.keywords = {}
         self._prepare_and_validate_keywords(keywords, _raise_warning=True)
+        if src_dataset is not None:
+            self._prepare_and_validate_keywords(src_dataset._dynamic_keyword_vocabs, _raise_warning=False)
 
     @property
     def index(self) -> Optional[int]:
@@ -73,6 +75,7 @@ class Example:
         for vocab_name, keywords in keywords.items():
             validated_keywords = []
             for keyword in keywords:
+                # Check if keyword is present in reference text (case-insensitive)
                 if keyword.lower() not in self.ref.raw.lower():
                     if _raise_warning:
                         warnings.warn(
@@ -80,7 +83,19 @@ class Example:
                             KeywordNotFoundWarning,
                         )
                     continue
-                validated_keywords.append(Text(keyword, src_example=self, text_type=TextType.KEYWORD))
+
+                # Convert keyword to Text object and check if it has valid spans in the reference text
+                keyword = Text(keyword, src_example=self, text_type=TextType.KEYWORD)
+                if len(keyword.get_keyword_span()) == 0:
+                    if _raise_warning:
+                        warnings.warn(
+                            f"Keyword '{keyword.raw}' not found in reference text after tokenization: "
+                            f"Example {self._index}. Will not be included.",
+                            KeywordNotFoundWarning,
+                        )
+                    continue
+
+                validated_keywords.append(keyword)
 
             if len(validated_keywords) > 0:
                 if vocab_name in self.keywords:

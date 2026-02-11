@@ -47,7 +47,8 @@ class Dataset(object):
         self.config = OmegaConf.load(self.config_path)
         self.pipelines = resolve_pipelines(self.config)
         self.examples = []
-        self.keyword_vocabs = {}
+        self._dynamic_keyword_vocabs = {}
+        self._static_keyword_vocabs = {}
         self.metrics = MetricCollection(self)
 
     @cached_property
@@ -84,7 +85,7 @@ class Dataset(object):
 
         for col in keyword_cols:
             df[col] = self._infer_keyword_column(df[col])
-            self._update_keyword_vocab(col, set(chain.from_iterable(df[col])))
+            self._update_static_keyword_vocab(col, set(chain.from_iterable(df[col])))
 
         # Add examples to the dataset
         for row in df.itertuples(index=False):
@@ -108,9 +109,9 @@ class Dataset(object):
     def add_keyword_list(self, name: str, keywords: Iterable[str]) -> None:
         """Add keywords to the dataset."""
         keywords = set(keywords)
-        self._update_keyword_vocab(name, keywords)
+        self._update_dynamic_keyword_vocab(name, keywords)
 
-        # Traverse already added examples and add keywords if they are present in the reference text
+        # Traverse already added examples and add keywords if they are present in the reference text.
         for example in self.examples:
             example._prepare_and_validate_keywords({name: list(keywords)}, _raise_warning=False)
 
@@ -136,12 +137,19 @@ class Dataset(object):
         else:
             raise ValueError(f"Column {series.name} is not a list (or literal) or string")
 
-    def _update_keyword_vocab(self, name: str, keywords: set[str]) -> None:
+    def _update_dynamic_keyword_vocab(self, name: str, keywords: set[str]) -> None:
         """Update the keyword vocabulary with new keywords."""
-        if name in self.keyword_vocabs:
-            self.keyword_vocabs[name].update(keywords)
+        if name in self._dynamic_keyword_vocabs:
+            self._dynamic_keyword_vocabs[name].update(keywords)
         else:
-            self.keyword_vocabs[name] = set(keywords)
+            self._dynamic_keyword_vocabs[name] = set(keywords)
+
+    def _update_static_keyword_vocab(self, name: str, keywords: set[str]) -> None:
+        """Update the static keyword vocabulary with new keywords."""
+        if name in self._static_keyword_vocabs:
+            self._static_keyword_vocabs[name].update(keywords)
+        else:
+            self._static_keyword_vocabs[name] = set(keywords)
 
     def __len__(self) -> int:
         """Get the number of examples in the dataset."""

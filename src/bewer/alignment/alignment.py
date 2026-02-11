@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, Optional, Union
 
@@ -35,6 +36,9 @@ class Alignment(list["Op"]):
         self._count_operations(self)
         self._src_example = src_example
 
+        for op in self:
+            op.set_source(self)
+
     @property
     def num_matches(self) -> int:
         """Get the number of match operations."""
@@ -59,6 +63,52 @@ class Alignment(list["Op"]):
     def num_edits(self) -> int:
         """Get the total number of edit operations (substitutions, insertions, deletions)."""
         return self.num_substitutions + self.num_insertions + self.num_deletions
+
+    @cached_property
+    def _start_index_mapping(self) -> dict[int, int]:
+        """Create a mapping from character start index to token index for quick lookup."""
+        mapping = {}
+        for i, op in enumerate(self):
+            if op.ref_span is not None:
+                mapping[op.ref_span.start] = i
+        return mapping
+
+    @cached_property
+    def _end_index_mapping(self) -> dict[int, int]:
+        """Create a mapping from character end index to token index for quick lookup."""
+        mapping = {}
+        for i, op in enumerate(self):
+            if op.ref_span is not None:
+                mapping[op.ref_span.stop] = i
+        return mapping
+
+    def start_index_to_op(self, char_index: int) -> Optional[Op]:
+        """Get the op that starts at the given character index.
+
+        Args:
+            char_index (int): The character index to look up.
+
+        Returns:
+            Optional[Op]: The token that starts at the given character index, or None if not found.
+        """
+        op_index = self._start_index_mapping.get(char_index, None)
+        if op_index is not None:
+            return self[op_index]
+        return None
+
+    def end_index_to_op(self, char_index: int) -> Optional[Op]:
+        """Get the op that ends at the given character index.
+
+        Args:
+            char_index (int): The character index to look up.
+
+        Returns:
+            Optional[Op]: The op that ends at the given character index, or None if not found.
+        """
+        op_index = self._end_index_mapping.get(char_index, None)
+        if op_index is not None:
+            return self[op_index]
+        return None
 
     def append(self, op: "Op") -> None:
         if self._src_example is not None:
