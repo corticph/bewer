@@ -3,7 +3,7 @@ from functools import cached_property
 from importlib import resources
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Iterable, Union
 
 import pandas as pd
 from omegaconf import OmegaConf
@@ -41,13 +41,14 @@ class Dataset(object):
         The dataset must be populated using one of the load_* methods or manually using the add() method.
 
         Args:
-            config_path (str | None): Path to the configuration file. If None, uses the default configuration.
+            config (str | None): Path to the configuration file. If None, uses the default configuration.
         """
         self.config_path = self.get_config_path(config)
         self.config = OmegaConf.load(self.config_path)
         self.pipelines = resolve_pipelines(self.config)
         self.examples = []
-        self.vocabs = {}
+        self._dynamic_keyword_vocabs = {}
+        self._static_keyword_vocabs = {}
         self.metrics = MetricCollection(self)
 
     @cached_property
@@ -73,18 +74,20 @@ class Dataset(object):
         example = Example(ref, hyp, keywords=keywords, src_dataset=self, index=len(self))
         self.examples.append(example)
 
-    def load_dataset(self, dataset, ref_col="ref", hyp_col="hyp", keyword_cols: list = []) -> None:
+    def load_dataset(self, dataset, ref_col="ref", hyp_col="hyp", keyword_cols: list | None = None) -> None:
         """Load a Hugging Face dataset."""
         raise NotImplementedError("load_dataset() method not implemented.")
 
-    def load_pandas(self, df, ref_col="ref", hyp_col="hyp", keyword_cols: list = []) -> None:
+    def load_pandas(self, df, ref_col="ref", hyp_col="hyp", keyword_cols: list | None = None) -> None:
         """Add a pandas DataFrame to the dataset."""
         if not isinstance(df, pd.DataFrame):
             raise TypeError("df must be a pandas DataFrame")
+        if keyword_cols is None:
+            keyword_cols = []
 
-        # Prepare and add vocabulary phrases to the tokenizer
         for col in keyword_cols:
             df[col] = self._infer_keyword_column(df[col])
+            self._update_static_keyword_vocab(col, set(chain.from_iterable(df[col])))
 
         # Add examples to the dataset
         for row in df.itertuples(index=False):
@@ -99,11 +102,27 @@ class Dataset(object):
             self.add(ref, hyp, keywords=keywords)
         return self
 
-    def load_csv(self, csv_file: str, ref_col="ref", hyp_col="hyp", keyword_cols: list = [], **kwargs) -> None:
+    def load_csv(self, csv_file: str, ref_col="ref", hyp_col="hyp", keyword_cols: list | None = None, **kwargs) -> None:
         """Add a CSV file to the dataset."""
         df = pd.read_csv(csv_file, **kwargs)
         self.load_pandas(df, ref_col, hyp_col, keyword_cols)
         return self
+
+    def add_keyword_list(self, name: str, keywords: Iterable[str]) -> None:
+        """Add a named keyword vocabulary to the dataset.
+
+        Keywords are matched against the reference text of each example (including already added examples).
+
+        Args:
+            name (str): The name of the keyword vocabulary.
+            keywords (Iterable[str]): The keywords to add.
+        """
+        keywords = set(keywords)
+        self._update_dynamic_keyword_vocab(name, keywords)
+
+        # Traverse already added examples and add keywords if they are present in the reference text.
+        for example in self.examples:
+            example._prepare_and_validate_keywords({name: list(keywords)}, _raise_warning=False)
 
     @staticmethod
     def get_config_path(config_path: str | None) -> str:
@@ -114,7 +133,7 @@ class Dataset(object):
                 return config_path
         return Path(config_path).resolve()
 
-    def _infer_keyword_column(self, series: pd.Series) -> set:
+    def _infer_keyword_column(self, series: pd.Series) -> pd.Series:
         """Infer the keyword terms from a pandas Series."""
         if series.map(is_list_literal).all():
             series = series.apply(ast.literal_eval)
@@ -126,6 +145,20 @@ class Dataset(object):
             return series
         else:
             raise ValueError(f"Column {series.name} is not a list (or literal) or string")
+
+    def _update_dynamic_keyword_vocab(self, name: str, keywords: set[str]) -> None:
+        """Update the keyword vocabulary with new keywords."""
+        if name in self._dynamic_keyword_vocabs:
+            self._dynamic_keyword_vocabs[name].update(keywords)
+        else:
+            self._dynamic_keyword_vocabs[name] = set(keywords)
+
+    def _update_static_keyword_vocab(self, name: str, keywords: set[str]) -> None:
+        """Update the static keyword vocabulary with new keywords."""
+        if name in self._static_keyword_vocabs:
+            self._static_keyword_vocabs[name].update(keywords)
+        else:
+            self._static_keyword_vocabs[name] = set(keywords)
 
     def __len__(self) -> int:
         """Get the number of examples in the dataset."""

@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Iterable, Optional
 
 from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
@@ -38,8 +38,9 @@ class Example:
         Args:
             ref (str): Reference text.
             hyp (str): Hypothesis text.
-            keywords (dict[str, list[str]], optional): Keywords associated with the example. The keywords must be
-                present in the reference text, otherwise they will be ignored. Defaults to None.
+            keywords (dict[str, list[str]], optional): Keywords associated with the example. The keywords are expected
+                to be present in the reference text. If not, a warning will be issued and the term will be discarded.
+                Defaults to None.
             src_dataset (Dataset, optional): The source Dataset object. Defaults to None.
             index (int, optional): The index of the example in the dataset. Defaults to None.
         """
@@ -49,7 +50,10 @@ class Example:
         self.metrics = ExampleMetricCollection(self)
         self.ref = Text(ref, src_example=self, text_type=TextType.REF)
         self.hyp = Text(hyp, src_example=self, text_type=TextType.HYP)
-        self.keywords = self._prepare_and_validate_keywords(keywords)
+        self.keywords = {}
+        self._prepare_and_validate_keywords(keywords, _raise_warning=True)
+        if src_dataset is not None:
+            self._prepare_and_validate_keywords(src_dataset._dynamic_keyword_vocabs, _raise_warning=False)
 
     @property
     def index(self) -> Optional[int]:
@@ -59,27 +63,45 @@ class Example:
     def src(self) -> Optional["Dataset"]:
         return self._src_dataset
 
-    def _prepare_and_validate_keywords(self, keywords: dict[str, list[str]] | None) -> dict[str, list[str]]:
-        """Prepare keywords dictionary by converting terms to Text objects."""
+    def _prepare_and_validate_keywords(
+        self,
+        keywords: dict[str, Iterable[str]] | None,
+        _raise_warning: bool = True,
+    ) -> None:
+        """Prepare keywords dictionary by converting keywords to Text objects."""
         if keywords is None:
-            return {}
+            return
 
-        validated_keywords = {}
-        for name, terms in keywords.items():
-            validated_terms = []
-            for term in terms:
-                if term.lower() not in self.ref.raw.lower():
-                    warnings.warn(
-                        f"Keyword '{term}' not found in reference for example {self._index}. Will not be included.",
-                        KeywordNotFoundWarning,
-                    )
+        for vocab_name, vocab_keywords in keywords.items():
+            validated_keywords = []
+            for keyword in vocab_keywords:
+                # Check if keyword is present in reference text (case-insensitive)
+                if keyword.lower() not in self.ref.raw.lower():
+                    if _raise_warning:
+                        warnings.warn(
+                            f"Keyword '{keyword}' not found: Example {self._index}. Will not be included.",
+                            KeywordNotFoundWarning,
+                        )
                     continue
-                validated_terms.append(Text(term, src_example=self, text_type=TextType.KEYWORD))
 
-            if len(validated_terms) > 0:
-                validated_keywords[name] = validated_terms
+                # Convert keyword to Text object and check if it has valid spans in the reference text
+                keyword = Text(keyword, src_example=self, text_type=TextType.KEYWORD)
+                if len(keyword.get_keyword_span()) == 0:
+                    if _raise_warning:
+                        warnings.warn(
+                            f"Keyword '{keyword.raw}' not found in reference text after tokenization: "
+                            f"Example {self._index}. Will not be included.",
+                            KeywordNotFoundWarning,
+                        )
+                    continue
 
-        return validated_keywords
+                validated_keywords.append(keyword)
+
+            if len(validated_keywords) > 0:
+                if vocab_name in self.keywords:
+                    self.keywords[vocab_name].update(validated_keywords)
+                else:
+                    self.keywords[vocab_name] = set(validated_keywords)
 
     def __hash__(self):
         return hash((self.ref, self.hyp, self._index))

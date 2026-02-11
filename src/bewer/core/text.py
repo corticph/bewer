@@ -1,4 +1,5 @@
 from enum import StrEnum
+from functools import cached_property
 from typing import TYPE_CHECKING, Optional, Union
 
 import regex as re
@@ -19,7 +20,9 @@ class TextType(StrEnum):
 def _find_word_slices(text, term, whole_word=True, case_sensitive=False) -> list[slice]:
     """Find all slices where word appears in text."""
     if whole_word:
-        pattern = r"\b" + re.escape(term) + r"\b"
+        escaped_term = re.escape(term)
+        boundary_pattern = r"![\p{L}\p{N}]"
+        pattern = rf"(?<{boundary_pattern}){escaped_term}(?{boundary_pattern})"
     else:
         pattern = re.escape(term)
     flags = 0 if case_sensitive else re.IGNORECASE
@@ -50,8 +53,10 @@ class Text:
     """BeWER text representation.
 
     Attributes:
-        text (str): The original text. Either reference or hypothesis.
-        tokens (list[Token]): A list of Token objects.
+        raw (str): The original text string.
+        standardized (str): The standardized text string after applying the specified standardizer.
+        src (Example): The source Example object that this text belongs to.
+        text_type (TextType): The type of the text (reference, hypothesis, or keyword).
     """
 
     def __init__(
@@ -64,8 +69,8 @@ class Text:
 
         Args:
             raw (str): The original text. Either reference or hypothesis.
-            _src (Example): The source Example object.
-            _is_hyp (bool): Whether the text is a hypothesis or not.
+            src_example (Example): The source Example object.
+            text_type (TextType): The type of the text (reference, hypothesis, or keyword).
         """
         self._raw = raw
         self._src_example = src_example
@@ -118,10 +123,7 @@ class Text:
 
     @property
     def standardized(self) -> str:
-        """Get the standardized text using a specified standardizer.
-
-        Args:
-            standardizer (str): The name of the text standardization function to apply.
+        """Get the standardized text using the active standardizer.
 
         Returns:
             str: The standardized string.
@@ -149,13 +151,10 @@ class Text:
         return _join_tokens(self.tokens, normalized=normalized)
 
     def get_keyword_span(self) -> list[slice]:
-        """Get the span of a keyword in the text.
-
-        Args:
-            keyword (str): The keyword to find.
+        """Get the span of this keyword in the source example's reference text.
 
         Returns:
-            list[slice]: The span of the keyword in the text.
+            list[slice]: The spans where this keyword appears in the reference text.
         """
         if self._text_type != TextType.KEYWORD:
             raise ValueError("get_keyword_span can only be called on Text objects of type KEYWORD.")
@@ -197,6 +196,50 @@ class TokenList(list["Token"]):
         """
         return [token.normalized for token in self]
 
+    @cached_property
+    def _start_index_mapping(self) -> dict[int, int]:
+        """Create a mapping from character start index to token index for quick lookup."""
+        mapping = {}
+        for i, token in enumerate(self):
+            mapping[token.start] = i
+        return mapping
+
+    @cached_property
+    def _end_index_mapping(self) -> dict[int, int]:
+        """Create a mapping from character end index to token index for quick lookup."""
+        mapping = {}
+        for i, token in enumerate(self):
+            mapping[token.end] = i
+        return mapping
+
+    def start_index_to_token(self, char_index: int) -> Optional["Token"]:
+        """Get the token that starts at the given character index.
+
+        Args:
+            char_index (int): The character index to look up.
+
+        Returns:
+            Optional[Token]: The token that starts at the given character index, or None if not found.
+        """
+        token_index = self._start_index_mapping.get(char_index, None)
+        if token_index is not None:
+            return self[token_index]
+        return None
+
+    def end_index_to_token(self, char_index: int) -> Optional["Token"]:
+        """Get the token that ends at the given character index.
+
+        Args:
+            char_index (int): The character index to look up.
+
+        Returns:
+            Optional[Token]: The token that ends at the given character index, or None if not found.
+        """
+        token_index = self._end_index_mapping.get(char_index, None)
+        if token_index is not None:
+            return self[token_index]
+        return None
+
     def ngrams(
         self,
         n: int,
@@ -216,7 +259,7 @@ class TokenList(list["Token"]):
         if n < 1:
             raise ValueError("n must be a positive integer")
         if n == 1:
-            return self.raw if normalized else self.normalized
+            return self.raw if not normalized else self.normalized
         ngrams = []
         for i in range(len(self) - n + 1):
             ngram = self[i : i + n]

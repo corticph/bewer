@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from functools import cached_property
+from typing import TYPE_CHECKING
 
 from bewer.alignment.op_type import OpType
 
+if TYPE_CHECKING:
+    from bewer.alignment.alignment import Alignment
 
-@dataclass
+
 class Op:
     """Class representing an operation with its type.
 
@@ -23,19 +26,34 @@ class Op:
         ref_right_partial (bool): Whether the reference token is a partial word, cropped on the right.
     """
 
-    type: OpType
-    ref: str | None = None
-    hyp: str | None = None
-    ref_token_idx: int | None = None
-    hyp_token_idx: int | None = None
-    ref_span: slice | None = None
-    hyp_span: slice | None = None
-    hyp_left_partial: bool = False
-    hyp_right_partial: bool = False
-    ref_left_partial: bool = False
-    ref_right_partial: bool = False
+    def __init__(
+        self,
+        type: OpType,
+        ref: str | None = None,
+        hyp: str | None = None,
+        ref_token_idx: int | None = None,
+        hyp_token_idx: int | None = None,
+        ref_span: slice | None = None,
+        hyp_span: slice | None = None,
+        hyp_left_partial: bool = False,
+        hyp_right_partial: bool = False,
+        ref_left_partial: bool = False,
+        ref_right_partial: bool = False,
+        _src_alignment: "Alignment" | None = None,
+    ):
+        self.type = type
+        self.ref = ref
+        self.hyp = hyp
+        self.ref_token_idx = ref_token_idx
+        self.hyp_token_idx = hyp_token_idx
+        self._ref_span = ref_span
+        self._hyp_span = hyp_span
+        self.hyp_left_partial = hyp_left_partial
+        self.hyp_right_partial = hyp_right_partial
+        self.ref_left_partial = ref_left_partial
+        self.ref_right_partial = ref_right_partial
+        self._src_alignment = _src_alignment
 
-    def __post_init__(self):
         if self.type == OpType.MATCH:
             if self.ref is None or self.hyp is None:
                 raise ValueError("MATCH operation must have non-empty ref or hyp.")
@@ -62,6 +80,32 @@ class Op:
         if self.ref is None:
             return None
         return f'{"-" if self.ref_left_partial else ""}"{self.ref}"{"-" if self.ref_right_partial else ""}'
+
+    def set_source(self, src: "Alignment") -> None:
+        """Set the source alignment for the operation."""
+        self._src_alignment = src
+
+    @cached_property
+    def ref_span(self) -> slice | None:
+        """Get the reference span for an operation."""
+        if self._ref_span is not None:
+            return self._ref_span
+        if self.ref_token_idx is not None:
+            if self._src_alignment is None or self._src_alignment._src_example is None:
+                return None
+            return self._src_alignment._src_example.ref.tokens[self.ref_token_idx].slice
+        return None
+
+    @cached_property
+    def hyp_span(self) -> slice | None:
+        """Get the hypothesis span for an operation."""
+        if self._hyp_span is not None:
+            return self._hyp_span
+        if self.hyp_token_idx is not None:
+            if self._src_alignment is None or self._src_alignment._src_example is None:
+                return None
+            return self._src_alignment._src_example.hyp.tokens[self.hyp_token_idx].slice
+        return None
 
     def to_dict(self) -> dict:
         """Convert the Op instance to a dictionary."""
