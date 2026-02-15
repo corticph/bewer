@@ -39,8 +39,24 @@ class Op:
         hyp_right_partial: bool = False,
         ref_left_partial: bool = False,
         ref_right_partial: bool = False,
-        _src_alignment: "Alignment" | None = None,
+        src: "Alignment" | None = None,
     ):
+        """Initialize Op.
+
+        Args:
+            type: Operation type (MATCH, INSERT, DELETE, SUBSTITUTE).
+            ref: Reference string.
+            hyp: Hypothesis string.
+            ref_token_idx: Reference token index.
+            hyp_token_idx: Hypothesis token index.
+            ref_span: Reference span.
+            hyp_span: Hypothesis span.
+            hyp_left_partial: Whether hypothesis is left-partial.
+            hyp_right_partial: Whether hypothesis is right-partial.
+            ref_left_partial: Whether reference is left-partial.
+            ref_right_partial: Whether reference is right-partial.
+            src: Parent Alignment object. Can be set later via set_source().
+        """
         self.type = type
         self.ref = ref
         self.hyp = hyp
@@ -52,7 +68,10 @@ class Op:
         self.hyp_right_partial = hyp_right_partial
         self.ref_left_partial = ref_left_partial
         self.ref_right_partial = ref_right_partial
-        self._src_alignment = _src_alignment
+
+        self._src = None
+        if src is not None:
+            self.set_source(src)
 
         if self.type == OpType.MATCH:
             if self.ref is None or self.hyp is None:
@@ -81,9 +100,23 @@ class Op:
             return None
         return f'{"-" if self.ref_left_partial else ""}"{self.ref}"{"-" if self.ref_right_partial else ""}'
 
+    @property
+    def src(self) -> "Alignment" | None:
+        """Get the parent Alignment object."""
+        return self._src
+
     def set_source(self, src: "Alignment") -> None:
-        """Set the source alignment for the operation."""
-        self._src_alignment = src
+        """Set the parent Alignment object.
+
+        Args:
+            src: The parent Alignment object.
+
+        Raises:
+            ValueError: If source is already set.
+        """
+        if self._src is not None:
+            raise ValueError("Source already set for Op")
+        self._src = src
 
     @cached_property
     def ref_span(self) -> slice | None:
@@ -91,9 +124,9 @@ class Op:
         if self._ref_span is not None:
             return self._ref_span
         if self.ref_token_idx is not None:
-            if self._src_alignment is None or self._src_alignment._src_example is None:
+            if self._src is None or self._src.src is None:
                 return None
-            return self._src_alignment._src_example.ref.tokens[self.ref_token_idx].slice
+            return self._src.src.ref.tokens[self.ref_token_idx].slice
         return None
 
     @cached_property
@@ -102,9 +135,9 @@ class Op:
         if self._hyp_span is not None:
             return self._hyp_span
         if self.hyp_token_idx is not None:
-            if self._src_alignment is None or self._src_alignment._src_example is None:
+            if self._src is None or self._src.src is None:
                 return None
-            return self._src_alignment._src_example.hyp.tokens[self.hyp_token_idx].slice
+            return self._src.src.hyp.tokens[self.hyp_token_idx].slice
         return None
 
     def to_dict(self) -> dict:

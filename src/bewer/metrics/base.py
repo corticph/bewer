@@ -87,21 +87,27 @@ class Metric(ABC):
         self,
         name: str,
         key: Optional[Hashable] = None,
+        src: Optional["Dataset"] = None,
     ):
         """Initialize the Metric object.
 
         Args:
-            src (Dataset): The dataset to compute the metric for.
+            name: Metric name.
+            key: Optional key for filtered metrics.
+            src: Parent Dataset object. Can be set later via set_source().
         """
         self.name = name
         self.key = key
-        self._src_dataset = None
         self._examples = {}
         self._members = {}
 
         self._standardizer = DEFAULT
         self._tokenizer = DEFAULT
         self._normalizer = DEFAULT
+
+        self._src = None
+        if src is not None:
+            self.set_source(src)
 
     @property
     @abstractmethod
@@ -122,9 +128,14 @@ class Metric(ABC):
         pass
 
     @property
+    def src(self) -> Optional["Dataset"]:
+        """Get the parent Dataset object."""
+        return self._src
+
+    @property
     def dataset(self) -> "Dataset":
-        """Get the dataset for the metric."""
-        return self._src_dataset
+        """Alias for src property for backward compatibility."""
+        return self._src
 
     @property
     def pipeline(self) -> tuple[str, str, str]:
@@ -146,9 +157,18 @@ class Metric(ABC):
             example_metric_row_values = None
         return (metric_row_values, example_metric_row_values)
 
-    def set_source(self, src: "Dataset"):
-        """Set the source dataset for the metric."""
-        self._src_dataset = src
+    def set_source(self, src: "Dataset") -> None:
+        """Set the parent Dataset object.
+
+        Args:
+            src: The parent Dataset object.
+
+        Raises:
+            ValueError: If source is already set.
+        """
+        if self._src is not None:
+            raise ValueError("Source already set for Metric")
+        self._src = src
 
     def set_standardizer(self, standardizer: str):
         """Set the standardizer for the metric."""
@@ -171,7 +191,7 @@ class Metric(ABC):
             return self._examples[example._index]
         if self.example_cls is None:
             return None
-        example_metric = self.example_cls(self)
+        example_metric = self.example_cls(parent_metric=self)
         example_metric.set_source(example)
         self._examples[example._index] = example_metric
         return example_metric
@@ -185,7 +205,7 @@ class Metric(ABC):
         if key in self._members:
             return self._members[key]
         elif self.is_valid_key(key):
-            self._members[key] = self.__class__(self._src_dataset, key)
+            self._members[key] = self.__class__(name=self.name, key=key, src=self._src)
             return self._members[key]
         raise AttributeError(f"'{key}' is not a valid key for this metric.")
 
@@ -193,33 +213,52 @@ class Metric(ABC):
 class ExampleMetric(ABC):
     def __init__(
         self,
-        src_metric: "Metric",
+        parent_metric: "Metric",
         key: Optional[Hashable] = None,
+        src: Optional["Example"] = None,
     ):
-        """Initialize the Metric object.
+        """Initialize the ExampleMetric object.
 
         Args:
-            src (Example): The Example to compute the metric for.
+            parent_metric: The parent Metric object.
+            key: Optional key for filtered metrics.
+            src: Parent Example object. Can be set later via set_source().
         """
-
-        self.src_metric = src_metric
+        self.parent_metric = parent_metric
         self.key = key
-        self._src_example = None
         self._members = {}
+
+        self._src = None
+        if src is not None:
+            self.set_source(src)
+
+    @property
+    def src(self) -> Optional["Example"]:
+        """Get the parent Example object."""
+        return self._src
 
     @property
     def example(self) -> "Example":
-        """Get the example for the metric."""
-        return self._src_example
+        """Alias for src property for backward compatibility."""
+        return self._src
 
     @property
     def pipeline(self) -> tuple[str, str, str]:
         """Get the preprocessing pipeline for the metric."""
-        return self.src_metric.pipeline
+        return self.parent_metric.pipeline
 
-    def set_source(self, src: "Example"):
-        """Set the source example for the metric."""
-        self._src_example = src
+    def set_source(self, src: "Example") -> None:
+        """Set the parent Example object.
+
+        Args:
+            src: The parent Example object.
+
+        Raises:
+            ValueError: If source is already set.
+        """
+        if self._src is not None:
+            raise ValueError("Source already set for ExampleMetric")
+        self._src = src
 
     @classmethod
     def metric_values(cls) -> dict[str, Union[str, list[str]]]:
@@ -284,7 +323,7 @@ class ExampleMetricCollection(object):
     def __init__(self, src: "Example"):
         """Initialize the ExampleMetricCollection object."""
         self._src_example = src
-        self._src_collection = src._src_dataset.metrics
+        self._src_collection = src.src.metrics if src.src is not None else None
         self._cache = {}
 
     def get(self, name: str) -> ExampleMetric:

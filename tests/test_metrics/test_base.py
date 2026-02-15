@@ -221,7 +221,7 @@ class TestMetricClass:
 
         metric = WER(name="test_wer")
         metric.set_source(sample_dataset)
-        assert metric._src_dataset is sample_dataset
+        assert metric.src is sample_dataset
 
     def test_set_standardizer(self, sample_dataset):
         """Test that set_standardizer works."""

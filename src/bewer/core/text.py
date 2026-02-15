@@ -62,27 +62,26 @@ class Text:
     def __init__(
         self,
         raw: str | None,
-        src_example: Optional["Example"] = None,
+        src: Optional["Example"] = None,
         text_type: Optional[TextType] = None,
     ):
         """Initialize the Text object.
 
         Args:
-            raw (str): The original text. Either reference or hypothesis.
-            src_example (Example): The source Example object.
-            text_type (TextType): The type of the text (reference, hypothesis, or keyword).
+            raw: The original text string (reference, hypothesis, or keyword).
+            src: Parent Example object. Can be set later via set_source().
+            text_type: The type of the text (REF, HYP, or KEYWORD).
         """
         self._raw = raw
-        self._src_example = src_example
         self._text_type = text_type
 
         self._standardized = {}
         self._tokenized = {}
 
-        if src_example is not None and src_example._src_dataset is not None:
-            self._pipelines = src_example._src_dataset.pipelines
-        else:
-            self._pipelines = None
+        self._src = None
+        self._pipelines = None
+        if src is not None:
+            self.set_source(src)
 
     @property
     def raw(self) -> str:
@@ -92,7 +91,28 @@ class Text:
 
     @property
     def src(self) -> Optional["Example"]:
-        return self._src_example
+        """Get the parent Example object."""
+        return self._src
+
+    def set_source(self, src: "Example") -> None:
+        """Set the parent Example object.
+
+        Args:
+            src: The parent Example object.
+
+        Raises:
+            ValueError: If source is already set.
+        """
+        if self._src is not None:
+            raise ValueError("Source already set for Text")
+
+        self._src = src
+
+        # Cache pipeline reference
+        if src is not None and src.src is not None:
+            self._pipelines = src.src.pipelines
+        else:
+            self._pipelines = None
 
     @property
     def text_type(self) -> Optional[TextType]:
@@ -117,7 +137,7 @@ class Text:
         if tokenizer is None:
             raise ValueError(f"Tokenizer '{tokenizer_name}' not found in pipelines.")
 
-        tokens = tokenizer(self.standardized, _src_text=self)
+        tokens = tokenizer(self.standardized, src=self)
         self._tokenized[pipeline_key] = tokens
         return tokens
 
@@ -158,10 +178,10 @@ class Text:
         """
         if self._text_type != TextType.KEYWORD:
             raise ValueError("get_keyword_span can only be called on Text objects of type KEYWORD.")
-        if self._src_example is None:
+        if self._src is None:
             raise ValueError("Source example is None, cannot get keyword span.")
         return _find_word_slices(
-            self._src_example.ref.standardized,
+            self._src.ref.standardized,
             self.standardized,
             whole_word=True,
             case_sensitive=False,

@@ -58,12 +58,12 @@ class Tokenizer(object):
         self._pattern = re.compile(pattern) if isinstance(pattern, str) else pattern
         self._name = name
 
-    def __call__(self, text: str, _src_text: Union["Text", None] = None) -> TokenList:
+    def __call__(self, text: str, src: Union["Text", None] = None) -> TokenList:
         """Tokenize the input text using the regex pattern.
 
         Args:
-            text (str): The input text to tokenize.
-            _src_text (Text | None): The source Text object, if available.
+            text: The input text to tokenize.
+            src: The source Text object, if available.
 
         Returns:
             TokenList: A list of Token objects.
@@ -71,7 +71,7 @@ class Tokenizer(object):
 
         def from_match(match_tuple: tuple[int, re.Match]) -> Token:
             """Create a Token object from a regex match object."""
-            token = Token.from_match(match_tuple[1], index=match_tuple[0], _src_text=_src_text)
+            token = Token.from_match(match_tuple[1], index=match_tuple[0], src=src)
             return token
 
         return TokenList(map(from_match, enumerate(self._pattern.finditer(text))))

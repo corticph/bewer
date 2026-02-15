@@ -397,10 +397,10 @@ class TestAlignmentSetSource:
 
         example = MockExample()
         alignment.set_source(example)
-        assert alignment._src_example is example
+        assert alignment.src is example
 
-    def test_set_source_can_be_overwritten(self):
-        """Test that set_source can be called multiple times."""
+    def test_set_source_raises_on_reassignment(self):
+        """Test that set_source raises ValueError on reassignment (single assignment only)."""
         alignment = Alignment()
 
         class MockExample:
@@ -408,5 +408,5 @@ class TestAlignmentSetSource:
                 self.index = idx
 
         alignment.set_source(MockExample(1))
-        alignment.set_source(MockExample(2))
-        assert alignment._src_example.index == 2
+        with pytest.raises(ValueError, match="Source already set"):
+            alignment.set_source(MockExample(2))

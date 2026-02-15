@@ -71,7 +71,7 @@ class Dataset(object):
 
     def add(self, ref: str, hyp: str, keywords: dict[str, list[str]] | None = None) -> None:
         """Add an example to the dataset."""
-        example = Example(ref, hyp, keywords=keywords, src_dataset=self, index=len(self))
+        example = Example(ref, hyp, keywords=keywords, src=self, index=len(self))
         self.examples.append(example)
 
     def load_dataset(self, dataset, ref_col="ref", hyp_col="hyp", keyword_cols: list | None = None) -> None:

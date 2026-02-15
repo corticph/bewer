@@ -254,7 +254,7 @@ class TestGenerateAlignmentHtmlLines:
     def test_generate_alignment_html_lines_returns_list_of_tuples(self):
         """Test that generate_alignment_html_lines returns a list of tuples."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops, src_example=self._create_mock_example())
+        alignment = Alignment(ops, src=self._create_mock_example())
         result = generate_alignment_html_lines(alignment)
         assert isinstance(result, list)
         assert all(isinstance(item, tuple) for item in result)
@@ -266,7 +266,7 @@ class TestGenerateAlignmentHtmlLines:
             Op(type=OpType.MATCH, ref="hello", hyp="hello"),
             Op(type=OpType.MATCH, ref="world", hyp="world"),
         ]
-        alignment = Alignment(ops, src_example=self._create_mock_example())
+        alignment = Alignment(ops, src=self._create_mock_example())
         result = generate_alignment_html_lines(alignment)
         assert len(result) >= 1
         ref_line, hyp_line = result[0]
@@ -281,7 +281,7 @@ class TestGenerateAlignmentHtmlLines:
             Op(type=OpType.INSERT, ref=None, hyp="big"),
             Op(type=OpType.DELETE, ref="sat", hyp=None),
         ]
-        alignment = Alignment(ops, src_example=self._create_mock_example())
+        alignment = Alignment(ops, src=self._create_mock_example())
         result = generate_alignment_html_lines(alignment)
         assert len(result) >= 1
         ref_line, hyp_line = result[0]
@@ -298,7 +298,7 @@ class TestGenerateAlignmentHtmlLines:
         """Test that long alignments wrap across multiple lines."""
         # Create a long alignment that should wrap
         ops = [Op(type=OpType.MATCH, ref=f"word{i}", hyp=f"word{i}") for i in range(20)]
-        alignment = Alignment(ops, src_example=self._create_mock_example())
+        alignment = Alignment(ops, src=self._create_mock_example())
         result = generate_alignment_html_lines(alignment, max_line_length=30)
 
         # Should have multiple lines
@@ -306,7 +306,7 @@ class TestGenerateAlignmentHtmlLines:
 
     def test_generate_alignment_html_lines_empty_alignment(self):
         """Test with empty alignment."""
-        alignment = Alignment(src_example=self._create_mock_example())
+        alignment = Alignment(src=self._create_mock_example())
         result = generate_alignment_html_lines(alignment)
         assert len(result) == 1  # Should have at least one line even if empty
 
@@ -316,7 +316,7 @@ class TestGenerateAlignmentHtmlLines:
             Op(type=OpType.MATCH, ref="test", hyp="test", hyp_right_partial=True),
             Op(type=OpType.MATCH, ref="ing", hyp="ing"),
         ]
-        alignment = Alignment(ops, src_example=self._create_mock_example())
+        alignment = Alignment(ops, src=self._create_mock_example())
         result = generate_alignment_html_lines(alignment)
         assert len(result) >= 1
 
@@ -332,7 +332,7 @@ class TestGenerateAlignmentHtmlLines:
             MATCH = "#custom123"
 
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops, src_example=self._create_mock_example())
+        alignment = Alignment(ops, src=self._create_mock_example())
         result = generate_alignment_html_lines(alignment, color_scheme=CustomColorScheme)
 
         ref_line, _ = result[0]
@@ -341,7 +341,7 @@ class TestGenerateAlignmentHtmlLines:
     def test_generate_alignment_html_lines_escapes_html(self):
         """Test that HTML characters are properly escaped."""
         ops = [Op(type=OpType.MATCH, ref="<script>", hyp="<script>")]
-        alignment = Alignment(ops, src_example=self._create_mock_example())
+        alignment = Alignment(ops, src=self._create_mock_example())
         result = generate_alignment_html_lines(alignment)
 
         ref_line, hyp_line = result[0]

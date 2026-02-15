@@ -30,14 +30,26 @@ class Alignment(list["Op"]):
         num_deletions (int): Number of deletion operations.
     """
 
-    def __init__(self, iterable: Iterable["Op"] = (), src_example: Optional["Example"] = None) -> None:
+    def __init__(self, iterable: Iterable["Op"] = (), src: Optional["Example"] = None) -> None:
+        """Initialize Alignment.
+
+        Args:
+            iterable: Iterable of Op objects.
+            src: Parent Example object. Can be set later via set_source().
+        """
         super().__init__(iterable)
         self._op_counts = Counter()
         self._count_operations(self)
-        self._src_example = src_example
 
+        self._src = None
+        if src is not None:
+            self.set_source(src)
+
+        # Set this alignment as parent for ops that don't already have one
+        # (ops from slicing/concatenation may already be parented)
         for op in self:
-            op.set_source(self)
+            if op.src is None:
+                op.set_source(self)
 
     @property
     def num_matches(self) -> int:
@@ -111,13 +123,13 @@ class Alignment(list["Op"]):
         return None
 
     def append(self, op: "Op") -> None:
-        if self._src_example is not None:
+        if self._src is not None:
             raise ValueError("Cannot modify Alignment after source example is set.")
         super().append(op)
         self._count_operations([op])
 
     def extend(self, iterable: Iterable["Op"]) -> None:
-        if self._src_example is not None:
+        if self._src is not None:
             raise ValueError("Cannot modify Alignment after source example is set.")
         ops = list(iterable)
         super().extend(ops)
@@ -128,9 +140,23 @@ class Alignment(list["Op"]):
         for op in ops:
             self._op_counts[op.type] += 1
 
+    @property
+    def src(self) -> Optional["Example"]:
+        """Get the parent Example object."""
+        return self._src
+
     def set_source(self, src: "Example") -> None:
-        """Set the source example for the alignment."""
-        self._src_example = src
+        """Set the parent Example object.
+
+        Args:
+            src: The parent Example object.
+
+        Raises:
+            ValueError: If source is already set.
+        """
+        if self._src is not None:
+            raise ValueError("Source already set for Alignment")
+        self._src = src
 
     def to_dicts(self) -> list[dict]:
         """Dump the alignment to a list of dictionaries.
@@ -173,7 +199,7 @@ class Alignment(list["Op"]):
             max_line_length (int | None): Maximum line length for display. If None, uses default.
             color_scheme (ColorScheme): Color scheme for display.
         """
-        title = None if self._src_example is None else f"   Example {self._src_example.index}"
+        title = None if self._src is None else f"   Example {self._src.index}"
         display_basic_aligned(self, max_line_length=max_line_length, title=title, color_scheme=color_scheme)
 
     def _to_html_lines(
@@ -203,7 +229,7 @@ class Alignment(list["Op"]):
         Returns:
             Alignment: The concatenated Alignment object.
         """
-        if self._src_example is not None or other._src_example is not None:
+        if self._src is not None or other._src is not None:
             raise ValueError("Cannot concatenate Alignments with source examples set.")
         return Alignment(super().__add__(other))
 

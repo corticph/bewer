@@ -29,39 +29,56 @@ class Example:
         ref: str,
         hyp: str,
         keywords: dict[str, list[str]] | None = None,
-        src_dataset: Optional["Dataset"] = None,
+        src: Optional["Dataset"] = None,
         index: Optional[int] = None,
     ):
         """
         Initialize the Example object.
 
         Args:
-            ref (str): Reference text.
-            hyp (str): Hypothesis text.
-            keywords (dict[str, list[str]], optional): Keywords associated with the example. The keywords are expected
+            ref: Reference text.
+            hyp: Hypothesis text.
+            keywords: Keywords associated with the example. The keywords are expected
                 to be present in the reference text. If not, a warning will be issued and the term will be discarded.
-                Defaults to None.
-            src_dataset (Dataset, optional): The source Dataset object. Defaults to None.
-            index (int, optional): The index of the example in the dataset. Defaults to None.
+            src: Parent Dataset object. Can be set later via set_source().
+            index: The index of the example in the dataset.
         """
-        self._src_dataset = src_dataset
         self._index = index
 
+        self._src = None
+        if src is not None:
+            self.set_source(src)
+
         self.metrics = ExampleMetricCollection(self)
-        self.ref = Text(ref, src_example=self, text_type=TextType.REF)
-        self.hyp = Text(hyp, src_example=self, text_type=TextType.HYP)
+        self.ref = Text(ref, src=self, text_type=TextType.REF)
+        self.hyp = Text(hyp, src=self, text_type=TextType.HYP)
         self.keywords = {}
         self._prepare_and_validate_keywords(keywords, _raise_warning=True)
-        if src_dataset is not None:
-            self._prepare_and_validate_keywords(src_dataset._dynamic_keyword_vocabs, _raise_warning=False)
+        if self._src is not None:
+            self._prepare_and_validate_keywords(self._src._dynamic_keyword_vocabs, _raise_warning=False)
 
     @property
     def index(self) -> Optional[int]:
+        """Get the example index."""
         return self._index
 
     @property
     def src(self) -> Optional["Dataset"]:
-        return self._src_dataset
+        """Get the parent Dataset object."""
+        return self._src
+
+    def set_source(self, src: "Dataset") -> None:
+        """Set the parent Dataset object.
+
+        Args:
+            src: The parent Dataset object.
+
+        Raises:
+            ValueError: If source is already set.
+        """
+        if self._src is not None:
+            raise ValueError("Source already set for Example")
+        self._src = src
 
     def _prepare_and_validate_keywords(
         self,
@@ -85,7 +102,7 @@ class Example:
                     continue
 
                 # Convert keyword to Text object and check if it has valid spans in the reference text
-                keyword = Text(keyword, src_example=self, text_type=TextType.KEYWORD)
+                keyword = Text(keyword, src=self, text_type=TextType.KEYWORD)
                 if len(keyword.get_keyword_span()) == 0:
                     if _raise_warning:
                         warnings.warn(

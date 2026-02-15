@@ -116,7 +116,7 @@ def format_alignment_op_html(
 def set_keyword_indicators(alignment: "Alignment") -> None:
     """Set indicators on alignment operations that correspond to keywords in the reference text."""
 
-    example = alignment._src_example
+    example = alignment.src
     if not example.keywords:
         return
     for keywords in example.keywords.values():

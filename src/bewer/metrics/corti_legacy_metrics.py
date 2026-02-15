@@ -122,7 +122,7 @@ class _KeywordAggregator(ExampleMetric):
             if distance == 0:
                 match_count += 1
                 correct_terms.append(term)
-            if cer_score <= self.src_metric.cer_threshold:
+            if cer_score <= self.parent_metric.cer_threshold:
                 relaxed_match_count += 1
             total_distance += distance
             total_length += max(len(term), 1)
@@ -196,34 +196,32 @@ class KeywordAggregator(Metric):
     @metric_value
     def match_count(self) -> int:
         """Get the total number of exactly matched medical terms."""
-        return sum([example.metrics.get(self.name).match_count for example in self._src_dataset])
+        return sum([example.metrics.get(self.name).match_count for example in self._src])
 
     @metric_value
     def relaxed_match_count(self) -> int:
         """Get the total number of medical terms matched with relaxed criteria."""
-        return sum([example.metrics.get(self.name).relaxed_match_count for example in self._src_dataset])
+        return sum([example.metrics.get(self.name).relaxed_match_count for example in self._src])
 
     @metric_value
     def total_terms(self) -> int:
         """Get the total number of medical terms."""
-        return sum([example.metrics.get(self.name).total_terms for example in self._src_dataset])
+        return sum([example.metrics.get(self.name).total_terms for example in self._src])
 
     @metric_value
     def total_length(self) -> float:
         """Get the total length of medical terms."""
-        return sum([example.metrics.get(self.name).total_length for example in self._src_dataset])
+        return sum([example.metrics.get(self.name).total_length for example in self._src])
 
     @metric_value
     def total_distance(self) -> float:
         """Get the total Levenshtein distance of medical terms."""
-        return sum([example.metrics.get(self.name).total_distance for example in self._src_dataset])
+        return sum([example.metrics.get(self.name).total_distance for example in self._src])
 
     @metric_value
     def correct_terms(self) -> list[str]:
         """Get the list of correctly matched medical terms."""
-        return list(
-            chain.from_iterable([example.metrics.get(self.name).correct_terms for example in self._src_dataset])
-        )
+        return list(chain.from_iterable([example.metrics.get(self.name).correct_terms for example in self._src]))
 
 
 @METRIC_REGISTRY.register("legacy_medical_word_accuracy")
@@ -238,9 +236,9 @@ class MTR(Metric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src_dataset.metrics._legacy_kwa.total_terms == 0:
+        if self._src.metrics._legacy_kwa.total_terms == 0:
             return 1.0
-        return self._src_dataset.metrics._legacy_kwa.match_count / self._src_dataset.metrics._legacy_kwa.total_terms
+        return self._src.metrics._legacy_kwa.match_count / self._src.metrics._legacy_kwa.total_terms
 
 
 @METRIC_REGISTRY.register("legacy_relaxed_medical_word_accuracy")
@@ -256,12 +254,9 @@ class RMTR(Metric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src_dataset.metrics._legacy_kwa.total_terms == 0:
+        if self._src.metrics._legacy_kwa.total_terms == 0:
             return 1.0
-        return (
-            self._src_dataset.metrics._legacy_kwa.relaxed_match_count
-            / self._src_dataset.metrics._legacy_kwa.total_terms
-        )
+        return self._src.metrics._legacy_kwa.relaxed_match_count / self._src.metrics._legacy_kwa.total_terms
 
 
 @METRIC_REGISTRY.register("legacy_keyword_cer")
@@ -276,9 +271,9 @@ class KeywordCER(Metric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the medical character error rate."""
-        if self._src_dataset.metrics._legacy_kwa.total_length == 0:
+        if self._src.metrics._legacy_kwa.total_length == 0:
             return 1.0
-        return self._src_dataset.metrics._legacy_kwa.total_distance / self._src_dataset.metrics._legacy_kwa.total_length
+        return self._src.metrics._legacy_kwa.total_distance / self._src.metrics._legacy_kwa.total_length
 
 
 class _HallucinationAggregator(ExampleMetric):
@@ -297,7 +292,7 @@ class _HallucinationAggregator(ExampleMetric):
             if alignment.op_type == OpType.INSERT:
                 consecutive_insertions += 1
                 insertions += 1
-                if consecutive_insertions > self.src_metric.threshold:
+                if consecutive_insertions > self.parent_metric.threshold:
                     has_contiguous_insertions = True
             else:
                 consecutive_insertions = 0
@@ -347,7 +342,7 @@ class Insertions(Metric):
         def get_insertions(example: "Example") -> int:
             return int(example.metrics._legacy_hlcn.insertions)
 
-        return sum([get_insertions(example) for example in self._src_dataset]) / len(self._src_dataset)
+        return sum([get_insertions(example) for example in self._src]) / len(self._src)
 
 
 @METRIC_REGISTRY.register("legacy_del_hallucinations")
@@ -363,4 +358,4 @@ class DeletionHallucinations(Metric):
         def get_int_value(example: "Example") -> int:
             return int(example.metrics._legacy_hlcn.has_contiguous_insertions)
 
-        return sum([get_int_value(example) for example in self._src_dataset]) / len(self._src_dataset)
+        return sum([get_int_value(example) for example in self._src]) / len(self._src)

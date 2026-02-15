@@ -29,8 +29,17 @@ class Token:
         start: int,
         end: int,
         index: Optional[int] = None,
-        _src_text: Optional["Text"] = None,
+        src: Optional["Text"] = None,
     ):
+        """Initialize Token.
+
+        Args:
+            raw: The raw token string.
+            start: Starting character index in the source text.
+            end: Ending character index in the source text.
+            index: Token index in the token list.
+            src: Parent Text object. Can be set later via set_source().
+        """
         self.raw = raw
         self.start = start
         self.end = end
@@ -39,10 +48,34 @@ class Token:
 
         self._normalized = {}
 
-        self._src_text = _src_text
-        self._src_example = _src_text._src_example if _src_text else None
-        self._src_dataset = self._src_example._src_dataset if self._src_example else None
-        self._pipelines = self._src_dataset.pipelines if self._src_dataset else None
+        self._src = None
+        self._pipelines = None
+        if src is not None:
+            self.set_source(src)
+
+    @property
+    def src(self) -> Optional["Text"]:
+        """Get the parent Text object."""
+        return self._src
+
+    def set_source(self, src: "Text") -> None:
+        """Set the parent Text object.
+
+        Args:
+            src: The parent Text object.
+
+        Raises:
+            ValueError: If source is already set.
+        """
+        if self._src is not None:
+            raise ValueError("Source already set for Token")
+
+        self._src = src
+
+        # Cache derived references for performance
+        _src_example = src.src if src is not None else None
+        _src_dataset = _src_example.src if _src_example is not None else None
+        self._pipelines = _src_dataset.pipelines if _src_dataset is not None else None
 
     @property
     def normalized(self) -> str:
@@ -69,9 +102,12 @@ class Token:
 
     @cached_property
     def levenshtein(self) -> "Op":
-        if self._src_example is None:
+        if self._src is None:
             return None
-        return self._src_example.levenshtein._token_to_op_index.get(self, None)
+        _src_example = self._src.src
+        if _src_example is None:
+            return None
+        return _src_example.levenshtein._token_to_op_index.get(self, None)
 
     def inctx(self, width: int = 20, highlight: bool = False, add_ellipsis: bool = True) -> str:
         """Get the context of the token in the source text.
@@ -83,16 +119,16 @@ class Token:
         Returns:
             str: The context string.
         """
-        if self._src_text is None:
+        if self._src is None:
             raise ValueError("Source text is not set. Cannot get context.")
         start = max(0, self.start - width)
-        end = min(len(self._src_text.raw), self.end + width)
-        ctx_span = self._src_text.raw[start:end]
+        end = min(len(self._src.raw), self.end + width)
+        ctx_span = self._src.raw[start:end]
         if highlight:
             ctx_span = highlight_span(ctx_span, self.start - start, self.end - start, "bold green")
         if add_ellipsis:
             start_marker = "..." if self.start - width > 0 else ""
-            end_marker = "..." if self.end + width < len(self._src_text.raw) else ""
+            end_marker = "..." if self.end + width < len(self._src.raw) else ""
             ctx_span = start_marker + ctx_span + end_marker
         return ctx_span
 
@@ -101,13 +137,15 @@ class Token:
         cls,
         match: re.Match,
         index: int,
-        _src_text: Optional["Text"] = None,
+        src: Optional["Text"] = None,
     ) -> "Token":
         """
         Create a Token object from a regex match object.
 
         Args:
             match (re.Match): The regex match object.
+            index (int): Token index in the token list.
+            src (Text): Parent Text object.
 
         Returns:
             Token: The created Token object.
@@ -117,7 +155,7 @@ class Token:
             start=match.start(),
             end=match.end(),
             index=index,
-            _src_text=_src_text,
+            src=src,
         )
 
     def __eq__(self, other):
