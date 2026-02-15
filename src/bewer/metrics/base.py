@@ -238,7 +238,7 @@ class ExampleMetric(ABC):
         return self._src
 
     @property
-    def example(self) -> "Example":
+    def example(self) -> Optional["Example"]:
         """Alias for src property for backward compatibility."""
         return self._src
 
