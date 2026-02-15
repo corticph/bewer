@@ -117,6 +117,8 @@ def set_keyword_indicators(alignment: "Alignment") -> None:
     """Set indicators on alignment operations that correspond to keywords in the reference text."""
 
     example = alignment.src
+    if example is None:
+        return
     if not example.keywords:
         return
     for keywords in example.keywords.values():
