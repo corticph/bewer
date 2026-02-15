@@ -133,7 +133,7 @@ class Metric(ABC):
         return self._src
 
     @property
-    def dataset(self) -> "Dataset":
+    def dataset(self) -> Optional["Dataset"]:
         """Alias for src property for backward compatibility."""
         return self._src
 
