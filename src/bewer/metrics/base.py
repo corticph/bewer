@@ -307,7 +307,8 @@ class Metric(ABC):
             param_hints = ", ".join(f"{p}=..." for p in missing_list)
             raise ValueError(
                 f"Missing required parameters for {self._short_name_base}: {missing_list}. "
-                f"Use .with_params({param_hints}) to set them."
+                f"Pass them as keyword arguments when constructing the metric, e.g. "
+                f"dataset.metrics.{self._short_name_base}({param_hints})."
             )
 
 
