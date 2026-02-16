@@ -308,7 +308,7 @@ class Metric(ABC):
             raise ValueError(
                 f"Missing required parameters for {self._short_name_base}: {missing_list}. "
                 f"Pass them as keyword arguments when constructing the metric, e.g. "
-                f"dataset.metrics.{self._short_name_base}({param_hints})."
+                f"dataset.metrics.metric_name({param_hints})."
             )
 
 
