@@ -16,7 +16,7 @@ class TestMetricValueDecorator:
     def test_metric_value_caches_result(self, sample_dataset):
         """Test that metric_value caches computed values."""
         # Access WER metric multiple times
-        wer = sample_dataset.metrics.wer
+        wer = sample_dataset.metrics.wer()
         value1 = wer.value
         value2 = wer.value
         assert value1 == value2
@@ -67,9 +67,10 @@ class TestMetricRegistryRegister:
         assert "cer" in METRIC_REGISTRY.metric_factories
 
     def test_registered_metric_is_callable(self):
-        """Test that registered metric factory is callable."""
-        factory = METRIC_REGISTRY.metric_factories["wer"]
-        assert callable(factory)
+        """Test that registered metric metadata exists."""
+        metadata = METRIC_REGISTRY.metric_metadata["wer"]
+        assert isinstance(metadata, dict)
+        assert "metric_cls" in metadata
 
 
 class TestMetricRegistryRegisterMetric:
@@ -130,9 +131,10 @@ class TestMetricCollection:
     """Tests for MetricCollection class."""
 
     def test_get_registered_metric(self, sample_dataset):
-        """Test getting a registered metric."""
-        wer = sample_dataset.metrics.get("wer")
-        assert wer is not None
+        """Test getting a registered metric factory."""
+        wer_factory = sample_dataset.metrics.get("wer")
+        assert wer_factory is not None
+        assert callable(wer_factory)
 
     def test_get_unregistered_metric_raises(self, sample_dataset):
         """Test getting unregistered metric raises AttributeError."""
@@ -141,13 +143,14 @@ class TestMetricCollection:
 
     def test_getattr_works_like_get(self, sample_dataset):
         """Test that attribute access works like get()."""
-        wer = sample_dataset.metrics.wer
-        assert wer is not None
+        wer_factory = sample_dataset.metrics.wer
+        assert wer_factory is not None
+        assert callable(wer_factory)
 
     def test_metric_cached(self, sample_dataset):
-        """Test that metrics are cached."""
-        wer1 = sample_dataset.metrics.get("wer")
-        wer2 = sample_dataset.metrics.get("wer")
+        """Test that metric instances are cached when called with same params."""
+        wer1 = sample_dataset.metrics.get("wer")()
+        wer2 = sample_dataset.metrics.get("wer")()
         assert wer1 is wer2
 
 
@@ -155,9 +158,10 @@ class TestExampleMetricCollection:
     """Tests for ExampleMetricCollection class."""
 
     def test_get_example_metric(self, sample_example):
-        """Test getting an example-level metric."""
-        wer = sample_example.metrics.get("wer")
-        assert wer is not None
+        """Test getting an example-level metric factory."""
+        wer_factory = sample_example.metrics.get("wer")
+        assert wer_factory is not None
+        assert callable(wer_factory)
 
     def test_get_unregistered_raises(self, sample_example):
         """Test getting unregistered metric raises AttributeError."""
@@ -166,8 +170,9 @@ class TestExampleMetricCollection:
 
     def test_getattr_works_like_get(self, sample_example):
         """Test that attribute access works like get()."""
-        wer = sample_example.metrics.wer
-        assert wer is not None
+        wer_factory = sample_example.metrics.wer
+        assert wer_factory is not None
+        assert callable(wer_factory)
 
 
 class TestListRegisteredMetrics:
@@ -202,7 +207,7 @@ class TestMetricClass:
 
     def test_metric_has_required_properties(self, sample_dataset):
         """Test that Metric instances have required properties."""
-        wer = sample_dataset.metrics.wer
+        wer = sample_dataset.metrics.wer()
         assert hasattr(wer, "short_name")
         assert hasattr(wer, "long_name")
         assert hasattr(wer, "description")
@@ -210,7 +215,7 @@ class TestMetricClass:
 
     def test_metric_pipeline_property(self, sample_dataset):
         """Test that pipeline returns tuple."""
-        wer = sample_dataset.metrics.wer
+        wer = sample_dataset.metrics.wer()
         pipeline = wer.pipeline
         assert isinstance(pipeline, tuple)
         assert len(pipeline) == 3
@@ -225,18 +230,18 @@ class TestMetricClass:
 
     def test_set_standardizer(self, sample_dataset):
         """Test that set_standardizer works."""
-        wer = sample_dataset.metrics.wer
+        wer = sample_dataset.metrics.wer()
         wer.set_standardizer("custom")
         assert wer._standardizer == "custom"
 
     def test_set_tokenizer(self, sample_dataset):
         """Test that set_tokenizer works."""
-        wer = sample_dataset.metrics.wer
+        wer = sample_dataset.metrics.wer()
         wer.set_tokenizer("custom")
         assert wer._tokenizer == "custom"
 
     def test_set_normalizer(self, sample_dataset):
         """Test that set_normalizer works."""
-        wer = sample_dataset.metrics.wer
+        wer = sample_dataset.metrics.wer()
         wer.set_normalizer("custom")
         assert wer._normalizer == "custom"

@@ -184,7 +184,7 @@ class KeywordAggregator(Metric):
     description = "Aggregates keyword-focused metrics for medical terms."
     example_cls = _KeywordAggregator
 
-    _hyperparams = {
+    _params = {
         "cer_threshold": (float, 0.2),  # Optional with default
     }
 
@@ -231,9 +231,9 @@ class MTR(Metric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src.metrics._legacy_kwa.total_terms == 0:
+        if self._src.metrics._legacy_kwa().total_terms == 0:
             return 1.0
-        return self._src.metrics._legacy_kwa.match_count / self._src.metrics._legacy_kwa.total_terms
+        return self._src.metrics._legacy_kwa().match_count / self._src.metrics._legacy_kwa().total_terms
 
 
 @METRIC_REGISTRY.register("legacy_relaxed_medical_word_accuracy")
@@ -249,9 +249,9 @@ class RMTR(Metric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src.metrics._legacy_kwa.total_terms == 0:
+        if self._src.metrics._legacy_kwa().total_terms == 0:
             return 1.0
-        return self._src.metrics._legacy_kwa.relaxed_match_count / self._src.metrics._legacy_kwa.total_terms
+        return self._src.metrics._legacy_kwa().relaxed_match_count / self._src.metrics._legacy_kwa().total_terms
 
 
 @METRIC_REGISTRY.register("legacy_keyword_cer")
@@ -266,9 +266,9 @@ class KeywordCER(Metric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the medical character error rate."""
-        if self._src.metrics._legacy_kwa.total_length == 0:
+        if self._src.metrics._legacy_kwa().total_length == 0:
             return 1.0
-        return self._src.metrics._legacy_kwa.total_distance / self._src.metrics._legacy_kwa.total_length
+        return self._src.metrics._legacy_kwa().total_distance / self._src.metrics._legacy_kwa().total_length
 
 
 class _HallucinationAggregator(ExampleMetric):
@@ -315,7 +315,7 @@ class HallucinationAggregator(Metric):
     description = "Number of insertions that appear in "
     example_cls = _HallucinationAggregator
 
-    _hyperparams = {
+    _params = {
         "threshold": (int, 2),  # Optional with default
     }
 

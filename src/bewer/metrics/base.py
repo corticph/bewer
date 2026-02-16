@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import inspect
 from abc import ABC, abstractmethod
 from functools import cached_property, update_wrapper
 from typing import TYPE_CHECKING, Any, Optional, Union
@@ -85,8 +84,7 @@ def _get_metric_table_row_values(metric: "Metric") -> tuple[str, str, str]:
 
 class Metric(ABC):
     example_cls: type["ExampleMetric"] | None = None
-    _param_schema: dict[str, type] | None = None  # Deprecated: use _hyperparams
-    _hyperparams: dict[str, type | tuple[type, Any]] | None = None
+    _params: dict[str, type | tuple[type, Any]] | None = None
     _short_name_base: str
     _long_name_base: str
 
@@ -105,9 +103,9 @@ class Metric(ABC):
         """
         self.name = name
 
-        # Apply defaults from _hyperparams
-        if self._hyperparams is not None:
-            for param_name, param_spec in self._hyperparams.items():
+        # Apply defaults from _params
+        if self._params is not None:
+            for param_name, param_spec in self._params.items():
                 # Parse spec: type or (type, default)
                 if isinstance(param_spec, tuple):
                     param_type, default_value = param_spec
@@ -118,7 +116,6 @@ class Metric(ABC):
 
         self.params = params
         self._examples = {}
-        self._param_cache = {}
 
         self._standardizer = DEFAULT
         self._tokenizer = DEFAULT
@@ -138,8 +135,11 @@ class Metric(ABC):
         if not self.params:
             return self._short_name_base
 
-        # Format parameters for display
-        param_strs = [f"{k}={v}" for k, v in self.params.items()]
+        # Format parameters in the order they're defined in _params
+        if self._params is not None:
+            param_strs = [f"{k}={self.params[k]}" for k in self._params if k in self.params]
+        else:
+            param_strs = [f"{k}={v}" for k, v in self.params.items()]
         return f"{self._short_name_base} ({', '.join(param_strs)})"
 
     @property
@@ -148,7 +148,11 @@ class Metric(ABC):
         if not self.params:
             return self._long_name_base
 
-        param_strs = [f"{k}={v}" for k, v in self.params.items()]
+        # Format parameters in the order they're defined in _params
+        if self._params is not None:
+            param_strs = [f"{k}={self.params[k]}" for k in self._params if k in self.params]
+        else:
+            param_strs = [f"{k}={v}" for k, v in self.params.items()]
         return f"{self._long_name_base} ({', '.join(param_strs)})"
 
     @property
@@ -230,79 +234,6 @@ class Metric(ABC):
         self._examples[example._index] = example_metric
         return example_metric
 
-    @staticmethod
-    def _make_cache_key(**params) -> tuple:
-        """Convert parameters to canonical hashable cache key.
-
-        All parameter values must be hashable (int, float, str, bool, tuple, etc.).
-        Non-hashable types like lists or dicts will raise TypeError.
-
-        Args:
-            **params: Parameters to convert to cache key. All values must be hashable.
-
-        Returns:
-            tuple: Tuple of sorted (key, value) pairs for use as cache key.
-        """
-        if not params:
-            return ()
-        # Sort keys for canonical representation and return as tuple
-        return tuple(sorted(params.items()))
-
-    def with_params(self, **new_params) -> "Metric":
-        """Create or retrieve cached instance with specified parameters.
-
-        Args:
-            **new_params: Parameters for the metric variant. All values must be hashable.
-
-        Returns:
-            Metric instance configured with the specified parameters.
-
-        Raises:
-            TypeError: If any parameter value is not hashable (e.g., list, dict, set).
-
-        Example:
-            >>> wer_threshold = dataset.metrics.wer.with_params(threshold=0.5)
-            >>> wer_threshold.value
-        """
-        # Merge params: current params + new params (new overrides)
-        merged_params = {**self.params, **new_params}
-
-        # Create cache key and check cache
-        # This will raise TypeError if params are not hashable
-        try:
-            cache_key = self._make_cache_key(**merged_params)
-            # Check cache - this is where TypeError actually happens for non-hashable values
-            if cache_key in self._param_cache:
-                return self._param_cache[cache_key]
-        except TypeError as e:
-            # Find which parameter is non-hashable for better error message
-            non_hashable = []
-            for key, value in merged_params.items():
-                try:
-                    hash(value)
-                except TypeError:
-                    non_hashable.append(f"{key} ({type(value).__name__})")
-            raise TypeError(
-                f"All metric parameters must be hashable. Non-hashable parameters: {', '.join(non_hashable)}. "
-                f"Use hashable alternatives: tuple instead of list, frozenset instead of set, etc."
-            ) from e
-
-        # Validate parameters if schema defined
-        if self._param_schema is not None:
-            self._validate_params(merged_params)
-
-        # Create new instance with merged params
-        new_instance = self.__class__(name=self.name, src=self._src, **merged_params)
-
-        # Copy preprocessing pipeline settings
-        new_instance._standardizer = self._standardizer
-        new_instance._tokenizer = self._tokenizer
-        new_instance._normalizer = self._normalizer
-
-        # Cache and return
-        self._param_cache[cache_key] = new_instance
-        return new_instance
-
     def _validate_params(self, params: dict) -> None:
         """Validate parameters against hyperparam definition.
 
@@ -313,26 +244,23 @@ class Metric(ABC):
             ValueError: If parameter name is unknown or no params accepted.
             TypeError: If parameter type doesn't match schema.
         """
-        # Use _hyperparams if defined, otherwise fall back to _param_schema
-        param_def = self._hyperparams if self._hyperparams is not None else self._param_schema
-
         # If no param definition, reject all params
-        if param_def is None:
+        if self._params is None:
             if params:
                 raise ValueError(f"Metric {self._short_name_base} does not accept parameters")
             return
 
         # Check for unknown params
         for param_name in params:
-            if param_name not in param_def:
-                valid_params = list(param_def.keys())
+            if param_name not in self._params:
+                valid_params = list(self._params.keys())
                 raise ValueError(
                     f"Unknown parameter '{param_name}' for {self._short_name_base}. Valid parameters: {valid_params}"
                 )
 
         # Type validation
         for param_name, param_value in params.items():
-            param_spec = param_def[param_name]
+            param_spec = self._params[param_name]
             # Extract type from spec (could be just type or (type, default))
             param_type = param_spec[0] if isinstance(param_spec, tuple) else param_spec
 
@@ -358,21 +286,18 @@ class Metric(ABC):
     def _validate_required_params(self) -> None:
         """Ensure all required parameters are present.
 
-        Required parameters are those defined in _hyperparams without defaults.
+        Required parameters are those defined in _params without defaults.
 
         Raises:
             ValueError: If required parameters are missing.
         """
-        # Use _hyperparams if defined, otherwise fall back to _param_schema
-        param_def = self._hyperparams if self._hyperparams is not None else self._param_schema
-
-        if param_def is None:
+        if self._params is None:
             return
 
         # Find required params (those without defaults)
         required = {
             name
-            for name, spec in param_def.items()
+            for name, spec in self._params.items()
             if not isinstance(spec, tuple)  # No tuple = no default = required
         }
 
@@ -458,7 +383,21 @@ class MetricCollection(object):
             src (Union[Dataset, Example]): The source object (dataset or example) to compute metrics for.
         """
         self._src = src
-        self._cache = {}
+        self._metric_cache = {}  # (name, kwargs_key) -> Metric instance
+
+    @staticmethod
+    def _make_cache_key(**kwargs) -> tuple:
+        """Create a hashable cache key from kwargs.
+
+        Args:
+            **kwargs: Keyword arguments to hash. All values must be hashable.
+
+        Returns:
+            Tuple of sorted (key, value) pairs.
+        """
+        if not kwargs:
+            return ()
+        return tuple(sorted(kwargs.items()))
 
     def list_metrics(self, show_private: bool = False) -> None:
         """Print all registered example metric and their values."""
@@ -469,21 +408,54 @@ class MetricCollection(object):
             metric_rows.append((metric_name, metric_cls._get_row_values()))
         print_metric_table(metric_rows)
 
-    def get(self, name: str) -> Metric:
-        """Get a metric by name.
+    def get(self, name: str):
+        """Get a metric factory function by name.
 
-        If the metric is not already computed, it will be created and set as an attribute of the MetricCollection.
+        Returns a callable that creates/caches metric instances with specified parameters.
+
+        Args:
+            name: The registered metric name.
+
+        Returns:
+            A factory function that accepts **kwargs and returns a Metric instance.
+
+        Example:
+            >>> wer_metric = dataset.metrics.get("wer")(threshold=0.5)
+            >>> wer_value = wer_metric.value
         """
-        if name in self._cache:
-            return self._cache[name]
-        elif name in METRIC_REGISTRY.metric_factories:
-            metric_factory = METRIC_REGISTRY.metric_factories[name]
-            metric_instance = metric_factory()
-            metric_instance.set_source(self._src)
-            self._cache[name] = metric_instance
-            return metric_instance
-        else:
+        if name not in METRIC_REGISTRY.metric_metadata:
             raise AttributeError(f"Metric '{name}' not found.")
+
+        # Return factory function
+        def metric_factory(**kwargs):
+            # Create cache key from kwargs
+            try:
+                cache_key = (name, self._make_cache_key(**kwargs))
+                # Check cache - this is where TypeError happens for non-hashable values
+                if cache_key in self._metric_cache:
+                    return self._metric_cache[cache_key]
+            except TypeError as e:
+                # Find non-hashable parameters for better error message
+                non_hashable = []
+                for key, value in kwargs.items():
+                    try:
+                        hash(value)
+                    except TypeError:
+                        non_hashable.append(f"{key} ({type(value).__name__})")
+                raise TypeError(
+                    f"All metric parameters must be hashable. Non-hashable parameters: {', '.join(non_hashable)}. "
+                    f"Use hashable alternatives: tuple instead of list, frozenset instead of set, etc."
+                ) from e
+
+            # Create new metric instance
+            metric_instance = METRIC_REGISTRY.create_metric(name, **kwargs)
+            metric_instance.set_source(self._src)
+
+            # Cache and return
+            self._metric_cache[cache_key] = metric_instance
+            return metric_instance
+
+        return metric_factory
 
     def __getattr__(self, name: str):
         # NOTE: This method is only called if the attribute is not found the usual ways.
@@ -503,22 +475,41 @@ class ExampleMetricCollection(object):
         self._src_collection = src.src.metrics if src.src is not None else None
         self._cache = {}
 
-    def get(self, name: str) -> ExampleMetric:
-        """Get a metric by name.
+    def get(self, name: str):
+        """Get a metric factory function by name.
 
-        If the metric is not already computed, it will be created and cached.
+        Returns a callable that creates/caches example metric instances.
 
-        Metrics without an ExampleMetric counterpart will return None.
+        Args:
+            name: The registered metric name.
+
+        Returns:
+            A factory function that accepts **kwargs and returns an ExampleMetric instance.
         """
-        if name in self._cache:
-            return self._cache[name]
-        elif name in METRIC_REGISTRY.metric_factories:
-            metric = self._src_collection.__getattr__(name)
-            example_metric_instance = metric._get_example_metric(self._src_example)
-            self._cache[name] = example_metric_instance
-            return example_metric_instance
-        else:
+        if name not in METRIC_REGISTRY.metric_metadata:
             raise AttributeError(f"Metric '{name}' not found.")
+
+        # Return factory function
+        def example_metric_factory(**kwargs):
+            # Create cache key from kwargs
+            cache_key = (name, MetricCollection._make_cache_key(**kwargs))
+
+            # Check cache
+            if cache_key in self._cache:
+                return self._cache[cache_key]
+
+            # Get the parent metric (with same params)
+            parent_metric_factory = self._src_collection.__getattr__(name)
+            parent_metric = parent_metric_factory(**kwargs)
+
+            # Get example metric from parent
+            example_metric_instance = parent_metric._get_example_metric(self._src_example)
+
+            # Cache and return
+            self._cache[cache_key] = example_metric_instance
+            return example_metric_instance
+
+        return example_metric_factory
 
     def __getattr__(self, name: str):
         # NOTE: This method is only called if the attribute is not found the usual ways.
@@ -531,8 +522,13 @@ class ExampleMetricCollection(object):
 
 class MetricRegistry:
     def __init__(self) -> None:
-        self.metric_factories = {}
-        self.metric_classes = {}
+        self.metric_metadata = {}  # name -> metadata dict
+        self.metric_classes = {}  # name -> class (kept for compatibility)
+
+    @property
+    def metric_factories(self):
+        """Backwards compatibility - returns dict of names."""
+        return self.metric_metadata
 
     def register_metric(
         self,
@@ -551,7 +547,10 @@ class MetricRegistry:
             metric_cls (type): The metric class to register.
             name (str | None): The name of the metric. If None, the attr_name of the metric class will be used.
             allow_override (bool): Whether to allow overriding an existing metric with the same name.
-            **kwargs: Additional keyword arguments to pass to the metric class upon instantiation.
+            standardizer (str): Default standardizer for the metric.
+            tokenizer (str): Default tokenizer for the metric.
+            normalizer (str): Default normalizer for the metric.
+            **kwargs: Default parameters to pass to the metric class upon instantiation.
         """
 
         # Validate metric class.
@@ -563,25 +562,73 @@ class MetricRegistry:
             raise TypeError("Metric name must be a string or None.")
 
         # Register metric based on its type.
-        if name in self.metric_factories and not allow_override:
+        if name in self.metric_metadata and not allow_override:
             raise ValueError(f"Metric '{name}' already registered.")
 
-        def metric_factory():
-            metric = metric_cls(name=name, **kwargs)
-            metric.set_standardizer(standardizer)
-            metric.set_tokenizer(tokenizer)
-            metric.set_normalizer(normalizer)
-            return metric
+        # Extract parameter schema from class
+        param_schema = metric_cls._params or {}
 
-        # Validate that all parameters (except the first) have default values.
-        sig = inspect.signature(metric_factory)
-        params = list(sig.parameters.values())  # NOTE: `self` not included when wrapped with partial.
-        for param in params:
-            if param.default is inspect.Parameter.empty:
-                raise ValueError(f"Parameter '{param.name}' for metric '{name}' must have a default value.")
+        # Determine required parameters (those without defaults)
+        required_params = {
+            param_name
+            for param_name, param_spec in param_schema.items()
+            if not isinstance(param_spec, tuple)  # No tuple = no default
+        }
 
-        self.metric_factories[name] = metric_factory
+        # Store metadata for factory creation
+        metadata = {
+            "metric_cls": metric_cls,
+            "pipeline_defaults": {
+                "standardizer": standardizer,
+                "tokenizer": tokenizer,
+                "normalizer": normalizer,
+            },
+            "param_defaults": kwargs,  # Params passed at registration
+            "param_schema": param_schema,
+            "required_params": required_params,
+        }
+
+        self.metric_metadata[name] = metadata
         self.metric_classes[name] = metric_cls
+
+    def create_metric(self, name: str, **kwargs) -> "Metric":
+        """Create a metric instance with merged defaults and overrides.
+
+        Args:
+            name: The registered metric name.
+            **kwargs: Parameters and pipeline overrides. Can include:
+                - standardizer, tokenizer, normalizer (pipeline overrides)
+                - Any metric-specific parameters
+
+        Returns:
+            Configured Metric instance.
+        """
+        if name not in self.metric_metadata:
+            raise ValueError(f"Metric '{name}' not registered.")
+
+        metadata = self.metric_metadata[name]
+
+        # Separate pipeline args from metric params
+        pipeline_args = {}
+        metric_params = {}
+
+        for key, value in kwargs.items():
+            if key in ("standardizer", "tokenizer", "normalizer"):
+                pipeline_args[key] = value
+            else:
+                metric_params[key] = value
+
+        # Merge with defaults
+        final_pipeline = {**metadata["pipeline_defaults"], **pipeline_args}
+        final_params = {**metadata["param_defaults"], **metric_params}
+
+        # Create metric instance
+        metric = metadata["metric_cls"](name=name, **final_params)
+        metric.set_standardizer(final_pipeline["standardizer"])
+        metric.set_tokenizer(final_pipeline["tokenizer"])
+        metric.set_normalizer(final_pipeline["normalizer"])
+
+        return metric
 
     def register(
         self,
