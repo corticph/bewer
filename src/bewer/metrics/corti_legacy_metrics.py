@@ -191,32 +191,32 @@ class KeywordAggregator(Metric):
     @metric_value
     def match_count(self) -> int:
         """Get the total number of exactly matched medical terms."""
-        return sum([example.metrics.get(self.name).match_count for example in self._src])
+        return sum([self._get_example_metric(example).match_count for example in self._src])
 
     @metric_value
     def relaxed_match_count(self) -> int:
         """Get the total number of medical terms matched with relaxed criteria."""
-        return sum([example.metrics.get(self.name).relaxed_match_count for example in self._src])
+        return sum([self._get_example_metric(example).relaxed_match_count for example in self._src])
 
     @metric_value
     def total_terms(self) -> int:
         """Get the total number of medical terms."""
-        return sum([example.metrics.get(self.name).total_terms for example in self._src])
+        return sum([self._get_example_metric(example).total_terms for example in self._src])
 
     @metric_value
     def total_length(self) -> float:
         """Get the total length of medical terms."""
-        return sum([example.metrics.get(self.name).total_length for example in self._src])
+        return sum([self._get_example_metric(example).total_length for example in self._src])
 
     @metric_value
     def total_distance(self) -> float:
         """Get the total Levenshtein distance of medical terms."""
-        return sum([example.metrics.get(self.name).total_distance for example in self._src])
+        return sum([self._get_example_metric(example).total_distance for example in self._src])
 
     @metric_value
     def correct_terms(self) -> list[str]:
         """Get the list of correctly matched medical terms."""
-        return list(chain.from_iterable([example.metrics.get(self.name).correct_terms for example in self._src]))
+        return list(chain.from_iterable([self._get_example_metric(example).correct_terms for example in self._src]))
 
 
 @METRIC_REGISTRY.register("legacy_medical_word_accuracy")
