@@ -40,12 +40,12 @@ class CER(Metric):
     @metric_value
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference texts."""
-        return sum([example.metrics.get(self.name).num_edits for example in self._src_dataset])
+        return sum([example.metrics.get(self.name).num_edits for example in self._src])
 
     @metric_value
     def ref_length(self) -> int:
         """Get the number of characters in the reference texts."""
-        return sum([example.metrics.get(self.name).ref_length for example in self._src_dataset])
+        return sum([example.metrics.get(self.name).ref_length for example in self._src])
 
     @metric_value(main=True)
     def value(self) -> float:

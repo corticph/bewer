@@ -103,7 +103,7 @@ class Levenshtein_(ExampleMetric):
                 raise ValueError(f"Unknown operation type: {op_type}")
             bewer_ops.append(op)
 
-        alignment = Alignment(bewer_ops, src_example=self.example)
+        alignment = Alignment(bewer_ops, src=self.example)
         return alignment
 
 

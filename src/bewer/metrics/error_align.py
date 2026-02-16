@@ -73,7 +73,7 @@ class ErrorAlign_(ExampleMetric):
                 ref_idx += 1
             ea_ops.append(op)
 
-        alignment = Alignment(ea_ops, src_example=self.example)
+        alignment = Alignment(ea_ops, src=self.example)
         return alignment
 
 

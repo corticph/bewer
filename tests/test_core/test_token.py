@@ -36,10 +36,10 @@ class TestTokenInit:
         token = Token(raw="hello", start=0, end=5)
         assert token._normalized == {}
 
-    def test_src_text_none_by_default(self):
-        """Test that _src_text defaults to None."""
+    def test_src_none_by_default(self):
+        """Test that src defaults to None."""
         token = Token(raw="hello", start=0, end=5)
-        assert token._src_text is None
+        assert token.src is None
 
 
 class TestTokenFromMatch:
@@ -65,12 +65,12 @@ class TestTokenFromMatch:
         assert token.start == 6
         assert token.end == 11
 
-    def test_from_match_with_src_text(self):
+    def test_from_match_with_src(self):
         """Test creating token with source text reference."""
         pattern = re.compile(r"\S+")
         match = pattern.search("hello")
-        token = Token.from_match(match, index=0, _src_text=None)
-        assert token._src_text is None
+        token = Token.from_match(match, index=0, src=None)
+        assert token.src is None
 
 
 class TestTokenEquality:

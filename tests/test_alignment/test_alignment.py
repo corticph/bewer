@@ -132,19 +132,19 @@ class TestAlignmentSetSource:
         alignment = Alignment()
         mock_example = Mock()
         alignment.set_source(mock_example)
-        assert alignment._src_example is mock_example
+        assert alignment.src is mock_example
 
-    def test_set_source_can_be_called_multiple_times(self):
-        """Test that set_source can be called multiple times."""
+    def test_set_source_raises_on_reassignment(self):
+        """Test that set_source raises ValueError on reassignment (single assignment only)."""
         alignment = Alignment()
         mock_example1 = Mock()
         mock_example2 = Mock()
 
         alignment.set_source(mock_example1)
-        assert alignment._src_example is mock_example1
+        assert alignment.src is mock_example1
 
-        alignment.set_source(mock_example2)
-        assert alignment._src_example is mock_example2
+        with pytest.raises(ValueError, match="Source already set"):
+            alignment.set_source(mock_example2)
 
 
 class TestAlignmentToDicts:
@@ -263,7 +263,7 @@ class TestAlignmentToHtmlLines:
     def test_to_html_lines_returns_list_of_tuples(self):
         """Test that _to_html_lines returns a list of tuples."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops, src_example=self._create_mock_example())
+        alignment = Alignment(ops, src=self._create_mock_example())
         result = alignment._to_html_lines()
 
         assert isinstance(result, list)
@@ -278,7 +278,7 @@ class TestAlignmentToHtmlLines:
             MATCH = "#custom"
 
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops, src_example=self._create_mock_example())
+        alignment = Alignment(ops, src=self._create_mock_example())
         result = alignment._to_html_lines(color_scheme=CustomColorScheme)
 
         # Verify custom color is used
