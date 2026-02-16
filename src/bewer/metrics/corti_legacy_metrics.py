@@ -184,16 +184,9 @@ class KeywordAggregator(Metric):
     description = "Aggregates keyword-focused metrics for medical terms."
     example_cls = _KeywordAggregator
 
-    def __init__(
-        self,
-        name: str = "_legacy_kwa",
-        cer_threshold: float = 0.2,
-        **params,
-    ):
-        """Initialize the KeywordAggregator Metric object."""
-        # Merge explicit parameter into params dict
-        params["cer_threshold"] = cer_threshold
-        super().__init__(name, **params)
+    _hyperparams = {
+        "cer_threshold": (float, 0.2),  # Optional with default
+    }
 
     @metric_value
     def match_count(self) -> int:
@@ -322,15 +315,9 @@ class HallucinationAggregator(Metric):
     description = "Number of insertions that appear in "
     example_cls = _HallucinationAggregator
 
-    def __init__(
-        self,
-        name: str = "_legacy_hlcn",
-        threshold: int = 2,
-        **params,
-    ):
-        # Merge explicit parameter into params dict
-        params["threshold"] = threshold
-        super().__init__(name, **params)
+    _hyperparams = {
+        "threshold": (int, 2),  # Optional with default
+    }
 
 
 @METRIC_REGISTRY.register("legacy_deletions")

@@ -52,6 +52,10 @@ class metric_value(cached_property):
         if name in obj.__dict__:
             return obj.__dict__[name]
 
+        # Validate required params before computing (only for Metric, not ExampleMetric)
+        if hasattr(obj, "_validate_required_params"):
+            obj._validate_required_params()
+
         with set_pipeline(*obj.pipeline):
             value = self.func(obj)
 
@@ -81,7 +85,8 @@ def _get_metric_table_row_values(metric: "Metric") -> tuple[str, str, str]:
 
 class Metric(ABC):
     example_cls: type["ExampleMetric"] | None = None
-    _param_schema: dict[str, type] | None = None
+    _param_schema: dict[str, type] | None = None  # Deprecated: use _hyperparams
+    _hyperparams: dict[str, type | tuple[type, Any]] | None = None
     _short_name_base: str
     _long_name_base: str
 
@@ -99,6 +104,18 @@ class Metric(ABC):
             **params: Optional parameters for metric configuration.
         """
         self.name = name
+
+        # Apply defaults from _hyperparams
+        if self._hyperparams is not None:
+            for param_name, param_spec in self._hyperparams.items():
+                # Parse spec: type or (type, default)
+                if isinstance(param_spec, tuple):
+                    param_type, default_value = param_spec
+                    # Apply default if not provided
+                    if param_name not in params:
+                        params[param_name] = default_value
+                # else: just type, means required (no default applied)
+
         self.params = params
         self._examples = {}
         self._param_cache = {}
@@ -107,8 +124,8 @@ class Metric(ABC):
         self._tokenizer = DEFAULT
         self._normalizer = DEFAULT
 
-        # Validate parameters if schema is defined
-        if self._param_schema is not None and params:
+        # Validate parameters
+        if params:
             self._validate_params(params)
 
         self._src = None
@@ -287,25 +304,41 @@ class Metric(ABC):
         return new_instance
 
     def _validate_params(self, params: dict) -> None:
-        """Validate parameters against schema.
+        """Validate parameters against hyperparam definition.
 
         Args:
             params: The parameters to validate.
 
         Raises:
-            ValueError: If parameter name is unknown.
+            ValueError: If parameter name is unknown or no params accepted.
             TypeError: If parameter type doesn't match schema.
         """
-        if self._param_schema is None:
+        # Use _hyperparams if defined, otherwise fall back to _param_schema
+        param_def = self._hyperparams if self._hyperparams is not None else self._param_schema
+
+        # If no param definition, reject all params
+        if param_def is None:
+            if params:
+                raise ValueError(f"Metric {self._short_name_base} does not accept parameters")
             return
 
+        # Check for unknown params
+        for param_name in params:
+            if param_name not in param_def:
+                valid_params = list(param_def.keys())
+                raise ValueError(
+                    f"Unknown parameter '{param_name}' for {self._short_name_base}. Valid parameters: {valid_params}"
+                )
+
+        # Type validation
         for param_name, param_value in params.items():
-            if param_name not in self._param_schema:
-                raise ValueError(f"Unknown parameter '{param_name}' for {self._short_name_base}")
-            expected_type = self._param_schema[param_name]
-            if not isinstance(param_value, expected_type):
+            param_spec = param_def[param_name]
+            # Extract type from spec (could be just type or (type, default))
+            param_type = param_spec[0] if isinstance(param_spec, tuple) else param_spec
+
+            if not isinstance(param_value, param_type):
                 raise TypeError(
-                    f"Parameter '{param_name}' must be {expected_type.__name__}, got {type(param_value).__name__}"
+                    f"Parameter '{param_name}' must be {param_type.__name__}, got {type(param_value).__name__}"
                 )
 
     def _validate_params_with_dataset(self, params: dict, dataset: "Dataset") -> None:
@@ -321,6 +354,36 @@ class Metric(ABC):
             ValueError: If parameters are invalid for this dataset.
         """
         pass  # Default: no dataset-specific validation
+
+    def _validate_required_params(self) -> None:
+        """Ensure all required parameters are present.
+
+        Required parameters are those defined in _hyperparams without defaults.
+
+        Raises:
+            ValueError: If required parameters are missing.
+        """
+        # Use _hyperparams if defined, otherwise fall back to _param_schema
+        param_def = self._hyperparams if self._hyperparams is not None else self._param_schema
+
+        if param_def is None:
+            return
+
+        # Find required params (those without defaults)
+        required = {
+            name
+            for name, spec in param_def.items()
+            if not isinstance(spec, tuple)  # No tuple = no default = required
+        }
+
+        missing = required - set(self.params.keys())
+        if missing:
+            missing_list = sorted(missing)
+            param_hints = ", ".join(f"{p}=..." for p in missing_list)
+            raise ValueError(
+                f"Missing required parameters for {self._short_name_base}: {missing_list}. "
+                f"Use .with_params({param_hints}) to set them."
+            )
 
 
 class ExampleMetric(ABC):
