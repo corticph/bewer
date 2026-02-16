@@ -109,7 +109,7 @@ class Levenshtein_(ExampleMetric):
 
 @METRIC_REGISTRY.register("levenshtein")
 class Levenshtein(Metric):
-    short_name = "Levenshtein"
-    long_name = "Levenshtein Alignment"
+    _short_name_base = "Levenshtein"
+    _long_name_base = "Levenshtein Alignment"
     description = "Levenshtein alignment between hypothesis and reference texts."
     example_cls = Levenshtein_

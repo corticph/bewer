@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import inspect
 from abc import ABC, abstractmethod
-from collections.abc import Hashable
 from functools import cached_property, update_wrapper
 from typing import TYPE_CHECKING, Any, Optional, Union
 
@@ -82,44 +81,58 @@ def _get_metric_table_row_values(metric: "Metric") -> tuple[str, str, str]:
 
 class Metric(ABC):
     example_cls: type["ExampleMetric"] | None = None
+    _param_schema: dict[str, type] | None = None
+    _short_name_base: str
+    _long_name_base: str
 
     def __init__(
         self,
         name: str,
-        key: Optional[Hashable] = None,
         src: Optional["Dataset"] = None,
+        **params,
     ):
         """Initialize the Metric object.
 
         Args:
             name: Metric name.
-            key: Optional key for filtered metrics.
             src: Parent Dataset object. Can be set later via set_source().
+            **params: Optional parameters for metric configuration.
         """
         self.name = name
-        self.key = key
+        self.params = params
         self._examples = {}
-        self._members = {}
+        self._param_cache = {}
 
         self._standardizer = DEFAULT
         self._tokenizer = DEFAULT
         self._normalizer = DEFAULT
+
+        # Validate parameters if schema is defined
+        if self._param_schema is not None and params:
+            self._validate_params(params)
 
         self._src = None
         if src is not None:
             self.set_source(src)
 
     @property
-    @abstractmethod
-    def long_name(self) -> str:
-        """Get the long/full name of the metric."""
-        pass
+    def short_name(self) -> str:
+        """Get the short name, including parameters if present."""
+        if not self.params:
+            return self._short_name_base
+
+        # Format parameters for display
+        param_strs = [f"{k}={v}" for k, v in self.params.items()]
+        return f"{self._short_name_base} ({', '.join(param_strs)})"
 
     @property
-    @abstractmethod
-    def short_name(self) -> str:
-        """Get the short name (e.g., an abbreviation) of the metric."""
-        pass
+    def long_name(self) -> str:
+        """Get the long name, including parameters if present."""
+        if not self.params:
+            return self._long_name_base
+
+        param_strs = [f"{k}={v}" for k, v in self.params.items()]
+        return f"{self._long_name_base} ({', '.join(param_strs)})"
 
     @property
     @abstractmethod
@@ -158,17 +171,21 @@ class Metric(ABC):
         return (metric_row_values, example_metric_row_values)
 
     def set_source(self, src: "Dataset") -> None:
-        """Set the parent Dataset object.
+        """Set the parent Dataset object and validate parameters if needed.
 
         Args:
             src: The parent Dataset object.
 
         Raises:
-            ValueError: If source is already set.
+            ValueError: If source is already set or if parameters are invalid for this dataset.
         """
         if self._src is not None:
             raise ValueError("Source already set for Metric")
         self._src = src
+
+        # Validate parameters against dataset if present
+        if self.params:
+            self._validate_params_with_dataset(self.params, src)
 
     def set_standardizer(self, standardizer: str):
         """Set the standardizer for the metric."""
@@ -196,41 +213,138 @@ class Metric(ABC):
         self._examples[example._index] = example_metric
         return example_metric
 
-    def is_valid_key(self, key: Hashable) -> bool:
-        """Check if the filter is valid."""
-        raise NotImplementedError(f"Metric '{self.short_name}' does not support filtering.")
+    @staticmethod
+    def _make_cache_key(**params) -> tuple:
+        """Convert parameters to canonical hashable cache key.
 
-    def __getitem__(self, key: Hashable) -> "Metric":
-        """Get a metric by a hashable key."""
-        if key in self._members:
-            return self._members[key]
-        elif self.is_valid_key(key):
-            self._members[key] = self.__class__(name=self.name, key=key, src=self._src)
-            return self._members[key]
-        raise AttributeError(f"'{key}' is not a valid key for this metric.")
+        All parameter values must be hashable (int, float, str, bool, tuple, etc.).
+        Non-hashable types like lists or dicts will raise TypeError.
+
+        Args:
+            **params: Parameters to convert to cache key. All values must be hashable.
+
+        Returns:
+            tuple: Tuple of sorted (key, value) pairs for use as cache key.
+        """
+        if not params:
+            return ()
+        # Sort keys for canonical representation and return as tuple
+        return tuple(sorted(params.items()))
+
+    def with_params(self, **new_params) -> "Metric":
+        """Create or retrieve cached instance with specified parameters.
+
+        Args:
+            **new_params: Parameters for the metric variant. All values must be hashable.
+
+        Returns:
+            Metric instance configured with the specified parameters.
+
+        Raises:
+            TypeError: If any parameter value is not hashable (e.g., list, dict, set).
+
+        Example:
+            >>> wer_threshold = dataset.metrics.wer.with_params(threshold=0.5)
+            >>> wer_threshold.value
+        """
+        # Merge params: current params + new params (new overrides)
+        merged_params = {**self.params, **new_params}
+
+        # Create cache key and check cache
+        # This will raise TypeError if params are not hashable
+        try:
+            cache_key = self._make_cache_key(**merged_params)
+            # Check cache - this is where TypeError actually happens for non-hashable values
+            if cache_key in self._param_cache:
+                return self._param_cache[cache_key]
+        except TypeError as e:
+            # Find which parameter is non-hashable for better error message
+            non_hashable = []
+            for key, value in merged_params.items():
+                try:
+                    hash(value)
+                except TypeError:
+                    non_hashable.append(f"{key} ({type(value).__name__})")
+            raise TypeError(
+                f"All metric parameters must be hashable. Non-hashable parameters: {', '.join(non_hashable)}. "
+                f"Use hashable alternatives: tuple instead of list, frozenset instead of set, etc."
+            ) from e
+
+        # Validate parameters if schema defined
+        if self._param_schema is not None:
+            self._validate_params(merged_params)
+
+        # Create new instance with merged params
+        new_instance = self.__class__(name=self.name, src=self._src, **merged_params)
+
+        # Copy preprocessing pipeline settings
+        new_instance._standardizer = self._standardizer
+        new_instance._tokenizer = self._tokenizer
+        new_instance._normalizer = self._normalizer
+
+        # Cache and return
+        self._param_cache[cache_key] = new_instance
+        return new_instance
+
+    def _validate_params(self, params: dict) -> None:
+        """Validate parameters against schema.
+
+        Args:
+            params: The parameters to validate.
+
+        Raises:
+            ValueError: If parameter name is unknown.
+            TypeError: If parameter type doesn't match schema.
+        """
+        if self._param_schema is None:
+            return
+
+        for param_name, param_value in params.items():
+            if param_name not in self._param_schema:
+                raise ValueError(f"Unknown parameter '{param_name}' for {self._short_name_base}")
+            expected_type = self._param_schema[param_name]
+            if not isinstance(param_value, expected_type):
+                raise TypeError(
+                    f"Parameter '{param_name}' must be {expected_type.__name__}, got {type(param_value).__name__}"
+                )
+
+    def _validate_params_with_dataset(self, params: dict, dataset: "Dataset") -> None:
+        """Optional hook for dataset-aware validation.
+
+        Override in subclasses that need to validate parameters against dataset state.
+
+        Args:
+            params: The parameters to validate.
+            dataset: The source dataset.
+
+        Raises:
+            ValueError: If parameters are invalid for this dataset.
+        """
+        pass  # Default: no dataset-specific validation
 
 
 class ExampleMetric(ABC):
     def __init__(
         self,
         parent_metric: "Metric",
-        key: Optional[Hashable] = None,
         src: Optional["Example"] = None,
     ):
         """Initialize the ExampleMetric object.
 
         Args:
             parent_metric: The parent Metric object.
-            key: Optional key for filtered metrics.
             src: Parent Example object. Can be set later via set_source().
         """
         self.parent_metric = parent_metric
-        self.key = key
-        self._members = {}
 
         self._src = None
         if src is not None:
             self.set_source(src)
+
+    @property
+    def params(self) -> dict:
+        """Access parent metric's parameters."""
+        return self.parent_metric.params
 
     @property
     def src(self) -> Optional["Example"]:

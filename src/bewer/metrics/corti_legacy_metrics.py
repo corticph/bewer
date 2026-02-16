@@ -122,7 +122,7 @@ class _KeywordAggregator(ExampleMetric):
             if distance == 0:
                 match_count += 1
                 correct_terms.append(term)
-            if cer_score <= self.parent_metric.cer_threshold:
+            if cer_score <= self.params["cer_threshold"]:
                 relaxed_match_count += 1
             total_distance += distance
             total_length += max(len(term), 1)
@@ -179,8 +179,8 @@ class _KeywordAggregator(ExampleMetric):
 
 @METRIC_REGISTRY.register("_legacy_kwa", standardizer="default", tokenizer="legacy", normalizer="legacy_uncased")
 class KeywordAggregator(Metric):
-    short_name = "kwa"
-    long_name = "Keyword Aggregator"
+    _short_name_base = "kwa"
+    _long_name_base = "Keyword Aggregator"
     description = "Aggregates keyword-focused metrics for medical terms."
     example_cls = _KeywordAggregator
 
@@ -188,10 +188,12 @@ class KeywordAggregator(Metric):
         self,
         name: str = "_legacy_kwa",
         cer_threshold: float = 0.2,
+        **params,
     ):
-        """Initialize the CER Metric object."""
-        self.cer_threshold = cer_threshold
-        super().__init__(name)
+        """Initialize the KeywordAggregator Metric object."""
+        # Merge explicit parameter into params dict
+        params["cer_threshold"] = cer_threshold
+        super().__init__(name, **params)
 
     @metric_value
     def match_count(self) -> int:
@@ -226,8 +228,8 @@ class KeywordAggregator(Metric):
 
 @METRIC_REGISTRY.register("legacy_medical_word_accuracy")
 class MTR(Metric):
-    short_name = "MTR"
-    long_name = "Medical Term Recall"
+    _short_name_base = "MTR"
+    _long_name_base = "Medical Term Recall"
     description = (
         "Medical Term Recall (MTR) is computed as the number of correctly recognized medical terms "
         "divided by the total number of medical terms in the reference transcripts."
@@ -243,8 +245,8 @@ class MTR(Metric):
 
 @METRIC_REGISTRY.register("legacy_relaxed_medical_word_accuracy")
 class RMTR(Metric):
-    short_name = "Relaxed MTR"
-    long_name = "Relaxed Medical Term Recall"
+    _short_name_base = "Relaxed MTR"
+    _long_name_base = "Relaxed Medical Term Recall"
     description = (
         "Relaxed Medical Term Recall (RMTR) is computed as the number of terms recognized with a relaxed criteria "
         "(i.e., within a certain character error rate threshold) divided by the total number of medical terms in the "
@@ -261,8 +263,8 @@ class RMTR(Metric):
 
 @METRIC_REGISTRY.register("legacy_keyword_cer")
 class KeywordCER(Metric):
-    short_name = "Keyword CER"
-    long_name = "Keyword Character Error Rate"
+    _short_name_base = "Keyword CER"
+    _long_name_base = "Keyword Character Error Rate"
     description = (
         "Keyword Character Error Rate (Keyword CER) is computed as the character error rate for medical terms "
         "between the reference and hypothesis terms."
@@ -292,7 +294,7 @@ class _HallucinationAggregator(ExampleMetric):
             if alignment.op_type == OpType.INSERT:
                 consecutive_insertions += 1
                 insertions += 1
-                if consecutive_insertions > self.parent_metric.threshold:
+                if consecutive_insertions > self.params["threshold"]:
                     has_contiguous_insertions = True
             else:
                 consecutive_insertions = 0
@@ -315,8 +317,8 @@ class _HallucinationAggregator(ExampleMetric):
 
 @METRIC_REGISTRY.register("_legacy_hlcn")
 class HallucinationAggregator(Metric):
-    short_name = "Hallucination Insertions"
-    long_name = "Hallucination Insertions"
+    _short_name_base = "Hallucination Insertions"
+    _long_name_base = "Hallucination Insertions"
     description = "Number of insertions that appear in "
     example_cls = _HallucinationAggregator
 
@@ -324,15 +326,17 @@ class HallucinationAggregator(Metric):
         self,
         name: str = "_legacy_hlcn",
         threshold: int = 2,
+        **params,
     ):
-        self.threshold = threshold
-        super().__init__(name)
+        # Merge explicit parameter into params dict
+        params["threshold"] = threshold
+        super().__init__(name, **params)
 
 
 @METRIC_REGISTRY.register("legacy_deletions")
 class Insertions(Metric):
-    short_name = "Hallucination Insertions"
-    long_name = "Hallucination Insertions"
+    _short_name_base = "Hallucination Insertions"
+    _long_name_base = "Hallucination Insertions"
     description = "Average number of insertions per example."
 
     @metric_value(main=True)
@@ -347,8 +351,8 @@ class Insertions(Metric):
 
 @METRIC_REGISTRY.register("legacy_del_hallucinations")
 class DeletionHallucinations(Metric):
-    short_name = "Insertion Hallucinations"
-    long_name = "Insertion Hallucinations"
+    _short_name_base = "Insertion Hallucinations"
+    _long_name_base = "Insertion Hallucinations"
     description = "Fraction of examples for which more than N consecutive insertions are observed."
 
     @metric_value(main=True)

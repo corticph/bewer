@@ -29,8 +29,8 @@ class CER_(ExampleMetric):
 
 @METRIC_REGISTRY.register("cer")
 class CER(Metric):
-    short_name = "CER"
-    long_name = "Character Error Rate"
+    _short_name_base = "CER"
+    _long_name_base = "Character Error Rate"
     description = (
         "Character Error Rate (CER) is computed as the character-level edit distance between the normalized reference "
         "and hypothesis texts, divided by the total number of characters in the reference texts."

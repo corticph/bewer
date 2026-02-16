@@ -54,11 +54,11 @@ class TestDatasetSummary:
 
     def test_short_name(self):
         """Test that short_name is set."""
-        assert DatasetSummary.short_name == "Summary"
+        assert DatasetSummary._short_name_base == "Summary"
 
     def test_long_name(self):
         """Test that long_name is set."""
-        assert DatasetSummary.long_name == "Dataset Summary"
+        assert DatasetSummary._long_name_base == "Dataset Summary"
 
     def test_description_exists(self):
         """Test that description is set."""

@@ -79,7 +79,7 @@ class ErrorAlign_(ExampleMetric):
 
 @METRIC_REGISTRY.register("error_align")
 class ErrorAlign(Metric):
-    short_name = "EA"
-    long_name = "Error Alignment"
+    _short_name_base = "EA"
+    _long_name_base = "Error Alignment"
     description = "Error alignment between hypothesis and reference texts."
     example_cls = ErrorAlign_
