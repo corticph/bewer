@@ -58,16 +58,17 @@ poetry run twine check dist/*  # Validate built packages
 
 **Text** (`src/bewer/core/text.py`)
 - Immutable text representation with preprocessing pipeline
-- Stores original, standardized, normalized, and tokenized versions
+- Stores original and standardized text and caches tokenization results
+- Normalization is applied per-token via the active normalizer pipeline
 - Lazy evaluation of preprocessing stages
 
 **Preprocessing Pipeline** (`src/bewer/preprocessing/`)
-- Three-stage pipeline: standardization → tokenization → normalization
+- Three-stage pipeline: standardization → tokenization → token-level normalization
 - Configured via YAML (`src/bewer/configs/base.yml`)
 - Each stage is a series of function applications
 - Standardizers: Unicode normalization (NFC)
 - Tokenizers: Whitespace-based with customizable symbol handling
-- Normalizers: Lowercase, transliteration, symbol removal/translation
+- Normalizers: Lowercase, transliteration, symbol removal/translation (applied to tokens)
 
 ### Metrics System
 
@@ -104,7 +105,7 @@ poetry run twine check dist/*  # Validate built packages
 
 ## Configuration System
 
-Configuration is managed through YAML files with OmegaConf/Hydra:
+Configuration is managed through YAML files with OmegaConf:
 
 - Default config: `src/bewer/configs/base.yml`
 - Defines preprocessing pipelines (standardizers, tokenizers, normalizers)
@@ -147,7 +148,7 @@ normalizers:
 **Core Dependencies**:
 - pandas: Data handling
 - regex, rapidfuzz: Text processing and matching
-- pyyaml, omegaconf, hydra-core: Configuration management
+- pyyaml, omegaconf: Configuration management
 - error-align: External alignment library (Corti package)
 - jinja2: HTML template rendering
 - rich: CLI output formatting
