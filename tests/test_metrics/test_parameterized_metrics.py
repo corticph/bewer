@@ -360,7 +360,9 @@ class TestRequiredHyperparams:
             def value(self) -> float:
                 threshold = self.params.threshold
                 return sum(
-                    ex.metrics.get(self.name).value for ex in self._src if ex.metrics.get(self.name).value >= threshold
+                    self._get_example_metric(ex).value
+                    for ex in self._src
+                    if self._get_example_metric(ex).value >= threshold
                 )
 
         # Try to construct without providing required param — error is eager

@@ -5,6 +5,8 @@ from dataclasses import MISSING, dataclass, fields
 from functools import cached_property, update_wrapper
 from typing import TYPE_CHECKING, Any, Optional, Union, get_type_hints
 
+from typeguard import check_type
+
 from bewer.flags import DEFAULT
 from bewer.preprocessing.context import set_pipeline
 from bewer.reporting.python.tables import print_metric_table
@@ -98,8 +100,11 @@ class MetricParams:
         for f in fields(self):
             value = getattr(self, f.name)
             expected_type = hints[f.name]
-            if not isinstance(value, expected_type):
-                raise TypeError(f"Parameter '{f.name}' must be {expected_type.__name__}, got {type(value).__name__}")
+            try:
+                check_type(value, expected_type)
+            except Exception:
+                type_name = getattr(expected_type, "__name__", str(expected_type))
+                raise TypeError(f"Parameter '{f.name}' must be {type_name}, got {type(value).__name__}")
 
     @property
     def metric(self) -> "Metric":
@@ -374,7 +379,7 @@ class MetricCollection(object):
             A factory function that accepts **kwargs and returns a Metric instance.
 
         Example:
-            >>> wer_metric = dataset.metrics.get("wer")(threshold=0.5)
+            >>> wer_metric = dataset.metrics.get("wer")()
             >>> wer_value = wer_metric.value
         """
         if name not in METRIC_REGISTRY.metric_metadata:
@@ -447,11 +452,21 @@ class ExampleMetricCollection(object):
         def example_metric_factory(**kwargs):
             # Resolve kwargs against all defaults for a canonical cache key
             resolved = METRIC_REGISTRY.resolve_params(name, **kwargs)
-            cache_key = (name, MetricCollection._make_cache_key(**resolved))
-
-            # Check cache
-            if cache_key in self._cache:
-                return self._cache[cache_key]
+            try:
+                cache_key = (name, MetricCollection._make_cache_key(**resolved))
+                if cache_key in self._cache:
+                    return self._cache[cache_key]
+            except TypeError as e:
+                non_hashable = []
+                for key, value in kwargs.items():
+                    try:
+                        hash(value)
+                    except TypeError:
+                        non_hashable.append(f"{key} ({type(value).__name__})")
+                raise TypeError(
+                    f"All metric parameters must be hashable. Non-hashable parameters: {', '.join(non_hashable)}. "
+                    f"Use hashable alternatives: tuple instead of list, frozenset instead of set, etc."
+                ) from e
 
             # Get the parent metric (with same params)
             parent_metric_factory = self._src_collection.__getattr__(name)
@@ -488,7 +503,7 @@ class MetricRegistry:
     def register_metric(
         self,
         metric_cls: type["Metric"],
-        name: str | None = None,
+        name: str,
         allow_override: bool = False,
         standardizer: str = DEFAULT,
         tokenizer: str = DEFAULT,
@@ -500,7 +515,7 @@ class MetricRegistry:
 
         Args:
             metric_cls (type): The metric class to register.
-            name (str | None): The name of the metric. If None, the attr_name of the metric class will be used.
+            name (str): The registered name for the metric.
             allow_override (bool): Whether to allow overriding an existing metric with the same name.
             standardizer (str): Default standardizer for the metric.
             tokenizer (str): Default tokenizer for the metric.
@@ -514,7 +529,7 @@ class MetricRegistry:
 
         # Validate metric name.
         if not isinstance(name, str):
-            raise TypeError("Metric name must be a string or None.")
+            raise TypeError("Metric name must be a string.")
 
         # Register metric based on its type.
         if name in self.metric_metadata and not allow_override:
@@ -531,7 +546,7 @@ class MetricRegistry:
                 if f.default is not MISSING:
                     param_schema[f.name] = (field_type, f.default)
                 elif f.default_factory is not MISSING:
-                    param_schema[f.name] = (field_type, f.default_factory())
+                    param_schema[f.name] = (field_type, f.default_factory)
                 else:
                     param_schema[f.name] = field_type
         else:
@@ -590,7 +605,8 @@ class MetricRegistry:
         # Apply class-level param_schema defaults for any still-missing params
         for param_name, param_spec in metadata["param_schema"].items():
             if isinstance(param_spec, tuple) and param_name not in final_params:
-                final_params[param_name] = param_spec[1]
+                default = param_spec[1]
+                final_params[param_name] = default() if callable(default) else default
 
         return {**final_pipeline, **final_params}
 
