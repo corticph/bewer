@@ -1,8 +1,11 @@
 """Tests for parameterized metrics functionality."""
 
+from dataclasses import dataclass
+
 import pytest
 
 from bewer import Dataset
+from bewer.metrics.base import MetricParams
 
 
 class TestParameterizedMetrics:
@@ -24,17 +27,17 @@ class TestParameterizedMetrics:
         )
         return dataset
 
-    def test_basic_metric_has_empty_params(self, sample_dataset):
-        """Test that a basic metric has empty params dict."""
+    def test_basic_metric_has_no_params(self, sample_dataset):
+        """Test that a basic metric has None params."""
         wer = sample_dataset.metrics.wer()
-        assert wer.params == {}
+        assert wer.params is None
 
     def test_factory_returns_new_instance(self, sample_dataset):
         """Test that factory calls with different params return different instances."""
         kwa_base = sample_dataset.metrics._legacy_kwa()
         kwa_params = sample_dataset.metrics._legacy_kwa(cer_threshold=0.5)
         assert kwa_base is not kwa_params
-        assert kwa_params.params == {"cer_threshold": 0.5}
+        assert kwa_params.params.cer_threshold == 0.5
 
     def test_factory_caching(self, sample_dataset):
         """Test that factory caches instances with same parameters."""
@@ -60,12 +63,12 @@ class TestParameterizedMetrics:
         """Test that factory uses default parameters."""
         # KeywordAggregator has default cer_threshold=0.2
         kwa1 = sample_dataset.metrics._legacy_kwa()
-        assert kwa1.params == {"cer_threshold": 0.2}
+        assert kwa1.params.cer_threshold == 0.2
 
     def test_factory_overrides_defaults(self, sample_dataset):
         """Test that factory can override default parameters."""
         kwa = sample_dataset.metrics._legacy_kwa(cer_threshold=0.5)
-        assert kwa.params == {"cer_threshold": 0.5}
+        assert kwa.params.cer_threshold == 0.5
 
 
 class TestDynamicNaming:
@@ -126,12 +129,12 @@ class TestKeywordAggregatorRefactoring:
     def test_default_cer_threshold(self, keyword_dataset):
         """Test that default cer_threshold is set correctly."""
         kwa = keyword_dataset.metrics._legacy_kwa()
-        assert kwa.params["cer_threshold"] == 0.2
+        assert kwa.params.cer_threshold == 0.2
 
     def test_custom_cer_threshold(self, keyword_dataset):
         """Test that custom cer_threshold can be set."""
         kwa = keyword_dataset.metrics._legacy_kwa(cer_threshold=0.1)
-        assert kwa.params["cer_threshold"] == 0.1
+        assert kwa.params.cer_threshold == 0.1
 
     def test_kwa_short_name_includes_threshold(self, keyword_dataset):
         """Test that KWA short name includes threshold parameter."""
@@ -182,7 +185,7 @@ class TestExampleMetricParamsAccess:
         # Access the example metric for the parameterized parent
         # This requires getting it through the parameterized parent's cache
         kwa_example = kwa._get_example_metric(example)
-        assert kwa_example.params["cer_threshold"] == 0.1
+        assert kwa_example.params.cer_threshold == 0.1
 
 
 class TestCacheKeyGeneration:
@@ -244,13 +247,13 @@ class TestDeclarativeHyperparams:
     """Test suite for declarative hyperparameters."""
 
     def test_metric_without_params_rejects_params(self):
-        """Test that metrics without _params reject all parameters."""
+        """Test that metrics without param_schema reject all parameters."""
         from bewer import Dataset
 
         dataset = Dataset()
         dataset.add(ref="hello world", hyp="hello world")
 
-        # WER doesn't define _params, so it should reject params
+        # WER doesn't define param_schema, so it should reject params
         with pytest.raises(ValueError) as exc_info:
             dataset.metrics.wer(threshold=0.5)
         assert "does not accept parameters" in str(exc_info.value)
@@ -268,7 +271,7 @@ class TestDeclarativeHyperparams:
 
         # KeywordAggregator has cer_threshold with default 0.2
         kwa = dataset.metrics._legacy_kwa()
-        assert kwa.params["cer_threshold"] == 0.2
+        assert kwa.params.cer_threshold == 0.2
 
     def test_metric_with_optional_hyperparam_can_override(self):
         """Test that optional hyperparams can be overridden."""
@@ -283,7 +286,7 @@ class TestDeclarativeHyperparams:
 
         # Override cer_threshold
         kwa = dataset.metrics._legacy_kwa(cer_threshold=0.5)
-        assert kwa.params["cer_threshold"] == 0.5
+        assert kwa.params.cer_threshold == 0.5
 
     def test_metric_rejects_unknown_hyperparam(self):
         """Test that unknown hyperparams are rejected with helpful message."""
@@ -299,7 +302,8 @@ class TestDeclarativeHyperparams:
         # Try to set unknown param
         with pytest.raises(ValueError) as exc_info:
             dataset.metrics._legacy_kwa(unknown_param=123)
-        assert "Unknown parameter 'unknown_param'" in str(exc_info.value)
+        assert "Unknown parameter" in str(exc_info.value)
+        assert "unknown_param" in str(exc_info.value)
         assert "Valid parameters:" in str(exc_info.value)
         assert "cer_threshold" in str(exc_info.value)
 
@@ -331,8 +335,8 @@ class TestRequiredHyperparams:
         dataset.add(ref="foo bar", hyp="foo baz")
         return dataset
 
-    def test_required_hyperparam_raises_on_access(self, sample_dataset):
-        """Test that missing required hyperparams raise error on value access."""
+    def test_required_hyperparam_raises_on_construction(self, sample_dataset):
+        """Test that missing required hyperparams raise error eagerly at construction."""
         # Create a test metric with required param
         from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
 
@@ -343,25 +347,25 @@ class TestRequiredHyperparams:
 
         @METRIC_REGISTRY.register("test_required")
         class TestRequiredMetric(Metric):
-            _short_name_base = "Test"
-            _long_name_base = "Test Metric"
+            short_name_base = "Test"
+            long_name_base = "Test Metric"
             description = "Test metric with required param"
             example_cls = TestMetricExample
 
-            _params = {
-                "threshold": float,  # Required (no default)
-            }
+            @dataclass
+            class param_schema(MetricParams):
+                threshold: float
 
             @metric_value(main=True)
             def value(self) -> float:
-                threshold = self.params["threshold"]
+                threshold = self.params.threshold
                 return sum(
                     ex.metrics.get(self.name).value for ex in self._src if ex.metrics.get(self.name).value >= threshold
                 )
 
-        # Try to access without providing required param
+        # Try to construct without providing required param — error is eager
         with pytest.raises(ValueError) as exc_info:
-            sample_dataset.metrics.test_required().value
+            sample_dataset.metrics.test_required()
         assert "Missing required parameters" in str(exc_info.value)
         assert "threshold" in str(exc_info.value)
 
@@ -376,18 +380,18 @@ class TestRequiredHyperparams:
 
         @METRIC_REGISTRY.register("test_required2")
         class TestRequiredMetric2(Metric):
-            _short_name_base = "Test2"
-            _long_name_base = "Test Metric 2"
+            short_name_base = "Test2"
+            long_name_base = "Test Metric 2"
             description = "Test metric with required param"
             example_cls = TestMetricExample2
 
-            _params = {
-                "threshold": float,  # Required
-            }
+            @dataclass
+            class param_schema(MetricParams):
+                threshold: float
 
             @metric_value(main=True)
             def value(self) -> float:
-                threshold = self.params["threshold"]
+                threshold = self.params.threshold
                 return threshold * 2
 
         # Provide required param - should work
@@ -405,25 +409,25 @@ class TestRequiredHyperparams:
 
         @METRIC_REGISTRY.register("test_mixed")
         class TestMixedMetric(Metric):
-            _short_name_base = "TestMixed"
-            _long_name_base = "Test Mixed Metric"
+            short_name_base = "TestMixed"
+            long_name_base = "Test Mixed Metric"
             description = "Test metric with mixed params"
             example_cls = TestMetricExample3
 
-            _params = {
-                "threshold": float,  # Required
-                "min_length": (int, 1),  # Optional with default
-            }
+            @dataclass
+            class param_schema(MetricParams):
+                threshold: float
+                min_length: int = 1
 
             @metric_value(main=True)
             def value(self) -> float:
-                threshold = self.params["threshold"]
-                min_length = self.params["min_length"]
+                threshold = self.params.threshold
+                min_length = self.params.min_length
                 return threshold * min_length
 
-        # Missing required param
+        # Missing required param — error is eager at construction
         with pytest.raises(ValueError) as exc_info:
-            sample_dataset.metrics.test_mixed().value
+            sample_dataset.metrics.test_mixed()
         assert "threshold" in str(exc_info.value)
 
         # Provide only required param - should use default for optional
@@ -435,7 +439,7 @@ class TestRequiredHyperparams:
         assert result == 1.5  # 0.5 * 3
 
     def test_params_printed_in_definition_order(self, sample_dataset):
-        """Test that parameters are printed in the order they're defined in _params."""
+        """Test that parameters are printed in the order they're defined in param_schema."""
         from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
 
         class TestMetricExample4(ExampleMetric):
@@ -445,16 +449,16 @@ class TestRequiredHyperparams:
 
         @METRIC_REGISTRY.register("test_param_order")
         class TestParamOrderMetric(Metric):
-            _short_name_base = "TestOrder"
-            _long_name_base = "Test Parameter Order"
+            short_name_base = "TestOrder"
+            long_name_base = "Test Parameter Order"
             description = "Test metric with multiple params"
             example_cls = TestMetricExample4
 
-            _params = {
-                "alpha": (str, "a"),
-                "beta": (int, 2),
-                "gamma": (float, 3.0),
-            }
+            @dataclass
+            class param_schema(MetricParams):
+                alpha: str = "a"
+                beta: int = 2
+                gamma: float = 3.0
 
             @metric_value(main=True)
             def value(self) -> float:

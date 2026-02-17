@@ -27,8 +27,8 @@ class DatasetSummary_(ExampleMetric):
 
 @METRIC_REGISTRY.register("summary")
 class DatasetSummary(Metric):
-    _short_name_base = "Summary"
-    _long_name_base = "Dataset Summary"
+    short_name_base = "Summary"
+    long_name_base = "Dataset Summary"
     description = (
         "Dataset Summary provides basic statistics about the dataset, including the number of words and characters "
         "in both the reference and hypothesis texts."

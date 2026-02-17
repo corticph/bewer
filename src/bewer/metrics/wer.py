@@ -29,8 +29,8 @@ class WER_(ExampleMetric):
 
 @METRIC_REGISTRY.register("wer")
 class WER(Metric):
-    _short_name_base = "WER"
-    _long_name_base = "Word Error Rate"
+    short_name_base = "WER"
+    long_name_base = "Word Error Rate"
     description = (
         "Word Error Rate (WER) is computed as the token-level (i.e., word-level) edit distance between the reference "
         "and hypothesis texts, divided by the total number of tokens in the reference texts."

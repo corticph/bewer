@@ -228,20 +228,23 @@ class TestMetricClass:
         metric.set_source(sample_dataset)
         assert metric.src is sample_dataset
 
-    def test_set_standardizer(self, sample_dataset):
-        """Test that set_standardizer works."""
-        wer = sample_dataset.metrics.wer()
-        wer.set_standardizer("custom")
+    def test_init_standardizer(self):
+        """Test that standardizer can be set via __init__."""
+        from bewer.metrics.wer import WER
+
+        wer = WER(name="test", standardizer="custom")
         assert wer._standardizer == "custom"
 
-    def test_set_tokenizer(self, sample_dataset):
-        """Test that set_tokenizer works."""
-        wer = sample_dataset.metrics.wer()
-        wer.set_tokenizer("custom")
+    def test_init_tokenizer(self):
+        """Test that tokenizer can be set via __init__."""
+        from bewer.metrics.wer import WER
+
+        wer = WER(name="test", tokenizer="custom")
         assert wer._tokenizer == "custom"
 
-    def test_set_normalizer(self, sample_dataset):
-        """Test that set_normalizer works."""
-        wer = sample_dataset.metrics.wer()
-        wer.set_normalizer("custom")
+    def test_init_normalizer(self):
+        """Test that normalizer can be set via __init__."""
+        from bewer.metrics.wer import WER
+
+        wer = WER(name="test", normalizer="custom")
         assert wer._normalizer == "custom"
