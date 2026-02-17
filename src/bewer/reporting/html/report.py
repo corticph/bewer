@@ -90,14 +90,14 @@ def render_report_html(
     # Resolve metrics against the dataset
     resolved_metrics = []
     for spec in report_metrics:
-        metric = dataset.metrics.get(spec.name)
+        metric = dataset.metrics.get(spec.name)()
         label = spec.label if spec.label is not None else metric.long_name
         resolved_metrics.append({"name": label, "value": f"{metric.value:{spec.format}}"})
 
     # Resolve summary items against the dataset summary
     resolved_summary = []
     for spec in report_summary:
-        value = getattr(dataset.metrics.summary, spec.name)
+        value = getattr(dataset.metrics.summary(), spec.name)
         label = spec.label if spec.label is not None else spec.name
         resolved_summary.append({"name": label, "value": f"{value:{spec.format}}"})
 

@@ -29,8 +29,8 @@ class WER_(ExampleMetric):
 
 @METRIC_REGISTRY.register("wer")
 class WER(Metric):
-    short_name = "WER"
-    long_name = "Word Error Rate"
+    short_name_base = "WER"
+    long_name_base = "Word Error Rate"
     description = (
         "Word Error Rate (WER) is computed as the token-level (i.e., word-level) edit distance between the reference "
         "and hypothesis texts, divided by the total number of tokens in the reference texts."
@@ -40,12 +40,12 @@ class WER(Metric):
     @metric_value
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference texts."""
-        return sum([example.metrics.get(self.name).num_edits for example in self._src])
+        return sum([self._get_example_metric(example).num_edits for example in self._src])
 
     @metric_value
     def ref_length(self) -> int:
         """Get the number of tokens in the reference texts."""
-        return sum([example.metrics.get(self.name).ref_length for example in self._src])
+        return sum([self._get_example_metric(example).ref_length for example in self._src])
 
     @metric_value(main=True)
     def value(self) -> float:

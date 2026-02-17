@@ -1,4 +1,5 @@
 import string
+from dataclasses import dataclass
 from itertools import chain
 from typing import TYPE_CHECKING
 
@@ -7,7 +8,7 @@ from error_align.utils import OpType
 from fuzzywuzzy import fuzz, process
 from rapidfuzz.distance import Levenshtein
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 from bewer.metrics.cer import CER
 from bewer.metrics.wer import WER
 
@@ -122,7 +123,7 @@ class _KeywordAggregator(ExampleMetric):
             if distance == 0:
                 match_count += 1
                 correct_terms.append(term)
-            if cer_score <= self.parent_metric.cer_threshold:
+            if cer_score <= self.params.cer_threshold:
                 relaxed_match_count += 1
             total_distance += distance
             total_length += max(len(term), 1)
@@ -179,55 +180,50 @@ class _KeywordAggregator(ExampleMetric):
 
 @METRIC_REGISTRY.register("_legacy_kwa", standardizer="default", tokenizer="legacy", normalizer="legacy_uncased")
 class KeywordAggregator(Metric):
-    short_name = "kwa"
-    long_name = "Keyword Aggregator"
+    short_name_base = "kwa"
+    long_name_base = "Keyword Aggregator"
     description = "Aggregates keyword-focused metrics for medical terms."
     example_cls = _KeywordAggregator
 
-    def __init__(
-        self,
-        name: str = "_legacy_kwa",
-        cer_threshold: float = 0.2,
-    ):
-        """Initialize the CER Metric object."""
-        self.cer_threshold = cer_threshold
-        super().__init__(name)
+    @dataclass
+    class param_schema(MetricParams):
+        cer_threshold: float = 0.2
 
     @metric_value
     def match_count(self) -> int:
         """Get the total number of exactly matched medical terms."""
-        return sum([example.metrics.get(self.name).match_count for example in self._src])
+        return sum([self._get_example_metric(example).match_count for example in self._src])
 
     @metric_value
     def relaxed_match_count(self) -> int:
         """Get the total number of medical terms matched with relaxed criteria."""
-        return sum([example.metrics.get(self.name).relaxed_match_count for example in self._src])
+        return sum([self._get_example_metric(example).relaxed_match_count for example in self._src])
 
     @metric_value
     def total_terms(self) -> int:
         """Get the total number of medical terms."""
-        return sum([example.metrics.get(self.name).total_terms for example in self._src])
+        return sum([self._get_example_metric(example).total_terms for example in self._src])
 
     @metric_value
     def total_length(self) -> float:
         """Get the total length of medical terms."""
-        return sum([example.metrics.get(self.name).total_length for example in self._src])
+        return sum([self._get_example_metric(example).total_length for example in self._src])
 
     @metric_value
     def total_distance(self) -> float:
         """Get the total Levenshtein distance of medical terms."""
-        return sum([example.metrics.get(self.name).total_distance for example in self._src])
+        return sum([self._get_example_metric(example).total_distance for example in self._src])
 
     @metric_value
     def correct_terms(self) -> list[str]:
         """Get the list of correctly matched medical terms."""
-        return list(chain.from_iterable([example.metrics.get(self.name).correct_terms for example in self._src]))
+        return list(chain.from_iterable([self._get_example_metric(example).correct_terms for example in self._src]))
 
 
 @METRIC_REGISTRY.register("legacy_medical_word_accuracy")
 class MTR(Metric):
-    short_name = "MTR"
-    long_name = "Medical Term Recall"
+    short_name_base = "MTR"
+    long_name_base = "Medical Term Recall"
     description = (
         "Medical Term Recall (MTR) is computed as the number of correctly recognized medical terms "
         "divided by the total number of medical terms in the reference transcripts."
@@ -236,15 +232,15 @@ class MTR(Metric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src.metrics._legacy_kwa.total_terms == 0:
+        if self._src.metrics._legacy_kwa().total_terms == 0:
             return 1.0
-        return self._src.metrics._legacy_kwa.match_count / self._src.metrics._legacy_kwa.total_terms
+        return self._src.metrics._legacy_kwa().match_count / self._src.metrics._legacy_kwa().total_terms
 
 
 @METRIC_REGISTRY.register("legacy_relaxed_medical_word_accuracy")
 class RMTR(Metric):
-    short_name = "Relaxed MTR"
-    long_name = "Relaxed Medical Term Recall"
+    short_name_base = "Relaxed MTR"
+    long_name_base = "Relaxed Medical Term Recall"
     description = (
         "Relaxed Medical Term Recall (RMTR) is computed as the number of terms recognized with a relaxed criteria "
         "(i.e., within a certain character error rate threshold) divided by the total number of medical terms in the "
@@ -254,15 +250,15 @@ class RMTR(Metric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the medical term recall."""
-        if self._src.metrics._legacy_kwa.total_terms == 0:
+        if self._src.metrics._legacy_kwa().total_terms == 0:
             return 1.0
-        return self._src.metrics._legacy_kwa.relaxed_match_count / self._src.metrics._legacy_kwa.total_terms
+        return self._src.metrics._legacy_kwa().relaxed_match_count / self._src.metrics._legacy_kwa().total_terms
 
 
 @METRIC_REGISTRY.register("legacy_keyword_cer")
 class KeywordCER(Metric):
-    short_name = "Keyword CER"
-    long_name = "Keyword Character Error Rate"
+    short_name_base = "Keyword CER"
+    long_name_base = "Keyword Character Error Rate"
     description = (
         "Keyword Character Error Rate (Keyword CER) is computed as the character error rate for medical terms "
         "between the reference and hypothesis terms."
@@ -271,9 +267,9 @@ class KeywordCER(Metric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the medical character error rate."""
-        if self._src.metrics._legacy_kwa.total_length == 0:
+        if self._src.metrics._legacy_kwa().total_length == 0:
             return 1.0
-        return self._src.metrics._legacy_kwa.total_distance / self._src.metrics._legacy_kwa.total_length
+        return self._src.metrics._legacy_kwa().total_distance / self._src.metrics._legacy_kwa().total_length
 
 
 class _HallucinationAggregator(ExampleMetric):
@@ -292,7 +288,7 @@ class _HallucinationAggregator(ExampleMetric):
             if alignment.op_type == OpType.INSERT:
                 consecutive_insertions += 1
                 insertions += 1
-                if consecutive_insertions > self.parent_metric.threshold:
+                if consecutive_insertions > self.params.threshold:
                     has_contiguous_insertions = True
             else:
                 consecutive_insertions = 0
@@ -315,24 +311,20 @@ class _HallucinationAggregator(ExampleMetric):
 
 @METRIC_REGISTRY.register("_legacy_hlcn")
 class HallucinationAggregator(Metric):
-    short_name = "Hallucination Insertions"
-    long_name = "Hallucination Insertions"
+    short_name_base = "Hallucination Insertions"
+    long_name_base = "Hallucination Insertions"
     description = "Number of insertions that appear in "
     example_cls = _HallucinationAggregator
 
-    def __init__(
-        self,
-        name: str = "_legacy_hlcn",
-        threshold: int = 2,
-    ):
-        self.threshold = threshold
-        super().__init__(name)
+    @dataclass
+    class param_schema(MetricParams):
+        threshold: int = 2
 
 
 @METRIC_REGISTRY.register("legacy_deletions")
 class Insertions(Metric):
-    short_name = "Hallucination Insertions"
-    long_name = "Hallucination Insertions"
+    short_name_base = "Hallucination Insertions"
+    long_name_base = "Hallucination Insertions"
     description = "Average number of insertions per example."
 
     @metric_value(main=True)
@@ -340,15 +332,15 @@ class Insertions(Metric):
         """Get the number of hallucinated medical term insertions."""
 
         def get_insertions(example: "Example") -> int:
-            return int(example.metrics._legacy_hlcn.insertions)
+            return int(example.metrics._legacy_hlcn().insertions)
 
         return sum([get_insertions(example) for example in self._src]) / len(self._src)
 
 
 @METRIC_REGISTRY.register("legacy_del_hallucinations")
 class DeletionHallucinations(Metric):
-    short_name = "Insertion Hallucinations"
-    long_name = "Insertion Hallucinations"
+    short_name_base = "Insertion Hallucinations"
+    long_name_base = "Insertion Hallucinations"
     description = "Fraction of examples for which more than N consecutive insertions are observed."
 
     @metric_value(main=True)
@@ -356,6 +348,6 @@ class DeletionHallucinations(Metric):
         """Get the number of examples with hallucinated deletions."""
 
         def get_int_value(example: "Example") -> int:
-            return int(example.metrics._legacy_hlcn.has_contiguous_insertions)
+            return int(example.metrics._legacy_hlcn().has_contiguous_insertions)
 
         return sum([get_int_value(example) for example in self._src]) / len(self._src)

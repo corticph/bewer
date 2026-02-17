@@ -29,8 +29,8 @@ class CER_(ExampleMetric):
 
 @METRIC_REGISTRY.register("cer")
 class CER(Metric):
-    short_name = "CER"
-    long_name = "Character Error Rate"
+    short_name_base = "CER"
+    long_name_base = "Character Error Rate"
     description = (
         "Character Error Rate (CER) is computed as the character-level edit distance between the normalized reference "
         "and hypothesis texts, divided by the total number of characters in the reference texts."
@@ -40,12 +40,12 @@ class CER(Metric):
     @metric_value
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference texts."""
-        return sum([example.metrics.get(self.name).num_edits for example in self._src])
+        return sum([self._get_example_metric(example).num_edits for example in self._src])
 
     @metric_value
     def ref_length(self) -> int:
         """Get the number of characters in the reference texts."""
-        return sum([example.metrics.get(self.name).ref_length for example in self._src])
+        return sum([self._get_example_metric(example).ref_length for example in self._src])
 
     @metric_value(main=True)
     def value(self) -> float:
