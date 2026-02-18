@@ -34,7 +34,7 @@ class CER(Metric):
     short_name_base = "CER"
     long_name_base = "Character Error Rate"
     description = (
-        "Character Error Rate (CER) is computed as the character-level edit distance between the normalized reference "
+        "Character error rate (CER) is computed as the character-level edit distance between the reference "
         "and hypothesis texts, divided by the total number of characters in the reference texts."
     )
     example_cls = CER_

@@ -41,8 +41,8 @@ class WER(Metric):
     short_name_base = "WER"
     long_name_base = "Word Error Rate"
     description = (
-        "Word Error Rate (WER) is computed as the token-level (i.e., word-level) edit distance between the reference "
-        "and hypothesis texts, divided by the total number of tokens in the reference texts."
+        "Word error rate (WER) is computed as the word-level edit distance between the reference "
+        "and hypothesis texts, divided by the total number of words in the reference texts."
     )
     example_cls = WER_
 
