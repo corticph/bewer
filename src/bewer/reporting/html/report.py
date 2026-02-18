@@ -16,10 +16,19 @@ if TYPE_CHECKING:
 class ReportMetric:
     """Specification for a metric to include in the report."""
 
-    def __init__(self, name: str, label: str | None = None, format: str = ".2%"):
+    def __init__(self, name: str, label: str | None = None, format: str = ".2%", **metric_kwargs):
         self.name = name  # metric registry name (e.g. "wer")
         self.label = label  # display label override (default: metric.long_name)
         self.format = format  # format spec for the value
+        self.metric_kwargs = metric_kwargs  # optional kwargs to pass when resolving the metric from the dataset
+
+
+class ReportAlignment:
+    """Specification for the alignment to include in the report."""
+
+    def __init__(self, name: str, **kwargs):
+        self.name = name  # metric registry name (e.g. "levenshtein")
+        self.metric_kwargs = kwargs  # kwargs passed to the metric factory
 
 
 class ReportSummaryItem:
@@ -30,6 +39,8 @@ class ReportSummaryItem:
         self.label = label  # display label override
         self.format = format  # format spec
 
+
+DEFAULT_REPORT_ALIGNMENT = ReportAlignment("levenshtein")
 
 DEFAULT_REPORT_METRICS = [
     ReportMetric("wer"),
@@ -57,11 +68,12 @@ def render_report_html(
     template: str = "report_basic",
     title: str | None = None,
     base_color_scheme: type[HTMLBaseColors] = HTMLBaseColors,
-    alignment_type: str = "levenshtein",
     alignment_color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
     alignment_labels: type[HTMLAlignmentLabels] = HTMLAlignmentLabels,
     report_metrics: list[ReportMetric] | None = None,
     report_summary: list[ReportSummaryItem] | None = None,
+    report_alignment: ReportAlignment | None = None,
+    metadata: dict[str, str] | None = None,
 ) -> str:
     """Render an HTML report with alignment visualizations for all examples in a dataset.
 
@@ -71,13 +83,15 @@ def render_report_html(
             package.
         title: An optional title for the report.
         base_color_scheme: The base color scheme to use for the report.
-        alignment_type: The alignment metric to use (default: "levenshtein").
         alignment_color_scheme: The color scheme to use for alignment display.
         alignment_labels: The labels and tooltips to use for alignment display.
         report_metrics: List of ReportMetric specs controlling which metrics appear. Defaults to
             DEFAULT_REPORT_METRICS.
         report_summary: List of ReportSummaryItem specs controlling the summary section. Defaults to
             DEFAULT_REPORT_SUMMARY_ITEMS.
+        report_alignment: ReportAlignment spec controlling which alignment to display. Defaults to
+            DEFAULT_REPORT_ALIGNMENT.
+        metadata: Optional dict of key-value pairs to display in the report metadata line.
 
     Returns:
         The rendered HTML report string.
@@ -86,11 +100,15 @@ def render_report_html(
         report_metrics = DEFAULT_REPORT_METRICS
     if report_summary is None:
         report_summary = DEFAULT_REPORT_SUMMARY_ITEMS
+    if report_alignment is None:
+        report_alignment = DEFAULT_REPORT_ALIGNMENT
+    if metadata is None:
+        metadata = {}
 
     # Resolve metrics against the dataset
     resolved_metrics = []
     for spec in report_metrics:
-        metric = dataset.metrics.get(spec.name)()
+        metric = dataset.metrics.get(spec.name)(**spec.metric_kwargs)
         label = spec.label if spec.label is not None else metric.long_name
         resolved_metrics.append({"name": label, "value": f"{metric.value:{spec.format}}"})
 
@@ -100,6 +118,12 @@ def render_report_html(
         value = getattr(dataset.metrics.summary(), spec.name)
         label = spec.label if spec.label is not None else spec.name
         resolved_summary.append({"name": label, "value": f"{value:{spec.format}}"})
+
+    # Resolve alignments for each example
+    resolved_alignments = []
+    for example in dataset:
+        alignment = example.metrics.get(report_alignment.name)(**report_alignment.metric_kwargs).alignment
+        resolved_alignments.append(alignment)
 
     # Load and render the Jinja template
     env = Environment(loader=PackageLoader("bewer", "templates"), autoescape=True)
@@ -113,9 +137,10 @@ def render_report_html(
         base_color_scheme=base_color_scheme,
         metrics=resolved_metrics,
         summary=resolved_summary,
-        alignment_type=alignment_type,
+        alignments=resolved_alignments,
         alignment_color_scheme=alignment_color_scheme,
         alignment_labels=alignment_labels,
+        metadata=metadata,
     )
 
     return html
@@ -128,11 +153,12 @@ def generate_report(
     template: str = "report_basic",
     title: str | None = None,
     base_color_scheme: type[HTMLBaseColors] = HTMLBaseColors,
-    alignment_type: str = "levenshtein",
     alignment_color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
     alignment_labels: type[HTMLAlignmentLabels] = HTMLAlignmentLabels,
     report_metrics: list[ReportMetric] | None = None,
     report_summary: list[ReportSummaryItem] | None = None,
+    report_alignment: ReportAlignment | None = None,
+    metadata: dict[str, str] | None = None,
 ) -> str:
     """Generate an HTML report with alignment visualizations for all examples.
 
@@ -144,13 +170,15 @@ def generate_report(
             in the bewer.templates package.
         title: An optional title for the report.
         base_color_scheme: The base color scheme to use for the report.
-        alignment_type: The alignment metric to use (default: "levenshtein").
         alignment_color_scheme: The color scheme to use for alignment display.
         alignment_labels: The labels and tooltips to use for alignment display.
         report_metrics: List of ReportMetric specs controlling which metrics appear. Defaults to
             DEFAULT_REPORT_METRICS.
         report_summary: List of ReportSummaryItem specs controlling the summary section. Defaults to
             DEFAULT_REPORT_SUMMARY_ITEMS.
+        report_alignment: ReportAlignment spec controlling which alignment to display. Defaults to
+            DEFAULT_REPORT_ALIGNMENT.
+        metadata: Optional dict of key-value pairs to display in the report metadata line.
 
     Returns:
         The rendered HTML report string.
@@ -160,11 +188,12 @@ def generate_report(
         template=template,
         title=title,
         base_color_scheme=base_color_scheme,
-        alignment_type=alignment_type,
         alignment_color_scheme=alignment_color_scheme,
         alignment_labels=alignment_labels,
         report_metrics=report_metrics,
         report_summary=report_summary,
+        report_alignment=report_alignment,
+        metadata=metadata,
     )
 
     if path is not None:

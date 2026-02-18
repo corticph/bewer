@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from rapidfuzz.distance import Levenshtein as RFLevenshtein
 
 from bewer.alignment import Alignment, Op, OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
 
 class Levenshtein_(ExampleMetric):
@@ -56,8 +58,13 @@ class Levenshtein_(ExampleMetric):
         Returns:
             list[Op]: List of BeWER operations.
         """
-        ref_tokens = self.example.ref.tokens.normalized
-        hyp_tokens = self.example.hyp.tokens.normalized
+        if self.params.normalized:
+            ref_tokens = self.example.ref.tokens.normalized
+            hyp_tokens = self.example.hyp.tokens.normalized
+        else:
+            ref_tokens = self.example.ref.tokens.raw
+            hyp_tokens = self.example.hyp.tokens.raw
+
         rapidfuzz_ops = RFLevenshtein.editops(ref_tokens, hyp_tokens).as_list()
 
         bewer_ops = []
@@ -113,3 +120,7 @@ class Levenshtein(Metric):
     long_name_base = "Levenshtein Alignment"
     description = "Levenshtein alignment between hypothesis and reference texts."
     example_cls = Levenshtein_
+
+    @dataclass
+    class param_schema(MetricParams):
+        normalized: bool = True

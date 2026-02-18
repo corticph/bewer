@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from rapidfuzz.distance import Levenshtein
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
 
 class CER_(ExampleMetric):
@@ -10,14 +12,14 @@ class CER_(ExampleMetric):
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference text."""
         return Levenshtein.distance(
-            self.example.hyp.joined(normalized=True),
-            self.example.ref.joined(normalized=True),
+            self.example.hyp.joined(normalized=self.params.normalized),
+            self.example.ref.joined(normalized=self.params.normalized),
         )
 
     @metric_value
     def ref_length(self) -> int:
         """Get the number of characters in the reference text."""
-        return len(self.example.ref.joined(normalized=True))
+        return len(self.example.ref.joined(normalized=self.params.normalized))
 
     @metric_value(main=True)
     def value(self) -> float:
@@ -36,6 +38,10 @@ class CER(Metric):
         "and hypothesis texts, divided by the total number of characters in the reference texts."
     )
     example_cls = CER_
+
+    @dataclass
+    class param_schema(MetricParams):
+        normalized: bool = True
 
     @metric_value
     def num_edits(self) -> int:

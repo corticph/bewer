@@ -29,8 +29,8 @@ class TestParameterizedMetrics:
 
     def test_basic_metric_has_no_params(self, sample_dataset):
         """Test that a basic metric has None params."""
-        wer = sample_dataset.metrics.wer()
-        assert wer.params is None
+        summary = sample_dataset.metrics.summary()
+        assert summary.params is None
 
     def test_factory_returns_new_instance(self, sample_dataset):
         """Test that factory calls with different params return different instances."""
@@ -83,13 +83,13 @@ class TestDynamicNaming:
 
     def test_base_metric_short_name_no_params(self, sample_dataset):
         """Test that base metric without params shows base name."""
-        wer = sample_dataset.metrics.wer()
-        assert wer.short_name == "WER"
+        summary = sample_dataset.metrics.summary()
+        assert summary.short_name == "Summary"
 
     def test_base_metric_long_name_no_params(self, sample_dataset):
         """Test that base metric without params shows base long name."""
-        wer = sample_dataset.metrics.wer()
-        assert wer.long_name == "Word Error Rate"
+        summary = sample_dataset.metrics.summary()
+        assert summary.long_name == "Dataset Summary"
 
     def test_parameterized_metric_short_name_includes_params(self, sample_dataset):
         """Test that parameterized metric includes params in short name."""
@@ -255,7 +255,7 @@ class TestDeclarativeHyperparams:
 
         # WER doesn't define param_schema, so it should reject params
         with pytest.raises(ValueError) as exc_info:
-            dataset.metrics.wer(threshold=0.5)
+            dataset.metrics.summary(threshold=0.5)
         assert "does not accept parameters" in str(exc_info.value)
 
     def test_metric_with_optional_hyperparam_uses_default(self):
