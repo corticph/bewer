@@ -178,7 +178,7 @@
 <body>
 
     <h1>{{ title | default('Speech Recognition Performance Report', true) }}</h1>
-    <p class="report-metadata">Created: {{ creation_date }}</p>
+    <p class="report-metadata">Created: {{ creation_date }}{% for key, value in metadata.items() %} &bull; {{ key }}: {{ value }}{% endfor %}</p>
 
     <div class="icon">
     {% set icon_svg %}
@@ -209,7 +209,7 @@
 
 
 {% set alignment_gallery -%}
-{%- with example_iterator=dataset, color_scheme=alignment_color_scheme, alignment_type=alignment_type, labels=alignment_labels -%}
+{%- with example_iterator=dataset, alignments=alignments, color_scheme=alignment_color_scheme, labels=alignment_labels -%}
 {%- include 'alignment_gallery.html.j2' -%}
 {%- endwith -%}
 {%- endset -%}

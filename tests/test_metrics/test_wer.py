@@ -117,12 +117,12 @@ class TestWERMetricAttributes:
     def test_short_name(self, sample_dataset):
         """Test WER short_name."""
         wer = sample_dataset.metrics.wer()
-        assert wer.short_name == "WER"
+        assert wer.short_name_base == "WER"
 
     def test_long_name(self, sample_dataset):
         """Test WER long_name."""
         wer = sample_dataset.metrics.wer()
-        assert wer.long_name == "Word Error Rate"
+        assert wer.long_name_base == "Word Error Rate"
 
     def test_description(self, sample_dataset):
         """Test WER has description."""

@@ -6,6 +6,7 @@ import pytest
 
 from bewer.reporting.html.labels import HTMLAlignmentLabels
 from bewer.reporting.html.report import (
+    ReportAlignment,
     ReportMetric,
     ReportSummaryItem,
     generate_report,
@@ -84,7 +85,7 @@ class TestRenderReportHtml:
 
     def test_render_report_html_with_different_alignment_type(self, sample_dataset):
         """Test rendering with different alignment type."""
-        result = render_report_html(sample_dataset, alignment_type="error_align")
+        result = render_report_html(sample_dataset, report_alignment=ReportAlignment("error_align"))
         assert isinstance(result, str)
         assert len(result) > 0
 

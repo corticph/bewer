@@ -97,12 +97,12 @@ class TestCERMetricAttributes:
     def test_short_name(self, sample_dataset):
         """Test CER short_name."""
         cer = sample_dataset.metrics.cer()
-        assert cer.short_name == "CER"
+        assert cer.short_name_base == "CER"
 
     def test_long_name(self, sample_dataset):
         """Test CER long_name."""
         cer = sample_dataset.metrics.cer()
-        assert cer.long_name == "Character Error Rate"
+        assert cer.long_name_base == "Character Error Rate"
 
     def test_description(self, sample_dataset):
         """Test CER has description."""
