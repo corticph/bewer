@@ -6,6 +6,7 @@ from bewer.core.text import TokenList
 from bewer.preprocessing.tokenization import (
     Tokenizer,
     strip_punctuation,
+    strip_punctuation_keep_symbols,
     whitespace,
 )
 
@@ -92,6 +93,64 @@ class TestWhitespaceStripSymbolsAndCustom:
         pattern = strip_punctuation(".")
         matches = [m.group() for m in pattern.finditer("hello.world")]
         assert matches == ["hello", "world"]
+
+
+class TestStripPunctuationKeepSymbols:
+    """Tests for the strip_punctuation_keep_symbols() pattern function."""
+
+    def test_returns_compiled_pattern(self):
+        pattern = strip_punctuation_keep_symbols()
+        assert isinstance(pattern, re.Pattern)
+
+    def test_basic_words(self):
+        pattern = strip_punctuation_keep_symbols()
+        matches = [m.group() for m in pattern.finditer("hello world")]
+        assert matches == ["hello", "world"]
+
+    def test_strips_trailing_punctuation(self):
+        pattern = strip_punctuation_keep_symbols()
+        matches = [m.group() for m in pattern.finditer("hello, world!")]
+        assert matches == ["hello", "world"]
+
+    def test_keeps_currency_symbols(self):
+        pattern = strip_punctuation_keep_symbols()
+        matches = [m.group() for m in pattern.finditer("costs $100")]
+        assert matches == ["costs", "$", "100"]
+
+    def test_keeps_euro_symbol(self):
+        pattern = strip_punctuation_keep_symbols()
+        matches = [m.group() for m in pattern.finditer("price is €50")]
+        assert matches == ["price", "is", "€", "50"]
+
+    def test_keeps_percent_sign(self):
+        pattern = strip_punctuation_keep_symbols()
+        matches = [m.group() for m in pattern.finditer("95% accuracy")]
+        assert matches == ["95", "%", "accuracy"]
+
+    def test_keeps_math_symbols(self):
+        pattern = strip_punctuation_keep_symbols()
+        matches = [m.group() for m in pattern.finditer("a+b=c")]
+        assert matches == ["a", "+", "b", "=", "c"]
+
+    def test_hyphenated_words_preserved(self):
+        pattern = strip_punctuation_keep_symbols()
+        matches = [m.group() for m in pattern.finditer("well-known fact")]
+        assert matches == ["well-known", "fact"]
+
+    def test_custom_split_on(self):
+        pattern = strip_punctuation_keep_symbols("-")
+        matches = [m.group() for m in pattern.finditer("well-known fact")]
+        assert matches == ["well", "known", "fact"]
+
+    def test_empty_string(self):
+        pattern = strip_punctuation_keep_symbols()
+        matches = [m.group() for m in pattern.finditer("")]
+        assert matches == []
+
+    def test_mixed_symbols_and_punctuation(self):
+        pattern = strip_punctuation_keep_symbols()
+        matches = [m.group() for m in pattern.finditer("total: $99, or €89!")]
+        assert matches == ["total", "$", "99", "or", "€", "89"]
 
 
 class TestTokenizer:
