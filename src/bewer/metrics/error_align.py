@@ -53,7 +53,7 @@ class ErrorAlign_(ExampleMetric):
         return self._get_ops()
 
     @staticmethod
-    def _normalize_conditionally(text: Optional[str], normalizer: Optional[callable]) -> Op:
+    def _normalize_conditionally(text: Optional[str], normalizer: Optional[callable]) -> Optional[str]:
         """Normalize text if normalizer is provided, otherwise return original text."""
         if text is None:
             return None
