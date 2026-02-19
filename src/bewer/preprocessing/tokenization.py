@@ -4,15 +4,9 @@ Functions returning regex patterns are generally advised to return uncompiled pa
 compiled patterns are also allowed, which may be necessary when passing flags to the regex compiler.
 """
 
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 import regex as re
-
-from bewer.core.text import TokenList
-from bewer.core.token import Token
-
-if TYPE_CHECKING:
-    from bewer.core.text import Text
 
 
 def whitespace_pattern() -> re.Pattern:
@@ -80,23 +74,21 @@ class Tokenizer(object):
         self._pattern = re.compile(pattern) if isinstance(pattern, str) else pattern
         self._name = name
 
-    def __call__(self, text: str, src: Union["Text", None] = None) -> TokenList:
+    @property
+    def pattern(self) -> re.Pattern:
+        """Get the regex pattern used by the tokenizer."""
+        return self._pattern
+
+    def __call__(self, text: str) -> list[re.Match]:
         """Tokenize the input text using the regex pattern.
 
         Args:
             text: The input text to tokenize.
-            src: The source Text object, if available.
 
         Returns:
-            TokenList: A list of Token objects.
+            list[re.Match]: A list of regex match objects.
         """
-
-        def from_match(match_tuple: tuple[int, re.Match]) -> Token:
-            """Create a Token object from a regex match object."""
-            token = Token.from_match(match_tuple[1], index=match_tuple[0], src=src)
-            return token
-
-        return TokenList(map(from_match, enumerate(self._pattern.finditer(text))))
+        return list(self._pattern.finditer(text))
 
     def __repr__(self):
         """Return a string representation of the Tokenizer object."""
