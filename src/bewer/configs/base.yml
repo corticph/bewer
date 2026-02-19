@@ -4,10 +4,10 @@ standardizers:
 
 tokenizers:
   default:
-    bewer.preprocessing.tokenization.strip_punctuation_keep_symbols:
+    bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
       split_on_escaped: "-/"
   legacy:
-    bewer.preprocessing.tokenization.whitespace:
+    bewer.preprocessing.tokenization.whitespace_pattern:
 
 normalizers:
   default:

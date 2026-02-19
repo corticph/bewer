@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from bewer.core.text import Text
 
 
-def whitespace() -> re.Pattern:
+def whitespace_pattern() -> re.Pattern:
     """Return a regex pattern that matches sequences of non-whitespace characters.
 
     Returns:
@@ -24,7 +24,7 @@ def whitespace() -> re.Pattern:
     return re.compile(r"\S+")
 
 
-def strip_punctuation(split_on_escaped: str | None = None, split_on_pattern: str | None = None) -> re.Pattern:
+def strip_punctuation_pattern(split_on_escaped: str | None = None, split_on_pattern: str | None = None) -> re.Pattern:
     """Return a regex pattern that matches tokens without internal whitespace or punctuation per specified characters.
 
     Args:
@@ -44,7 +44,7 @@ def strip_punctuation(split_on_escaped: str | None = None, split_on_pattern: str
     )
 
 
-def strip_punctuation_keep_symbols(
+def strip_punctuation_keep_symbols_pattern(
     split_on_escaped: str | None = None,
 ) -> re.Pattern:
     """
@@ -57,12 +57,12 @@ def strip_punctuation_keep_symbols(
     Returns:
         re.Pattern: The compiled regex pattern.
     """
-    math_and_currency_symbols = r"\p{Sc}\p{Sm}%"
-    strip_pattern = strip_punctuation(
+    math_currency = r"\p{Sm}\p{Sc}%"
+    strip_pattern = strip_punctuation_pattern(
         split_on_escaped=split_on_escaped,
-        split_on_pattern=math_and_currency_symbols,
+        split_on_pattern=math_currency,
     )
-    return re.compile(rf"([{math_and_currency_symbols}])|({strip_pattern.pattern})", re.V1)
+    return re.compile(rf"([{math_currency}])|({strip_pattern.pattern})", re.V1)
 
 
 class Tokenizer(object):
