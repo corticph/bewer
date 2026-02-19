@@ -5,8 +5,8 @@ import regex as re
 from bewer.core.text import TokenList
 from bewer.preprocessing.tokenization import (
     Tokenizer,
+    strip_punctuation,
     whitespace,
-    whitespace_strip_symbols_and_custom,
 )
 
 
@@ -60,36 +60,36 @@ class TestWhitespaceStripSymbolsAndCustom:
 
     def test_returns_compiled_pattern(self):
         """Test that function returns a compiled pattern."""
-        pattern = whitespace_strip_symbols_and_custom(None)
+        pattern = strip_punctuation(None)
         assert isinstance(pattern, re.Pattern)
 
     def test_basic_tokenization(self):
         """Test basic tokenization without custom split chars."""
-        pattern = whitespace_strip_symbols_and_custom(None)
+        pattern = strip_punctuation(None)
         matches = [m.group() for m in pattern.finditer("hello world")]
         assert matches == ["hello", "world"]
 
     def test_custom_split_character(self):
         """Test tokenization with custom split character."""
-        pattern = whitespace_strip_symbols_and_custom("-")
+        pattern = strip_punctuation("-")
         matches = [m.group() for m in pattern.finditer("hello-world")]
         assert matches == ["hello", "world"]
 
     def test_hyphenated_words_preserved_without_split(self):
         """Test that hyphenated words are preserved without custom split."""
-        pattern = whitespace_strip_symbols_and_custom(None)
+        pattern = strip_punctuation(None)
         matches = [m.group() for m in pattern.finditer("well-known")]
         assert matches == ["well-known"]
 
     def test_multiple_custom_split_chars(self):
         """Test with multiple custom split characters."""
-        pattern = whitespace_strip_symbols_and_custom("-_")
+        pattern = strip_punctuation("-_")
         matches = [m.group() for m in pattern.finditer("hello-world_test")]
         assert matches == ["hello", "world", "test"]
 
     def test_escapes_special_regex_chars(self):
         """Test that special regex characters are escaped."""
-        pattern = whitespace_strip_symbols_and_custom(".")
+        pattern = strip_punctuation(".")
         matches = [m.group() for m in pattern.finditer("hello.world")]
         assert matches == ["hello", "world"]
 

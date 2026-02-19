@@ -24,7 +24,7 @@ def whitespace() -> re.Pattern:
     return re.compile(r"\S+")
 
 
-def whitespace_strip_symbols_and_custom(split_on: str | None = None) -> re.Pattern:
+def strip_punctuation(split_on: str | None = None) -> re.Pattern:
     """Return a regex pattern that matches tokens without internal whitespace or punctuation per specified characters.
 
     Args:
@@ -41,6 +41,23 @@ def whitespace_strip_symbols_and_custom(split_on: str | None = None) -> re.Patte
     return re.compile(
         rf"[{letters_digits}]+([[{symbols_punctuation_marks}]--[{escaped_split_on}]]+[{letters_digits}]+)*", re.V1
     )
+
+
+def strip_punctuation_keep_symbols(
+    split_on: str | None = None,
+) -> re.Pattern:
+    """
+    Return a regex pattern that matches tokens without internal whitespace or punctuation per specified characters, but
+    keeps currency symbols, math symbols, and percent signs as separate tokens.
+
+    Args:
+        split_on (str): A string of characters to split on in addition to whitespace. Will be escaped.
+
+    Returns:
+        re.Pattern: The compiled regex pattern.
+    """
+    strip_pattern = strip_punctuation(split_on)
+    return re.compile(rf"([\p{{Sc}}\p{{Sm}}%])|({strip_pattern.pattern})", re.V1)
 
 
 class Tokenizer(object):
