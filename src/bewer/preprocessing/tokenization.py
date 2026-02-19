@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from bewer.core.text import Text
 
 
-def whitespace() -> re.Pattern:
+def whitespace_pattern() -> re.Pattern:
     """Return a regex pattern that matches sequences of non-whitespace characters.
 
     Returns:
@@ -24,23 +24,45 @@ def whitespace() -> re.Pattern:
     return re.compile(r"\S+")
 
 
-def whitespace_strip_symbols_and_custom(split_on: str | None = None) -> re.Pattern:
+def strip_punctuation_pattern(split_on_escaped: str | None = None, split_on_pattern: str | None = None) -> re.Pattern:
     """Return a regex pattern that matches tokens without internal whitespace or punctuation per specified characters.
 
     Args:
-        split_on (str): A string of characters to split on in addition to whitespace. Will be escaped.
+        split_on_escaped (str): A string of characters to split on in addition to whitespace. Will be escaped.
+        split_on_pattern (str): A regex pattern to split on in addition to whitespace. Will be used as-is.
 
     Returns:
         re.Pattern: The compiled regex pattern.
     """
     letters_digits = r"\p{L}\p{N}"
     symbols_punctuation_marks = r"\p{S}\p{P}\p{M}"
-    if split_on is None:
+    if split_on_escaped is None and split_on_pattern is None:
         return re.compile(rf"[{letters_digits}]+([[{symbols_punctuation_marks}]]+[{letters_digits}]+)*", re.V1)
-    escaped_split_on = re.escape(split_on)
+    escaped_split_on = (re.escape(split_on_escaped) if split_on_escaped is not None else "") + (split_on_pattern or "")
     return re.compile(
         rf"[{letters_digits}]+([[{symbols_punctuation_marks}]--[{escaped_split_on}]]+[{letters_digits}]+)*", re.V1
     )
+
+
+def strip_punctuation_keep_symbols_pattern(
+    split_on_escaped: str | None = None,
+) -> re.Pattern:
+    """
+    Return a regex pattern that matches tokens without internal whitespace or punctuation per specified characters, but
+    keeps currency symbols, math symbols, and percent signs as separate tokens.
+
+    Args:
+        split_on_escaped (str): A string of characters to split on in addition to whitespace. Will be escaped.
+
+    Returns:
+        re.Pattern: The compiled regex pattern.
+    """
+    math_currency = r"\p{Sm}\p{Sc}%"
+    strip_pattern = strip_punctuation_pattern(
+        split_on_escaped=split_on_escaped,
+        split_on_pattern=math_currency,
+    )
+    return re.compile(rf"([{math_currency}])|({strip_pattern.pattern})", re.V1)
 
 
 class Tokenizer(object):

@@ -5,8 +5,9 @@ import regex as re
 from bewer.core.text import TokenList
 from bewer.preprocessing.tokenization import (
     Tokenizer,
-    whitespace,
-    whitespace_strip_symbols_and_custom,
+    strip_punctuation_keep_symbols_pattern,
+    strip_punctuation_pattern,
+    whitespace_pattern,
 )
 
 
@@ -15,83 +16,159 @@ class TestWhitespace:
 
     def test_returns_pattern(self):
         """Test that whitespace() returns a regex pattern string."""
-        pattern = whitespace()
+        pattern = whitespace_pattern()
         assert isinstance(pattern, re.Pattern)
 
     def test_pattern_matches_words(self):
         """Test that the pattern matches non-whitespace sequences."""
-        pattern = whitespace()
+        pattern = whitespace_pattern()
         matches = pattern.findall("hello world")
         assert matches == ["hello", "world"]
 
     def test_pattern_handles_multiple_spaces(self):
         """Test pattern with multiple consecutive spaces."""
-        pattern = whitespace()
+        pattern = whitespace_pattern()
         matches = pattern.findall("hello   world")
         assert matches == ["hello", "world"]
 
     def test_pattern_handles_tabs_and_newlines(self):
         """Test pattern with tabs and newlines."""
-        pattern = whitespace()
+        pattern = whitespace_pattern()
         matches = pattern.findall("hello\tworld\ntest")
         assert matches == ["hello", "world", "test"]
 
     def test_pattern_empty_string(self):
         """Test pattern with empty string."""
-        pattern = whitespace()
+        pattern = whitespace_pattern()
         matches = pattern.findall("")
         assert matches == []
 
     def test_pattern_whitespace_only(self):
         """Test pattern with whitespace only."""
-        pattern = whitespace()
+        pattern = whitespace_pattern()
         matches = pattern.findall("   \t\n   ")
         assert matches == []
 
     def test_pattern_includes_punctuation(self):
         """Test that punctuation is included in tokens."""
-        pattern = whitespace()
+        pattern = whitespace_pattern()
         matches = pattern.findall("hello, world!")
         assert matches == ["hello,", "world!"]
 
 
-class TestWhitespaceStripSymbolsAndCustom:
-    """Tests for the whitespace_strip_symbols_and_custom() pattern function."""
+class TestStripPunctuation:
+    """Tests for the strip_punctuation() pattern function."""
 
     def test_returns_compiled_pattern(self):
         """Test that function returns a compiled pattern."""
-        pattern = whitespace_strip_symbols_and_custom(None)
+        pattern = strip_punctuation_pattern(None)
         assert isinstance(pattern, re.Pattern)
 
     def test_basic_tokenization(self):
         """Test basic tokenization without custom split chars."""
-        pattern = whitespace_strip_symbols_and_custom(None)
+        pattern = strip_punctuation_pattern(None)
         matches = [m.group() for m in pattern.finditer("hello world")]
         assert matches == ["hello", "world"]
 
-    def test_custom_split_character(self):
-        """Test tokenization with custom split character."""
-        pattern = whitespace_strip_symbols_and_custom("-")
+    def test_split_on_escaped_single_char(self):
+        """Test tokenization with a single escaped split character."""
+        pattern = strip_punctuation_pattern(split_on_escaped="-")
         matches = [m.group() for m in pattern.finditer("hello-world")]
         assert matches == ["hello", "world"]
 
     def test_hyphenated_words_preserved_without_split(self):
         """Test that hyphenated words are preserved without custom split."""
-        pattern = whitespace_strip_symbols_and_custom(None)
+        pattern = strip_punctuation_pattern()
         matches = [m.group() for m in pattern.finditer("well-known")]
         assert matches == ["well-known"]
 
-    def test_multiple_custom_split_chars(self):
-        """Test with multiple custom split characters."""
-        pattern = whitespace_strip_symbols_and_custom("-_")
+    def test_split_on_escaped_multiple_chars(self):
+        """Test with multiple escaped split characters."""
+        pattern = strip_punctuation_pattern(split_on_escaped="-_")
         matches = [m.group() for m in pattern.finditer("hello-world_test")]
         assert matches == ["hello", "world", "test"]
 
-    def test_escapes_special_regex_chars(self):
-        """Test that special regex characters are escaped."""
-        pattern = whitespace_strip_symbols_and_custom(".")
+    def test_split_on_escaped_special_regex_chars(self):
+        """Test that special regex characters in split_on_escaped are escaped."""
+        pattern = strip_punctuation_pattern(split_on_escaped=".")
         matches = [m.group() for m in pattern.finditer("hello.world")]
         assert matches == ["hello", "world"]
+
+    def test_split_on_pattern(self):
+        """Test splitting with a regex pattern."""
+        pattern = strip_punctuation_pattern(split_on_pattern=r"\p{Sc}")
+        matches = [m.group() for m in pattern.finditer("100$50")]
+        assert matches == ["100", "50"]
+
+    def test_split_on_pattern_preserves_non_matching(self):
+        """Test that split_on_pattern only splits on matching characters."""
+        pattern = strip_punctuation_pattern(split_on_pattern=r"\p{Sc}")
+        matches = [m.group() for m in pattern.finditer("well-known")]
+        assert matches == ["well-known"]
+
+    def test_split_on_escaped_and_pattern_combined(self):
+        """Test using both split_on_escaped and split_on_pattern together."""
+        pattern = strip_punctuation_pattern(split_on_escaped="-", split_on_pattern=r"\p{Sc}")
+        matches = [m.group() for m in pattern.finditer("hello-world$test")]
+        assert matches == ["hello", "world", "test"]
+
+
+class TestStripPunctuationKeepSymbols:
+    """Tests for the strip_punctuation_keep_symbols() pattern function."""
+
+    def test_returns_compiled_pattern(self):
+        pattern = strip_punctuation_keep_symbols_pattern()
+        assert isinstance(pattern, re.Pattern)
+
+    def test_basic_words(self):
+        pattern = strip_punctuation_keep_symbols_pattern()
+        matches = [m.group() for m in pattern.finditer("hello world")]
+        assert matches == ["hello", "world"]
+
+    def test_strips_trailing_punctuation(self):
+        pattern = strip_punctuation_keep_symbols_pattern()
+        matches = [m.group() for m in pattern.finditer("hello, world!")]
+        assert matches == ["hello", "world"]
+
+    def test_keeps_currency_symbols(self):
+        pattern = strip_punctuation_keep_symbols_pattern()
+        matches = [m.group() for m in pattern.finditer("costs $100")]
+        assert matches == ["costs", "$", "100"]
+
+    def test_keeps_euro_symbol(self):
+        pattern = strip_punctuation_keep_symbols_pattern()
+        matches = [m.group() for m in pattern.finditer("price is €50")]
+        assert matches == ["price", "is", "€", "50"]
+
+    def test_keeps_percent_sign(self):
+        pattern = strip_punctuation_keep_symbols_pattern()
+        matches = [m.group() for m in pattern.finditer("95% accuracy")]
+        assert matches == ["95", "%", "accuracy"]
+
+    def test_keeps_math_symbols(self):
+        pattern = strip_punctuation_keep_symbols_pattern()
+        matches = [m.group() for m in pattern.finditer("a+b=c")]
+        assert matches == ["a", "+", "b", "=", "c"]
+
+    def test_hyphenated_words_preserved(self):
+        pattern = strip_punctuation_keep_symbols_pattern()
+        matches = [m.group() for m in pattern.finditer("well-known fact")]
+        assert matches == ["well-known", "fact"]
+
+    def test_custom_split_on(self):
+        pattern = strip_punctuation_keep_symbols_pattern("-")
+        matches = [m.group() for m in pattern.finditer("well-known fact")]
+        assert matches == ["well", "known", "fact"]
+
+    def test_empty_string(self):
+        pattern = strip_punctuation_keep_symbols_pattern()
+        matches = [m.group() for m in pattern.finditer("")]
+        assert matches == []
+
+    def test_mixed_symbols_and_punctuation(self):
+        pattern = strip_punctuation_keep_symbols_pattern()
+        matches = [m.group() for m in pattern.finditer("total: $99, or €89!")]
+        assert matches == ["total", "$", "99", "or", "€", "89"]
 
 
 class TestTokenizer:
