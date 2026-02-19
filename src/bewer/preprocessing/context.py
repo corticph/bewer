@@ -8,6 +8,13 @@ STANDARDIZER_NAME = ContextVar("STANDARDIZER", default=DEFAULT)
 TOKENIZER_NAME = ContextVar("TOKENIZER", default=DEFAULT)
 NORMALIZER_NAME = ContextVar("NORMALIZER", default=DEFAULT)
 
+# Ordered pipeline stages: (context_var, pipelines attribute name)
+PIPELINE_STAGES = (
+    (STANDARDIZER_NAME, "standardizers"),
+    (TOKENIZER_NAME, "tokenizers"),
+    (NORMALIZER_NAME, "normalizers"),
+)
+
 
 @contextmanager
 def set_pipeline(standardizer=DEFAULT, tokenizer=DEFAULT, normalizer=DEFAULT):
