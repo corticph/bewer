@@ -2,7 +2,6 @@
 
 import regex as re
 
-from bewer.core.text import TokenList
 from bewer.preprocessing.tokenization import (
     Tokenizer,
     strip_punctuation_keep_symbols_pattern,
@@ -189,40 +188,37 @@ class TestTokenizer:
     def test_basic_tokenization(self):
         """Test basic tokenization."""
         tokenizer = Tokenizer(r"\S+", name="whitespace")
-        tokens = tokenizer("hello world")
-        assert isinstance(tokens, TokenList)
-        assert len(tokens) == 2
-        assert tokens[0].raw == "hello"
-        assert tokens[1].raw == "world"
+        matches = tokenizer("hello world")
+        assert len(matches) == 2
+        assert matches[0].group() == "hello"
+        assert matches[1].group() == "world"
 
-    def test_token_positions(self):
-        """Test that tokens have correct positions."""
+    def test_returns_match_objects(self):
+        """Test that tokenizer returns regex Match objects."""
         tokenizer = Tokenizer(r"\S+", name="whitespace")
-        tokens = tokenizer("hello world")
-        assert tokens[0].start == 0
-        assert tokens[0].end == 5
-        assert tokens[1].start == 6
-        assert tokens[1].end == 11
+        matches = tokenizer("hello world")
+        assert all(isinstance(m, re.Match) for m in matches)
 
-    def test_token_indices(self):
-        """Test that tokens have correct indices."""
+    def test_match_positions(self):
+        """Test that matches have correct positions."""
         tokenizer = Tokenizer(r"\S+", name="whitespace")
-        tokens = tokenizer("one two three")
-        assert tokens[0].index == 0
-        assert tokens[1].index == 1
-        assert tokens[2].index == 2
+        matches = tokenizer("hello world")
+        assert matches[0].start() == 0
+        assert matches[0].end() == 5
+        assert matches[1].start() == 6
+        assert matches[1].end() == 11
 
     def test_empty_string(self):
         """Test tokenization of empty string."""
         tokenizer = Tokenizer(r"\S+", name="whitespace")
-        tokens = tokenizer("")
-        assert len(tokens) == 0
+        matches = tokenizer("")
+        assert len(matches) == 0
 
     def test_whitespace_only(self):
         """Test tokenization of whitespace-only string."""
         tokenizer = Tokenizer(r"\S+", name="whitespace")
-        tokens = tokenizer("   \t\n   ")
-        assert len(tokens) == 0
+        matches = tokenizer("   \t\n   ")
+        assert len(matches) == 0
 
     def test_repr_with_name(self):
         """Test string representation with name."""
@@ -240,14 +236,14 @@ class TestTokenizer:
     def test_leading_trailing_whitespace(self):
         """Test tokenization with leading/trailing whitespace."""
         tokenizer = Tokenizer(r"\S+", name="whitespace")
-        tokens = tokenizer("  hello world  ")
-        assert len(tokens) == 2
-        assert tokens[0].raw == "hello"
-        assert tokens[0].start == 2
+        matches = tokenizer("  hello world  ")
+        assert len(matches) == 2
+        assert matches[0].group() == "hello"
+        assert matches[0].start() == 2
 
     def test_punctuation_in_tokens(self):
         """Test that punctuation is included in tokens."""
         tokenizer = Tokenizer(r"\S+", name="whitespace")
-        tokens = tokenizer("hello, world!")
-        assert tokens[0].raw == "hello,"
-        assert tokens[1].raw == "world!"
+        matches = tokenizer("hello, world!")
+        assert matches[0].group() == "hello,"
+        assert matches[1].group() == "world!"

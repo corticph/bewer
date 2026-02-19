@@ -1,15 +1,15 @@
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Iterable, Optional, Union
 
 import regex as re
 
 from bewer.core.caching import pipeline_cached_property
+from bewer.core.token import Token
 from bewer.preprocessing.context import STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
     from bewer.core.example import Example
-    from bewer.core.token import Token
 
 
 class TextType(str, Enum):
@@ -107,7 +107,7 @@ class Text:
     @pipeline_cached_property(TOKENIZER_NAME)
     def tokens(self, tokenizer):
         """The list of Token objects produced by the active tokenizer."""
-        return tokenizer(self.standardized, src=self)
+        return TokenList.from_matches(tokenizer(self.standardized), src=self)
 
     def set_source(self, src: "Example") -> None:
         """Set the parent Example object.
@@ -164,6 +164,23 @@ class Text:
 
 class TokenList(list["Token"]):
     """A list of Token objects."""
+
+    @classmethod
+    def from_matches(
+        cls,
+        matches: "Iterable[re.Match]",
+        src: Optional["Text"] = None,
+    ) -> "TokenList":
+        """Create a TokenList from an iterable of regex match objects.
+
+        Args:
+            matches: An iterable of regex Match objects.
+            src: The source Text object, if available.
+
+        Returns:
+            TokenList: A list of Token objects created from the matches.
+        """
+        return cls(Token.from_match(match, index=i, src=src) for i, match in enumerate(matches))
 
     @property
     def raw(self) -> list[str]:
