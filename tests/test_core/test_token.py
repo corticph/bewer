@@ -34,7 +34,7 @@ class TestTokenInit:
     def test_normalized_cache_initialized(self):
         """Test that normalized cache is initialized as empty dict."""
         token = Token(raw="hello", start=0, end=5)
-        assert token._normalized == {}
+        assert token._cache_normalized == {}
 
     def test_src_none_by_default(self):
         """Test that src defaults to None."""

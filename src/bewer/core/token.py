@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING, Optional
 
 import regex as re
 
-from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
+from bewer.core.caching import pipeline_cached_property
+from bewer.preprocessing.context import NORMALIZER_NAME
 from bewer.reporting.python.utils import highlight_span
 
 if TYPE_CHECKING:
@@ -40,13 +41,13 @@ class Token:
             index: Token index in the token list.
             src: Parent Text object. Can be set later via set_source().
         """
-        self.raw = raw
+        self._raw = raw
         self.start = start
         self.end = end
         self.index = index
         self.slice = slice(self.start, self.end)
 
-        self._normalized = {}
+        self._cache_normalized = {}
 
         self._src = None
         self._pipelines = None
@@ -78,27 +79,14 @@ class Token:
         self._pipelines = _src_dataset.pipelines if _src_dataset is not None else None
 
     @property
-    def normalized(self) -> str:
-        """Get the normalized string of the token using a specified normalizer.
+    def raw(self) -> str:
+        """The raw string of the token as extracted during tokenization."""
+        return self._raw
 
-        Returns:
-            str: The normalized string.
-        """
-        standardizer_name = STANDARDIZER_NAME.get()
-        tokenizer_name = TOKENIZER_NAME.get()
-        normalizer_name = NORMALIZER_NAME.get()
-        pipeline_key = (standardizer_name, tokenizer_name, normalizer_name)
-
-        if pipeline_key in self._normalized:
-            return self._normalized[pipeline_key]
-        if self._pipelines is None:
-            raise ValueError("No normalizers found in pipelines.")
-        normalizer_func = self._pipelines.normalizers.get(normalizer_name, None)
-        if normalizer_func is None:
-            raise ValueError(f"Token normalizer '{normalizer_name}' not found in pipelines.")
-        normalized_token = normalizer_func(self.raw)
-        self._normalized[pipeline_key] = normalized_token
-        return normalized_token
+    @pipeline_cached_property(NORMALIZER_NAME)
+    def normalized(self, normalizer):
+        """The normalized string of the token after applying the active normalizer."""
+        return normalizer(self.raw)
 
     @cached_property
     def levenshtein(self) -> "Op":

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import regex as re
 
+from bewer.core.caching import pipeline_cached_property
 from bewer.preprocessing.context import STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
@@ -75,8 +76,8 @@ class Text:
         self._raw = raw
         self._text_type = text_type
 
-        self._standardized = {}
-        self._tokenized = {}
+        self._cache_standardized = {}
+        self._cache_tokens = {}
 
         self._src = None
         self._pipelines = None
@@ -93,6 +94,20 @@ class Text:
     def src(self) -> Optional["Example"]:
         """Get the parent Example object."""
         return self._src
+
+    @property
+    def text_type(self) -> Optional[TextType]:
+        return self._text_type
+
+    @pipeline_cached_property(STANDARDIZER_NAME)
+    def standardized(self, standardizer):
+        """The standardized text string after applying the active standardizer."""
+        return standardizer(self.raw)
+
+    @pipeline_cached_property(TOKENIZER_NAME)
+    def tokens(self, tokenizer):
+        """The list of Token objects produced by the active tokenizer."""
+        return tokenizer(self.standardized, src=self)
 
     def set_source(self, src: "Example") -> None:
         """Set the parent Example object.
@@ -113,54 +128,6 @@ class Text:
             self._pipelines = src.src.pipelines
         else:
             self._pipelines = None
-
-    @property
-    def text_type(self) -> Optional[TextType]:
-        return self._text_type
-
-    @property
-    def tokens(self) -> "TokenList":
-        """Get the list of Token objects using a specified tokenizer.
-
-        Returns:
-            TokenList: The list of Token objects.
-        """
-        standardizer_name = STANDARDIZER_NAME.get()
-        tokenizer_name = TOKENIZER_NAME.get()
-        pipeline_key = (standardizer_name, tokenizer_name)
-
-        if pipeline_key in self._tokenized:
-            return self._tokenized[pipeline_key]
-        if self._pipelines is None:
-            raise ValueError("No tokenizers found in pipelines.")
-        tokenizer = self._pipelines.tokenizers.get(tokenizer_name, None)
-        if tokenizer is None:
-            raise ValueError(f"Tokenizer '{tokenizer_name}' not found in pipelines.")
-
-        tokens = tokenizer(self.standardized, src=self)
-        self._tokenized[pipeline_key] = tokens
-        return tokens
-
-    @property
-    def standardized(self) -> str:
-        """Get the standardized text using the active standardizer.
-
-        Returns:
-            str: The standardized string.
-        """
-        standardizer_name = STANDARDIZER_NAME.get()
-
-        if standardizer_name in self._standardized:
-            return self._standardized[standardizer_name]
-        if self._pipelines is None:
-            raise ValueError("No standardizers found in pipelines.")
-        standardizer_func = self._pipelines.standardizers.get(standardizer_name, None)
-        if standardizer_func is None:
-            raise ValueError(f"Text standardizer '{standardizer_name}' not found in pipelines.")
-
-        standardized_text = standardizer_func(self.raw)
-        self._standardized[standardizer_name] = standardized_text
-        return standardized_text
 
     def joined(self, normalized: bool = True) -> str:
         """Get the joined text from tokens.
