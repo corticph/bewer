@@ -70,29 +70,47 @@ class TestWhitespaceStripSymbolsAndCustom:
         matches = [m.group() for m in pattern.finditer("hello world")]
         assert matches == ["hello", "world"]
 
-    def test_custom_split_character(self):
-        """Test tokenization with custom split character."""
-        pattern = strip_punctuation("-")
+    def test_split_on_escaped_single_char(self):
+        """Test tokenization with a single escaped split character."""
+        pattern = strip_punctuation(split_on_escaped="-")
         matches = [m.group() for m in pattern.finditer("hello-world")]
         assert matches == ["hello", "world"]
 
     def test_hyphenated_words_preserved_without_split(self):
         """Test that hyphenated words are preserved without custom split."""
-        pattern = strip_punctuation(None)
+        pattern = strip_punctuation()
         matches = [m.group() for m in pattern.finditer("well-known")]
         assert matches == ["well-known"]
 
-    def test_multiple_custom_split_chars(self):
-        """Test with multiple custom split characters."""
-        pattern = strip_punctuation("-_")
+    def test_split_on_escaped_multiple_chars(self):
+        """Test with multiple escaped split characters."""
+        pattern = strip_punctuation(split_on_escaped="-_")
         matches = [m.group() for m in pattern.finditer("hello-world_test")]
         assert matches == ["hello", "world", "test"]
 
-    def test_escapes_special_regex_chars(self):
-        """Test that special regex characters are escaped."""
-        pattern = strip_punctuation(".")
+    def test_split_on_escaped_special_regex_chars(self):
+        """Test that special regex characters in split_on_escaped are escaped."""
+        pattern = strip_punctuation(split_on_escaped=".")
         matches = [m.group() for m in pattern.finditer("hello.world")]
         assert matches == ["hello", "world"]
+
+    def test_split_on_pattern(self):
+        """Test splitting with a regex pattern."""
+        pattern = strip_punctuation(split_on_pattern=r"\p{Sc}")
+        matches = [m.group() for m in pattern.finditer("100$50")]
+        assert matches == ["100", "50"]
+
+    def test_split_on_pattern_preserves_non_matching(self):
+        """Test that split_on_pattern only splits on matching characters."""
+        pattern = strip_punctuation(split_on_pattern=r"\p{Sc}")
+        matches = [m.group() for m in pattern.finditer("well-known")]
+        assert matches == ["well-known"]
+
+    def test_split_on_escaped_and_pattern_combined(self):
+        """Test using both split_on_escaped and split_on_pattern together."""
+        pattern = strip_punctuation(split_on_escaped="-", split_on_pattern=r"\p{Sc}")
+        matches = [m.group() for m in pattern.finditer("hello-world$test")]
+        assert matches == ["hello", "world", "test"]
 
 
 class TestStripPunctuationKeepSymbols:

@@ -5,7 +5,7 @@ standardizers:
 tokenizers:
   default:
     bewer.preprocessing.tokenization.strip_punctuation_keep_symbols:
-      split_on: "-/"
+      split_on_escaped: "-/"
   legacy:
     bewer.preprocessing.tokenization.whitespace:
 

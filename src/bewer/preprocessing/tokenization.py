@@ -24,40 +24,45 @@ def whitespace() -> re.Pattern:
     return re.compile(r"\S+")
 
 
-def strip_punctuation(split_on: str | None = None) -> re.Pattern:
+def strip_punctuation(split_on_escaped: str | None = None, split_on_pattern: str | None = None) -> re.Pattern:
     """Return a regex pattern that matches tokens without internal whitespace or punctuation per specified characters.
 
     Args:
-        split_on (str): A string of characters to split on in addition to whitespace. Will be escaped.
+        split_on_escaped (str): A string of characters to split on in addition to whitespace. Will be escaped.
+        split_on_pattern (str): A regex pattern to split on in addition to whitespace. Will be used as-is.
 
     Returns:
         re.Pattern: The compiled regex pattern.
     """
     letters_digits = r"\p{L}\p{N}"
     symbols_punctuation_marks = r"\p{S}\p{P}\p{M}"
-    if split_on is None:
+    if split_on_escaped is None and split_on_pattern is None:
         return re.compile(rf"[{letters_digits}]+([[{symbols_punctuation_marks}]]+[{letters_digits}]+)*", re.V1)
-    escaped_split_on = re.escape(split_on)
+    escaped_split_on = (re.escape(split_on_escaped) if split_on_escaped is not None else "") + (split_on_pattern or "")
     return re.compile(
         rf"[{letters_digits}]+([[{symbols_punctuation_marks}]--[{escaped_split_on}]]+[{letters_digits}]+)*", re.V1
     )
 
 
 def strip_punctuation_keep_symbols(
-    split_on: str | None = None,
+    split_on_escaped: str | None = None,
 ) -> re.Pattern:
     """
     Return a regex pattern that matches tokens without internal whitespace or punctuation per specified characters, but
     keeps currency symbols, math symbols, and percent signs as separate tokens.
 
     Args:
-        split_on (str): A string of characters to split on in addition to whitespace. Will be escaped.
+        split_on_escaped (str): A string of characters to split on in addition to whitespace. Will be escaped.
 
     Returns:
         re.Pattern: The compiled regex pattern.
     """
-    strip_pattern = strip_punctuation(split_on)
-    return re.compile(rf"([\p{{Sc}}\p{{Sm}}%])|({strip_pattern.pattern})", re.V1)
+    math_and_currency_symbols = r"\p{Sc}\p{Sm}%"
+    strip_pattern = strip_punctuation(
+        split_on_escaped=split_on_escaped,
+        split_on_pattern=math_and_currency_symbols,
+    )
+    return re.compile(rf"([{math_and_currency_symbols}])|({strip_pattern.pattern})", re.V1)
 
 
 class Tokenizer(object):
