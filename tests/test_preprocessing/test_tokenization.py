@@ -56,8 +56,8 @@ class TestWhitespace:
         assert matches == ["hello,", "world!"]
 
 
-class TestWhitespaceStripSymbolsAndCustom:
-    """Tests for the whitespace_strip_symbols_and_custom() pattern function."""
+class TestStripPunctuation:
+    """Tests for the strip_punctuation() pattern function."""
 
     def test_returns_compiled_pattern(self):
         """Test that function returns a compiled pattern."""
