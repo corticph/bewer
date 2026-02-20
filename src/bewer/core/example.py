@@ -1,6 +1,7 @@
 import warnings
 from typing import TYPE_CHECKING, Iterable, Optional
 
+from bewer.core.keyword import Keyword
 from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
 
@@ -53,9 +54,9 @@ class Example:
         self.ref = Text(ref, src=self, text_type=TextType.REF)
         self.hyp = Text(hyp, src=self, text_type=TextType.HYP)
         self.keywords = {}
-        self._prepare_and_validate_keywords(keywords, _raise_warning=True)
+        self._prepare_and_validate_keywords(keywords, raise_warning=True)
         if self._src is not None:
-            self._prepare_and_validate_keywords(self._src._dynamic_keyword_vocabs, _raise_warning=False)
+            self._prepare_and_validate_keywords(self._src._dynamic_keyword_vocabs, raise_warning=False)
 
     @property
     def index(self) -> Optional[int]:
@@ -83,7 +84,7 @@ class Example:
     def _prepare_and_validate_keywords(
         self,
         keywords: dict[str, Iterable[str]] | None,
-        _raise_warning: bool = True,
+        raise_warning: bool = True,
     ) -> None:
         """Prepare keywords dictionary by converting keywords to Text objects."""
         if keywords is None:
@@ -94,17 +95,17 @@ class Example:
             for keyword in vocab_keywords:
                 # Check if keyword is present in reference text (case-insensitive)
                 if keyword.lower() not in self.ref.raw.lower():
-                    if _raise_warning:
+                    if raise_warning:
                         warnings.warn(
                             f"Keyword '{keyword}' not found: Example {self._index}. Will not be included.",
                             KeywordNotFoundWarning,
                         )
                     continue
 
-                # Convert keyword to Text object and check if it has valid spans in the reference text
-                keyword = Text(keyword, src=self, text_type=TextType.KEYWORD)
-                if len(keyword.get_keyword_span()) == 0:
-                    if _raise_warning:
+                # Convert keyword to Keyword object and check if it has valid spans in the reference text
+                keyword = Keyword(keyword, src=self)
+                if len(keyword.find_in_ref()) == 0:
+                    if raise_warning:
                         warnings.warn(
                             f"Keyword '{keyword.raw}' not found in reference text after tokenization: "
                             f"Example {self._index}. Will not be included.",

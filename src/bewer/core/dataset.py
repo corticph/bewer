@@ -121,8 +121,9 @@ class Dataset(object):
         self._update_dynamic_keyword_vocab(name, keywords)
 
         # Traverse already added examples and add keywords if they are present in the reference text.
+        keywords_dict = {name: list(keywords)}
         for example in self.examples:
-            example._prepare_and_validate_keywords({name: list(keywords)}, _raise_warning=False)
+            example._prepare_and_validate_keywords(keywords_dict, raise_warning=False)
 
     @staticmethod
     def get_config_path(config_path: str | None) -> str:
