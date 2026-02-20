@@ -138,7 +138,7 @@ class TokenList(list["Token"]):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._normalized_index_cache: dict[str, dict[str, list[int]]] = {}
+        self._normalized_index_cache: dict[str, dict[str, set[int]]] = {}
 
     @classmethod
     def from_matches(

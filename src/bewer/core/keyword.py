@@ -22,7 +22,7 @@ class Keyword(Text):
         src: Optional["Example"] = None,
     ):
         super().__init__(raw=raw, src=src, text_type=TextType.KEYWORD)
-        self._cache_find_in_ref: dict[tuple, list[TokenList]] = {}
+        self._cache_find_in_ref: dict[tuple[str, str, str | None], list[TokenList]] = {}
 
     def find_in_tokens(
         self,
@@ -60,6 +60,9 @@ class Keyword(Text):
         """Find all contiguous occurrences of this keyword in the source example's reference tokens.
 
         Results are cached per active pipeline and normalized flag.
+
+        Args:
+            normalized: Whether to match using normalized token text.
 
         Returns:
             list[TokenList]: Matching token slices from the reference.
