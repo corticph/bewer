@@ -108,7 +108,7 @@ class Alignment(list["Op"]):
 
         Args:
             start (int): The start reference token index.
-            stop (Optional[int]): The stop reference token index. If None, defaults to the end of the alignment.
+            stop (Optional[int]): The stop reference token index.
 
         Returns:
             Alignment: The ops that correspond to the given reference token span.

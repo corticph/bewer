@@ -46,6 +46,13 @@ class MTR(Metric):
 
         normalized: bool = True
 
+        def validate(self) -> None:
+            """Validate that the metric can be computed with the given parameters and source data."""
+            is_dynamic_vocab = "medical_terms" in self.metric.dataset._dynamic_keyword_vocabs
+            is_static_vocab = "medical_terms" in self.metric.dataset._static_keyword_vocabs
+            if not is_dynamic_vocab and not is_static_vocab:
+                raise ValueError("Vocabulary 'medical_terms' not found in dataset keyword vocabularies.")
+
     @cached_property
     def _kwer_metric(self):
         """Get the corresponding KWER metric instance for calculating MTR."""
