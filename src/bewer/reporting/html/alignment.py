@@ -123,12 +123,10 @@ def set_keyword_indicators(alignment: "Alignment") -> None:
         return
     for keywords in example.keywords.values():
         for keyword in keywords:
-            keyword_spans = keyword.get_keyword_span()
-            if not keyword_spans:
-                continue
-            for keyword_span in keyword_spans:
-                start_op = alignment.start_index_to_op(keyword_span.start)
-                end_op = alignment.end_index_to_op(keyword_span.stop)
+            matches = keyword.find_in_ref()
+            for match in matches:
+                start_op = alignment.start_index_to_op(match[0].start)
+                end_op = alignment.end_index_to_op(match[-1].end)
                 if start_op is None or end_op is None:
                     continue
                 setattr(start_op, "keyword_start", True)

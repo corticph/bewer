@@ -6,7 +6,7 @@ import regex as re
 
 from bewer.core.caching import pipeline_cached_property
 from bewer.core.token import Token
-from bewer.preprocessing.context import STANDARDIZER_NAME, TOKENIZER_NAME
+from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
     from bewer.core.example import Example
@@ -16,18 +16,6 @@ class TextType(str, Enum):
     REF = "ref"
     HYP = "hyp"
     KEYWORD = "keyword"
-
-
-def _find_word_slices(text, term, whole_word=True, case_sensitive=False) -> list[slice]:
-    """Find all slices where word appears in text."""
-    if whole_word:
-        escaped_term = re.escape(term)
-        boundary_pattern = r"![\p{L}\p{N}]"
-        pattern = rf"(?<{boundary_pattern}){escaped_term}(?{boundary_pattern})"
-    else:
-        pattern = re.escape(term)
-    flags = 0 if case_sensitive else re.IGNORECASE
-    return [slice(m.start(), m.end()) for m in re.finditer(pattern, text, flags)]
 
 
 def _join_tokens(tokens: "TokenList", normalized: bool = True) -> str:
@@ -137,23 +125,6 @@ class Text:
         """
         return _join_tokens(self.tokens, normalized=normalized)
 
-    def get_keyword_span(self) -> list[slice]:
-        """Get the span of this keyword in the source example's reference text.
-
-        Returns:
-            list[slice]: The spans where this keyword appears in the reference text.
-        """
-        if self._text_type != TextType.KEYWORD:
-            raise ValueError("get_keyword_span can only be called on Text objects of type KEYWORD.")
-        if self._src is None:
-            raise ValueError("Source example is None, cannot get keyword span.")
-        return _find_word_slices(
-            self._src.ref.standardized,
-            self.standardized,
-            whole_word=True,
-            case_sensitive=False,
-        )
-
     def __hash__(self):
         return hash((self.raw, self._text_type))
 
@@ -164,6 +135,10 @@ class Text:
 
 class TokenList(list["Token"]):
     """A list of Token objects."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._normalized_index_cache: dict[str, dict[str, set[int]]] = {}
 
     @classmethod
     def from_matches(
@@ -273,6 +248,40 @@ class TokenList(list["Token"]):
                 ngram = ngram.normalized if normalized else ngram.raw
             ngrams.append(ngram)
         return ngrams
+
+    @cached_property
+    def _raw_index_mapping(self) -> dict[str, set[int]]:
+        """Mapping from raw token text to set of positions in this TokenList."""
+        mapping: dict[str, set[int]] = {}
+        for i, token in enumerate(self):
+            mapping.setdefault(token.raw, set()).add(i)
+        return mapping
+
+    @property
+    def _normalized_index_mapping(self) -> dict[str, set[int]]:
+        """Mapping from normalized token text to set of positions, cached per normalizer."""
+        key = NORMALIZER_NAME.get()
+        cache = self._normalized_index_cache
+        if key not in cache:
+            mapping: dict[str, set[int]] = {}
+            for i, token in enumerate(self):
+                mapping.setdefault(token.normalized, set()).add(i)
+            cache[key] = mapping
+        return cache[key]
+
+    def indices(self, text: str, normalized: bool = True) -> set[int]:
+        """Find all token positions where the token text matches the given string.
+
+        Args:
+            text: The string to search for.
+            normalized: If True, compare against normalized token text.
+                        If False, compare against raw token text.
+
+        Returns:
+            set[int]: Set of indices where the token's text matches.
+        """
+        mapping = self._normalized_index_mapping if normalized else self._raw_index_mapping
+        return mapping.get(text, set())
 
     def _sub_repr(self):
         """Used internally by TextTokenList.__repr__"""

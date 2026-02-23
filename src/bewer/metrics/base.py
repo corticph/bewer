@@ -227,6 +227,21 @@ class Metric(ABC):
         """Get the preprocessing pipeline for the metric. Cached property to ensure immutability."""
         return self._pipeline
 
+    @property
+    def standardizer(self) -> str:
+        """Get the standardizer for the metric."""
+        return self._standardizer
+
+    @property
+    def tokenizer(self) -> str:
+        """Get the tokenizer for the metric."""
+        return self._tokenizer
+
+    @property
+    def normalizer(self) -> str:
+        """Get the normalizer for the metric."""
+        return self._normalizer
+
     @classmethod
     def metric_values(cls) -> dict[str, Union[str, list[str]]]:
         """Get the metric values defined in the class and its bases."""
@@ -307,6 +322,21 @@ class ExampleMetric(ABC):
     def pipeline(self) -> tuple[str, str, str]:
         """Get the preprocessing pipeline for the metric."""
         return self.parent_metric.pipeline
+
+    @property
+    def standardizer(self) -> str:
+        """Get the standardizer for the metric."""
+        return self.parent_metric.standardizer
+
+    @property
+    def tokenizer(self) -> str:
+        """Get the tokenizer for the metric."""
+        return self.parent_metric.tokenizer
+
+    @property
+    def normalizer(self) -> str:
+        """Get the normalizer for the metric."""
+        return self.parent_metric.normalizer
 
     def set_source(self, src: "Example") -> None:
         """Set the parent Example object.
