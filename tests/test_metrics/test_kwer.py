@@ -155,6 +155,32 @@ class TestKWERExampleMetric:
         assert kwer.value == 0.0
 
 
+class TestKWERNormalization:
+    """Tests for KWER with normalized=False."""
+
+    def test_unnormalized_casing_mismatch(self):
+        """Test that differing casing causes an error when normalized=False."""
+        dataset = Dataset()
+        dataset.add(
+            ref="the Fox jumps",
+            hyp="the fox jumps",
+            keywords={"animals": ["Fox"]},
+        )
+        kwer = dataset[0].metrics.kwer(vocab="animals", normalized=False)
+        assert kwer.num_errors == 1
+
+    def test_unnormalized_casing_match(self):
+        """Test that matching casing is fine when normalized=False."""
+        dataset = Dataset()
+        dataset.add(
+            ref="the FOX jumps",
+            hyp="the FOX jumps",
+            keywords={"animals": ["FOX"]},
+        )
+        kwer = dataset[0].metrics.kwer(vocab="animals", normalized=False)
+        assert kwer.num_errors == 0
+
+
 class TestKWERDatasetMetric:
     """Tests for KWER (dataset-level Metric) class."""
 
