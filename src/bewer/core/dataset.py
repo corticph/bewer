@@ -71,6 +71,9 @@ class Dataset(object):
 
     def add(self, ref: str, hyp: str, keywords: dict[str, list[str]] | None = None) -> None:
         """Add an example to the dataset."""
+        if keywords is not None:
+            for name, kw_list in keywords.items():
+                self._update_static_keyword_vocab(name, set(kw_list))
         example = Example(ref, hyp, keywords=keywords, src=self, index=len(self))
         self.examples.append(example)
 
@@ -87,7 +90,6 @@ class Dataset(object):
 
         for col in keyword_cols:
             df[col] = self._infer_keyword_column(df[col])
-            self._update_static_keyword_vocab(col, set(chain.from_iterable(df[col])))
 
         # Add examples to the dataset
         for row in df.itertuples(index=False):
