@@ -103,7 +103,7 @@ class Alignment(list["Op"]):
                 mapping[op.ref_token_idx] = i
         return mapping
 
-    def ops_from_ref_index(self, start: int, stop: Optional[int] = None) -> list["Op"]:
+    def ops_from_ref_index(self, start: int, stop: Optional[int] = None) -> Alignment:
         """Get the ops that correspond to the given reference token index or slice.
 
         Args:
@@ -111,7 +111,7 @@ class Alignment(list["Op"]):
             stop (Optional[int]): The stop reference token index. If None, defaults to the end of the alignment.
 
         Returns:
-            list[Op]: The ops that correspond to the given reference token span.
+            Alignment: The ops that correspond to the given reference token span.
 
         Raises:
             ValueError: If start or stop indices are not found in _ref_index_mapping, or if stop index is less than
