@@ -40,17 +40,14 @@ class Alignment(tuple["Op", ...]):
             src: Parent Example object. Can be set later via set_source().
         """
         self._op_counts = Counter()
-        self._count_operations(self)
+        for op in self:
+            self._op_counts[op.type] += 1
+            if op.src is None:
+                op.set_source(self)
 
         self._src = None
         if src is not None:
             self.set_source(src)
-
-        # Set this alignment as parent for ops that don't already have one
-        # (ops from slicing/concatenation may already be parented)
-        for op in self:
-            if op.src is None:
-                op.set_source(self)
 
     @property
     def num_matches(self) -> int:
@@ -76,6 +73,11 @@ class Alignment(tuple["Op", ...]):
     def num_edits(self) -> int:
         """Get the total number of edit operations (substitutions, insertions, deletions)."""
         return self.num_substitutions + self.num_insertions + self.num_deletions
+
+    @property
+    def num_ops(self) -> int:
+        """Get the total number of operations."""
+        return len(self)
 
     @cached_property
     def _start_index_mapping(self) -> dict[int, int]:
@@ -155,11 +157,6 @@ class Alignment(tuple["Op", ...]):
         if op_index is not None:
             return self[op_index]
         return None
-
-    def _count_operations(self, ops: Iterable["Op"]) -> None:
-        """Count operation types and store as attributes."""
-        for op in ops:
-            self._op_counts[op.type] += 1
 
     @property
     def src(self) -> Optional["Example"]:
