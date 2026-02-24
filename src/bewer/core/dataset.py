@@ -180,8 +180,11 @@ class Dataset(object):
         return f"Dataset({len(self.examples)} examples)"
 
 
-class TextList(list["Text"]):
-    """A list of Text or TokenList objects."""
+class TextList(tuple["Text", ...]):
+    """An immutable sequence of Text objects."""
+
+    def __new__(cls, iterable=()):
+        return super().__new__(cls, iterable)
 
     @cached_property
     def raw(self) -> list[str]:
@@ -210,7 +213,7 @@ class TextList(list["Text"]):
         """
         return TextTokenList([text.tokens for text in self])
 
-    def __getitem__(self, index: int) -> Union["Text", "TextList"]:
+    def __getitem__(self, index: int | slice) -> Union["Text", "TextList"]:
         if isinstance(index, slice):
             return TextList(super().__getitem__(index))
         return super().__getitem__(index)
@@ -226,8 +229,11 @@ class TextList(list["Text"]):
         return f"TextList([\n {texts_str}]\n)"
 
 
-class TextTokenList(list["TokenList"]):
-    """A list of Text or TokenList objects."""
+class TextTokenList(tuple["TokenList", ...]):
+    """An immutable sequence of TokenList objects."""
+
+    def __new__(cls, iterable=()):
+        return super().__new__(cls, iterable)
 
     @cached_property
     def raw(self) -> list[list[str]]:
@@ -256,7 +262,7 @@ class TextTokenList(list["TokenList"]):
         """
         return TokenList(chain(*self))
 
-    def __getitem__(self, index: int | slice) -> Union[TokenList, "TextTokenList"]:
+    def __getitem__(self, index: int | slice) -> Union["TokenList", "TextTokenList"]:
         if isinstance(index, slice):
             return TextTokenList(super().__getitem__(index))
         return super().__getitem__(index)
