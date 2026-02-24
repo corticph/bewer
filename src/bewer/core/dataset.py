@@ -240,16 +240,16 @@ class TextTokenList(tuple["TokenList", ...]):
         """Get the raw tokens as a regular Python list.
 
         Returns:
-            list[str]: The raw tokens.
+            list[list[str]]: The raw tokens.
         """
         return [tokens.raw for tokens in self]
 
     @cached_property
-    def normalized(self) -> list[str]:
+    def normalized(self) -> list[list[str]]:
         """Get the normalized tokens as a regular Python list.
 
         Returns:
-            list[str]: The normalized tokens.
+            list[list[str]]: The normalized tokens.
         """
         return [tokens.normalized for tokens in self]
 
