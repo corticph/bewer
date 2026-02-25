@@ -63,5 +63,5 @@ dataset.metrics.list_metrics()
 **Compute metrics lazily**
 
 ```python
-print(f"WER: {dataset.metrics.wer.value:.2%}")
+print(f"WER: {dataset.metrics.wer().value:.2%}")
 ```
