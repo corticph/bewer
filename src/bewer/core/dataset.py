@@ -186,7 +186,7 @@ class TextList(tuple["Text", ...]):
     def __new__(cls, iterable=()):
         return super().__new__(cls, iterable)
 
-    @cached_property
+    @property
     def raw(self) -> list[str]:
         """Get the raw texts as a regular Python list.
 
@@ -195,7 +195,7 @@ class TextList(tuple["Text", ...]):
         """
         return [text.raw for text in self]
 
-    @cached_property
+    @property
     def standardized(self) -> list[str]:
         """Get the standardized texts as a regular Python list.
 
@@ -204,7 +204,7 @@ class TextList(tuple["Text", ...]):
         """
         return [text.standardized for text in self]
 
-    @cached_property
+    @property
     def tokens(self) -> "TextTokenList":
         """Get the tokens as a TextTokenList object.
 
@@ -235,7 +235,7 @@ class TextTokenList(tuple["TokenList", ...]):
     def __new__(cls, iterable=()):
         return super().__new__(cls, iterable)
 
-    @cached_property
+    @property
     def raw(self) -> list[list[str]]:
         """Get the raw tokens as a regular Python list.
 
@@ -244,7 +244,7 @@ class TextTokenList(tuple["TokenList", ...]):
         """
         return [tokens.raw for tokens in self]
 
-    @cached_property
+    @property
     def normalized(self) -> list[list[str]]:
         """Get the normalized tokens as a regular Python list.
 
@@ -253,7 +253,7 @@ class TextTokenList(tuple["TokenList", ...]):
         """
         return [tokens.normalized for tokens in self]
 
-    @cached_property
+    @property
     def flat(self) -> "TokenList":
         """Flatten the TextTokenList into a TokenList.
 
