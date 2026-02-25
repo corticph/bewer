@@ -133,11 +133,13 @@ class Text:
         return f'Text("{text}")'
 
 
-class TokenList(list["Token"]):
-    """A list of Token objects."""
+class TokenList(tuple["Token", ...]):
+    """An immutable sequence of Token objects."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __new__(cls, iterable=()):
+        return super().__new__(cls, iterable)
+
+    def __init__(self, iterable=()):
         self._normalized_index_cache: dict[str, dict[str, set[int]]] = {}
 
     @classmethod
@@ -291,7 +293,7 @@ class TokenList(list["Token"]):
             tokens_str += ", ..."
         return f"TokenList([{tokens_str}])"
 
-    def __getitem__(self, index: int) -> Union["Token", "TokenList"]:
+    def __getitem__(self, index: int | slice) -> Union["Token", "TokenList"]:
         if isinstance(index, slice):
             return TokenList(super().__getitem__(index))
         return super().__getitem__(index)

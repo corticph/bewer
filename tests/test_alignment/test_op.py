@@ -189,17 +189,10 @@ class TestOpRepr:
 class TestAlignment:
     """Tests for Alignment class."""
 
-    def test_alignment_is_list(self):
-        """Test that Alignment is a list."""
+    def test_alignment_is_tuple(self):
+        """Test that Alignment is a tuple."""
         alignment = Alignment()
-        assert isinstance(alignment, list)
-
-    def test_alignment_append(self):
-        """Test appending to Alignment."""
-        alignment = Alignment()
-        op = Op(type=OpType.MATCH, ref="hello", hyp="hello")
-        alignment.append(op)
-        assert len(alignment) == 1
+        assert isinstance(alignment, tuple)
 
     def test_alignment_from_list(self):
         """Test creating Alignment from list of ops."""

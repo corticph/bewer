@@ -18,17 +18,19 @@ if TYPE_CHECKING:
     from bewer.reporting.python.alignment import ColorScheme
 
 
-class Alignment(list["Op"]):
+class Alignment(tuple["Op", ...]):
     """
-    List of operations with additional methods for processing.
+    Immutable sequence of operations with additional methods for processing.
 
     Attributes:
-        ops (list[Op]): List of operations.
         num_matches (int): Number of match operations.
         num_substitutions (int): Number of substitution operations.
         num_insertions (int): Number of insertion operations.
         num_deletions (int): Number of deletion operations.
     """
+
+    def __new__(cls, iterable: Iterable["Op"] = (), src: Optional["Example"] = None) -> "Alignment":
+        return super().__new__(cls, iterable)
 
     def __init__(self, iterable: Iterable["Op"] = (), src: Optional["Example"] = None) -> None:
         """Initialize Alignment.
@@ -37,19 +39,15 @@ class Alignment(list["Op"]):
             iterable: Iterable of Op objects.
             src: Parent Example object. Can be set later via set_source().
         """
-        super().__init__(iterable)
         self._op_counts = Counter()
-        self._count_operations(self)
+        for op in self:
+            self._op_counts[op.type] += 1
+            if op.src is None:
+                op.set_source(self)
 
         self._src = None
         if src is not None:
             self.set_source(src)
-
-        # Set this alignment as parent for ops that don't already have one
-        # (ops from slicing/concatenation may already be parented)
-        for op in self:
-            if op.src is None:
-                op.set_source(self)
 
     @property
     def num_matches(self) -> int:
@@ -75,6 +73,11 @@ class Alignment(list["Op"]):
     def num_edits(self) -> int:
         """Get the total number of edit operations (substitutions, insertions, deletions)."""
         return self.num_substitutions + self.num_insertions + self.num_deletions
+
+    @property
+    def num_ops(self) -> int:
+        """Get the total number of operations."""
+        return len(self)
 
     @cached_property
     def _start_index_mapping(self) -> dict[int, int]:
@@ -155,24 +158,6 @@ class Alignment(list["Op"]):
             return self[op_index]
         return None
 
-    def append(self, op: "Op") -> None:
-        if self._src is not None:
-            raise ValueError("Cannot modify Alignment after source example is set.")
-        super().append(op)
-        self._count_operations([op])
-
-    def extend(self, iterable: Iterable["Op"]) -> None:
-        if self._src is not None:
-            raise ValueError("Cannot modify Alignment after source example is set.")
-        ops = list(iterable)
-        super().extend(ops)
-        self._count_operations(ops)
-
-    def _count_operations(self, ops: Iterable["Op"]) -> None:
-        """Count operation types and store as attributes."""
-        for op in ops:
-            self._op_counts[op.type] += 1
-
     @property
     def src(self) -> Optional["Example"]:
         """Get the parent Example object."""
@@ -249,7 +234,7 @@ class Alignment(list["Op"]):
         """
         return _generate_alignment_html_lines(self, color_scheme=color_scheme)
 
-    def __getitem__(self, index: int) -> Union[Op, "Alignment"]:
+    def __getitem__(self, index: int | slice) -> Union[Op, "Alignment"]:
         if isinstance(index, slice):
             return Alignment(super().__getitem__(index))
         return super().__getitem__(index)
@@ -262,8 +247,6 @@ class Alignment(list["Op"]):
         Returns:
             Alignment: The concatenated Alignment object.
         """
-        if self._src is not None or other._src is not None:
-            raise ValueError("Cannot concatenate Alignments with source examples set.")
         return Alignment(super().__add__(other))
 
     def __repr__(self):

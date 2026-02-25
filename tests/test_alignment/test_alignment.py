@@ -62,66 +62,24 @@ class TestAlignmentProperties:
         alignment = Alignment(ops)
         assert alignment.num_edits == 3
 
-    def test_counts_updated_on_append(self):
-        """Test that operation counts are updated when appending."""
-        alignment = Alignment()
-        alignment.append(Op(type=OpType.MATCH, ref="a", hyp="a"))
-        assert alignment.num_matches == 1
-
-        alignment.append(Op(type=OpType.SUBSTITUTE, ref="b", hyp="c"))
-        assert alignment.num_substitutions == 1
-
-    def test_counts_updated_on_extend(self):
-        """Test that operation counts are updated when extending."""
-        alignment = Alignment()
-        new_ops = [
-            Op(type=OpType.MATCH, ref="a", hyp="a"),
-            Op(type=OpType.INSERT, ref=None, hyp="b"),
-        ]
-        alignment.extend(new_ops)
-        assert alignment.num_matches == 1
-        assert alignment.num_insertions == 1
-
-
-class TestAlignmentModification:
-    """Tests for modifying Alignment objects."""
-
-    def test_append_when_source_not_set(self):
-        """Test that append works when source is not set."""
-        alignment = Alignment()
-        op = Op(type=OpType.MATCH, ref="test", hyp="test")
-        alignment.append(op)
-        assert len(alignment) == 1
-
-    def test_append_when_source_set_raises(self):
-        """Test that append raises when source is set."""
-        alignment = Alignment()
-        mock_example = Mock()
-        alignment.set_source(mock_example)
-
-        op = Op(type=OpType.MATCH, ref="test", hyp="test")
-        with pytest.raises(ValueError, match="Cannot modify"):
-            alignment.append(op)
-
-    def test_extend_when_source_not_set(self):
-        """Test that extend works when source is not set."""
-        alignment = Alignment()
+    def test_counts_from_constructor(self):
+        """Test that operation counts are correct from construction."""
         ops = [
             Op(type=OpType.MATCH, ref="a", hyp="a"),
-            Op(type=OpType.MATCH, ref="b", hyp="b"),
+            Op(type=OpType.SUBSTITUTE, ref="b", hyp="c"),
+            Op(type=OpType.INSERT, ref=None, hyp="d"),
         ]
-        alignment.extend(ops)
-        assert len(alignment) == 2
+        alignment = Alignment(ops)
+        assert alignment.num_matches == 1
+        assert alignment.num_substitutions == 1
+        assert alignment.num_insertions == 1
 
-    def test_extend_when_source_set_raises(self):
-        """Test that extend raises when source is set."""
-        alignment = Alignment()
-        mock_example = Mock()
-        alignment.set_source(mock_example)
-
-        ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        with pytest.raises(ValueError, match="Cannot modify"):
-            alignment.extend(ops)
+    def test_immutable(self):
+        """Test that Alignment is immutable (tuple-based)."""
+        ops = [Op(type=OpType.MATCH, ref="a", hyp="a")]
+        alignment = Alignment(ops)
+        with pytest.raises(TypeError):
+            alignment[0] = Op(type=OpType.MATCH, ref="b", hyp="b")
 
 
 class TestAlignmentSetSource:
@@ -328,8 +286,8 @@ class TestAlignmentConcatenation:
         assert isinstance(result, Alignment)
         assert len(result) == 2
 
-    def test_add_raises_if_source_set(self):
-        """Test that adding raises if either alignment has source set."""
+    def test_add_with_source_set(self):
+        """Test that adding works even if source is set (since Alignment is immutable)."""
         ops1 = [Op(type=OpType.MATCH, ref="a", hyp="a")]
         ops2 = [Op(type=OpType.MATCH, ref="b", hyp="b")]
 
@@ -339,8 +297,9 @@ class TestAlignmentConcatenation:
         mock_example = Mock()
         alignment1.set_source(mock_example)
 
-        with pytest.raises(ValueError, match="Cannot concatenate"):
-            _ = alignment1 + alignment2
+        result = alignment1 + alignment2
+        assert isinstance(result, Alignment)
+        assert len(result) == 2
 
 
 class TestAlignmentRepr:
