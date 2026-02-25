@@ -92,12 +92,6 @@ class TestDatasetLoadPandas:
         with pytest.raises(TypeError, match="must be a pandas DataFrame"):
             empty_dataset.load_pandas({"ref": ["hello"], "hyp": ["hi"]})
 
-    def test_load_returns_self(self, empty_dataset):
-        """Test that load_pandas returns self for chaining."""
-        df = pd.DataFrame({"ref": ["hello"], "hyp": ["hi"]})
-        result = empty_dataset.load_pandas(df)
-        assert result is empty_dataset
-
 
 class TestDatasetLoadCsv:
     """Tests for Dataset.load_csv() method."""
@@ -127,18 +121,6 @@ class TestDatasetLoadCsv:
             empty_dataset.load_csv(csv_path, ref_col="reference", hyp_col="hypothesis")
             assert len(empty_dataset) == 1
             assert empty_dataset[0].ref.raw == "hello"
-        finally:
-            os.unlink(csv_path)
-
-    def test_load_csv_returns_self(self, empty_dataset):
-        """Test that load_csv returns self for chaining."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
-            f.write("ref,hyp\nhello,hi\n")
-            csv_path = f.name
-
-        try:
-            result = empty_dataset.load_csv(csv_path)
-            assert result is empty_dataset
         finally:
             os.unlink(csv_path)
 

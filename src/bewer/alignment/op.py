@@ -87,14 +87,14 @@ class Op:
                 raise ValueError("SUBSTITUTE operation must have both ref and hyp.")
 
     @property
-    def _repr_hyp(self) -> str:
+    def _repr_hyp(self) -> str | None:
         """Return the hypothesis with partial markers if applicable."""
         if self.hyp is None:
             return None
         return f'{"-" if self.hyp_left_partial else ""}"{self.hyp}"{"-" if self.hyp_right_partial else ""}'
 
     @property
-    def _repr_ref(self) -> str:
+    def _repr_ref(self) -> str | None:
         """Return the reference with partial markers if applicable."""
         if self.ref is None:
             return None

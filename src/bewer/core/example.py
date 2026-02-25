@@ -23,6 +23,8 @@ class Example:
     Attributes:
         ref (Text): Reference text object.
         hyp (Text): Hypothesis text object.
+        keywords (dict[str, set[Keyword]]): Keywords grouped by vocabulary name.
+        metrics (ExampleMetricCollection): Metrics collection for this example.
     """
 
     def __init__(
