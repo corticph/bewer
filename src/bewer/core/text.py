@@ -19,10 +19,11 @@ class TextType(str, Enum):
 
 
 def _join_tokens(tokens: "TokenList", normalized: bool = True) -> str:
-    """Join a list of tokens into a single string with a specified delimiter.
+    """Join tokens into a single string, preserving original spacing.
 
     Args:
-        tokens (list[str]): The list of tokens to join.
+        tokens (TokenList): The tokens to join.
+        normalized (bool): Whether to use normalized token text.
 
     Returns:
         str: The joined string.
@@ -176,50 +177,6 @@ class TokenList(tuple["Token", ...]):
             list[str]: The normalized tokens.
         """
         return [token.normalized for token in self]
-
-    @cached_property
-    def _start_index_mapping(self) -> dict[int, int]:
-        """Create a mapping from character start index to token index for quick lookup."""
-        mapping = {}
-        for i, token in enumerate(self):
-            mapping[token.start] = i
-        return mapping
-
-    @cached_property
-    def _end_index_mapping(self) -> dict[int, int]:
-        """Create a mapping from character end index to token index for quick lookup."""
-        mapping = {}
-        for i, token in enumerate(self):
-            mapping[token.end] = i
-        return mapping
-
-    def start_index_to_token(self, char_index: int) -> Optional["Token"]:
-        """Get the token that starts at the given character index.
-
-        Args:
-            char_index (int): The character index to look up.
-
-        Returns:
-            Optional[Token]: The token that starts at the given character index, or None if not found.
-        """
-        token_index = self._start_index_mapping.get(char_index, None)
-        if token_index is not None:
-            return self[token_index]
-        return None
-
-    def end_index_to_token(self, char_index: int) -> Optional["Token"]:
-        """Get the token that ends at the given character index.
-
-        Args:
-            char_index (int): The character index to look up.
-
-        Returns:
-            Optional[Token]: The token that ends at the given character index, or None if not found.
-        """
-        token_index = self._end_index_mapping.get(char_index, None)
-        if token_index is not None:
-            return self[token_index]
-        return None
 
     def ngrams(
         self,

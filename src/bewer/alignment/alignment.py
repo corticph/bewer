@@ -214,7 +214,8 @@ class Alignment(tuple["Op", ...]):
         """Display the alignment in the console.
 
         Args:
-            max_line_length (int | None): Maximum line length for display. If None, uses default.
+            max_line_length (int | float): Maximum line length for display. If a float between 0 and 1,
+                interpreted as a fraction of the terminal width.
             color_scheme (ColorScheme): Color scheme for display.
         """
         title = None if self._src is None else f"   Example {self._src.index}"
@@ -238,16 +239,6 @@ class Alignment(tuple["Op", ...]):
         if isinstance(index, slice):
             return Alignment(super().__getitem__(index))
         return super().__getitem__(index)
-
-    def __add__(self, other: "Alignment") -> "Alignment":
-        """Concatenate two Alignment objects.
-
-        Args:
-            other (Alignment): The other Alignment object.
-        Returns:
-            Alignment: The concatenated Alignment object.
-        """
-        return Alignment(super().__add__(other))
 
     def __repr__(self):
         ops = self[:60]

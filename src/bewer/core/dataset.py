@@ -28,7 +28,8 @@ class Dataset(object):
     """BeWER dataset.
 
     Attributes:
-        config (...): ...
+        config (OmegaConf): The resolved configuration object.
+        pipelines: The resolved preprocessing pipelines.
         examples (list[Example]): A list of Example objects.
         metrics (MetricCollection): A metrics collection for the dataset.
         refs (TextList): The reference texts in the dataset.
@@ -81,7 +82,7 @@ class Dataset(object):
         """Load a Hugging Face dataset."""
         raise NotImplementedError("load_dataset() method not implemented.")
 
-    def load_pandas(self, df, ref_col="ref", hyp_col="hyp", keyword_cols: list | None = None) -> None:
+    def load_pandas(self, df: pd.DataFrame, ref_col="ref", hyp_col="hyp", keyword_cols: list | None = None) -> None:
         """Add a pandas DataFrame to the dataset."""
         if not isinstance(df, pd.DataFrame):
             raise TypeError("df must be a pandas DataFrame")
@@ -102,13 +103,11 @@ class Dataset(object):
             else:
                 keywords = None
             self.add(ref, hyp, keywords=keywords)
-        return self
 
     def load_csv(self, csv_file: str, ref_col="ref", hyp_col="hyp", keyword_cols: list | None = None, **kwargs) -> None:
         """Add a CSV file to the dataset."""
         df = pd.read_csv(csv_file, **kwargs)
         self.load_pandas(df, ref_col, hyp_col, keyword_cols)
-        return self
 
     def add_keyword_list(self, name: str, keywords: Iterable[str]) -> None:
         """Add a named keyword vocabulary to the dataset.
@@ -209,7 +208,7 @@ class TextList(tuple["Text", ...]):
         """Get the tokens as a TextTokenList object.
 
         Returns:
-            TokenList: The tokens.
+            TextTokenList: The tokens.
         """
         return TextTokenList([text.tokens for text in self])
 

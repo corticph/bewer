@@ -1,4 +1,3 @@
-from functools import cached_property
 from typing import TYPE_CHECKING, Optional
 
 import regex as re
@@ -8,7 +7,6 @@ from bewer.preprocessing.context import NORMALIZER_NAME
 from bewer.reporting.python.utils import highlight_span
 
 if TYPE_CHECKING:
-    from bewer.alignment.op import Op
     from bewer.core.text import Text
 
 
@@ -88,20 +86,12 @@ class Token:
         """The normalized string of the token after applying the active normalizer."""
         return normalizer(self.raw)
 
-    @cached_property
-    def levenshtein(self) -> "Op":
-        if self._src is None:
-            return None
-        _src_example = self._src.src
-        if _src_example is None:
-            return None
-        return _src_example.levenshtein._token_to_op_index.get(self, None)
-
     def inctx(self, width: int = 20, highlight: bool = False, add_ellipsis: bool = True) -> str:
         """Get the context of the token in the source text.
 
         Args:
-            width (int): The width of the context to show.
+            width (int): The number of characters of context to show on each side.
+            highlight (bool): Whether to highlight the token span in the context.
             add_ellipsis (bool): Whether to add ellipsis around the context, if starting/ending not within width.
 
         Returns:

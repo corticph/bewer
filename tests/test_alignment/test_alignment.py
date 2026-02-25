@@ -271,37 +271,6 @@ class TestAlignmentSlicing:
         assert len(result) == 2
 
 
-class TestAlignmentConcatenation:
-    """Tests for Alignment concatenation."""
-
-    def test_add_returns_alignment(self):
-        """Test that adding two alignments returns an Alignment."""
-        ops1 = [Op(type=OpType.MATCH, ref="a", hyp="a")]
-        ops2 = [Op(type=OpType.MATCH, ref="b", hyp="b")]
-
-        alignment1 = Alignment(ops1)
-        alignment2 = Alignment(ops2)
-
-        result = alignment1 + alignment2
-        assert isinstance(result, Alignment)
-        assert len(result) == 2
-
-    def test_add_with_source_set(self):
-        """Test that adding works even if source is set (since Alignment is immutable)."""
-        ops1 = [Op(type=OpType.MATCH, ref="a", hyp="a")]
-        ops2 = [Op(type=OpType.MATCH, ref="b", hyp="b")]
-
-        alignment1 = Alignment(ops1)
-        alignment2 = Alignment(ops2)
-
-        mock_example = Mock()
-        alignment1.set_source(mock_example)
-
-        result = alignment1 + alignment2
-        assert isinstance(result, Alignment)
-        assert len(result) == 2
-
-
 class TestAlignmentRepr:
     """Tests for Alignment __repr__ method."""
 

@@ -311,16 +311,6 @@ class TestAlignmentSlicing:
         assert isinstance(sliced, Alignment)
         assert len(sliced) == 2
 
-    def test_add_returns_alignment(self):
-        """Test that adding Alignments returns Alignment."""
-        ops1 = [Op(type=OpType.MATCH, ref="a", hyp="a")]
-        ops2 = [Op(type=OpType.MATCH, ref="b", hyp="b")]
-        alignment1 = Alignment(ops1)
-        alignment2 = Alignment(ops2)
-        combined = alignment1 + alignment2
-        assert isinstance(combined, Alignment)
-        assert len(combined) == 2
-
 
 class TestAlignmentRepr:
     """Tests for Alignment.__repr__()."""
