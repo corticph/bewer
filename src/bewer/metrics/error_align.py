@@ -11,6 +11,8 @@ from bewer.alignment import Alignment, Op, OpType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 from bewer.preprocessing.context import get_normalizer, get_tokenizer
 
+__all__ = ["ErrorAlign"]
+
 
 class ErrorAlign_(ExampleMetric):
     """Compute ErrorAlign edit operations between hypothesis and reference text."""

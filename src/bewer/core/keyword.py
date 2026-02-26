@@ -8,6 +8,8 @@ from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKE
 if TYPE_CHECKING:
     from bewer.core.example import Example
 
+__all__ = ["Keyword"]
+
 
 class Keyword(Text):
     """A keyword that can locate itself within reference text tokens.

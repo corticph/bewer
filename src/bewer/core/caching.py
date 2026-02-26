@@ -5,6 +5,8 @@ from typing import Any, Callable
 
 from bewer.preprocessing.context import PIPELINE_STAGES
 
+__all__ = ["pipeline_cached_property"]
+
 # Build lookup: context_var -> (context_vars_up_to_and_including, pipeline_attr)
 _STAGE_INDEX = {}
 for i, (cv, attr) in enumerate(PIPELINE_STAGES):

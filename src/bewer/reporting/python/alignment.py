@@ -20,6 +20,8 @@ from bewer.alignment.op_type import OpType
 if TYPE_CHECKING:
     from bewer.alignment.op import Alignment, Op
 
+__all__ = ["display_basic_aligned", "ColorScheme", "DefaultColorScheme"]
+
 
 class ColorScheme:
     """Base class for color schemes used in alignment display."""

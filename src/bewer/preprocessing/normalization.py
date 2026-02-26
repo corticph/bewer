@@ -4,24 +4,34 @@ from functools import lru_cache
 import regex as re
 from unidecode import unidecode
 
+__all__ = [
+    "Normalizer",
+    "lowercase",
+    "nfc",
+    "strip_punctuation",
+    "transliterate_latin_letters",
+    "transliterate_symbols",
+    "remove_symbols",
+]
+
 # ============================================================
 # Helpers
 # ============================================================
 
 
-VALID_ATTRS = {
+_VALID_ATTRS = {
     "token_only": bool,
     "length_preserving": bool,
 }
 
 
-def set_attrs(**attrs):
+def _set_attrs(**attrs):
     def decorator(func):
         for k, v in attrs.items():
-            # if k not in VALID_ATTRS:
+            # if k not in _VALID_ATTRS:
             #     raise ValueError(f"Invalid attribute: {k}")
-            # if not isinstance(v, VALID_ATTRS[k]):
-            #     raise TypeError(f"Attribute {k} must be of type {VALID_ATTRS[k].__name__}")
+            # if not isinstance(v, _VALID_ATTRS[k]):
+            #     raise TypeError(f"Attribute {k} must be of type {_VALID_ATTRS[k].__name__}")
             setattr(func, k, v)
         return func
 
@@ -33,7 +43,7 @@ def set_attrs(**attrs):
 # ============================================================
 
 
-@set_attrs(token_only=False, length_preserving=True)
+@_set_attrs(token_only=False, length_preserving=True)
 def lowercase(text: str) -> str:
     """
     Lowercase the input string.
@@ -47,7 +57,7 @@ def lowercase(text: str) -> str:
     return text.lower()
 
 
-@set_attrs(token_only=False, length_preserving=False)
+@_set_attrs(token_only=False, length_preserving=False)
 def nfc(text: str) -> str:
     """
     Normalize the input string to Unicode NFC (Normalization Form Composition).
@@ -66,7 +76,7 @@ def nfc(text: str) -> str:
 # ============================================================
 
 
-@set_attrs(token_only=True, length_preserving=False)
+@_set_attrs(token_only=True, length_preserving=False)
 def strip_punctuation(text: str) -> str:
     """
     Strip leading and trailing Unicode punctuation from the input string, excluding '&' and '%'.
@@ -101,7 +111,7 @@ def _transliterate_latin_letters(char: str) -> str:
     return unidecode(char)
 
 
-@set_attrs(token_only=False, length_preserving=False)
+@_set_attrs(token_only=False, length_preserving=False)
 def transliterate_latin_letters(text: str) -> str:
     """Transliterate a single latin Unicode letter to its ASCII equivalent.
 
@@ -129,7 +139,7 @@ def _transliterate_symbols(char: str) -> str:
     return char
 
 
-@set_attrs(token_only=False, length_preserving=False)
+@_set_attrs(token_only=False, length_preserving=False)
 def transliterate_symbols(text: str) -> str:
     """Transliterate Unicode markers, symbols, and punctuation characters to their ASCII equivalents.
 
@@ -156,7 +166,7 @@ def _remove_symbols(char: str) -> str:
     return char
 
 
-@set_attrs(token_only=False, length_preserving=False)
+@_set_attrs(token_only=False, length_preserving=False)
 def remove_symbols(text: str) -> str:
     """Remove Unicode markers, symbols, and punctuation characters.
 

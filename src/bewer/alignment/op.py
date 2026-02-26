@@ -3,6 +3,8 @@ from __future__ import annotations
 from functools import cached_property
 from typing import TYPE_CHECKING
 
+__all__ = ["Op"]
+
 from bewer.alignment.op_type import OpType
 
 if TYPE_CHECKING:

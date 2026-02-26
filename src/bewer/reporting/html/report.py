@@ -12,6 +12,17 @@ from bewer.reporting.html.labels import HTMLAlignmentLabels
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
 
+__all__ = [
+    "generate_report",
+    "render_report_html",
+    "ReportMetric",
+    "ReportAlignment",
+    "ReportSummaryItem",
+    "DEFAULT_REPORT_METRICS",
+    "DEFAULT_REPORT_SUMMARY_ITEMS",
+    "DEFAULT_REPORT_ALIGNMENT",
+]
+
 
 class ReportMetric:
     """Specification for a metric to include in the report."""

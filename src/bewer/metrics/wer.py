@@ -6,6 +6,8 @@ from rapidfuzz.distance import Levenshtein
 
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
+__all__ = ["WER"]
+
 
 class WER_(ExampleMetric):
     @metric_value
@@ -53,12 +55,12 @@ class WER(Metric):
     @metric_value
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference texts."""
-        return sum([self._get_example_metric(example).num_edits for example in self._src])
+        return sum([self.get_example_metric(example).num_edits for example in self._src])
 
     @metric_value
     def ref_length(self) -> int:
         """Get the number of tokens in the reference texts."""
-        return sum([self._get_example_metric(example).ref_length for example in self._src])
+        return sum([self.get_example_metric(example).ref_length for example in self._src])
 
     @metric_value(main=True)
     def value(self) -> float:

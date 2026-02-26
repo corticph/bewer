@@ -1,6 +1,8 @@
 from rich.console import Console
 from rich.table import Table
 
+__all__: list[str] = []  # Internal
+
 
 def print_metric_table(
     rows: list[tuple[tuple[str, str, str], tuple[str, str, str] | None]],

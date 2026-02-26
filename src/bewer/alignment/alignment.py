@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from bewer.reporting.html.color_schemes import HTMLAlignmentColors
     from bewer.reporting.python.alignment import ColorScheme
 
+__all__ = ["Alignment"]
+
 
 class Alignment(tuple["Op", ...]):
     """

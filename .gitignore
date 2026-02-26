@@ -149,3 +149,6 @@ tests/reports
 
 # Temporary files (used as a working directory)
 temp/
+
+# Local TODO
+TODO.md
