@@ -8,6 +8,8 @@ from bewer.metrics.base import ExampleMetricCollection
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
 
+__all__ = ["Example", "KeywordNotFoundWarning"]
+
 
 class KeywordNotFoundWarning(UserWarning):
     pass

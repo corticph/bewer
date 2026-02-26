@@ -9,6 +9,8 @@ from bewer.reporting.python.utils import highlight_span
 if TYPE_CHECKING:
     from bewer.core.text import Text
 
+__all__ = ["Token"]
+
 
 class Token:
     """BeWER Token representation.

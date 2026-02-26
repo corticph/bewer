@@ -1,5 +1,7 @@
 from enum import IntEnum
 
+__all__ = ["OpType"]
+
 
 class OpType(IntEnum):
     MATCH = 0

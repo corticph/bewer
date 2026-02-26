@@ -1,5 +1,7 @@
 """Configurable labels and tooltips for alignment display in HTML reports."""
 
+__all__ = ["HTMLAlignmentLabels"]
+
 
 class HTMLAlignmentLabels:
     """Configurable labels and tooltips for alignment display in HTML reports.

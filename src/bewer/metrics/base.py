@@ -15,6 +15,18 @@ if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
     from bewer.core.example import Example
 
+__all__ = [
+    "Metric",
+    "ExampleMetric",
+    "MetricParams",
+    "metric_value",
+    "METRIC_REGISTRY",
+    "MetricRegistry",
+    "list_registered_metrics",
+    "MetricCollection",
+    "ExampleMetricCollection",
+]
+
 
 class metric_value(cached_property):
     def __init__(self, func=None, *, main: bool = False):
@@ -273,7 +285,7 @@ class Metric(ABC):
         if self.params is not None:
             self.params.validate()
 
-    def _get_example_metric(self, example: "Example") -> "ExampleMetric":
+    def get_example_metric(self, example: "Example") -> "ExampleMetric":
         """Get the ExampleMetric object for a given example index."""
         if example._index in self._examples:
             return self._examples[example._index]
@@ -503,7 +515,7 @@ class ExampleMetricCollection(object):
             parent_metric = parent_metric_factory(**kwargs)
 
             # Get example metric from parent
-            example_metric_instance = parent_metric._get_example_metric(self._src_example)
+            example_metric_instance = parent_metric.get_example_metric(self._src_example)
 
             # Cache and return
             self._cache[cache_key] = example_metric_instance

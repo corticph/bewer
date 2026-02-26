@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from bewer.alignment import OpType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
+__all__ = ["KWER", "KWER_"]
+
 
 class KWER_(ExampleMetric):
     def _get_alignment(self):
@@ -85,12 +87,12 @@ class KWER(Metric):
     @metric_value
     def num_errors(self) -> int:
         """Get the number of keywords incorrectly transcribed in the hypothesis texts."""
-        return sum([self._get_example_metric(example).num_errors for example in self._src])
+        return sum([self.get_example_metric(example).num_errors for example in self._src])
 
     @metric_value
     def num_keywords(self) -> int:
         """Get the number of keywords in the reference texts."""
-        return sum([self._get_example_metric(example).num_keywords for example in self._src])
+        return sum([self.get_example_metric(example).num_keywords for example in self._src])
 
     @metric_value(main=True)
     def value(self) -> float:

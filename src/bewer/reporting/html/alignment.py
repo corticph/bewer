@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from bewer.alignment.alignment import Alignment
     from bewer.alignment.op import Op
 
+__all__ = ["generate_alignment_html_lines"]
+
 
 def get_html_padding(length: int, color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors) -> str:
     """Get an HTML span representing padding spaces.
@@ -113,7 +115,7 @@ def format_alignment_op_html(
     raise ValueError(f"Unknown operation type: {op.type}")
 
 
-def set_keyword_indicators(alignment: "Alignment") -> None:
+def _set_keyword_indicators(alignment: "Alignment") -> None:
     """Set indicators on alignment operations that correspond to keywords in the reference text."""
 
     example = alignment.src
@@ -155,7 +157,7 @@ def generate_alignment_html_lines(
     ref_line, hyp_line = "", ""
     current_length = 0
 
-    set_keyword_indicators(alignment)  # Update alignment ops with keyword indicators before rendering
+    _set_keyword_indicators(alignment)  # Update alignment ops with keyword indicators before rendering
 
     lines = []
     for op in alignment:

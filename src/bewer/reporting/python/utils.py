@@ -7,6 +7,8 @@ from rich.text import Text
 if TYPE_CHECKING:
     from bewer.core.token import TokenList
 
+__all__: list[str] = []  # Internal
+
 
 def highlight_span(text: str, start: int, end: int, style: str) -> str:
     # Use a StringIO buffer to capture ANSI output

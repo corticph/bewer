@@ -8,6 +8,8 @@ from typing import Union
 
 import regex as re
 
+__all__ = ["Tokenizer", "whitespace_pattern", "strip_punctuation_pattern", "strip_punctuation_keep_symbols_pattern"]
+
 
 def whitespace_pattern() -> re.Pattern:
     """Return a regex pattern that matches sequences of non-whitespace characters.

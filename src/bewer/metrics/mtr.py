@@ -5,22 +5,24 @@ from functools import cached_property
 
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
+__all__ = ["MTR", "MTR_"]
+
 
 class MTR_(ExampleMetric):
     @metric_value
     def num_matches(self) -> int:
         """Get the number of medical keywords correctly transcribed in the hypothesis text."""
-        return self.num_keywords - self.parent_metric._kwer_metric._get_example_metric(self.example).num_errors
+        return self.num_keywords - self.parent_metric._kwer_metric.get_example_metric(self.example).num_errors
 
     @metric_value
     def num_keywords(self) -> int:
         """Get the number of medical keywords in the reference text."""
-        return self.parent_metric._kwer_metric._get_example_metric(self.example).num_keywords
+        return self.parent_metric._kwer_metric.get_example_metric(self.example).num_keywords
 
     @metric_value(main=True)
     def value(self) -> float:
         """Get the example-level medical term recall."""
-        return 1 - self.parent_metric._kwer_metric._get_example_metric(self.example).value
+        return 1 - self.parent_metric._kwer_metric.get_example_metric(self.example).value
 
 
 @METRIC_REGISTRY.register("mtr")

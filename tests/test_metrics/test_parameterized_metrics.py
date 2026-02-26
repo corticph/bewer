@@ -184,7 +184,7 @@ class TestExampleMetricParamsAccess:
         example = keyword_dataset.examples[0]
         # Access the example metric for the parameterized parent
         # This requires getting it through the parameterized parent's cache
-        kwa_example = kwa._get_example_metric(example)
+        kwa_example = kwa.get_example_metric(example)
         assert kwa_example.params.cer_threshold == 0.1
 
 
@@ -360,9 +360,9 @@ class TestRequiredHyperparams:
             def value(self) -> float:
                 threshold = self.params.threshold
                 return sum(
-                    self._get_example_metric(ex).value
+                    self.get_example_metric(ex).value
                     for ex in self._src
-                    if self._get_example_metric(ex).value >= threshold
+                    if self.get_example_metric(ex).value >= threshold
                 )
 
         # Try to construct without providing required param — error is eager

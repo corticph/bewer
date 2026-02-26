@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Optional
 
 from bewer.flags import DEFAULT
 
+__all__ = ["set_pipeline", "get_standardizer", "get_tokenizer", "get_normalizer"]
+
 if TYPE_CHECKING:
     from bewer import Dataset
     from bewer.preprocessing.normalization import Normalizer

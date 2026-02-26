@@ -1,3 +1,6 @@
+__all__ = ["HTMLAlignmentColors", "HTMLDefaultAlignmentColors", "HTMLBaseColors"]
+
+
 class HTMLAlignmentColors:
     """Base class for HTML color schemes used in alignment display."""
 

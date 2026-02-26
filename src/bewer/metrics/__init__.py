@@ -1,14 +1,34 @@
-from bewer.metrics.base import METRIC_REGISTRY  # noqa
-from bewer.metrics.base import list_registered_metrics  # noqa
+from bewer.metrics import corti_legacy_metrics  # noqa (for backward compatibility)
+from bewer.metrics.base import (
+    METRIC_REGISTRY,
+    ExampleMetric,
+    Metric,
+    MetricParams,
+    list_registered_metrics,
+    metric_value,
+)
+from bewer.metrics.cer import CER
+from bewer.metrics.error_align import ErrorAlign
+from bewer.metrics.kwer import KWER
+from bewer.metrics.levenshtein import Levenshtein
+from bewer.metrics.mtr import MTR
+from bewer.metrics.summary import DatasetSummary
 
 # Metric implementations
-from bewer.metrics.wer import WER  # noqa
-from bewer.metrics.cer import CER  # noqa
-from bewer.metrics.kwer import KWER  # noqa
-from bewer.metrics.mtr import MTR  # noqa
-from bewer.metrics.levenshtein import Levenshtein  # noqa
-from bewer.metrics.error_align import ErrorAlign  # noqa
-from bewer.metrics.summary import DatasetSummary  # noqa
+from bewer.metrics.wer import WER
 
-# Legacy metrics for backward compatibility
-from bewer.metrics import corti_legacy_metrics  # noqa
+__all__ = [
+    "METRIC_REGISTRY",
+    "list_registered_metrics",
+    "Metric",
+    "ExampleMetric",
+    "MetricParams",
+    "metric_value",
+    "WER",
+    "CER",
+    "KWER",
+    "MTR",
+    "Levenshtein",
+    "ErrorAlign",
+    "DatasetSummary",
+]

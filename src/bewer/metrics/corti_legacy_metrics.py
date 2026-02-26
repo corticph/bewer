@@ -15,6 +15,16 @@ from bewer.metrics.wer import WER
 if TYPE_CHECKING:
     from bewer.core.example import Example
 
+__all__ = [
+    "LegacyKeywordAggregator",
+    "LegacyMTR",
+    "LegacyRMTR",
+    "LegacyKeywordCER",
+    "LegacyInsertions",
+    "LegacyDeletionHallucinations",
+    "LegacyHallucinationAggregator",
+]
+
 METRIC_REGISTRY.register_metric(
     WER,
     "legacy_wer",
@@ -179,7 +189,7 @@ class _KeywordAggregator(ExampleMetric):
 
 
 @METRIC_REGISTRY.register("_legacy_kwa", standardizer="default", tokenizer="legacy", normalizer="legacy_uncased")
-class KeywordAggregator(Metric):
+class LegacyKeywordAggregator(Metric):
     short_name_base = "kwa"
     long_name_base = "Keyword Aggregator"
     description = "Aggregates keyword-focused metrics for medical terms."
@@ -192,36 +202,36 @@ class KeywordAggregator(Metric):
     @metric_value
     def match_count(self) -> int:
         """Get the total number of exactly matched medical terms."""
-        return sum([self._get_example_metric(example).match_count for example in self._src])
+        return sum([self.get_example_metric(example).match_count for example in self._src])
 
     @metric_value
     def relaxed_match_count(self) -> int:
         """Get the total number of medical terms matched with relaxed criteria."""
-        return sum([self._get_example_metric(example).relaxed_match_count for example in self._src])
+        return sum([self.get_example_metric(example).relaxed_match_count for example in self._src])
 
     @metric_value
     def total_terms(self) -> int:
         """Get the total number of medical terms."""
-        return sum([self._get_example_metric(example).total_terms for example in self._src])
+        return sum([self.get_example_metric(example).total_terms for example in self._src])
 
     @metric_value
     def total_length(self) -> float:
         """Get the total length of medical terms."""
-        return sum([self._get_example_metric(example).total_length for example in self._src])
+        return sum([self.get_example_metric(example).total_length for example in self._src])
 
     @metric_value
     def total_distance(self) -> float:
         """Get the total Levenshtein distance of medical terms."""
-        return sum([self._get_example_metric(example).total_distance for example in self._src])
+        return sum([self.get_example_metric(example).total_distance for example in self._src])
 
     @metric_value
     def correct_terms(self) -> list[str]:
         """Get the list of correctly matched medical terms."""
-        return list(chain.from_iterable([self._get_example_metric(example).correct_terms for example in self._src]))
+        return list(chain.from_iterable([self.get_example_metric(example).correct_terms for example in self._src]))
 
 
 @METRIC_REGISTRY.register("legacy_medical_word_accuracy")
-class MTR(Metric):
+class LegacyMTR(Metric):
     short_name_base = "MTR"
     long_name_base = "Medical Term Recall"
     description = (
@@ -238,7 +248,7 @@ class MTR(Metric):
 
 
 @METRIC_REGISTRY.register("legacy_relaxed_medical_word_accuracy")
-class RMTR(Metric):
+class LegacyRMTR(Metric):
     short_name_base = "Relaxed MTR"
     long_name_base = "Relaxed Medical Term Recall"
     description = (
@@ -256,7 +266,7 @@ class RMTR(Metric):
 
 
 @METRIC_REGISTRY.register("legacy_keyword_cer")
-class KeywordCER(Metric):
+class LegacyKeywordCER(Metric):
     short_name_base = "Keyword CER"
     long_name_base = "Keyword Character Error Rate"
     description = (
@@ -310,7 +320,7 @@ class _HallucinationAggregator(ExampleMetric):
 
 
 @METRIC_REGISTRY.register("_legacy_hlcn")
-class HallucinationAggregator(Metric):
+class LegacyHallucinationAggregator(Metric):
     short_name_base = "Hallucination Insertions"
     long_name_base = "Hallucination Insertions"
     description = "Number of insertions that appear in "
@@ -322,7 +332,7 @@ class HallucinationAggregator(Metric):
 
 
 @METRIC_REGISTRY.register("legacy_deletions")
-class Insertions(Metric):
+class LegacyInsertions(Metric):
     short_name_base = "Hallucination Insertions"
     long_name_base = "Hallucination Insertions"
     description = "Average number of insertions per example."
@@ -338,7 +348,7 @@ class Insertions(Metric):
 
 
 @METRIC_REGISTRY.register("legacy_del_hallucinations")
-class DeletionHallucinations(Metric):
+class LegacyDeletionHallucinations(Metric):
     short_name_base = "Insertion Hallucinations"
     long_name_base = "Insertion Hallucinations"
     description = "Fraction of examples for which more than N consecutive insertions are observed."

@@ -13,11 +13,13 @@ from bewer.core.example import Example
 from bewer.core.text import TokenList
 from bewer.metrics.base import MetricCollection
 
+__all__ = ["Dataset", "TextList", "TextTokenList"]
+
 if TYPE_CHECKING:
     from bewer.core.text import Text
 
 
-def is_list_literal(s):
+def _is_list_literal(s):
     try:
         return isinstance(ast.literal_eval(s), list)
     except (ValueError, SyntaxError):
@@ -137,7 +139,7 @@ class Dataset(object):
 
     def _infer_keyword_column(self, series: pd.Series) -> pd.Series:
         """Infer the keyword terms from a pandas Series."""
-        if series.map(is_list_literal).all():
+        if series.map(_is_list_literal).all():
             series = series.apply(ast.literal_eval)
             return series
         elif series.map(lambda x: isinstance(x, str)).all():
