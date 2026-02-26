@@ -5,7 +5,7 @@ from functools import cached_property
 
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
-__all__ = ["MTR", "MTR_"]
+__all__ = ["MTR"]
 
 
 class MTR_(ExampleMetric):

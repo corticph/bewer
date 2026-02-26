@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
 
-__all__ = ["DatasetSummary", "DatasetSummary_"]
+__all__ = ["DatasetSummary"]
 
 
 class DatasetSummary_(ExampleMetric):

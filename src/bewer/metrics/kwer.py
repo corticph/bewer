@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from bewer.alignment import OpType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
-__all__ = ["KWER", "KWER_"]
+__all__ = ["KWER"]
 
 
 class KWER_(ExampleMetric):

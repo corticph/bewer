@@ -6,7 +6,7 @@ from rapidfuzz.distance import Levenshtein
 
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
-__all__ = ["WER", "WER_"]
+__all__ = ["WER"]
 
 
 class WER_(ExampleMetric):

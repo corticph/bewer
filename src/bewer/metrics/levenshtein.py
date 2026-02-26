@@ -7,7 +7,7 @@ from rapidfuzz.distance import Levenshtein as RFLevenshtein
 from bewer.alignment import Alignment, Op, OpType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
-__all__ = ["Levenshtein", "Levenshtein_"]
+__all__ = ["Levenshtein"]
 
 
 class Levenshtein_(ExampleMetric):
