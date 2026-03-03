@@ -111,6 +111,13 @@ class Dataset(object):
         df = pd.read_csv(csv_file, **kwargs)
         self.load_pandas(df, ref_col, hyp_col, keyword_cols)
 
+    def load_jsonl(
+        self, jsonl_file: str, ref_col="ref", hyp_col="hyp", keyword_cols: list | None = None, **kwargs
+    ) -> None:
+        """Add a JSONL file to the dataset."""
+        df = pd.read_json(jsonl_file, lines=True, **kwargs)
+        self.load_pandas(df, ref_col, hyp_col, keyword_cols)
+
     def add_keyword_list(self, name: str, keywords: Iterable[str]) -> None:
         """Add a named keyword vocabulary to the dataset.
 
@@ -120,6 +127,9 @@ class Dataset(object):
             name (str): The name of the keyword vocabulary.
             keywords (Iterable[str]): The keywords to add.
         """
+        if not isinstance(keywords, Iterable) or isinstance(keywords, str):
+            raise TypeError("keywords must be an iterable of strings")
+
         keywords = set(keywords)
         self._update_dynamic_keyword_vocab(name, keywords)
 
@@ -127,6 +137,25 @@ class Dataset(object):
         keywords_dict = {name: list(keywords)}
         for example in self.examples:
             example._prepare_and_validate_keywords(keywords_dict, raise_warning=False)
+
+    def add_keyword_file(self, name: str, keyword_file: str) -> None:
+        """Add a named keyword vocabulary to the dataset from a file.
+
+        The file should be plain text and contain one keyword per line.
+
+        Keywords are matched against the reference text of each example (including already added examples).
+
+        Args:
+            name (str): The name of the keyword vocabulary.
+            keyword_file (str): Path to the keyword file.
+        """
+        if not Path(keyword_file).is_file():
+            raise FileNotFoundError(f"Keyword file {keyword_file} not found")
+
+        with open(keyword_file, "r") as f:
+            keywords = f.read().strip().splitlines()
+
+        self.add_keyword_list(name, keywords)
 
     @staticmethod
     def get_config_path(config_path: str | None) -> str:
