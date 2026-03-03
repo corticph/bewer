@@ -131,6 +131,11 @@ class Dataset(object):
             raise TypeError("keywords must be an iterable of strings")
 
         keywords = set(keywords)
+
+        for keyword in keywords:
+            if not isinstance(keyword, str):
+                raise TypeError(f"keywords must be an iterable of strings, but got element of type {type(keyword)}")
+
         self._update_dynamic_keyword_vocab(name, keywords)
 
         # Traverse already added examples and add keywords if they are present in the reference text.
