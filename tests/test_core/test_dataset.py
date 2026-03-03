@@ -125,6 +125,103 @@ class TestDatasetLoadCsv:
             os.unlink(csv_path)
 
 
+class TestDatasetLoadJsonl:
+    """Tests for Dataset.load_jsonl() method."""
+
+    def test_load_jsonl_file(self, empty_dataset):
+        """Test loading from JSONL file."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+            f.write('{"ref": "hello world", "hyp": "hello world"}\n')
+            f.write('{"ref": "test phrase", "hyp": "test sentence"}\n')
+            jsonl_path = f.name
+
+        try:
+            empty_dataset.load_jsonl(jsonl_path)
+            assert len(empty_dataset) == 2
+            assert empty_dataset[0].ref.raw == "hello world"
+            assert empty_dataset[1].hyp.raw == "test sentence"
+        finally:
+            os.unlink(jsonl_path)
+
+    def test_load_jsonl_custom_columns(self, empty_dataset):
+        """Test loading JSONL with custom column names."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+            f.write('{"reference": "hello", "hypothesis": "hi"}\n')
+            jsonl_path = f.name
+
+        try:
+            empty_dataset.load_jsonl(jsonl_path, ref_col="reference", hyp_col="hypothesis")
+            assert len(empty_dataset) == 1
+            assert empty_dataset[0].ref.raw == "hello"
+            assert empty_dataset[0].hyp.raw == "hi"
+        finally:
+            os.unlink(jsonl_path)
+
+    def test_load_jsonl_with_keyword_cols(self, empty_dataset):
+        """Test loading JSONL with keyword columns."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+            f.write('{"ref": "the quick brown fox", "hyp": "the quick brown dog", "animals": ["fox"]}\n')
+            jsonl_path = f.name
+
+        try:
+            empty_dataset.load_jsonl(jsonl_path, keyword_cols=["animals"])
+            assert len(empty_dataset) == 1
+            assert "animals" in empty_dataset[0].keywords
+        finally:
+            os.unlink(jsonl_path)
+
+
+class TestDatasetAddKeywordFile:
+    """Tests for Dataset.add_keyword_file() method."""
+
+    def test_add_keyword_file(self, empty_dataset):
+        """Test loading keywords from a file."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("fox\nbrown\n")
+            keyword_path = f.name
+
+        try:
+            empty_dataset.add_keyword_file("animals", keyword_path)
+            assert "animals" in empty_dataset._dynamic_keyword_vocabs
+            assert "fox" in empty_dataset._dynamic_keyword_vocabs["animals"]
+            assert "brown" in empty_dataset._dynamic_keyword_vocabs["animals"]
+        finally:
+            os.unlink(keyword_path)
+
+    def test_add_keyword_file_not_found(self, empty_dataset):
+        """Test that nonexistent file raises FileNotFoundError."""
+        with pytest.raises(FileNotFoundError, match="not found"):
+            empty_dataset.add_keyword_file("animals", "/nonexistent/path/keywords.txt")
+
+    def test_add_keyword_file_matches_existing_examples(self, empty_dataset):
+        """Test that keywords from file are matched against existing examples."""
+        empty_dataset.add("the quick brown fox", "the quick brown dog")
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("fox\n")
+            keyword_path = f.name
+
+        try:
+            empty_dataset.add_keyword_file("animals", keyword_path)
+            assert "animals" in empty_dataset[0].keywords
+        finally:
+            os.unlink(keyword_path)
+
+
+class TestDatasetAddKeywordListValidation:
+    """Tests for input validation in Dataset.add_keyword_list()."""
+
+    def test_add_keyword_list_string_raises(self, empty_dataset):
+        """Test that passing a string raises TypeError."""
+        with pytest.raises(TypeError, match="must be an iterable"):
+            empty_dataset.add_keyword_list("test", "not_a_list")
+
+    def test_add_keyword_list_non_iterable_raises(self, empty_dataset):
+        """Test that passing a non-iterable raises TypeError."""
+        with pytest.raises(TypeError, match="must be an iterable"):
+            empty_dataset.add_keyword_list("test", 42)
+
+
 class TestDatasetRefsHyps:
     """Tests for Dataset.refs and Dataset.hyps properties."""
 
