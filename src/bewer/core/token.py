@@ -72,11 +72,7 @@ class Token:
             raise ValueError("Source already set for Token")
 
         self._src = src
-
-        # Cache derived references for performance
-        _src_example = src.src if src is not None else None
-        _src_dataset = _src_example.src if _src_example is not None else None
-        self._pipelines = _src_dataset.pipelines if _src_dataset is not None else None
+        self._pipelines = src.pipelines
 
     @property
     def raw(self) -> str:

@@ -20,31 +20,34 @@ class KWER_(ExampleMetric):
     @metric_value
     def num_errors(self) -> int:
         """Get the number of keywords incorrectly transcribed in the hypothesis text."""
-        keywords = self.example.keywords.get(self.params.vocab, None)
+        keywords = self.example.get_keyword_matches(
+            vocab=self.params.vocab,
+            normalized=self.params.normalized,
+        )
+        # import IPython; IPython.embed(using=False, header="Debugging KWER"); exit(1) # DEBUG
         if keywords is None:
             return 0
         alignment = self._get_alignment()
         num_errors = 0
         for keyword in keywords:
-            ref_token_lists = keyword.find_in_ref(normalized=True)
-            if not ref_token_lists:
-                continue
-            for tokens in ref_token_lists:
-                if len(tokens) == 1:
-                    ops = alignment.ops_from_ref_index(tokens[0].index)
-                else:
-                    ops = alignment.ops_from_ref_index(tokens[0].index, tokens[-1].index)
-                if any(op.type != OpType.MATCH for op in ops):
-                    num_errors += 1
+            tokens = self.example.ref.tokens[keyword]
+            if len(tokens) == 1:
+                ops = alignment.ops_from_ref_index(tokens[0].index)
+            else:
+                ops = alignment.ops_from_ref_index(tokens[0].index, tokens[-1].index)
+            if any(op.type != OpType.MATCH for op in ops):
+                num_errors += 1
         return num_errors
 
     @metric_value
     def num_keywords(self) -> int:
         """Get the number of keywords in the reference text."""
-        keywords = self.example.keywords.get(self.params.vocab, None)
-        if keywords is None:
-            return 0
-        return sum(len(keyword.find_in_ref(normalized=True)) for keyword in keywords)
+        return len(
+            self.example.get_keyword_matches(
+                vocab=self.params.vocab,
+                normalized=self.params.normalized,
+            )
+        )
 
     @metric_value(main=True)
     def value(self) -> float:

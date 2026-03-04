@@ -3,19 +3,22 @@ from functools import cached_property
 from importlib import resources
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Union
+from typing import TYPE_CHECKING, Iterable, Optional, Union
 
 import pandas as pd
 from omegaconf import OmegaConf
 
 from bewer.configs.resolve import resolve_pipelines
 from bewer.core.example import Example
+from bewer.core.keyword import Keyword
+from bewer.core.shared import get_keyword_trie
 from bewer.core.text import TokenList
 from bewer.metrics.base import MetricCollection
 
 __all__ = ["Dataset", "TextList", "TextTokenList"]
 
 if TYPE_CHECKING:
+    from bewer.core.keyword import KeywordTrie
     from bewer.core.text import Text
 
 
@@ -48,11 +51,16 @@ class Dataset(object):
         """
         self.config_path = self.get_config_path(config)
         self.config = OmegaConf.load(self.config_path)
-        self.pipelines = resolve_pipelines(self.config)
+        self._pipelines = resolve_pipelines(self.config)
         self.examples = []
         self._dynamic_keyword_vocabs = {}
         self._static_keyword_vocabs = {}
+        self._cache_keyword_tries = {}
         self.metrics = MetricCollection(self)
+
+    @property
+    def pipelines(self):
+        return self._pipelines
 
     @cached_property
     def refs(self) -> "TextList":
@@ -76,7 +84,8 @@ class Dataset(object):
         """Add an example to the dataset."""
         if keywords is not None:
             for name, kw_list in keywords.items():
-                self._update_static_keyword_vocab(name, set(kw_list))
+                keywords[name] = set(kw_list)
+                self._update_static_keyword_vocab(name, keywords[name])
         example = Example(ref, hyp, keywords=keywords, src=self, index=len(self))
         self.examples.append(example)
 
@@ -139,9 +148,9 @@ class Dataset(object):
         self._update_dynamic_keyword_vocab(name, keywords)
 
         # Traverse already added examples and add keywords if they are present in the reference text.
-        keywords_dict = {name: list(keywords)}
-        for example in self.examples:
-            example._prepare_and_validate_keywords(keywords_dict, raise_warning=False)
+        # keywords_dict = {name: list(keywords)}
+        # for example in self.examples:
+        #     example._prepare_and_validate_keywords(keywords_dict, raise_warning=False)
 
     def add_keyword_file(self, name: str, keyword_file: str) -> None:
         """Add a named keyword vocabulary to the dataset from a file.
@@ -161,6 +170,18 @@ class Dataset(object):
             keywords = f.read().strip().splitlines()
 
         self.add_keyword_list(name, keywords)
+
+    def _get_keyword_trie(
+        self, vocab: str, normalized: bool = True, add_capitalized: bool = False
+    ) -> Optional["KeywordTrie"]:
+        """Get a trie for the specified keyword vocabulary."""
+        return get_keyword_trie(
+            self._dynamic_keyword_vocabs,
+            self._cache_keyword_tries,
+            vocab,
+            normalized=normalized,
+            add_capitalized=add_capitalized,
+        )
 
     @staticmethod
     def get_config_path(config_path: str | None) -> str:
@@ -186,6 +207,7 @@ class Dataset(object):
 
     def _update_dynamic_keyword_vocab(self, name: str, keywords: set[str]) -> None:
         """Update the keyword vocabulary with new keywords."""
+        keywords = set(Keyword(keyword, src=self) for keyword in keywords)
         if name in self._dynamic_keyword_vocabs:
             self._dynamic_keyword_vocabs[name].update(keywords)
         else:
@@ -193,6 +215,7 @@ class Dataset(object):
 
     def _update_static_keyword_vocab(self, name: str, keywords: set[str]) -> None:
         """Update the static keyword vocabulary with new keywords."""
+        keywords = set(Keyword(keyword, src=self) for keyword in keywords)
         if name in self._static_keyword_vocabs:
             self._static_keyword_vocabs[name].update(keywords)
         else:

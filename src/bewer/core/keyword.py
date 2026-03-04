@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 
 from bewer.core.text import Text, TextType, TokenList
-from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
     from bewer.core.example import Example
@@ -24,65 +23,85 @@ class Keyword(Text):
         src: Optional["Example"] = None,
     ):
         super().__init__(raw=raw, src=src, text_type=TextType.KEYWORD)
-        self._cache_find_in_ref: dict[tuple[str, str, str | None], list[TokenList]] = {}
-
-    def find_in_tokens(
-        self,
-        token_list: TokenList,
-        normalized: bool = True,
-    ) -> list[TokenList]:
-        """Find all contiguous occurrences of this keyword's tokens in the given TokenList.
-
-        Args:
-            token_list: The TokenList to search within (typically ref.tokens).
-            normalized: Whether to match using normalized token text.
-
-        Returns:
-            list[TokenList]: Each element is a TokenList slice from token_list
-                             representing one contiguous match.
-        """
-        kw_tokens = self.tokens.normalized if normalized else self.tokens.raw
-        if len(kw_tokens) == 0:
-            return []
-
-        # Start with positions of the first keyword token
-        starts = token_list.indices(kw_tokens[0], normalized=normalized)
-
-        # Intersect with offset-shifted positions of each subsequent token
-        for offset, kw_text in enumerate(kw_tokens[1:], start=1):
-            positions = token_list.indices(kw_text, normalized=normalized)
-            starts = starts & {p - offset for p in positions}
-            if not starts:
-                return []
-
-        kw_len = len(kw_tokens)
-        return [token_list[start : start + kw_len] for start in sorted(starts)]
-
-    def find_in_ref(self, normalized: bool = True) -> list[TokenList]:
-        """Find all contiguous occurrences of this keyword in the source example's reference tokens.
-
-        Results are cached per active pipeline and normalized flag.
-
-        Args:
-            normalized: Whether to match using normalized token text.
-
-        Returns:
-            list[TokenList]: Matching token slices from the reference.
-
-        Raises:
-            ValueError: If source example is not set.
-        """
-        if self._src is None:
-            raise ValueError("Source example is not set. Cannot search reference tokens.")
-        cache_key = (
-            STANDARDIZER_NAME.get(),
-            TOKENIZER_NAME.get(),
-            NORMALIZER_NAME.get() if normalized else None,
-        )
-        if cache_key not in self._cache_find_in_ref:
-            self._cache_find_in_ref[cache_key] = self.find_in_tokens(self._src.ref.tokens, normalized=normalized)
-        return self._cache_find_in_ref[cache_key]
 
     def __repr__(self):
         text = self.raw if len(self.raw) <= 46 else self.raw[:46] + "..."
         return f'Keyword("{text}")'
+
+
+class KeywordTrie:
+    """A trie for efficient keyword matching in reference tokens."""
+
+    def __init__(
+        self,
+        keywords: set[Keyword],
+        normalized: bool = True,
+        add_capitalized: bool = False,
+    ):
+        """Initialize the trie with the given set of keywords.
+
+        Args:
+            keywords: A set of Keyword objects to build the trie from.
+            normalized: Whether to use normalized text for matching. If False, uses raw text.
+            add_capitalized: Whether to add capitalized versions of keywords to the trie for case-insensitive matching.
+                Only applies if normalized is False and is only applied to the first word in an n-gram keyword.
+        """
+        # TODO: Consider whether to add capitalized versions of all tokens in the keyword phrase (not just the first).
+        # TODO: Consider whether to add capitalized versions of keywords when normalized is True.
+        self.depth = 0
+        self.children = {}
+        self.normalized = normalized
+        self.add_capitalized = add_capitalized
+        self.build(keywords, normalized, add_capitalized)
+
+    def build(self, keywords: set[Keyword], normalized: bool, add_capitalized: bool) -> None:
+        """Build the trie from the given set of keywords."""
+        apply_capitalization = self.add_capitalized and not self.normalized
+
+        for keyword in keywords:
+            tokens = keyword.tokens.normalized if self.normalized else keyword.tokens.raw
+            self.add_path(tokens)
+            if apply_capitalization:
+                first_capitalized = tokens[0].capitalize()
+                if first_capitalized != tokens[0]:
+                    tokens[0] = first_capitalized
+                    self.add_path(tokens)
+
+    def add_path(self, tokens: list[str]) -> None:
+        """Add a path of tokens to the trie."""
+        current_node = self
+        for token in tokens:
+            if token not in current_node.children:
+                current_node.children[token] = KeywordNode(depth=current_node.depth + 1)
+            current_node = current_node.children[token]
+        current_node.is_end = True
+
+    def find_in_tokens(self, tokens: TokenList, allow_subsets: bool = False) -> list[TokenList]:
+        """Find all contiguous token sequences in the given tokens that match any keyword in the trie."""
+        matches = []
+        tokens = tokens.normalized if self.normalized else tokens.raw
+        for i in range(len(tokens)):
+            current_node = self
+            for j in range(i, len(tokens)):
+                token_text = tokens[j]
+                if token_text not in current_node.children:
+                    break
+                current_node = current_node.children[token_text]
+                if current_node.is_end:
+                    if not allow_subsets and matches:
+                        if matches[-1].start == i:
+                            matches[-1] = slice(matches[-1].start, j + 1)
+                        elif matches[-1].stop >= j + 1:
+                            continue
+                    else:
+                        matches.append(slice(i, j + 1))
+        return matches
+
+
+class KeywordNode:
+    """A node in the keyword trie, representing a single token in a keyword."""
+
+    def __init__(self, depth: int):
+        self.depth = depth
+        self.children = {}
+        self.is_end = False

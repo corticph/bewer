@@ -90,13 +90,17 @@ class Text:
     def text_type(self) -> Optional[TextType]:
         return self._text_type
 
+    @property
+    def pipelines(self):
+        return self._pipelines
+
     @pipeline_cached_property(STANDARDIZER_NAME)
-    def standardized(self, standardizer):
+    def standardized(self, standardizer) -> str:
         """The standardized text string after applying the active standardizer."""
         return standardizer(self.raw)
 
     @pipeline_cached_property(TOKENIZER_NAME)
-    def tokens(self, tokenizer):
+    def tokens(self, tokenizer) -> "TokenList":
         """The list of Token objects produced by the active tokenizer."""
         return TokenList.from_matches(tokenizer(self.standardized), src=self)
 
@@ -115,10 +119,7 @@ class Text:
         self._src = src
 
         # Cache pipeline reference
-        if src is not None and src.src is not None:
-            self._pipelines = src.src.pipelines
-        else:
-            self._pipelines = None
+        self._pipelines = src.pipelines if src is not None else None
 
     def joined(self, normalized: bool = True) -> str:
         """Get the joined text from tokens.
