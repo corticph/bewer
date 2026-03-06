@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 import ahocorasick
 
 from bewer.core.text import Text, TextType, TokenList
 
 if TYPE_CHECKING:
+    from bewer.core.dataset import Dataset
     from bewer.core.example import Example
 
 __all__ = ["Keyword"]
@@ -22,7 +23,7 @@ class Keyword(Text):
     def __init__(
         self,
         raw: str,
-        src: Optional["Example"] = None,
+        src: Optional[Union["Example", "Dataset"]] = None,
     ):
         super().__init__(raw=raw, src=src, text_type=TextType.KEYWORD)
 
