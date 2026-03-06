@@ -206,6 +206,11 @@ class Normalizer(object):
         Returns:
             str: The normalized text.
         """
+        return self._normalize(text)
+
+    @lru_cache(maxsize=32768)
+    def _normalize(self, text: str) -> str:
+        """Cached normalization."""
         for func, kwargs in self._pipeline:
             text = func(text, **kwargs)
         return text
