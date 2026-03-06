@@ -24,8 +24,7 @@ class KWER_(ExampleMetric):
             vocab=self.params.vocab,
             normalized=self.params.normalized,
         )
-        # import IPython; IPython.embed(using=False, header="Debugging KWER"); exit(1) # DEBUG
-        if keywords is None:
+        if not keywords:
             return 0
         alignment = self._get_alignment()
         num_errors = 0

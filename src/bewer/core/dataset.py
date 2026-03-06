@@ -147,11 +147,6 @@ class Dataset(object):
 
         self._update_dynamic_keyword_vocab(name, keywords)
 
-        # Traverse already added examples and add keywords if they are present in the reference text.
-        # keywords_dict = {name: list(keywords)}
-        # for example in self.examples:
-        #     example._prepare_and_validate_keywords(keywords_dict, raise_warning=False)
-
     def add_keyword_file(self, name: str, keyword_file: str) -> None:
         """Add a named keyword vocabulary to the dataset from a file.
 

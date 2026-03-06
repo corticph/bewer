@@ -48,13 +48,13 @@ class KeywordTrie:
         """
         # TODO: Consider whether to add capitalized versions of all tokens in the keyword phrase (not just the first).
         # TODO: Consider whether to add capitalized versions of keywords when normalized is True.
-        self.depth = 0
         self.children = {}
         self.normalized = normalized
         self.add_capitalized = add_capitalized
-        self.build(keywords, normalized, add_capitalized)
+        self.build(keywords)
+        self.root_tokens = frozenset(self.children.keys())
 
-    def build(self, keywords: set[Keyword], normalized: bool, add_capitalized: bool) -> None:
+    def build(self, keywords: set[Keyword]) -> None:
         """Build the trie from the given set of keywords."""
         apply_capitalization = self.add_capitalized and not self.normalized
 
@@ -72,12 +72,17 @@ class KeywordTrie:
         current_node = self
         for token in tokens:
             if token not in current_node.children:
-                current_node.children[token] = KeywordNode(depth=current_node.depth + 1)
+                current_node.children[token] = KeywordNode()
             current_node = current_node.children[token]
         current_node.is_end = True
 
-    def find_in_tokens(self, tokens: TokenList, allow_subsets: bool = True) -> list[TokenList]:
+    def find_in_tokens(self, tokens: TokenList, allow_subsets: bool = True) -> list[slice]:
         """Find all contiguous token sequences in the given tokens that match any keyword in the trie."""
+        # Early exit: skip scan if no root tokens appear in the text
+        index_mapping = tokens._normalized_index_mapping if self.normalized else tokens._raw_index_mapping
+        if self.root_tokens.isdisjoint(index_mapping):
+            return []
+
         matches = []
         tokens = tokens.normalized if self.normalized else tokens.raw
         for i in range(len(tokens)):
@@ -101,7 +106,8 @@ class KeywordTrie:
 class KeywordNode:
     """A node in the keyword trie, representing a single token in a keyword."""
 
-    def __init__(self, depth: int):
-        self.depth = depth
+    __slots__ = ("children", "is_end")
+
+    def __init__(self):
         self.children = {}
         self.is_end = False

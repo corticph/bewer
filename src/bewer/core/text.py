@@ -145,6 +145,7 @@ class TokenList(tuple["Token", ...]):
 
     def __init__(self, iterable=()):
         self._normalized_index_cache: dict[str, dict[str, set[int]]] = {}
+        self._normalized_cache: dict[str, list[str]] = {}
 
     @classmethod
     def from_matches(
@@ -179,7 +180,10 @@ class TokenList(tuple["Token", ...]):
         Returns:
             list[str]: The normalized tokens.
         """
-        return [token.normalized for token in self]
+        key = NORMALIZER_NAME.get()
+        if key not in self._normalized_cache:
+            self._normalized_cache[key] = [token.normalized for token in self]
+        return self._normalized_cache[key]
 
     def ngrams(
         self,
