@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
+import ahocorasick
+
 from bewer.core.text import Text, TextType, TokenList
 
 if TYPE_CHECKING:
@@ -30,7 +32,7 @@ class Keyword(Text):
 
 
 class KeywordTrie:
-    """A trie for efficient keyword matching in reference tokens."""
+    """Aho-Corasick automaton for efficient multi-keyword matching in token sequences."""
 
     def __init__(
         self,
@@ -38,75 +40,72 @@ class KeywordTrie:
         normalized: bool = True,
         add_capitalized: bool = False,
     ):
-        """Initialize the trie with the given set of keywords.
+        """Initialize the automaton with the given set of keywords.
 
         Args:
-            keywords: A set of Keyword objects to build the trie from.
+            keywords: A set of Keyword objects to build the automaton from.
             normalized: Whether to use normalized text for matching. If False, uses raw text.
-            add_capitalized: Whether to add capitalized versions of keywords to the trie for case-insensitive matching.
+            add_capitalized: Whether to add capitalized versions of keywords for case-insensitive matching.
                 Only applies if normalized is False and is only applied to the first word in an n-gram keyword.
         """
-        # TODO: Consider whether to add capitalized versions of all tokens in the keyword phrase (not just the first).
-        # TODO: Consider whether to add capitalized versions of keywords when normalized is True.
-        self.children = {}
         self.normalized = normalized
         self.add_capitalized = add_capitalized
-        self.build(keywords)
-        self.root_tokens = frozenset(self.children.keys())
 
-    def build(self, keywords: set[Keyword]) -> None:
-        """Build the trie from the given set of keywords."""
-        apply_capitalization = self.add_capitalized and not self.normalized
-
+        # Collect token patterns from keywords
+        patterns = []
         for keyword in keywords:
-            tokens = keyword.tokens.normalized if self.normalized else keyword.tokens.raw
-            self.add_path(tokens)
-            if apply_capitalization:
-                first_capitalized = tokens[0].capitalize()
-                if first_capitalized != tokens[0]:
-                    tokens[0] = first_capitalized
-                    self.add_path(tokens)
+            tokens = keyword.tokens.normalized if normalized else keyword.tokens.raw
+            patterns.append(tuple(tokens))
 
-    def add_path(self, tokens: list[str]) -> None:
-        """Add a path of tokens to the trie."""
-        current_node = self
-        for token in tokens:
-            if token not in current_node.children:
-                current_node.children[token] = KeywordNode()
-            current_node = current_node.children[token]
-        current_node.is_end = True
+        # Handle capitalization variants
+        if add_capitalized and not normalized:
+            extra = []
+            for p in patterns:
+                first_cap = p[0].capitalize()
+                if first_cap != p[0]:
+                    extra.append((first_cap,) + p[1:])
+            patterns.extend(extra)
+
+        # Build vocab: token string -> int for KEY_SEQUENCE mode
+        self._vocab = {w: i for i, w in enumerate({w for p in patterns for w in p})}
+        self._unknown = len(self._vocab)
+
+        # Build Aho-Corasick automaton
+        self._automaton = ahocorasick.Automaton(ahocorasick.STORE_ANY, ahocorasick.KEY_SEQUENCE)
+        for pattern in patterns:
+            int_pattern = tuple(self._vocab[w] for w in pattern)
+            self._automaton.add_word(int_pattern, len(pattern))
+        self._automaton.make_automaton()
 
     def find_in_tokens(self, tokens: TokenList, allow_subsets: bool = True) -> list[slice]:
-        """Find all contiguous token sequences in the given tokens that match any keyword in the trie."""
-        # Early exit: skip scan if no root tokens appear in the text
-        tokens = tokens.normalized if self.normalized else tokens.raw
-        if self.root_tokens.isdisjoint(set(tokens)):
-            return []
+        """Find all contiguous token sequences that match any keyword in the automaton."""
+        token_strings = tokens.normalized if self.normalized else tokens.raw
+        vocab = self._vocab
+        unknown = self._unknown
+        int_text = tuple(vocab.get(w, unknown) for w in token_strings)
 
         matches = []
-        for i in range(len(tokens)):
-            current_node = self
-            for j in range(i, len(tokens)):
-                token_text = tokens[j]
-                if token_text not in current_node.children:
-                    break
-                current_node = current_node.children[token_text]
-                if current_node.is_end:
-                    if not allow_subsets and matches:
-                        if matches[-1].start == i:
-                            matches[-1] = slice(matches[-1].start, j + 1)
-                        elif matches[-1].stop >= j + 1:
-                            continue
-                    else:
-                        matches.append(slice(i, j + 1))
+        for end_idx, pattern_len in self._automaton.iter(int_text):
+            start_idx = end_idx - pattern_len + 1
+            matches.append(slice(start_idx, end_idx + 1))
+
+        if not allow_subsets:
+            matches = _remove_subset_matches(matches)
+
         return matches
 
 
-class KeywordNode:
-    """A node in the keyword trie, representing a single token in a keyword."""
-
-    __slots__ = ("children", "is_end")
-
-    def __init__(self):
-        self.children = {}
-        self.is_end = False
+def _remove_subset_matches(matches: list[slice]) -> list[slice]:
+    """Remove matches that are subsets of other matches, preferring longer matches."""
+    if not matches:
+        return matches
+    # Sort by start ascending, then by length descending
+    matches.sort(key=lambda s: (s.start, s.start - s.stop))
+    result = [matches[0]]
+    for m in matches[1:]:
+        prev = result[-1]
+        # Skip if fully contained within previous match
+        if m.start >= prev.start and m.stop <= prev.stop:
+            continue
+        result.append(m)
+    return result
