@@ -76,7 +76,7 @@ class KeywordTrie:
             current_node = current_node.children[token]
         current_node.is_end = True
 
-    def find_in_tokens(self, tokens: TokenList, allow_subsets: bool = False) -> list[TokenList]:
+    def find_in_tokens(self, tokens: TokenList, allow_subsets: bool = True) -> list[TokenList]:
         """Find all contiguous token sequences in the given tokens that match any keyword in the trie."""
         matches = []
         tokens = tokens.normalized if self.normalized else tokens.raw
