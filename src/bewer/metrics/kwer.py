@@ -20,16 +20,16 @@ class KWER_(ExampleMetric):
     @metric_value
     def num_errors(self) -> int:
         """Get the number of keywords incorrectly transcribed in the hypothesis text."""
-        keywords = self.example.get_keyword_matches(
+        keyword_matches = self.example.get_keyword_matches(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
         )
-        if not keywords:
+        if not keyword_matches:
             return 0
         alignment = self._get_alignment()
         num_errors = 0
-        for keyword in keywords:
-            tokens = self.example.ref.tokens[keyword]
+        for keyword_match in keyword_matches:
+            tokens = self.example.ref.tokens[keyword_match]
             if len(tokens) == 1:
                 ops = alignment.ops_from_ref_index(tokens[0].index)
             else:
