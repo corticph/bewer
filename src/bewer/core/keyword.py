@@ -79,12 +79,11 @@ class KeywordTrie:
     def find_in_tokens(self, tokens: TokenList, allow_subsets: bool = True) -> list[slice]:
         """Find all contiguous token sequences in the given tokens that match any keyword in the trie."""
         # Early exit: skip scan if no root tokens appear in the text
-        index_mapping = tokens._normalized_index_mapping if self.normalized else tokens._raw_index_mapping
-        if self.root_tokens.isdisjoint(index_mapping):
+        tokens = tokens.normalized if self.normalized else tokens.raw
+        if self.root_tokens.isdisjoint(set(tokens)):
             return []
 
         matches = []
-        tokens = tokens.normalized if self.normalized else tokens.raw
         for i in range(len(tokens)):
             current_node = self
             for j in range(i, len(tokens)):
