@@ -10,6 +10,7 @@ __all__ = ["KWER"]
 
 class KWER_(ExampleMetric):
     def _get_alignment(self):
+        """Get the alignment for the example."""
         return self.example.metrics.levenshtein(
             normalized=self.params.normalized,
             standardizer=self.standardizer,
@@ -29,13 +30,12 @@ class KWER_(ExampleMetric):
         alignment = self._get_alignment()
         num_errors = 0
         for keyword_match in keyword_matches:
-            tokens = self.example.ref.tokens[keyword_match]
-            if len(tokens) == 1:
-                ops = alignment.ops_from_ref_index(tokens[0].index)
-            else:
-                ops = alignment.ops_from_ref_index(tokens[0].index, tokens[-1].index)
-            if any(op.type != OpType.MATCH for op in ops):
-                num_errors += 1
+            for ref_index in range(keyword_match.start, keyword_match.stop):
+                op_index = alignment._ref_index_mapping.get(ref_index)
+                if alignment[op_index].type != OpType.MATCH:
+                    num_errors += 1
+                    break
+
         return num_errors
 
     @metric_value

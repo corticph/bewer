@@ -140,12 +140,18 @@ class Text:
 class TokenList(tuple["Token", ...]):
     """An immutable sequence of Token objects."""
 
-    def __new__(cls, iterable=()):
+    def __new__(cls, iterable=(), src=None):
         return super().__new__(cls, iterable)
 
-    def __init__(self, iterable=()):
+    def __init__(self, iterable=(), src: Optional["Text"] = None):
         self._normalized_index_cache: dict[str, dict[str, set[int]]] = {}
         self._normalized_cache: dict[str, list[str]] = {}
+        self._src = src
+
+    @property
+    def src(self) -> Optional["Text"]:
+        """Get the source Text object."""
+        return self._src
 
     @classmethod
     def from_matches(
@@ -162,7 +168,7 @@ class TokenList(tuple["Token", ...]):
         Returns:
             TokenList: A list of Token objects created from the matches.
         """
-        return cls(Token.from_match(match, index=i, src=src) for i, match in enumerate(matches))
+        return cls((Token.from_match(match, index=i, src=src) for i, match in enumerate(matches)), src=src)
 
     @property
     def raw(self) -> list[str]:

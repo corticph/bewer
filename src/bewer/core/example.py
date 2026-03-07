@@ -1,7 +1,6 @@
-import warnings
 from typing import TYPE_CHECKING, Optional
 
-from bewer.core.keyword import Keyword, KeywordTrie
+from bewer.core.keyword import Keyword, KeywordNotFoundWarning, KeywordTrie
 from bewer.core.shared import get_keyword_trie
 from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
@@ -11,13 +10,6 @@ if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
 
 __all__ = ["Example", "KeywordNotFoundWarning"]
-
-
-class KeywordNotFoundWarning(UserWarning):
-    pass
-
-
-warnings.filterwarnings("always", category=KeywordNotFoundWarning)
 
 
 class Example:
@@ -132,13 +124,15 @@ class Example:
         if cache_key in self._cache_keyword_matches:
             return self._cache_keyword_matches[cache_key]
 
-        # Get example-specific trie or build if not cached
-        example_trie = self._get_keyword_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
-        dataset_trie = self.src._get_keyword_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
+        matches = []
+        if vocab in self.keywords:
+            example_trie = self._get_keyword_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
+            matches += example_trie.find_in_tokens(self.ref.tokens, warn_missing=True)
 
-        example_matches = example_trie.find_in_tokens(self.ref.tokens) if example_trie is not None else []
-        dataset_matches = dataset_trie.find_in_tokens(self.ref.tokens) if dataset_trie is not None else []
-        matches = example_matches + dataset_matches
+        if vocab in self.src._dynamic_keyword_vocabs:
+            dataset_trie = self.src._get_keyword_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
+            matches += dataset_trie.find_in_tokens(self.ref.tokens) if dataset_trie is not None else []
+
         self._cache_keyword_matches[cache_key] = matches
         return matches
 

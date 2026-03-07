@@ -1,8 +1,8 @@
 """Tests for bewer.core.keyword module."""
 
-import pytest
+import warnings
 
-from bewer.core.keyword import Keyword
+from bewer.core.keyword import Keyword, KeywordNotFoundWarning, KeywordTrie
 from bewer.core.text import Text, TextType, TokenList
 
 
@@ -44,70 +44,67 @@ class TestKeywordProperties:
         assert len(kw.tokens) == 1
 
 
-class TestKeywordFindInTokens:
-    """Tests for Keyword.find_in_tokens() method."""
+class TestKeywordTrieFindInTokens:
+    """Tests for KeywordTrie.find_in_tokens() method."""
 
     def test_single_token_found(self, sample_dataset):
         """Test finding a single-token keyword in a token list."""
         sample_dataset.add("the quick brown fox", "the quick brown dog", keywords={"animals": ["fox"]})
-        kw = next(iter(sample_dataset[-1].keywords["animals"]))
-        ref_tokens = sample_dataset[-1].ref.tokens
-        matches = kw.find_in_tokens(ref_tokens)
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["animals"])
+        ref_tokens = example.ref.tokens
+        matches = trie.find_in_tokens(ref_tokens)
         assert len(matches) == 1
-        assert len(matches[0]) == 1
-        assert matches[0][0].raw == "fox"
+        assert ref_tokens[matches[0]][0].raw == "fox"
 
     def test_single_token_multiple_occurrences(self, sample_dataset):
         """Test finding a token that appears multiple times."""
         sample_dataset.add("the fox and the fox", "the fox", keywords={"animals": ["fox"]})
-        kw = next(iter(sample_dataset[-1].keywords["animals"]))
-        ref_tokens = sample_dataset[-1].ref.tokens
-        matches = kw.find_in_tokens(ref_tokens)
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["animals"])
+        matches = trie.find_in_tokens(example.ref.tokens)
         assert len(matches) == 2
 
     def test_multi_token_keyword(self, sample_dataset):
         """Test finding a multi-token keyword contiguously."""
         sample_dataset.add("the quick brown fox", "the quick dog", keywords={"phrases": ["quick brown"]})
-        kw = next(iter(sample_dataset[-1].keywords["phrases"]))
-        ref_tokens = sample_dataset[-1].ref.tokens
-        matches = kw.find_in_tokens(ref_tokens)
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["phrases"])
+        ref_tokens = example.ref.tokens
+        matches = trie.find_in_tokens(ref_tokens)
         assert len(matches) == 1
-        assert len(matches[0]) == 2
-        assert matches[0].raw == ["quick", "brown"]
+        matched_tokens = ref_tokens[matches[0]]
+        assert len(matched_tokens) == 2
+        assert matched_tokens.raw == ["quick", "brown"]
 
     def test_no_match(self, sample_dataset):
         """Test that non-matching keyword returns empty list."""
         sample_dataset.add("hello world", "hello world", keywords={"greetings": ["hello"]})
-        kw = next(iter(sample_dataset[-1].keywords["greetings"]))
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["greetings"])
         # Search in a different example's tokens where "hello" doesn't appear
         other_tokens = sample_dataset[1].ref.tokens  # "the quick brown fox"
-        matches = kw.find_in_tokens(other_tokens)
+        matches = trie.find_in_tokens(other_tokens)
         assert len(matches) == 0
 
-    def test_returns_tokenlist_slices(self, sample_dataset):
-        """Test that matches are TokenList instances."""
+    def test_returns_slices(self, sample_dataset):
+        """Test that matches are slice instances."""
         sample_dataset.add("the quick brown fox", "the quick", keywords={"colors": ["brown"]})
-        kw = next(iter(sample_dataset[-1].keywords["colors"]))
-        matches = kw.find_in_tokens(sample_dataset[-1].ref.tokens)
-        assert all(isinstance(m, TokenList) for m in matches)
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["colors"])
+        matches = trie.find_in_tokens(example.ref.tokens)
+        assert all(isinstance(m, slice) for m in matches)
 
-
-class TestKeywordFindInRef:
-    """Tests for Keyword.find_in_ref() method."""
-
-    def test_find_in_ref(self, sample_dataset):
-        """Test convenience method that searches in source ref."""
-        sample_dataset.add("the quick brown fox", "the quick brown dog", keywords={"animals": ["fox"]})
-        kw = next(iter(sample_dataset[-1].keywords["animals"]))
-        matches = kw.find_in_ref()
-        assert len(matches) == 1
-        assert matches[0][0].raw == "fox"
-
-    def test_find_in_ref_no_source_raises(self):
-        """Test that find_in_ref raises without a source."""
-        kw = Keyword("test")
-        with pytest.raises(ValueError, match="Source example is not set"):
-            kw.find_in_ref()
+    def test_warn_missing(self, sample_dataset):
+        """Test that warn_missing emits KeywordNotFoundWarning for unmatched keywords."""
+        sample_dataset.add("hello world", "hello world", keywords={"missing": ["nonexistent"]})
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["missing"])
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            matches = trie.find_in_tokens(example.ref.tokens, warn_missing=True)
+        assert len(matches) == 0
+        assert len([x for x in w if issubclass(x.category, KeywordNotFoundWarning)]) > 0
 
 
 class TestKeywordRepr:

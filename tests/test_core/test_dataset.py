@@ -183,8 +183,9 @@ class TestDatasetAddKeywordFile:
         try:
             empty_dataset.add_keyword_file("animals", keyword_path)
             assert "animals" in empty_dataset._dynamic_keyword_vocabs
-            assert "fox" in empty_dataset._dynamic_keyword_vocabs["animals"]
-            assert "brown" in empty_dataset._dynamic_keyword_vocabs["animals"]
+            kw_raws = {kw.raw for kw in empty_dataset._dynamic_keyword_vocabs["animals"]}
+            assert "fox" in kw_raws
+            assert "brown" in kw_raws
         finally:
             os.unlink(keyword_path)
 
@@ -203,7 +204,9 @@ class TestDatasetAddKeywordFile:
 
         try:
             empty_dataset.add_keyword_file("animals", keyword_path)
-            assert "animals" in empty_dataset[0].keywords
+            assert "animals" in empty_dataset._dynamic_keyword_vocabs
+            matches = empty_dataset[0].get_keyword_matches(vocab="animals")
+            assert len(matches) == 1
         finally:
             os.unlink(keyword_path)
 

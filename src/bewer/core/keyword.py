@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, Optional, Union
 
 import ahocorasick
@@ -10,7 +11,14 @@ if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
     from bewer.core.example import Example
 
-__all__ = ["Keyword"]
+__all__ = ["Keyword", "KeywordNotFoundWarning"]
+
+
+class KeywordNotFoundWarning(UserWarning):
+    pass
+
+
+warnings.filterwarnings("always", category=KeywordNotFoundWarning)
 
 
 class Keyword(Text):
@@ -52,43 +60,75 @@ class KeywordTrie:
         self.normalized = normalized
         self.add_capitalized = add_capitalized
 
-        # Collect token patterns from keywords
+        # Collect token patterns from keywords, tracking origin
         patterns = []
+        self._pattern_keywords: dict[tuple[int, ...], set[str]] = {}
+        keyword_patterns = []
         for keyword in keywords:
             tokens = keyword.tokens.normalized if normalized else keyword.tokens.raw
+            keyword_patterns.append((keyword.raw, tuple(tokens)))
             patterns.append(tuple(tokens))
 
         # Handle capitalization variants
         if add_capitalized and not normalized:
-            extra = []
-            for p in patterns:
+            for _, p in keyword_patterns:
                 first_cap = p[0].capitalize()
                 if first_cap != p[0]:
-                    extra.append((first_cap,) + p[1:])
-            patterns.extend(extra)
+                    patterns.append((first_cap,) + p[1:])
 
         # Build vocab: token string -> int for KEY_SEQUENCE mode
         self._vocab = {w: i for i, w in enumerate({w for p in patterns for w in p})}
         self._unknown = len(self._vocab)
 
+        # Map int_pattern -> set of keyword raw strings (for warn_missing)
+        for kw_raw, token_pattern in keyword_patterns:
+            int_pattern = tuple(self._vocab[w] for w in token_pattern)
+            self._pattern_keywords.setdefault(int_pattern, set()).add(kw_raw)
+
         # Build Aho-Corasick automaton
         self._automaton = ahocorasick.Automaton(ahocorasick.STORE_ANY, ahocorasick.KEY_SEQUENCE)
+        seen = set()
         for pattern in patterns:
             int_pattern = tuple(self._vocab[w] for w in pattern)
-            self._automaton.add_word(int_pattern, len(pattern))
+            if int_pattern not in seen:
+                self._automaton.add_word(int_pattern, len(pattern))
+                seen.add(int_pattern)
         self._automaton.make_automaton()
 
-    def find_in_tokens(self, tokens: TokenList, allow_subsets: bool = True) -> list[slice]:
-        """Find all contiguous token sequences that match any keyword in the automaton."""
+    def find_in_tokens(
+        self,
+        tokens: TokenList,
+        allow_subsets: bool = True,
+        warn_missing: bool = False,
+    ) -> list[slice]:
+        """Find all contiguous token sequences that match any keyword in the automaton.
+
+        Args:
+            tokens: The token list to search in.
+            allow_subsets: Whether to allow subset matches (default True).
+            warn_missing: If True, emit a KeywordNotFoundWarning for each keyword whose
+                token pattern was not found in the text. Uses tokens.src to identify the example.
+        """
         token_strings = tokens.normalized if self.normalized else tokens.raw
-        vocab = self._vocab
-        unknown = self._unknown
-        int_text = tuple(vocab.get(w, unknown) for w in token_strings)
+        int_text = tuple(self._vocab.get(w, self._unknown) for w in token_strings)
 
         matches = []
+        found_patterns = set() if warn_missing else None
         for end_idx, pattern_len in self._automaton.iter(int_text):
             start_idx = end_idx - pattern_len + 1
             matches.append(slice(start_idx, end_idx + 1))
+            if found_patterns is not None:
+                found_patterns.add(int_text[start_idx : end_idx + 1])
+
+        if warn_missing:
+            example_index = getattr(getattr(tokens.src, "src", None), "index", None)
+            for int_pattern, kw_raws in self._pattern_keywords.items():
+                if int_pattern not in found_patterns:
+                    for kw_raw in kw_raws:
+                        warnings.warn(
+                            f"Keyword '{kw_raw}' not found in reference tokens: Example {example_index}.",
+                            KeywordNotFoundWarning,
+                        )
 
         if not allow_subsets:
             matches = _remove_subset_matches(matches)

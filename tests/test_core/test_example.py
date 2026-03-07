@@ -39,7 +39,7 @@ class TestExampleInit:
 
 
 class TestExamplePrepareAndValidateKeywords:
-    """Tests for Example._prepare_and_validate_keywords()."""
+    """Tests for Example keyword preparation and validation."""
 
     def test_none_keywords_returns_empty_dict(self, sample_dataset):
         """Test that None keywords returns empty dict."""
@@ -55,21 +55,22 @@ class TestExamplePrepareAndValidateKeywords:
         assert isinstance(example.keywords["animals"].pop(), Text)
 
     def test_keyword_not_in_ref_warns(self, sample_dataset):
-        """Test that keyword not in reference issues warning."""
+        """Test that keyword not in reference issues warning when trie matches are computed."""
+        sample_dataset.add("hello world", "hello world", keywords={"missing": ["nonexistent"]})
+        example = sample_dataset[-1]
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            sample_dataset.add("hello world", "hello world", keywords={"missing": ["nonexistent"]})
-            # Check that a warning was issued
+            example.get_keyword_matches(vocab="missing")
             assert len([x for x in w if issubclass(x.category, KeywordNotFoundWarning)]) > 0
 
-    def test_keyword_not_in_ref_excluded(self, sample_dataset):
-        """Test that keyword not in reference is excluded."""
+    def test_keyword_not_in_ref_no_matches(self, sample_dataset):
+        """Test that keyword not in reference produces no matches."""
+        sample_dataset.add("hello world", "hello world", keywords={"missing": ["nonexistent"]})
+        example = sample_dataset[-1]
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
-            sample_dataset.add("hello world", "hello world", keywords={"missing": ["nonexistent"]})
-        example = sample_dataset[-1]
-        # Either empty dict or "missing" key not present
-        assert "missing" not in example.keywords or len(example.keywords.get("missing", [])) == 0
+            matches = example.get_keyword_matches(vocab="missing")
+        assert len(matches) == 0
 
     def test_case_insensitive_keyword_matching(self, sample_dataset):
         """Test that keyword matching is case insensitive."""
