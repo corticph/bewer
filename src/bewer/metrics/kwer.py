@@ -35,7 +35,7 @@ class KWER_(ExampleMetric):
         num_errors = 0
         for keyword_match in keyword_matches:
             for ref_index in range(keyword_match.start, keyword_match.stop):
-                op_index = alignment._ref_index_mapping.get(ref_index)
+                op_index = alignment.ref_index_mapping.get(ref_index)
                 if alignment[op_index].type != OpType.MATCH:
                     num_errors += 1
                     break

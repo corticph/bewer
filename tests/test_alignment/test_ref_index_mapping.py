@@ -1,4 +1,4 @@
-"""Tests for Alignment._ref_index_mapping and ops_from_ref_index methods."""
+"""Tests for Alignment.ref_index_mapping and ops_from_ref_index methods."""
 
 import pytest
 
@@ -6,7 +6,7 @@ from bewer.alignment import Alignment, Op, OpType
 
 
 class TestRefIndexMapping:
-    """Tests for _ref_index_mapping cached property."""
+    """Tests for ref_index_mapping cached property."""
 
     def test_mapping_with_all_ref_tokens(self):
         """Test mapping when all ops have ref_token_idx set."""
@@ -15,7 +15,7 @@ class TestRefIndexMapping:
             Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=1),
         ]
         alignment = Alignment(ops)
-        assert alignment._ref_index_mapping == {0: 0, 1: 1}
+        assert alignment.ref_index_mapping == {0: 0, 1: 1}
 
     def test_mapping_skips_insertions(self):
         """Test that ops without ref_token_idx (insertions) are skipped."""
@@ -25,7 +25,7 @@ class TestRefIndexMapping:
             Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=1),
         ]
         alignment = Alignment(ops)
-        assert alignment._ref_index_mapping == {0: 0, 1: 2}
+        assert alignment.ref_index_mapping == {0: 0, 1: 2}
 
     def test_mapping_includes_deletions(self):
         """Test that deletions (which have ref_token_idx) are included."""
@@ -35,7 +35,7 @@ class TestRefIndexMapping:
             Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=2),
         ]
         alignment = Alignment(ops)
-        assert alignment._ref_index_mapping == {0: 0, 1: 1, 2: 2}
+        assert alignment.ref_index_mapping == {0: 0, 1: 1, 2: 2}
 
     def test_mapping_includes_substitutions(self):
         """Test that substitutions are included in the mapping."""
@@ -44,12 +44,12 @@ class TestRefIndexMapping:
             Op(type=OpType.SUBSTITUTE, ref="fox", hyp="dog", ref_token_idx=1),
         ]
         alignment = Alignment(ops)
-        assert alignment._ref_index_mapping == {0: 0, 1: 1}
+        assert alignment.ref_index_mapping == {0: 0, 1: 1}
 
     def test_mapping_empty_alignment(self):
         """Test mapping for an empty alignment."""
         alignment = Alignment()
-        assert alignment._ref_index_mapping == {}
+        assert alignment.ref_index_mapping == {}
 
 
 class TestOpsFromRefIndex:

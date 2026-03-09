@@ -83,9 +83,9 @@ class Dataset(object):
     def add(self, ref: str, hyp: str, keywords: dict[str, list[str]] | None = None) -> None:
         """Add an example to the dataset."""
         if keywords is not None:
-            for name, kw_list in keywords.items():
-                keywords[name] = set(kw_list)
-                self._update_static_keyword_vocab(name, keywords[name])
+            keywords = {name: set(kw_list) for name, kw_list in keywords.items()}
+            for name, kw_set in keywords.items():
+                self._update_static_keyword_vocab(name, kw_set)
         example = Example(ref, hyp, keywords=keywords, src=self, index=len(self))
         self.examples.append(example)
 

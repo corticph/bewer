@@ -66,8 +66,11 @@ class KeywordTrie:
         keyword_patterns = []
         for keyword in keywords:
             tokens = keyword.tokens.normalized if normalized else keyword.tokens.raw
-            keyword_patterns.append((keyword.raw, tuple(tokens)))
-            patterns.append(tuple(tokens))
+            token_pattern = tuple(tokens)
+            if not token_pattern:
+                continue
+            keyword_patterns.append((keyword.raw, token_pattern))
+            patterns.append(token_pattern)
 
         # Handle capitalization variants
         if add_capitalized and not normalized:
@@ -113,18 +116,20 @@ class KeywordTrie:
         int_text = tuple(self._vocab.get(w, self._unknown) for w in token_strings)
 
         matches = []
-        found_patterns = set() if warn_missing else None
+        found_keywords: set[str] | None = set() if warn_missing else None
         for end_idx, pattern_len in self._automaton.iter(int_text):
             start_idx = end_idx - pattern_len + 1
             matches.append(slice(start_idx, end_idx + 1))
-            if found_patterns is not None:
-                found_patterns.add(int_text[start_idx : end_idx + 1])
+            if found_keywords is not None:
+                int_pattern = int_text[start_idx : end_idx + 1]
+                for kw_raw in self._pattern_keywords.get(int_pattern, ()):
+                    found_keywords.add(kw_raw)
 
         if warn_missing:
             example_index = getattr(getattr(tokens.src, "src", None), "index", None)
-            for int_pattern, kw_raws in self._pattern_keywords.items():
-                if int_pattern not in found_patterns:
-                    for kw_raw in kw_raws:
+            for kw_raws in self._pattern_keywords.values():
+                for kw_raw in kw_raws:
+                    if kw_raw not in found_keywords:
                         warnings.warn(
                             f"Keyword '{kw_raw}' not found in reference tokens: Example {example_index}.",
                             KeywordNotFoundWarning,

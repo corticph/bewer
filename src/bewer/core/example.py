@@ -37,8 +37,8 @@ class Example:
         Args:
             ref: Reference text.
             hyp: Hypothesis text.
-            keywords: Keywords associated with the example. The keywords are expected to be present in the reference
-                text. If not, a warning will be issued and the term will be discarded.
+            keywords: Keywords associated with the example. Missing terms are retained; warnings are emitted
+                during keyword trie matching if a term cannot be matched in the reference tokens.
             src: Parent Dataset object. Can be set later via set_source().
             index: The index of the example in the dataset.
         """

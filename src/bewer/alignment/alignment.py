@@ -100,7 +100,7 @@ class Alignment(tuple["Op", ...]):
         return mapping
 
     @cached_property
-    def _ref_index_mapping(self) -> dict[int, int]:
+    def ref_index_mapping(self) -> dict[int, int]:
         """Create a mapping from reference token index to operation index for quick lookup."""
         mapping = {}
         for i, op in enumerate(self):
@@ -119,18 +119,18 @@ class Alignment(tuple["Op", ...]):
             Alignment: The ops that correspond to the given reference token span.
 
         Raises:
-            ValueError: If start or stop indices are not found in _ref_index_mapping, or if stop index is less than
+            ValueError: If start or stop indices are not found in ref_index_mapping, or if stop index is less than
                 start index.
         """
-        if start not in self._ref_index_mapping:
+        if start not in self.ref_index_mapping:
             raise ValueError(f"Start index {start} not found in reference index mapping.")
-        if stop is not None and stop not in self._ref_index_mapping:
+        if stop is not None and stop not in self.ref_index_mapping:
             raise ValueError(f"Stop index {stop} not found in reference index mapping.")
         if stop is not None:
             if stop < start:
                 raise ValueError("Stop index must be greater than or equal to start index.")
-            return self[self._ref_index_mapping[start] : self._ref_index_mapping[stop] + 1]
-        return self[self._ref_index_mapping[start] : self._ref_index_mapping[start] + 1]
+            return self[self.ref_index_mapping[start] : self.ref_index_mapping[stop] + 1]
+        return self[self.ref_index_mapping[start] : self.ref_index_mapping[start] + 1]
 
     def start_index_to_op(self, char_index: int) -> Optional[Op]:
         """Get the op that starts at the given character index.
