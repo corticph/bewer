@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 
-from bewer.core.keyword import Keyword, KeywordTrie, _remove_duplicate_matches, _remove_subset_matches
-from bewer.core.shared import get_keyword_trie
+from bewer.core.keyword import Keyword, KeywordTrie, _remove_duplicate_matches, _remove_subset_matches, get_keyword_trie
 from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
 from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME

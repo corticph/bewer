@@ -10,8 +10,7 @@ from omegaconf import OmegaConf
 
 from bewer.configs.resolve import resolve_pipelines
 from bewer.core.example import Example
-from bewer.core.keyword import Keyword
-from bewer.core.shared import get_keyword_trie
+from bewer.core.keyword import Keyword, get_keyword_trie
 from bewer.core.text import TokenList
 from bewer.metrics.base import MetricCollection
 
@@ -183,8 +182,7 @@ class Dataset(object):
         """Get the configuration path."""
         if config_path is None or not Path(config_path).is_file():
             config_path = "base" if config_path is None else config_path
-            with resources.path("bewer.configs", f"{config_path}.yml") as config_path:
-                return config_path
+            return resources.files("bewer.configs").joinpath(f"{config_path}.yml")
         return Path(config_path).resolve()
 
     def _infer_keyword_column(self, series: pd.Series) -> pd.Series:
