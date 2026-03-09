@@ -2,7 +2,7 @@
 
 import warnings
 
-from bewer.core.example import KeywordNotFoundWarning
+from bewer.core.keyword import KeywordNotFoundWarning
 from bewer.core.text import Text, TextType
 
 
@@ -127,6 +127,73 @@ class TestExampleHash:
         example1 = sample_dataset[0]
         example2 = sample_dataset[1]
         assert hash(example1) != hash(example2)
+
+
+class TestExampleGetKeywordMatches:
+    """Tests for Example.get_keyword_matches() merging example and dataset keywords."""
+
+    def test_merges_example_and_dataset_keywords(self, sample_dataset):
+        """Matches from both example-level and dataset-level keywords are returned."""
+        sample_dataset.add(
+            "the quick brown fox",
+            "the quick brown dog",
+            keywords={"animals": ["fox"]},
+        )
+        sample_dataset.add_keyword_list("animals", ["brown"])
+        example = sample_dataset[-1]
+        matches = example.get_keyword_matches(vocab="animals")
+        matched_raws = sorted(example.ref.tokens[m].raw for m in matches)
+        assert ["brown"] in matched_raws
+        assert ["fox"] in matched_raws
+
+    def test_dataset_only_keywords_no_warning(self, sample_dataset):
+        """Dataset-level keywords produce matches without KeywordNotFoundWarning."""
+        sample_dataset.add("the quick brown fox", "the quick brown dog")
+        sample_dataset.add_keyword_list("animals", ["fox"])
+        example = sample_dataset[-1]
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            matches = example.get_keyword_matches(vocab="animals")
+        assert len(matches) == 1
+        assert len([x for x in w if issubclass(x.category, KeywordNotFoundWarning)]) == 0
+
+    def test_cached_no_duplicate_warnings(self, sample_dataset):
+        """Second call returns cached result and does not re-emit warnings."""
+        sample_dataset.add("hello world", "hello world", keywords={"missing": ["nonexistent"]})
+        example = sample_dataset[-1]
+        # First call triggers the warning
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            example.get_keyword_matches(vocab="missing")
+        # Second call should be cached — no new warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            example.get_keyword_matches(vocab="missing")
+        assert len([x for x in w if issubclass(x.category, KeywordNotFoundWarning)]) == 0
+
+    def test_allow_subsets_true_deduplicates_exact(self, sample_dataset):
+        """With allow_subsets=True, exact duplicate matches from both tries are deduplicated."""
+        sample_dataset.add(
+            "the quick brown fox",
+            "the quick brown dog",
+            keywords={"animals": ["fox"]},
+        )
+        sample_dataset.add_keyword_list("animals", ["fox"])
+        example = sample_dataset[-1]
+        matches = example.get_keyword_matches(vocab="animals", allow_subsets=True)
+        assert len(matches) == 1
+
+    def test_allow_subsets_false_deduplicates(self, sample_dataset):
+        """With allow_subsets=False, duplicate matches from both tries are deduplicated."""
+        sample_dataset.add(
+            "the quick brown fox",
+            "the quick brown dog",
+            keywords={"animals": ["fox"]},
+        )
+        sample_dataset.add_keyword_list("animals", ["fox"])
+        example = sample_dataset[-1]
+        matches = example.get_keyword_matches(vocab="animals", allow_subsets=False)
+        assert len(matches) == 1
 
 
 class TestExampleMetrics:

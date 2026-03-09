@@ -5,7 +5,7 @@ from bewer import metrics as metrics
 from bewer import preprocessing as preprocessing
 from bewer import reporting as reporting
 from bewer.core.dataset import Dataset
-from bewer.core.example import KeywordNotFoundWarning
+from bewer.core.keyword import KeywordNotFoundWarning
 
 try:
     __version__ = version("bewer")

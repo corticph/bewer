@@ -3,7 +3,7 @@
 import pytest
 
 from bewer import Dataset
-from bewer.core.example import KeywordNotFoundWarning
+from bewer.core.keyword import KeywordNotFoundWarning
 from bewer.metrics.kwer import KWER, KWER_
 
 

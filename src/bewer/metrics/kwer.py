@@ -18,13 +18,17 @@ class KWER_(ExampleMetric):
             normalizer=self.normalizer,
         ).alignment
 
+    def _get_keyword_matches(self) -> list[slice]:
+        return self.example.get_keyword_matches(
+            vocab=self.params.vocab,
+            normalized=self.params.normalized,
+            allow_subsets=self.params.allow_subsets,
+        )
+
     @metric_value
     def num_errors(self) -> int:
         """Get the number of keywords incorrectly transcribed in the hypothesis text."""
-        keyword_matches = self.example.get_keyword_matches(
-            vocab=self.params.vocab,
-            normalized=self.params.normalized,
-        )
+        keyword_matches = self._get_keyword_matches()
         if not keyword_matches:
             return 0
         alignment = self._get_alignment()
@@ -41,12 +45,7 @@ class KWER_(ExampleMetric):
     @metric_value
     def num_keywords(self) -> int:
         """Get the number of keywords in the reference text."""
-        return len(
-            self.example.get_keyword_matches(
-                vocab=self.params.vocab,
-                normalized=self.params.normalized,
-            )
-        )
+        return len(self._get_keyword_matches())
 
     @metric_value(main=True)
     def value(self) -> float:
@@ -74,10 +73,13 @@ class KWER(Metric):
         Attributes:
             vocab: The vocabulary name to use for keyword identification.
             normalized: Whether to use normalized tokens for alignment and keyword matching.
+            allow_subsets: Whether to allow subset matches. If False, overlapping keyword matches
+                are deduplicated, keeping only the longest match.
         """
 
         vocab: str
         normalized: bool = True
+        allow_subsets: bool = True
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 
-from bewer.core.keyword import Keyword, KeywordNotFoundWarning, KeywordTrie
+from bewer.core.keyword import Keyword, KeywordTrie, _remove_subset_matches
 from bewer.core.shared import get_keyword_trie
 from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
@@ -9,7 +9,7 @@ from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKE
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
 
-__all__ = ["Example", "KeywordNotFoundWarning"]
+__all__ = ["Example"]
 
 
 class Example:
@@ -110,7 +110,13 @@ class Example:
             add_capitalized=add_capitalized,
         )
 
-    def get_keyword_matches(self, vocab: str, normalized: bool = True, add_capitalized: bool = False) -> list[slice]:
+    def get_keyword_matches(
+        self,
+        vocab: str,
+        normalized: bool = True,
+        add_capitalized: bool = False,
+        allow_subsets: bool = True,
+    ) -> list[slice]:
         if vocab not in self.keywords and vocab not in self.src._dynamic_keyword_vocabs:
             return []
 
@@ -119,6 +125,7 @@ class Example:
             TOKENIZER_NAME.get(),
             NORMALIZER_NAME.get() if normalized else None,
             add_capitalized,
+            allow_subsets,
             vocab,
         )
         if cache_key in self._cache_keyword_matches:
@@ -131,7 +138,14 @@ class Example:
 
         if vocab in self.src._dynamic_keyword_vocabs:
             dataset_trie = self.src._get_keyword_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
-            matches += dataset_trie.find_in_tokens(self.ref.tokens) if dataset_trie is not None else []
+            if dataset_trie is not None:
+                matches += dataset_trie.find_in_tokens(self.ref.tokens)
+
+        if matches:
+            if allow_subsets:
+                matches = list(dict.fromkeys(matches))
+            else:
+                matches = _remove_subset_matches(matches)
 
         self._cache_keyword_matches[cache_key] = matches
         return matches
