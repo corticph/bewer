@@ -3,7 +3,7 @@
 import pytest
 
 from bewer import Dataset
-from bewer.core.example import KeywordNotFoundWarning
+from bewer.core.keyword import KeywordNotFoundWarning
 from bewer.metrics.kwer import KWER, KWER_
 
 
@@ -130,29 +130,29 @@ class TestKWERExampleMetric:
     def test_keyword_not_in_ref(self):
         """Test that keywords not found in reference are not counted."""
         dataset = Dataset()
-        with pytest.warns(KeywordNotFoundWarning):
-            dataset.add(
-                ref="hello world",
-                hyp="hello world",
-                keywords={"terms": ["missing"]},
-            )
+        dataset.add(
+            ref="hello world",
+            hyp="hello world",
+            keywords={"terms": ["missing"]},
+        )
         example = dataset[0]
         kwer = example.metrics.kwer(vocab="terms")
-        assert kwer.num_keywords == 0
+        with pytest.warns(KeywordNotFoundWarning):
+            assert kwer.num_keywords == 0
         assert kwer.num_errors == 0
 
     def test_no_keywords_returns_zero(self):
         """Test value is 0 when there are no keywords to evaluate."""
         dataset = Dataset()
-        with pytest.warns(KeywordNotFoundWarning):
-            dataset.add(
-                ref="hello world",
-                hyp="hello world",
-                keywords={"terms": ["missing"]},
-            )
+        dataset.add(
+            ref="hello world",
+            hyp="hello world",
+            keywords={"terms": ["missing"]},
+        )
         example = dataset[0]
         kwer = example.metrics.kwer(vocab="terms")
-        assert kwer.value == 0.0
+        with pytest.warns(KeywordNotFoundWarning):
+            assert kwer.value == 0.0
 
 
 class TestKWERNormalization:

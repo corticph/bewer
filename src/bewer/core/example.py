@@ -1,21 +1,14 @@
-import warnings
-from typing import TYPE_CHECKING, Iterable, Optional
+from typing import TYPE_CHECKING, Optional
 
-from bewer.core.keyword import Keyword
+from bewer.core.keyword import Keyword, KeywordTrie, _remove_duplicate_matches, _remove_subset_matches, get_keyword_trie
 from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
+from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
 
-__all__ = ["Example", "KeywordNotFoundWarning"]
-
-
-class KeywordNotFoundWarning(UserWarning):
-    pass
-
-
-warnings.filterwarnings("always", category=KeywordNotFoundWarning)
+__all__ = ["Example"]
 
 
 class Example:
@@ -43,12 +36,15 @@ class Example:
         Args:
             ref: Reference text.
             hyp: Hypothesis text.
-            keywords: Keywords associated with the example. The keywords are expected
-                to be present in the reference text. If not, a warning will be issued and the term will be discarded.
+            keywords: Keywords associated with the example. Missing terms are retained; warnings are emitted
+                during keyword trie matching if a term cannot be matched in the reference tokens.
             src: Parent Dataset object. Can be set later via set_source().
             index: The index of the example in the dataset.
         """
         self._index = index
+        self._cache_keyword_matches = {}
+        self._cache_keyword_tries = {}
+        self._pipelines = None
 
         self._src = None
         if src is not None:
@@ -57,10 +53,7 @@ class Example:
         self.metrics = ExampleMetricCollection(self)
         self.ref = Text(ref, src=self, text_type=TextType.REF)
         self.hyp = Text(hyp, src=self, text_type=TextType.HYP)
-        self.keywords = {}
-        self._prepare_and_validate_keywords(keywords, raise_warning=True)
-        if self._src is not None:
-            self._prepare_and_validate_keywords(self._src._dynamic_keyword_vocabs, raise_warning=False)
+        self.keywords = self._prepare_keywords(keywords)
 
     @property
     def index(self) -> Optional[int]:
@@ -71,6 +64,10 @@ class Example:
     def src(self) -> Optional["Dataset"]:
         """Get the parent Dataset object."""
         return self._src
+
+    @property
+    def pipelines(self):
+        return self._pipelines
 
     def set_source(self, src: "Dataset") -> None:
         """Set the parent Dataset object.
@@ -84,46 +81,73 @@ class Example:
         if self._src is not None:
             raise ValueError("Source already set for Example")
         self._src = src
+        self._pipelines = src.pipelines
 
-    def _prepare_and_validate_keywords(
-        self,
-        keywords: dict[str, Iterable[str]] | None,
-        raise_warning: bool = True,
-    ) -> None:
-        """Prepare keywords dictionary by converting keywords to Text objects."""
+    def _prepare_keywords(self, keywords: dict[str, set[str]] | None) -> dict[str, set[Keyword]]:
+        """Prepare keywords dictionary by converting keywords to Keyword objects."""
         if keywords is None:
-            return
+            return {}
 
+        prepared_keywords = {}
         for vocab_name, vocab_keywords in keywords.items():
-            validated_keywords = []
-            for keyword in vocab_keywords:
-                # Check if keyword is present in reference text (case-insensitive)
-                if keyword.lower() not in self.ref.raw.lower():
-                    if raise_warning:
-                        warnings.warn(
-                            f"Keyword '{keyword}' not found: Example {self._index}. Will not be included.",
-                            KeywordNotFoundWarning,
-                        )
-                    continue
+            prepared_keywords[vocab_name] = set(Keyword(keyword, src=self) for keyword in vocab_keywords)
 
-                # Convert keyword to Keyword object and check if it has valid spans in the reference text
-                keyword = Keyword(keyword, src=self)
-                if len(keyword.find_in_ref()) == 0:
-                    if raise_warning:
-                        warnings.warn(
-                            f"Keyword '{keyword.raw}' not found in reference text after tokenization: "
-                            f"Example {self._index}. Will not be included.",
-                            KeywordNotFoundWarning,
-                        )
-                    continue
+        return prepared_keywords
 
-                validated_keywords.append(keyword)
+    def _get_keyword_trie(
+        self,
+        vocab: str,
+        normalized: bool = True,
+        add_capitalized: bool = False,
+    ) -> Optional["KeywordTrie"]:
+        """Get or build a trie for the keywords in the specified vocabulary."""
+        return get_keyword_trie(
+            self.keywords,
+            self._cache_keyword_tries,
+            vocab,
+            normalized=normalized,
+            add_capitalized=add_capitalized,
+        )
 
-            if len(validated_keywords) > 0:
-                if vocab_name in self.keywords:
-                    self.keywords[vocab_name].update(validated_keywords)
-                else:
-                    self.keywords[vocab_name] = set(validated_keywords)
+    def get_keyword_matches(
+        self,
+        vocab: str,
+        normalized: bool = True,
+        add_capitalized: bool = False,
+        allow_subsets: bool = True,
+    ) -> list[slice]:
+        if vocab not in self.keywords and vocab not in self.src._dynamic_keyword_vocabs:
+            return []
+
+        cache_key = (
+            STANDARDIZER_NAME.get(),
+            TOKENIZER_NAME.get(),
+            NORMALIZER_NAME.get() if normalized else None,
+            add_capitalized,
+            allow_subsets,
+            vocab,
+        )
+        if cache_key in self._cache_keyword_matches:
+            return self._cache_keyword_matches[cache_key]
+
+        matches = []
+        if vocab in self.keywords:
+            example_trie = self._get_keyword_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
+            matches += example_trie.find_in_tokens(self.ref.tokens, warn_missing=True)
+
+        if vocab in self.src._dynamic_keyword_vocabs:
+            dataset_trie = self.src._get_keyword_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
+            if dataset_trie is not None:
+                matches += dataset_trie.find_in_tokens(self.ref.tokens)
+
+        if matches:
+            if allow_subsets:
+                matches = _remove_duplicate_matches(matches)
+            else:
+                matches = _remove_subset_matches(matches)
+
+        self._cache_keyword_matches[cache_key] = matches
+        return matches
 
     def __hash__(self):
         return hash((self.ref, self.hyp, self._index))

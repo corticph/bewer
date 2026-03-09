@@ -90,13 +90,17 @@ class Text:
     def text_type(self) -> Optional[TextType]:
         return self._text_type
 
+    @property
+    def pipelines(self):
+        return self._pipelines
+
     @pipeline_cached_property(STANDARDIZER_NAME)
-    def standardized(self, standardizer):
+    def standardized(self, standardizer) -> str:
         """The standardized text string after applying the active standardizer."""
         return standardizer(self.raw)
 
     @pipeline_cached_property(TOKENIZER_NAME)
-    def tokens(self, tokenizer):
+    def tokens(self, tokenizer) -> "TokenList":
         """The list of Token objects produced by the active tokenizer."""
         return TokenList.from_matches(tokenizer(self.standardized), src=self)
 
@@ -115,10 +119,7 @@ class Text:
         self._src = src
 
         # Cache pipeline reference
-        if src is not None and src.src is not None:
-            self._pipelines = src.src.pipelines
-        else:
-            self._pipelines = None
+        self._pipelines = src.pipelines if src is not None else None
 
     def joined(self, normalized: bool = True) -> str:
         """Get the joined text from tokens.
@@ -139,11 +140,18 @@ class Text:
 class TokenList(tuple["Token", ...]):
     """An immutable sequence of Token objects."""
 
-    def __new__(cls, iterable=()):
+    def __new__(cls, iterable=(), src=None):
         return super().__new__(cls, iterable)
 
-    def __init__(self, iterable=()):
+    def __init__(self, iterable=(), src: Optional["Text"] = None):
         self._normalized_index_cache: dict[str, dict[str, set[int]]] = {}
+        self._normalized_cache: dict[str, list[str]] = {}
+        self._src = src
+
+    @property
+    def src(self) -> Optional["Text"]:
+        """Get the source Text object."""
+        return self._src
 
     @classmethod
     def from_matches(
@@ -160,7 +168,7 @@ class TokenList(tuple["Token", ...]):
         Returns:
             TokenList: A list of Token objects created from the matches.
         """
-        return cls(Token.from_match(match, index=i, src=src) for i, match in enumerate(matches))
+        return cls((Token.from_match(match, index=i, src=src) for i, match in enumerate(matches)), src=src)
 
     @property
     def raw(self) -> list[str]:
@@ -178,7 +186,10 @@ class TokenList(tuple["Token", ...]):
         Returns:
             list[str]: The normalized tokens.
         """
-        return [token.normalized for token in self]
+        key = NORMALIZER_NAME.get()
+        if key not in self._normalized_cache:
+            self._normalized_cache[key] = [token.normalized for token in self]
+        return self._normalized_cache[key]
 
     def ngrams(
         self,

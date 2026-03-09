@@ -8,6 +8,7 @@ from error_align.utils import OpType
 from fuzzywuzzy import fuzz, process
 from rapidfuzz.distance import Levenshtein
 
+from bewer.core.text import _join_tokens
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 from bewer.metrics.cer import CER
 from bewer.metrics.wer import WER
@@ -121,13 +122,14 @@ class _KeywordAggregator(ExampleMetric):
                 correct_terms=[],
             )
 
-        medical_terms = self.example.keywords["medical_terms"]
-        max_n = max((len(term.tokens) for term in medical_terms), default=0)
+        matches = self.example.get_keyword_matches("medical_terms", normalized=True, add_capitalized=True)
+        medical_terms = [self.example.ref.tokens[match_slice] for match_slice in matches]
+        max_n = max((len(term) for term in medical_terms), default=0)
         words = self.example.hyp.tokens.normalized
         ngram_matrix = [self._get_ngrams(words, n) for n in range(1, max_n + 1)]
 
         for term in medical_terms:
-            term = term.joined(normalized=True)
+            term = _join_tokens(term, normalized=True)
             distance = self._term_distance(term, ngram_matrix=ngram_matrix)
             cer_score = distance / max(len(term), 1)  # Avoid division by zero
             if distance == 0:

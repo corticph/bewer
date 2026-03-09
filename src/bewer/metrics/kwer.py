@@ -10,6 +10,7 @@ __all__ = ["KWER"]
 
 class KWER_(ExampleMetric):
     def _get_alignment(self):
+        """Get the alignment for the example."""
         return self.example.metrics.levenshtein(
             normalized=self.params.normalized,
             standardizer=self.standardizer,
@@ -17,34 +18,34 @@ class KWER_(ExampleMetric):
             normalizer=self.normalizer,
         ).alignment
 
+    def _get_keyword_matches(self) -> list[slice]:
+        return self.example.get_keyword_matches(
+            vocab=self.params.vocab,
+            normalized=self.params.normalized,
+            allow_subsets=self.params.allow_subsets,
+        )
+
     @metric_value
     def num_errors(self) -> int:
         """Get the number of keywords incorrectly transcribed in the hypothesis text."""
-        keywords = self.example.keywords.get(self.params.vocab, None)
-        if keywords is None:
+        keyword_matches = self._get_keyword_matches()
+        if not keyword_matches:
             return 0
         alignment = self._get_alignment()
         num_errors = 0
-        for keyword in keywords:
-            ref_token_lists = keyword.find_in_ref(normalized=True)
-            if not ref_token_lists:
-                continue
-            for tokens in ref_token_lists:
-                if len(tokens) == 1:
-                    ops = alignment.ops_from_ref_index(tokens[0].index)
-                else:
-                    ops = alignment.ops_from_ref_index(tokens[0].index, tokens[-1].index)
-                if any(op.type != OpType.MATCH for op in ops):
+        for keyword_match in keyword_matches:
+            for ref_index in range(keyword_match.start, keyword_match.stop):
+                op_index = alignment.ref_index_mapping.get(ref_index)
+                if alignment[op_index].type != OpType.MATCH:
                     num_errors += 1
+                    break
+
         return num_errors
 
     @metric_value
     def num_keywords(self) -> int:
         """Get the number of keywords in the reference text."""
-        keywords = self.example.keywords.get(self.params.vocab, None)
-        if keywords is None:
-            return 0
-        return sum(len(keyword.find_in_ref(normalized=True)) for keyword in keywords)
+        return len(self._get_keyword_matches())
 
     @metric_value(main=True)
     def value(self) -> float:
@@ -72,10 +73,13 @@ class KWER(Metric):
         Attributes:
             vocab: The vocabulary name to use for keyword identification.
             normalized: Whether to use normalized tokens for alignment and keyword matching.
+            allow_subsets: Whether to allow subset matches. If False, overlapping keyword matches
+                are deduplicated, keeping only the longest match.
         """
 
         vocab: str
         normalized: bool = True
+        allow_subsets: bool = True
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""

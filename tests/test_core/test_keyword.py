@@ -1,8 +1,8 @@
 """Tests for bewer.core.keyword module."""
 
-import pytest
+import warnings
 
-from bewer.core.keyword import Keyword
+from bewer.core.keyword import Keyword, KeywordNotFoundWarning, KeywordTrie, _remove_subset_matches
 from bewer.core.text import Text, TextType, TokenList
 
 
@@ -44,70 +44,67 @@ class TestKeywordProperties:
         assert len(kw.tokens) == 1
 
 
-class TestKeywordFindInTokens:
-    """Tests for Keyword.find_in_tokens() method."""
+class TestKeywordTrieFindInTokens:
+    """Tests for KeywordTrie.find_in_tokens() method."""
 
     def test_single_token_found(self, sample_dataset):
         """Test finding a single-token keyword in a token list."""
         sample_dataset.add("the quick brown fox", "the quick brown dog", keywords={"animals": ["fox"]})
-        kw = next(iter(sample_dataset[-1].keywords["animals"]))
-        ref_tokens = sample_dataset[-1].ref.tokens
-        matches = kw.find_in_tokens(ref_tokens)
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["animals"])
+        ref_tokens = example.ref.tokens
+        matches = trie.find_in_tokens(ref_tokens)
         assert len(matches) == 1
-        assert len(matches[0]) == 1
-        assert matches[0][0].raw == "fox"
+        assert ref_tokens[matches[0]][0].raw == "fox"
 
     def test_single_token_multiple_occurrences(self, sample_dataset):
         """Test finding a token that appears multiple times."""
         sample_dataset.add("the fox and the fox", "the fox", keywords={"animals": ["fox"]})
-        kw = next(iter(sample_dataset[-1].keywords["animals"]))
-        ref_tokens = sample_dataset[-1].ref.tokens
-        matches = kw.find_in_tokens(ref_tokens)
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["animals"])
+        matches = trie.find_in_tokens(example.ref.tokens)
         assert len(matches) == 2
 
     def test_multi_token_keyword(self, sample_dataset):
         """Test finding a multi-token keyword contiguously."""
         sample_dataset.add("the quick brown fox", "the quick dog", keywords={"phrases": ["quick brown"]})
-        kw = next(iter(sample_dataset[-1].keywords["phrases"]))
-        ref_tokens = sample_dataset[-1].ref.tokens
-        matches = kw.find_in_tokens(ref_tokens)
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["phrases"])
+        ref_tokens = example.ref.tokens
+        matches = trie.find_in_tokens(ref_tokens)
         assert len(matches) == 1
-        assert len(matches[0]) == 2
-        assert matches[0].raw == ["quick", "brown"]
+        matched_tokens = ref_tokens[matches[0]]
+        assert len(matched_tokens) == 2
+        assert matched_tokens.raw == ["quick", "brown"]
 
     def test_no_match(self, sample_dataset):
         """Test that non-matching keyword returns empty list."""
         sample_dataset.add("hello world", "hello world", keywords={"greetings": ["hello"]})
-        kw = next(iter(sample_dataset[-1].keywords["greetings"]))
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["greetings"])
         # Search in a different example's tokens where "hello" doesn't appear
         other_tokens = sample_dataset[1].ref.tokens  # "the quick brown fox"
-        matches = kw.find_in_tokens(other_tokens)
+        matches = trie.find_in_tokens(other_tokens)
         assert len(matches) == 0
 
-    def test_returns_tokenlist_slices(self, sample_dataset):
-        """Test that matches are TokenList instances."""
+    def test_returns_slices(self, sample_dataset):
+        """Test that matches are slice instances."""
         sample_dataset.add("the quick brown fox", "the quick", keywords={"colors": ["brown"]})
-        kw = next(iter(sample_dataset[-1].keywords["colors"]))
-        matches = kw.find_in_tokens(sample_dataset[-1].ref.tokens)
-        assert all(isinstance(m, TokenList) for m in matches)
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["colors"])
+        matches = trie.find_in_tokens(example.ref.tokens)
+        assert all(isinstance(m, slice) for m in matches)
 
-
-class TestKeywordFindInRef:
-    """Tests for Keyword.find_in_ref() method."""
-
-    def test_find_in_ref(self, sample_dataset):
-        """Test convenience method that searches in source ref."""
-        sample_dataset.add("the quick brown fox", "the quick brown dog", keywords={"animals": ["fox"]})
-        kw = next(iter(sample_dataset[-1].keywords["animals"]))
-        matches = kw.find_in_ref()
-        assert len(matches) == 1
-        assert matches[0][0].raw == "fox"
-
-    def test_find_in_ref_no_source_raises(self):
-        """Test that find_in_ref raises without a source."""
-        kw = Keyword("test")
-        with pytest.raises(ValueError, match="Source example is not set"):
-            kw.find_in_ref()
+    def test_warn_missing(self, sample_dataset):
+        """Test that warn_missing emits KeywordNotFoundWarning for unmatched keywords."""
+        sample_dataset.add("hello world", "hello world", keywords={"missing": ["nonexistent"]})
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["missing"])
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            matches = trie.find_in_tokens(example.ref.tokens, warn_missing=True)
+        assert len(matches) == 0
+        assert len([x for x in w if issubclass(x.category, KeywordNotFoundWarning)]) > 0
 
 
 class TestKeywordRepr:
@@ -148,3 +145,118 @@ class TestTokenListIndices:
         tokens = sample_dataset[1].ref.tokens  # "the quick brown fox"
         indices = tokens.indices("fox", normalized=False)
         assert indices == {3}
+
+
+class TestRemoveSubsetMatches:
+    """Tests for _remove_subset_matches() function."""
+
+    def test_empty_input(self):
+        assert _remove_subset_matches([]) == []
+
+    def test_no_overlaps(self):
+        matches = [slice(0, 1), slice(2, 3), slice(5, 7)]
+        result = _remove_subset_matches(matches)
+        assert len(result) == 3
+
+    def test_subset_removed(self):
+        """A shorter match contained within a longer match is removed."""
+        matches = [slice(1, 4), slice(1, 3)]
+        result = _remove_subset_matches(matches)
+        assert result == [slice(1, 4)]
+
+    def test_adjacent_kept(self):
+        """Adjacent non-overlapping matches are preserved."""
+        matches = [slice(0, 2), slice(2, 4)]
+        result = _remove_subset_matches(matches)
+        assert len(result) == 2
+
+    def test_identical_deduplicated(self):
+        """Identical matches are deduplicated to one."""
+        matches = [slice(1, 3), slice(1, 3)]
+        result = _remove_subset_matches(matches)
+        assert result == [slice(1, 3)]
+
+
+class TestKeywordTrieAllowSubsets:
+    """Tests for KeywordTrie.find_in_tokens() with allow_subsets parameter."""
+
+    def test_allow_subsets_true_returns_all(self, sample_dataset):
+        """With allow_subsets=True (default), overlapping keywords both match."""
+        sample_dataset.add(
+            "the quick brown fox",
+            "the quick brown fox",
+            keywords={"phrases": ["quick", "quick brown"]},
+        )
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["phrases"])
+        matches = trie.find_in_tokens(example.ref.tokens, allow_subsets=True)
+        assert len(matches) == 2
+
+    def test_allow_subsets_false_keeps_longer(self, sample_dataset):
+        """With allow_subsets=False, the shorter overlapping match is removed."""
+        sample_dataset.add(
+            "the quick brown fox",
+            "the quick brown fox",
+            keywords={"phrases": ["quick", "quick brown"]},
+        )
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["phrases"])
+        matches = trie.find_in_tokens(example.ref.tokens, allow_subsets=False)
+        assert len(matches) == 1
+        matched = example.ref.tokens[matches[0]]
+        assert matched.raw == ["quick", "brown"]
+
+
+class TestKeywordTrieAddCapitalized:
+    """Tests for KeywordTrie with add_capitalized parameter."""
+
+    def test_add_capitalized_matches_sentence_start(self, sample_dataset):
+        """With normalized=False and add_capitalized=True, matches capitalized variant."""
+        sample_dataset.add("Hello world", "Hello world", keywords={"greetings": ["hello"]})
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["greetings"], normalized=False, add_capitalized=True)
+        matches = trie.find_in_tokens(example.ref.tokens)
+        assert len(matches) == 1
+
+    def test_no_capitalized_misses_sentence_start(self, sample_dataset):
+        """With normalized=False and add_capitalized=False, does not match capitalized text."""
+        sample_dataset.add("Hello world", "Hello world", keywords={"greetings": ["hello"]})
+        example = sample_dataset[-1]
+        trie = KeywordTrie(example.keywords["greetings"], normalized=False, add_capitalized=False)
+        matches = trie.find_in_tokens(example.ref.tokens)
+        assert len(matches) == 0
+
+
+class TestTokenListSrc:
+    """Tests for TokenList.src property."""
+
+    def test_src_from_text_tokens(self, sample_dataset):
+        """Text.tokens produces a TokenList whose src points to the Text."""
+        text = sample_dataset[0].ref
+        tokens = text.tokens
+        assert tokens.src is text
+
+    def test_default_src_is_none(self):
+        """A bare TokenList() has src == None."""
+        tokens = TokenList()
+        assert tokens.src is None
+
+
+class TestKeywordNotFoundWarningImport:
+    """Tests for KeywordNotFoundWarning import paths."""
+
+    def test_importable_from_keyword_module(self):
+        from bewer.core.keyword import KeywordNotFoundWarning as W1
+
+        assert issubclass(W1, UserWarning)
+
+    def test_importable_from_top_level(self):
+        from bewer import KeywordNotFoundWarning as W2
+
+        assert issubclass(W2, UserWarning)
+
+    def test_same_class(self):
+        from bewer import KeywordNotFoundWarning as W1
+        from bewer.core.keyword import KeywordNotFoundWarning as W2
+
+        assert W1 is W2
