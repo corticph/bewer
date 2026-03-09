@@ -123,16 +123,19 @@ def _set_keyword_indicators(alignment: "Alignment") -> None:
         return
     if not example.keywords:
         return
-    for keywords in example.keywords.values():
-        for keyword in keywords:
-            matches = keyword.find_in_ref()
-            for match in matches:
-                start_op = alignment.start_index_to_op(match[0].start)
-                end_op = alignment.end_index_to_op(match[-1].end)
-                if start_op is None or end_op is None:
-                    continue
-                setattr(start_op, "keyword_start", True)
-                setattr(end_op, "keyword_end", True)
+    for vocab in example.keywords:
+        matches = example.get_keyword_matches(vocab=vocab)
+        for match in matches:
+            start_op_idx = alignment.ref_index_mapping.get(match.start)
+            end_op_idx = alignment.ref_index_mapping.get(match.stop - 1)
+            if start_op_idx is None or end_op_idx is None:
+                continue
+            start_op = alignment[start_op_idx]
+            end_op = alignment[end_op_idx]
+            existing_start = getattr(start_op, "keyword_start_tags", "")
+            start_op.keyword_start_tags = existing_start + '<span class="keyword-box">'
+            existing_end = getattr(end_op, "keyword_end_tags", "")
+            end_op.keyword_end_tags = existing_end + "</span>"
 
 
 def generate_alignment_html_lines(
@@ -163,10 +166,10 @@ def generate_alignment_html_lines(
     for op in alignment:
         ref_str, hyp_str, op_length = format_alignment_op_html(op, color_scheme=color_scheme)
 
-        if hasattr(op, "keyword_start") and op.keyword_start:
-            ref_str = f'<span class="keyword-box">{ref_str}'
-        if hasattr(op, "keyword_end") and op.keyword_end:
-            ref_str = f"{ref_str}</span>"
+        keyword_start_tags = getattr(op, "keyword_start_tags", "")
+        keyword_end_tags = getattr(op, "keyword_end_tags", "")
+        if keyword_start_tags or keyword_end_tags:
+            ref_str = f"{keyword_start_tags}{ref_str}{keyword_end_tags}"
 
         if current_length + op_length > max_line_length and current_length > 0:
             lines.append((ref_line, hyp_line))
