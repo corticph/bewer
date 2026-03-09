@@ -136,6 +136,18 @@ class KeywordTrie:
         return matches
 
 
+def _remove_duplicate_matches(matches: list[slice]) -> list[slice]:
+    """Remove exact duplicate matches, preserving order."""
+    seen: set[tuple[int, int]] = set()
+    result = []
+    for m in matches:
+        key = (m.start, m.stop)
+        if key not in seen:
+            seen.add(key)
+            result.append(m)
+    return result
+
+
 def _remove_subset_matches(matches: list[slice]) -> list[slice]:
     """Remove matches that are subsets of other matches, preferring longer matches."""
     if not matches:

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 
-from bewer.core.keyword import Keyword, KeywordTrie, _remove_subset_matches
+from bewer.core.keyword import Keyword, KeywordTrie, _remove_duplicate_matches, _remove_subset_matches
 from bewer.core.shared import get_keyword_trie
 from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
@@ -143,7 +143,7 @@ class Example:
 
         if matches:
             if allow_subsets:
-                matches = list(dict.fromkeys(matches))
+                matches = _remove_duplicate_matches(matches)
             else:
                 matches = _remove_subset_matches(matches)
 
