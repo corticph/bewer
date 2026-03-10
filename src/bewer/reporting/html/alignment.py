@@ -115,24 +115,62 @@ def format_alignment_op_html(
     raise ValueError(f"Unknown operation type: {op.type}")
 
 
-def _set_keyword_indicators(alignment: "Alignment") -> None:
-    """Set indicators on alignment operations that correspond to keywords in the reference text."""
+def format_keyword(text: str, start: bool = False, end: bool = False) -> str:
+    """Format a keyword with HTML tags for highlighting.
 
+    Args:
+        text: The keyword text to format.
+        start: Whether this is the start of a keyword span.
+        end: Whether this is the end of a keyword span.
+
+    Returns:
+        The formatted keyword string with HTML span tags.
+    """
+    kw_class = "kw"
+    if start:
+        kw_class += " kw-start"
+    if end:
+        kw_class += " kw-end"
+    return f'<span class="{kw_class}">{text}</span>'
+
+
+def _get_keyword_indicators(alignment: "Alignment") -> tuple[set[int], set[int], set[int]]:
+    """Compute keyword span indicators for the given alignment.
+
+    Args:
+        alignment: The alignment whose reference side is inspected for keyword spans.
+
+    Returns:
+        A tuple of three sets of operation indices:
+
+        - start_indices: Indices of alignment operations that correspond to the first
+          token of a keyword span in the reference text.
+        - stop_indices: Indices of alignment operations that correspond to the last
+          token of a keyword span in the reference text.
+        - open_indices: Indices of alignment operations that fall inside any keyword
+          span (including the start index but excluding the stop index), i.e. where a
+          keyword span is considered "open"/ongoing.
+    """
     example = alignment.src
     if example is None:
-        return
+        return set(), set(), set()
     if not example.keywords:
-        return
-    for keywords in example.keywords.values():
-        for keyword in keywords:
-            matches = keyword.find_in_ref()
-            for match in matches:
-                start_op = alignment.start_index_to_op(match[0].start)
-                end_op = alignment.end_index_to_op(match[-1].end)
-                if start_op is None or end_op is None:
-                    continue
-                setattr(start_op, "keyword_start", True)
-                setattr(end_op, "keyword_end", True)
+        return set(), set(), set()
+
+    start_indices, stop_indices, open_indices = set(), set(), set()
+    for vocab in example.keywords:
+        matches = example.get_keyword_matches(vocab=vocab)
+        for match in matches:
+            start_op_idx = alignment.ref_index_mapping.get(match.start)
+            end_op_idx = alignment.ref_index_mapping.get(match.stop - 1)
+            if start_op_idx is None or end_op_idx is None:
+                continue
+            start_indices.add(start_op_idx)
+            stop_indices.add(end_op_idx)
+            for idx in range(start_op_idx, end_op_idx):
+                open_indices.add(idx)
+
+    return start_indices, stop_indices, open_indices
 
 
 def generate_alignment_html_lines(
@@ -157,23 +195,25 @@ def generate_alignment_html_lines(
     ref_line, hyp_line = "", ""
     current_length = 0
 
-    _set_keyword_indicators(alignment)  # Update alignment ops with keyword indicators before rendering
+    start_indices, stop_indices, open_indices = _get_keyword_indicators(alignment)
 
     lines = []
-    for op in alignment:
+    for op_idx, op in enumerate(alignment):
         ref_str, hyp_str, op_length = format_alignment_op_html(op, color_scheme=color_scheme)
 
-        if hasattr(op, "keyword_start") and op.keyword_start:
-            ref_str = f'<span class="keyword-box">{ref_str}'
-        if hasattr(op, "keyword_end") and op.keyword_end:
-            ref_str = f"{ref_str}</span>"
+        is_kw_start = op_idx in start_indices
+        is_kw_end = op_idx in stop_indices
+        is_kw_open = op_idx in open_indices
+        is_kw = is_kw_start or is_kw_end or is_kw_open
+        if is_kw:
+            ref_str = format_keyword(ref_str, start=is_kw_start, end=is_kw_end)
 
         if current_length + op_length > max_line_length and current_length > 0:
             lines.append((ref_line, hyp_line))
             ref_line, hyp_line = "", ""
             current_length = 0
 
-        ref_line += ref_str + "&nbsp;"
+        ref_line += ref_str + (format_keyword("&nbsp;") if is_kw_open else "&nbsp;")
         hyp_line += hyp_str + (get_html_padding(1, color_scheme=color_scheme) if op.hyp_right_partial else "&nbsp;")
         current_length += op_length + 1
 

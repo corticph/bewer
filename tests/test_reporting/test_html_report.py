@@ -307,3 +307,49 @@ class TestCustomReportSummary:
         ]
         result = render_report_html(sample_dataset, report_summary=custom_summary)
         assert "Examples" in result
+
+
+class TestKeywordIndicators:
+    """Tests for keyword indicators in HTML alignment rendering."""
+
+    @pytest.fixture
+    def dataset_with_keywords(self):
+        """Create a dataset with keywords for testing HTML rendering."""
+        from bewer.core.dataset import Dataset
+
+        dataset = Dataset()
+        dataset.add("the quick brown fox", "the quick brown dog", keywords={"animals": ["fox"]})
+        return dataset
+
+    def test_keyword_classes_rendered_in_html(self, dataset_with_keywords):
+        """Test that kw CSS classes appear in rendered HTML when keywords are present."""
+        result = render_report_html(dataset_with_keywords)
+        # Legend has one kw span, alignment content should add more
+        assert result.count("kw kw-start") > 1
+
+    def test_no_keyword_classes_without_keywords(self, sample_dataset):
+        """Test that kw CSS classes do not appear in alignment content when no keywords are set."""
+        result = render_report_html(sample_dataset)
+        # Only the legend kw span should be present
+        assert result.count("kw kw-start") == 1
+
+    def test_overlapping_keywords_merge_into_run(self):
+        """Test that overlapping keywords merge into a single contiguous run."""
+        from bewer.core.dataset import Dataset
+
+        dataset = Dataset()
+        # "brown fox" and "brown" overlap — their union covers "brown" and "fox"
+        dataset.add(
+            "the quick brown fox jumps",
+            "the quick brown dog jumps",
+            keywords={"overlapping": ["brown fox", "brown"]},
+        )
+        result = render_report_html(dataset)
+        # The merged run should have one kw-start at "brown" and kw-end at both brown and fox
+        assert result.count("w-start") < result.count("kw-end")
+
+    def test_keyword_rendering_is_idempotent(self, dataset_with_keywords):
+        """Test that rendering twice produces the same output."""
+        result1 = render_report_html(dataset_with_keywords)
+        result2 = render_report_html(dataset_with_keywords)
+        assert result1 == result2
