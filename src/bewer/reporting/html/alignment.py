@@ -135,8 +135,22 @@ def format_keyword(text: str, start: bool = False, end: bool = False) -> str:
 
 
 def _get_keyword_indicators(alignment: "Alignment") -> tuple[set[int], set[int], set[int]]:
-    """Set indicators on alignment operations that correspond to keywords in the reference text."""
+    """Compute keyword span indicators for the given alignment.
 
+    Args:
+        alignment: The alignment whose reference side is inspected for keyword spans.
+
+    Returns:
+        A tuple of three sets of operation indices:
+
+        - start_indices: Indices of alignment operations that correspond to the first
+          token of a keyword span in the reference text.
+        - stop_indices: Indices of alignment operations that correspond to the last
+          token of a keyword span in the reference text.
+        - open_indices: Indices of alignment operations that fall inside any keyword
+          span (including the start index but excluding the stop index), i.e. where a
+          keyword span is considered "open"/ongoing.
+    """
     example = alignment.src
     if example is None:
         return set(), set(), set()
