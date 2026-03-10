@@ -30,22 +30,27 @@
             margin: 0px 0px 30px 0px;  /* Bottom margin to maintain spacing */
             font-style: italic;  /* Optional: makes it look more like metadata */
         }
-        .keyword-box {
+        .kw {
             position: relative;
-            display: inline;
-            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0);
         }
-
-        /* Add "padding" visually without moving text */
-        .keyword-box::before {
-            content: "";
+        .kw::before {
+            content: '';
             position: absolute;
             top: -2px;
             bottom: -2px;
-            left: -3px;
-            right: -3px;
-            border: 1px solid rgb(0, 162, 255);
+            left: 0;
+            right: 0;
+            border-top: 1px solid #00a2ff;
+            border-bottom: 1px solid #00a2ff;
             pointer-events: none;
+        }
+        .kw-start::before {
+            left: -3px;
+            border-left: 1px solid #00a2ff;
+        }
+        .kw-end::before {
+            right: -3px;
+            border-right: 1px solid #00a2ff;
         }
         .tables-side-by-side {
             display: flex;

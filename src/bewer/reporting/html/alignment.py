@@ -115,14 +115,35 @@ def format_alignment_op_html(
     raise ValueError(f"Unknown operation type: {op.type}")
 
 
-def _set_keyword_indicators(alignment: "Alignment") -> None:
+def format_keyword(text: str, start: bool = False, end: bool = False) -> str:
+    """Format a keyword with HTML tags for highlighting.
+
+    Args:
+        text: The keyword text to format.
+        start: Whether this is the start of a keyword span.
+        end: Whether this is the end of a keyword span.
+
+    Returns:
+        The formatted keyword string with HTML span tags.
+    """
+    kw_class = "kw"
+    if start:
+        kw_class += " kw-start"
+    if end:
+        kw_class += " kw-end"
+    return f'<span class="{kw_class}">{text}</span>'
+
+
+def _get_keyword_indicators(alignment: "Alignment") -> tuple[set[int], set[int], set[int]]:
     """Set indicators on alignment operations that correspond to keywords in the reference text."""
 
     example = alignment.src
     if example is None:
-        return
+        return set(), set(), set()
     if not example.keywords:
-        return
+        return set(), set(), set()
+
+    start_indices, stop_indices, open_indices = set(), set(), set()
     for vocab in example.keywords:
         matches = example.get_keyword_matches(vocab=vocab)
         for match in matches:
@@ -130,12 +151,12 @@ def _set_keyword_indicators(alignment: "Alignment") -> None:
             end_op_idx = alignment.ref_index_mapping.get(match.stop - 1)
             if start_op_idx is None or end_op_idx is None:
                 continue
-            start_op = alignment[start_op_idx]
-            end_op = alignment[end_op_idx]
-            existing_start = getattr(start_op, "keyword_start_tags", "")
-            start_op.keyword_start_tags = existing_start + '<span class="keyword-box">'
-            existing_end = getattr(end_op, "keyword_end_tags", "")
-            end_op.keyword_end_tags = existing_end + "</span>"
+            start_indices.add(start_op_idx)
+            stop_indices.add(end_op_idx)
+            for idx in range(start_op_idx, end_op_idx):
+                open_indices.add(idx)
+
+    return start_indices, stop_indices, open_indices
 
 
 def generate_alignment_html_lines(
@@ -160,23 +181,25 @@ def generate_alignment_html_lines(
     ref_line, hyp_line = "", ""
     current_length = 0
 
-    _set_keyword_indicators(alignment)  # Update alignment ops with keyword indicators before rendering
+    start_indices, stop_indices, open_indices = _get_keyword_indicators(alignment)
 
     lines = []
-    for op in alignment:
+    for op_idx, op in enumerate(alignment):
         ref_str, hyp_str, op_length = format_alignment_op_html(op, color_scheme=color_scheme)
 
-        keyword_start_tags = getattr(op, "keyword_start_tags", "")
-        keyword_end_tags = getattr(op, "keyword_end_tags", "")
-        if keyword_start_tags or keyword_end_tags:
-            ref_str = f"{keyword_start_tags}{ref_str}{keyword_end_tags}"
+        is_kw_start = op_idx in start_indices
+        is_kw_end = op_idx in stop_indices
+        is_kw_open = op_idx in open_indices
+        is_kw = is_kw_start or is_kw_end or is_kw_open
+        if is_kw:
+            ref_str = format_keyword(ref_str, start=is_kw_start, end=is_kw_end)
 
         if current_length + op_length > max_line_length and current_length > 0:
             lines.append((ref_line, hyp_line))
             ref_line, hyp_line = "", ""
             current_length = 0
 
-        ref_line += ref_str + "&nbsp;"
+        ref_line += ref_str + (format_keyword("&nbsp;") if is_kw_open else "&nbsp;")
         hyp_line += hyp_str + (get_html_padding(1, color_scheme=color_scheme) if op.hyp_right_partial else "&nbsp;")
         current_length += op_length + 1
 
