@@ -249,6 +249,7 @@ class TestGenerateAlignmentHtmlLines:
         """Helper to create a mock example with keywords attribute."""
         mock_example = Mock()
         mock_example.keywords = None
+        mock_example.vocabs = set()
         return mock_example
 
     def test_generate_alignment_html_lines_returns_list_of_tuples(self):

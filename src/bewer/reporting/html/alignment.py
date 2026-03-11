@@ -154,11 +154,11 @@ def _get_keyword_indicators(alignment: "Alignment") -> tuple[set[int], set[int],
     example = alignment.src
     if example is None:
         return set(), set(), set()
-    if not example.keywords:
+    if not example.vocabs:
         return set(), set(), set()
 
     start_indices, stop_indices, open_indices = set(), set(), set()
-    for vocab in example.keywords:
+    for vocab in example.vocabs:
         matches = example.get_keyword_matches(vocab=vocab)
         for match in matches:
             start_op_idx = alignment.ref_index_mapping.get(match.start)
