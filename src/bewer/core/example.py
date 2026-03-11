@@ -72,10 +72,10 @@ class Example:
     @property
     def vocabs(self) -> set[str]:
         """Get the set of all keyword vocabularies associated with this example."""
-        example = set(self.keywords.keys())
+        vocabs = set(self.keywords.keys())
         if self._src is not None:
-            example.update(self._src._dynamic_keyword_vocabs)
-        return example
+            vocabs.update(self._src._dynamic_keyword_vocabs.keys())
+        return vocabs
 
     def set_source(self, src: "Dataset") -> None:
         """Set the parent Dataset object.

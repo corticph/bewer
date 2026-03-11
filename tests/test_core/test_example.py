@@ -93,6 +93,42 @@ class TestExamplePrepareAndValidateKeywords:
         assert "actions" in example.keywords
 
 
+class TestExampleVocabs:
+    """Tests for Example.vocabs property."""
+
+    def test_vocabs_empty_when_no_keywords(self, sample_dataset):
+        """Test that vocabs is empty when no keywords are set."""
+        example = sample_dataset[0]
+        assert example.vocabs == set()
+
+    def test_vocabs_from_example_keywords(self, sample_dataset):
+        """Test that vocabs includes example-level keyword vocabularies."""
+        sample_dataset.add(
+            "the quick brown fox",
+            "the quick brown dog",
+            keywords={"animals": ["fox"], "colors": ["brown"]},
+        )
+        example = sample_dataset[-1]
+        assert example.vocabs == {"animals", "colors"}
+
+    def test_vocabs_includes_dynamic_dataset_vocabs(self, sample_dataset):
+        """Test that vocabs includes dynamic keyword vocabularies from the parent dataset."""
+        sample_dataset._dynamic_keyword_vocabs["global_terms"] = set()
+        example = sample_dataset[0]
+        assert "global_terms" in example.vocabs
+
+    def test_vocabs_merges_example_and_dataset_vocabs(self, sample_dataset):
+        """Test that vocabs merges both example-level and dataset-level vocabularies."""
+        sample_dataset.add(
+            "hello world",
+            "hello world",
+            keywords={"greetings": ["hello"]},
+        )
+        sample_dataset._dynamic_keyword_vocabs["global_terms"] = set()
+        example = sample_dataset[-1]
+        assert example.vocabs == {"greetings", "global_terms"}
+
+
 class TestExampleRepr:
     """Tests for Example.__repr__()."""
 
