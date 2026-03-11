@@ -213,9 +213,10 @@ class TestAlignmentToHtmlLines:
     """Tests for _to_html_lines method."""
 
     def _create_mock_example(self):
-        """Helper to create a mock example with keywords attribute."""
+        """Helper to create a mock example with keywords and vocabs attributes."""
         mock_example = Mock()
         mock_example.keywords = None
+        mock_example.vocabs = set()
         return mock_example
 
     def test_to_html_lines_returns_list_of_tuples(self):
