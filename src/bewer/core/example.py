@@ -98,6 +98,8 @@ class Example:
 
         prepared_keywords = {}
         for vocab_name, vocab_keywords in keywords.items():
+            if len(vocab_keywords) == 0:
+                continue
             prepared_keywords[vocab_name] = set(Keyword(keyword, src=self) for keyword in vocab_keywords)
 
         return prepared_keywords
