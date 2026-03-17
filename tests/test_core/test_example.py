@@ -92,6 +92,13 @@ class TestExamplePrepareAndValidateKeywords:
         assert "animals" in example.keywords
         assert "actions" in example.keywords
 
+    def test_empty_keyword_list_resolves_without_error(self, sample_dataset):
+        """Test that an empty keyword list does not cause keyword match resolution to fail."""
+        sample_dataset.add("hello world", "hello world", keywords={"greetings": []})
+        example = sample_dataset[-1]
+        matches = example.get_keyword_matches(vocab="greetings")
+        assert matches == []
+
 
 class TestExampleVocabs:
     """Tests for Example.vocabs property."""
