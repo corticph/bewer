@@ -122,14 +122,14 @@ class _KeywordAggregator(ExampleMetric):
                 correct_terms=[],
             )
 
-        matches = self.example.get_keyword_matches("medical_terms", normalized=True, add_capitalized=True)
-        medical_terms = [self.example.ref.tokens[match_slice] for match_slice in matches]
-        max_n = max((len(term) for term in medical_terms), default=0)
+        ref = self.example.ref.joined(normalized=True)
+        medical_terms = [kw for kw in self.example.keywords["medical_terms"] if kw.joined(normalized=True) in ref]
+        max_n = max((len(term.tokens) for term in medical_terms), default=0)
         words = self.example.hyp.tokens.normalized
         ngram_matrix = [self._get_ngrams(words, n) for n in range(1, max_n + 1)]
 
         for term in medical_terms:
-            term = _join_tokens(term, normalized=True)
+            term = _join_tokens(term.tokens, normalized=True)
             distance = self._term_distance(term, ngram_matrix=ngram_matrix)
             cer_score = distance / max(len(term), 1)  # Avoid division by zero
             if distance == 0:
@@ -190,7 +190,7 @@ class _KeywordAggregator(ExampleMetric):
         return Levenshtein.distance(term, best_match)
 
 
-@METRIC_REGISTRY.register("_legacy_kwa", standardizer="default", tokenizer="legacy", normalizer="legacy_uncased")
+@METRIC_REGISTRY.register("_legacy_kwa", tokenizer="legacy", normalizer="legacy_uncased")
 class LegacyKeywordAggregator(Metric):
     short_name_base = "kwa"
     long_name_base = "Keyword Aggregator"
