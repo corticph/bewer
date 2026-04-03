@@ -55,7 +55,7 @@ class KWER_(ExampleMetric):
         return self.num_errors / self.num_keywords
 
 
-@METRIC_REGISTRY.register("kwer")
+@METRIC_REGISTRY.register("kwer", tokenizer="keyterms")
 class KWER(Metric):
     short_name_base = "KWER"
     long_name_base = "Keyword Error Rate"
