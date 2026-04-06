@@ -4,10 +4,15 @@ from functools import lru_cache
 import regex as re
 from unidecode import unidecode
 
+from bewer.preprocessing._unicode_normalization_tables import APOSTROPHE_TABLE, HYPHEN_TABLE, SLASH_TABLE
+
 __all__ = [
     "Normalizer",
     "lowercase",
     "nfc",
+    "normalize_apostrophe_variants",
+    "normalize_hyphen_variants",
+    "normalize_slash_variants",
     "strip_punctuation",
     "transliterate_latin_letters",
     "transliterate_symbols",
@@ -69,6 +74,45 @@ def nfc(text: str) -> str:
         str: NFC-normalized string.
     """
     return unicodedata.normalize("NFC", text)
+
+
+@_set_attrs(token_only=False, length_preserving=True)
+def normalize_apostrophe_variants(text: str) -> str:
+    """Normalize Unicode apostrophe variants (e.g. \u2019, \u02bc) to ASCII apostrophe (').
+
+    Args:
+        text (str): Input string.
+
+    Returns:
+        str: Text with apostrophe variants replaced by ASCII apostrophe.
+    """
+    return text.translate(APOSTROPHE_TABLE)
+
+
+@_set_attrs(token_only=False, length_preserving=True)
+def normalize_hyphen_variants(text: str) -> str:
+    """Normalize Unicode hyphen/dash variants (e.g. \u2013, \u2014) to ASCII hyphen-minus (-).
+
+    Args:
+        text (str): Input string.
+
+    Returns:
+        str: Text with hyphen/dash variants replaced by ASCII hyphen-minus.
+    """
+    return text.translate(HYPHEN_TABLE)
+
+
+@_set_attrs(token_only=False, length_preserving=True)
+def normalize_slash_variants(text: str) -> str:
+    """Normalize Unicode slash variants (e.g. \uff0f) to ASCII solidus (/).
+
+    Args:
+        text (str): Input string.
+
+    Returns:
+        str: Text with slash variants replaced by ASCII solidus.
+    """
+    return text.translate(SLASH_TABLE)
 
 
 # ============================================================

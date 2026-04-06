@@ -25,7 +25,7 @@ class MTR_(ExampleMetric):
         return 1 - self.parent_metric._kwer_metric.get_example_metric(self.example).value
 
 
-@METRIC_REGISTRY.register("mtr")
+@METRIC_REGISTRY.register("mtr", tokenizer="keyterms")
 class MTR(Metric):
     short_name_base = "MTR"
     long_name_base = "Medical Term Recall"
