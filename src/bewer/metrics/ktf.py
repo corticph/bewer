@@ -28,6 +28,8 @@ class KTF(Metric):
         "Key term F-score (KTF) is the weighted harmonic mean of key term precision (KTP) and key term recall (KTR). "
         "The beta parameter controls the trade-off: beta > 1 weights recall more heavily, beta < 1 weights precision "
         "more heavily, and beta = 1 (default) gives the standard F1 score. "
+        "At the dataset level, KTF is computed as a micro F-score: TP, FN, and FP counts are summed across all "
+        "examples before applying the formula, so examples with more key terms contribute more to the final score. "
         "Computed as: (1 + beta²) × TP / ((1 + beta²) × TP + beta² × FN + FP)."
     )
     example_cls = KTF_
