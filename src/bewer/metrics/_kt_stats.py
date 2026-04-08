@@ -77,8 +77,8 @@ class _KTStats(Metric):
     short_name_base = "_KTStats"
     long_name_base = "Key Term Statistics"
     description = (
-        "Private metric that computes shared key term statistics (TP, FN) used by KTR, KTER, and future "
-        "precision/F-score metrics. Not intended for direct use."
+        "Private metric that computes shared key term statistics (num_ref_terms, num_hyp_terms, TP, FN, FP) "
+        "used by KTR, KTER, KTP, and KTF. Not intended for direct use."
     )
     example_cls = _KTStats_
 

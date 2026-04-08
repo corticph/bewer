@@ -1,4 +1,4 @@
-"""Tests for bewer.metrics.mtr module."""
+"""Tests for bewer.metrics.ktr module."""
 
 import pytest
 

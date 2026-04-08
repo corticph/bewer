@@ -53,6 +53,8 @@ class KTF(Metric):
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""
+            if self.beta <= 0:
+                raise ValueError(f"beta must be positive, got {self.beta}.")
             is_dynamic_vocab = self.vocab in self.metric.dataset._dynamic_keyword_vocabs
             is_static_vocab = self.vocab in self.metric.dataset._static_keyword_vocabs
             if not is_dynamic_vocab and not is_static_vocab:

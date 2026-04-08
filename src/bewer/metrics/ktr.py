@@ -35,8 +35,9 @@ class KTR(Metric):
     description = (
         "Key term recall (KTR) is computed as the number of key terms correctly transcribed divided by the total "
         "number of key terms in the reference texts. A key term may consist of one or more tokens, but is treated as "
-        "a single unit for the purpose of KTR calculation. KTR is the complement of KTER (Key Term Error Rate) for a "
-        "given vocabulary. Specifically, KTR = 1 - KTER."
+        "a single unit for the purpose of KTR calculation. For inputs with at least one reference key term, KTR is "
+        "the complement of KTER (Key Term Error Rate) for a given vocabulary. Specifically, when num_ref_terms > 0, "
+        "KTR = 1 - KTER."
     )
     example_cls = KTR_
 
