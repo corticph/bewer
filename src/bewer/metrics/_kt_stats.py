@@ -72,7 +72,7 @@ class _KTStats_(ExampleMetric):
         return self.num_hyp_terms - self.num_tp
 
 
-@METRIC_REGISTRY.register("_kt_stats")
+@METRIC_REGISTRY.register("_kt_stats", tokenizer="keyterms")
 class _KTStats(Metric):
     short_name_base = "_KTStats"
     long_name_base = "Key Term Statistics"

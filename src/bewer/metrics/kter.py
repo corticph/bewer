@@ -28,7 +28,7 @@ class KTER_(ExampleMetric):
         return stats.num_fn / stats.num_ref_terms
 
 
-@METRIC_REGISTRY.register("kter")
+@METRIC_REGISTRY.register("kter", tokenizer="keyterms")
 class KTER(Metric):
     short_name_base = "KTER"
     long_name_base = "Key Term Error Rate"

@@ -28,7 +28,7 @@ class KTP_(ExampleMetric):
         return stats.num_tp / stats.num_hyp_terms
 
 
-@METRIC_REGISTRY.register("ktp")
+@METRIC_REGISTRY.register("ktp", tokenizer="keyterms")
 class KTP(Metric):
     short_name_base = "KTP"
     long_name_base = "Key Term Precision"

@@ -4,6 +4,9 @@ from bewer.preprocessing.normalization import (
     Normalizer,
     lowercase,
     nfc,
+    normalize_apostrophe_variants,
+    normalize_hyphen_variants,
+    normalize_slash_variants,
     remove_symbols,
     strip_punctuation,
     transliterate_latin_letters,
@@ -208,6 +211,85 @@ class TestRemoveSymbols:
         """Test that function has correct attributes."""
         assert remove_symbols.token_only is False
         assert remove_symbols.length_preserving is False
+
+
+class TestNormalizeApostropheVariants:
+    """Tests for the normalize_apostrophe_variants() function."""
+
+    def test_apostrophe_variants(self):
+        """Test normalization of apostrophe Unicode variants."""
+        assert normalize_apostrophe_variants("\u2019") == "'"  # RIGHT SINGLE QUOTATION MARK
+        assert normalize_apostrophe_variants("\u2018") == "'"  # LEFT SINGLE QUOTATION MARK
+        assert normalize_apostrophe_variants("\u02bc") == "'"  # MODIFIER LETTER APOSTROPHE
+
+    def test_mixed_text(self):
+        """Test normalization in realistic mixed text."""
+        assert normalize_apostrophe_variants("it\u2019s") == "it's"
+
+    def test_ascii_passthrough(self):
+        """Test that ASCII apostrophe is unchanged."""
+        assert normalize_apostrophe_variants("don't") == "don't"
+
+    def test_empty_string(self):
+        """Test empty string input."""
+        assert normalize_apostrophe_variants("") == ""
+
+    def test_function_attributes(self):
+        """Test that function has correct attributes."""
+        assert normalize_apostrophe_variants.token_only is False
+        assert normalize_apostrophe_variants.length_preserving is True
+
+
+class TestNormalizeHyphenVariants:
+    """Tests for the normalize_hyphen_variants() function."""
+
+    def test_hyphen_variants(self):
+        """Test normalization of hyphen/dash Unicode variants."""
+        assert normalize_hyphen_variants("\u2013") == "-"  # EN DASH
+        assert normalize_hyphen_variants("\u2014") == "-"  # EM DASH
+        assert normalize_hyphen_variants("\u2010") == "-"  # HYPHEN
+
+    def test_mixed_text(self):
+        """Test normalization in realistic mixed text."""
+        assert normalize_hyphen_variants("state\u2013of\u2013the\u2013art") == "state-of-the-art"
+
+    def test_ascii_passthrough(self):
+        """Test that ASCII hyphen-minus is unchanged."""
+        assert normalize_hyphen_variants("state-of-the-art") == "state-of-the-art"
+
+    def test_empty_string(self):
+        """Test empty string input."""
+        assert normalize_hyphen_variants("") == ""
+
+    def test_function_attributes(self):
+        """Test that function has correct attributes."""
+        assert normalize_hyphen_variants.token_only is False
+        assert normalize_hyphen_variants.length_preserving is True
+
+
+class TestNormalizeSlashVariants:
+    """Tests for the normalize_slash_variants() function."""
+
+    def test_slash_variants(self):
+        """Test normalization of slash Unicode variants."""
+        assert normalize_slash_variants("\uff0f") == "/"  # FULLWIDTH SOLIDUS
+
+    def test_mixed_text(self):
+        """Test normalization in realistic mixed text."""
+        assert normalize_slash_variants("input\uff0foutput") == "input/output"
+
+    def test_ascii_passthrough(self):
+        """Test that ASCII solidus is unchanged."""
+        assert normalize_slash_variants("input/output") == "input/output"
+
+    def test_empty_string(self):
+        """Test empty string input."""
+        assert normalize_slash_variants("") == ""
+
+    def test_function_attributes(self):
+        """Test that function has correct attributes."""
+        assert normalize_slash_variants.token_only is False
+        assert normalize_slash_variants.length_preserving is True
 
 
 class TestNormalizer:

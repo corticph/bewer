@@ -1,11 +1,17 @@
 standardizers:
   default:
     bewer.preprocessing.normalization.nfc:
+    bewer.preprocessing.normalization.normalize_apostrophe_variants:
+    bewer.preprocessing.normalization.normalize_hyphen_variants:
+    bewer.preprocessing.normalization.normalize_slash_variants:
 
 tokenizers:
   default:
     bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
       split_on_escaped: "-/"
+  keyterms:
+    bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
+      split_on_escaped: "-/'"
   legacy:
     bewer.preprocessing.tokenization.whitespace_pattern:
 
