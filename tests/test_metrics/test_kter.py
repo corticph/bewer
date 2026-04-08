@@ -4,15 +4,15 @@ import pytest
 
 from bewer import Dataset
 from bewer.core.keyword import KeywordNotFoundWarning
-from bewer.metrics.kwer import KWER, KWER_
+from bewer.metrics.kter import KTER, KTER_
 
 
-class TestKWERExampleMetric:
-    """Tests for KWER_ (ExampleMetric) class."""
+class TestKTERExampleMetric:
+    """Tests for KTER_ (ExampleMetric) class."""
 
     @pytest.fixture
     def dataset_single_keyword_match(self):
-        """Dataset where a single-token keyword is correctly transcribed."""
+        """Dataset where a single-token key term is correctly transcribed."""
         dataset = Dataset()
         dataset.add(
             ref="the quick brown fox",
@@ -23,7 +23,7 @@ class TestKWERExampleMetric:
 
     @pytest.fixture
     def dataset_single_keyword_error(self):
-        """Dataset where a single-token keyword is incorrectly transcribed."""
+        """Dataset where a single-token key term is incorrectly transcribed."""
         dataset = Dataset()
         dataset.add(
             ref="the quick brown fox",
@@ -34,7 +34,7 @@ class TestKWERExampleMetric:
 
     @pytest.fixture
     def dataset_multi_token_keyword_match(self):
-        """Dataset where a multi-token keyword is correctly transcribed."""
+        """Dataset where a multi-token key term is correctly transcribed."""
         dataset = Dataset()
         dataset.add(
             ref="the quick brown fox",
@@ -45,7 +45,7 @@ class TestKWERExampleMetric:
 
     @pytest.fixture
     def dataset_multi_token_keyword_error(self):
-        """Dataset where a multi-token keyword is partially incorrectly transcribed."""
+        """Dataset where a multi-token key term is partially incorrectly transcribed."""
         dataset = Dataset()
         dataset.add(
             ref="the quick brown fox",
@@ -55,53 +55,53 @@ class TestKWERExampleMetric:
         return dataset
 
     def test_num_errors_perfect_match(self, dataset_single_keyword_match):
-        """Test num_errors is 0 when keyword is correctly transcribed."""
+        """Test num_errors is 0 when key term is correctly transcribed."""
         example = dataset_single_keyword_match[0]
-        kwer = example.metrics.kwer(vocab="animals")
-        assert kwer.num_errors == 0
+        kter = example.metrics.kter(vocab="animals")
+        assert kter.num_errors == 0
 
     def test_num_errors_single_keyword_error(self, dataset_single_keyword_error):
-        """Test num_errors is 1 when keyword is incorrectly transcribed."""
+        """Test num_errors is 1 when key term is incorrectly transcribed."""
         example = dataset_single_keyword_error[0]
-        kwer = example.metrics.kwer(vocab="animals")
-        assert kwer.num_errors == 1
+        kter = example.metrics.kter(vocab="animals")
+        assert kter.num_errors == 1
 
     def test_num_keywords_single(self, dataset_single_keyword_match):
-        """Test num_keywords counts keyword occurrences correctly."""
+        """Test num_keywords counts key term occurrences correctly."""
         example = dataset_single_keyword_match[0]
-        kwer = example.metrics.kwer(vocab="animals")
-        assert kwer.num_keywords == 1
+        kter = example.metrics.kter(vocab="animals")
+        assert kter.num_keywords == 1
 
     def test_value_perfect_match(self, dataset_single_keyword_match):
-        """Test KWER value is 0.0 for perfect keyword match."""
+        """Test KTER value is 0.0 for perfect key term match."""
         example = dataset_single_keyword_match[0]
-        kwer = example.metrics.kwer(vocab="animals")
-        assert kwer.value == 0.0
+        kter = example.metrics.kter(vocab="animals")
+        assert kter.value == 0.0
 
     def test_value_all_errors(self, dataset_single_keyword_error):
-        """Test KWER value is 1.0 when all keywords have errors."""
+        """Test KTER value is 1.0 when all key terms have errors."""
         example = dataset_single_keyword_error[0]
-        kwer = example.metrics.kwer(vocab="animals")
-        assert kwer.value == 1.0
+        kter = example.metrics.kter(vocab="animals")
+        assert kter.value == 1.0
 
     def test_multi_token_keyword_match(self, dataset_multi_token_keyword_match):
-        """Test that multi-token keywords are correctly identified as matching."""
+        """Test that multi-token key terms are correctly identified as matching."""
         example = dataset_multi_token_keyword_match[0]
-        kwer = example.metrics.kwer(vocab="phrases")
-        assert kwer.num_errors == 0
-        assert kwer.num_keywords == 1
-        assert kwer.value == 0.0
+        kter = example.metrics.kter(vocab="phrases")
+        assert kter.num_errors == 0
+        assert kter.num_keywords == 1
+        assert kter.value == 0.0
 
     def test_multi_token_keyword_error(self, dataset_multi_token_keyword_error):
-        """Test that multi-token keywords with partial errors are counted as errors."""
+        """Test that multi-token key terms with partial errors are counted as errors."""
         example = dataset_multi_token_keyword_error[0]
-        kwer = example.metrics.kwer(vocab="phrases")
-        assert kwer.num_errors == 1
-        assert kwer.num_keywords == 1
-        assert kwer.value == 1.0
+        kter = example.metrics.kter(vocab="phrases")
+        assert kter.num_errors == 1
+        assert kter.num_keywords == 1
+        assert kter.value == 1.0
 
     def test_multiple_keyword_occurrences(self):
-        """Test counting multiple occurrences of the same keyword."""
+        """Test counting multiple occurrences of the same key term."""
         dataset = Dataset()
         dataset.add(
             ref="the fox met another fox",
@@ -109,12 +109,12 @@ class TestKWERExampleMetric:
             keywords={"animals": ["fox"]},
         )
         example = dataset[0]
-        kwer = example.metrics.kwer(vocab="animals")
-        assert kwer.num_keywords == 2
-        assert kwer.num_errors == 1  # Only the second "fox" is wrong
+        kter = example.metrics.kter(vocab="animals")
+        assert kter.num_keywords == 2
+        assert kter.num_errors == 1  # Only the second "fox" is wrong
 
     def test_multiple_different_keywords(self):
-        """Test with multiple different keywords in the same vocabulary."""
+        """Test with multiple different key terms in the same vocabulary."""
         dataset = Dataset()
         dataset.add(
             ref="the quick brown fox",
@@ -122,13 +122,13 @@ class TestKWERExampleMetric:
             keywords={"terms": ["quick", "fox"]},
         )
         example = dataset[0]
-        kwer = example.metrics.kwer(vocab="terms")
-        assert kwer.num_keywords == 2
-        assert kwer.num_errors == 2
-        assert kwer.value == 1.0
+        kter = example.metrics.kter(vocab="terms")
+        assert kter.num_keywords == 2
+        assert kter.num_errors == 2
+        assert kter.value == 1.0
 
     def test_keyword_not_in_ref(self):
-        """Test that keywords not found in reference are not counted."""
+        """Test that key terms not found in reference are not counted."""
         dataset = Dataset()
         dataset.add(
             ref="hello world",
@@ -136,13 +136,13 @@ class TestKWERExampleMetric:
             keywords={"terms": ["missing"]},
         )
         example = dataset[0]
-        kwer = example.metrics.kwer(vocab="terms")
+        kter = example.metrics.kter(vocab="terms")
         with pytest.warns(KeywordNotFoundWarning):
-            assert kwer.num_keywords == 0
-        assert kwer.num_errors == 0
+            assert kter.num_keywords == 0
+        assert kter.num_errors == 0
 
     def test_no_keywords_returns_zero(self):
-        """Test value is 0 when there are no keywords to evaluate."""
+        """Test value is 0 when there are no key terms to evaluate."""
         dataset = Dataset()
         dataset.add(
             ref="hello world",
@@ -150,13 +150,13 @@ class TestKWERExampleMetric:
             keywords={"terms": ["missing"]},
         )
         example = dataset[0]
-        kwer = example.metrics.kwer(vocab="terms")
+        kter = example.metrics.kter(vocab="terms")
         with pytest.warns(KeywordNotFoundWarning):
-            assert kwer.value == 0.0
+            assert kter.value == 0.0
 
 
-class TestKWERNormalization:
-    """Tests for KWER with normalized=False."""
+class TestKTERNormalization:
+    """Tests for KTER with normalized=False."""
 
     def test_unnormalized_casing_mismatch(self):
         """Test that differing casing causes an error when normalized=False."""
@@ -166,8 +166,8 @@ class TestKWERNormalization:
             hyp="the fox jumps",
             keywords={"animals": ["Fox"]},
         )
-        kwer = dataset[0].metrics.kwer(vocab="animals", normalized=False)
-        assert kwer.num_errors == 1
+        kter = dataset[0].metrics.kter(vocab="animals", normalized=False)
+        assert kter.num_errors == 1
 
     def test_unnormalized_casing_match(self):
         """Test that matching casing is fine when normalized=False."""
@@ -177,16 +177,16 @@ class TestKWERNormalization:
             hyp="the FOX jumps",
             keywords={"animals": ["FOX"]},
         )
-        kwer = dataset[0].metrics.kwer(vocab="animals", normalized=False)
-        assert kwer.num_errors == 0
+        kter = dataset[0].metrics.kter(vocab="animals", normalized=False)
+        assert kter.num_errors == 0
 
 
-class TestKWERDatasetMetric:
-    """Tests for KWER (dataset-level Metric) class."""
+class TestKTERDatasetMetric:
+    """Tests for KTER (dataset-level Metric) class."""
 
     @pytest.fixture
     def keyword_dataset(self):
-        """Create a dataset with keywords across multiple examples."""
+        """Create a dataset with key terms across multiple examples."""
         dataset = Dataset()
         dataset.add(
             ref="the quick brown fox",
@@ -202,85 +202,85 @@ class TestKWERDatasetMetric:
 
     def test_num_errors_aggregates(self, keyword_dataset):
         """Test that dataset num_errors sums example-level errors."""
-        kwer = keyword_dataset.metrics.kwer(vocab="animals")
-        expected = sum(ex.metrics.kwer(vocab="animals").num_errors for ex in keyword_dataset)
-        assert kwer.num_errors == expected
+        kter = keyword_dataset.metrics.kter(vocab="animals")
+        expected = sum(ex.metrics.kter(vocab="animals").num_errors for ex in keyword_dataset)
+        assert kter.num_errors == expected
 
     def test_num_keywords_aggregates(self, keyword_dataset):
         """Test that dataset num_keywords sums example-level keyword counts."""
-        kwer = keyword_dataset.metrics.kwer(vocab="animals")
-        expected = sum(ex.metrics.kwer(vocab="animals").num_keywords for ex in keyword_dataset)
-        assert kwer.num_keywords == expected
+        kter = keyword_dataset.metrics.kter(vocab="animals")
+        expected = sum(ex.metrics.kter(vocab="animals").num_keywords for ex in keyword_dataset)
+        assert kter.num_keywords == expected
 
     def test_value_calculation(self, keyword_dataset):
-        """Test dataset-level KWER value calculation."""
-        kwer = keyword_dataset.metrics.kwer(vocab="animals")
-        # 1 error out of 2 keywords = 0.5
-        assert kwer.num_keywords == 2
-        assert kwer.num_errors == 1
-        assert kwer.value == 0.5
+        """Test dataset-level KTER value calculation."""
+        kter = keyword_dataset.metrics.kter(vocab="animals")
+        # 1 error out of 2 key terms = 0.5
+        assert kter.num_keywords == 2
+        assert kter.num_errors == 1
+        assert kter.value == 0.5
 
     def test_value_all_correct(self):
-        """Test KWER is 0.0 when all keywords match."""
+        """Test KTER is 0.0 when all key terms match."""
         dataset = Dataset()
         dataset.add(ref="hello world", hyp="hello world", keywords={"terms": ["hello"]})
         dataset.add(ref="foo bar", hyp="foo bar", keywords={"terms": ["foo"]})
-        kwer = dataset.metrics.kwer(vocab="terms")
-        assert kwer.value == 0.0
+        kter = dataset.metrics.kter(vocab="terms")
+        assert kter.value == 0.0
 
     def test_empty_dataset(self):
-        """Test KWER on empty dataset raises when vocab is not registered."""
+        """Test KTER on empty dataset raises when vocab is not registered."""
         dataset = Dataset()
         with pytest.raises(ValueError, match="not found in dataset keyword vocabularies"):
-            dataset.metrics.kwer(vocab="terms").value
+            dataset.metrics.kter(vocab="terms").value
 
 
-class TestKWERParameterValidation:
-    """Tests for KWER parameter validation."""
+class TestKTERParameterValidation:
+    """Tests for KTER parameter validation."""
 
     def test_missing_vocab_param_raises(self):
         """Test that omitting the required vocab parameter raises ValueError."""
         dataset = Dataset()
         dataset.add(ref="hello world", hyp="hello world", keywords={"terms": ["hello"]})
         with pytest.raises(ValueError, match="Missing required parameters"):
-            dataset.metrics.kwer()
+            dataset.metrics.kter()
 
     def test_invalid_vocab_raises(self):
         """Test that using a non-existent vocabulary raises ValueError."""
         dataset = Dataset()
         dataset.add(ref="hello world", hyp="hello world", keywords={"terms": ["hello"]})
         with pytest.raises(ValueError, match="not found in dataset keyword vocabularies"):
-            dataset.metrics.kwer(vocab="nonexistent").value
+            dataset.metrics.kter(vocab="nonexistent").value
 
     def test_vocab_param_type_validation(self):
         """Test that vocab parameter must be a string."""
         dataset = Dataset()
         dataset.add(ref="hello world", hyp="hello world", keywords={"terms": ["hello"]})
         with pytest.raises(TypeError, match="must be str"):
-            dataset.metrics.kwer(vocab=123)
+            dataset.metrics.kter(vocab=123)
 
 
-class TestKWERMetricAttributes:
-    """Tests for KWER metric attributes."""
+class TestKTERMetricAttributes:
+    """Tests for KTER metric attributes."""
 
     def test_short_name_base(self):
-        assert KWER.short_name_base == "KWER"
+        assert KTER.short_name_base == "KTER"
 
     def test_long_name_base(self):
-        assert KWER.long_name_base == "Keyword Error Rate"
+        assert KTER.long_name_base == "Key Term Error Rate"
 
     def test_description(self):
-        assert len(KWER.description) > 0
+        assert len(KTER.description) > 0
 
     def test_example_cls(self):
-        assert KWER.example_cls == KWER_
+        assert KTER.example_cls == KTER_
 
     def test_metric_values_main(self):
-        values = KWER.metric_values()
+        values = KTER.metric_values()
         assert values["main"] == "value"
 
     def test_metric_values_other(self):
-        values = KWER.metric_values()
+        values = KTER.metric_values()
         assert "num_errors" in values["other"]
         assert "num_keywords" in values["other"]
 
@@ -288,13 +288,25 @@ class TestKWERMetricAttributes:
         """Test that short_name includes the vocab parameter."""
         dataset = Dataset()
         dataset.add(ref="hello", hyp="hello", keywords={"terms": ["hello"]})
-        kwer = dataset.metrics.kwer(vocab="terms")
-        assert "vocab=terms" in kwer.short_name
+        kter = dataset.metrics.kter(vocab="terms")
+        assert "vocab=terms" in kter.short_name
 
     def test_factory_caching(self):
         """Test that same parameters return cached instance."""
         dataset = Dataset()
         dataset.add(ref="hello", hyp="hello", keywords={"terms": ["hello"]})
-        kwer1 = dataset.metrics.kwer(vocab="terms")
-        kwer2 = dataset.metrics.kwer(vocab="terms")
-        assert kwer1 is kwer2
+        kter1 = dataset.metrics.kter(vocab="terms")
+        kter2 = dataset.metrics.kter(vocab="terms")
+        assert kter1 is kter2
+
+
+class TestKTERSharesKTStats:
+    """Tests that KTER and KTR share the same _KTStats instance."""
+
+    def test_kter_and_ktr_share_kt_stats(self):
+        """Test that KTER and KTR with identical params use the same cached _KTStats instance."""
+        dataset = Dataset()
+        dataset.add(ref="the fox jumps", hyp="the fox jumps", keywords={"animals": ["fox"]})
+        kter = dataset.metrics.kter(vocab="animals")
+        ktr = dataset.metrics.ktr(vocab="animals")
+        assert kter._kt_stats is ktr._kt_stats

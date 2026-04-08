@@ -125,6 +125,7 @@ class Example:
         normalized: bool = True,
         add_capitalized: bool = False,
         allow_subsets: bool = True,
+        side: TextType = TextType.REF,
     ) -> list[slice]:
         if vocab not in self.keywords and vocab not in self.src._dynamic_keyword_vocabs:
             return []
@@ -136,19 +137,22 @@ class Example:
             add_capitalized,
             allow_subsets,
             vocab,
+            side,
         )
         if cache_key in self._cache_keyword_matches:
             return self._cache_keyword_matches[cache_key]
 
+        tokens = self.ref.tokens if side == TextType.REF else self.hyp.tokens
+
         matches = []
         if vocab in self.keywords:
             example_trie = self._get_keyword_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
-            matches += example_trie.find_in_tokens(self.ref.tokens, warn_missing=True)
+            matches += example_trie.find_in_tokens(tokens, warn_missing=(side == TextType.REF))
 
         if vocab in self.src._dynamic_keyword_vocabs:
             dataset_trie = self.src._get_keyword_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
             if dataset_trie is not None:
-                matches += dataset_trie.find_in_tokens(self.ref.tokens)
+                matches += dataset_trie.find_in_tokens(tokens)
 
         if matches:
             if allow_subsets:
