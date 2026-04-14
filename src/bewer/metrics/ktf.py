@@ -20,7 +20,7 @@ class KTF_(ExampleMetric):
         return (1 + beta_sq) * stats.num_tp / denominator
 
 
-@METRIC_REGISTRY.register("ktf", tokenizer="keyterms")
+@METRIC_REGISTRY.register("ktf", tokenizer="key_term")
 class KTF(Metric):
     short_name_base = "KTF"
     long_name_base = "Key Term F-Score"
@@ -55,10 +55,10 @@ class KTF(Metric):
             """Validate that the metric can be computed with the given parameters and source data."""
             if self.beta <= 0:
                 raise ValueError(f"beta must be positive, got {self.beta}.")
-            is_dynamic_vocab = self.vocab in self.metric.dataset._dynamic_keyword_vocabs
-            is_static_vocab = self.vocab in self.metric.dataset._static_keyword_vocabs
+            is_dynamic_vocab = self.vocab in self.metric.dataset._dynamic_key_term_vocabs
+            is_static_vocab = self.vocab in self.metric.dataset._static_key_term_vocabs
             if not is_dynamic_vocab and not is_static_vocab:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset keyword vocabularies.")
+                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @cached_property
     def _kt_stats(self):

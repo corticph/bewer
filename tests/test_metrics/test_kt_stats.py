@@ -16,7 +16,7 @@ class TestKTStatsExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         return dataset
 
@@ -27,7 +27,7 @@ class TestKTStatsExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the dog jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         return dataset
 
@@ -38,7 +38,7 @@ class TestKTStatsExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox fox jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         return dataset
 
@@ -109,12 +109,12 @@ class TestKTStatsDatasetMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         dataset.add(
             ref="the rabbit runs",
             hyp="the dog runs",
-            keywords={"animals": ["rabbit"]},
+            key_terms={"animals": ["rabbit"]},
         )
         return dataset
 
@@ -151,7 +151,7 @@ class TestKTStatsDatasetMetric:
     def test_empty_dataset(self):
         """Test _KTStats raises ValueError for unknown vocab."""
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found in dataset keyword vocabularies"):
+        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
             dataset.metrics._kt_stats(vocab="animals").num_tp
 
 
@@ -177,7 +177,7 @@ class TestKTStatsSharing:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         return dataset
 
@@ -209,7 +209,7 @@ class TestKTStatsSharing:
 
     def test_different_vocabs_different_instances(self, dataset):
         """Different vocab params produce different _KTStats instances."""
-        dataset.add_keyword_list("verbs", ["jumps"])
+        dataset.add_key_term_list("verbs", ["jumps"])
         ktr_animals = dataset.metrics.ktr(vocab="animals")
         ktr_verbs = dataset.metrics.ktr(vocab="verbs")
         assert ktr_animals._kt_stats is not ktr_verbs._kt_stats

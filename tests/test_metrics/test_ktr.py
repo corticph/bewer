@@ -16,7 +16,7 @@ class TestKTRExampleMetric:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetes",
-            keywords={"key_terms": ["diabetes"]},
+            key_terms={"key_terms": ["diabetes"]},
         )
         return dataset
 
@@ -27,7 +27,7 @@ class TestKTRExampleMetric:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
-            keywords={"key_terms": ["diabetes"]},
+            key_terms={"key_terms": ["diabetes"]},
         )
         return dataset
 
@@ -74,7 +74,7 @@ class TestKTRExampleMetric:
         dataset.add(
             ref="patient has diabetes and hypertension",
             hyp="patient has diabetes and hypotension",
-            keywords={"key_terms": ["diabetes", "hypertension"]},
+            key_terms={"key_terms": ["diabetes", "hypertension"]},
         )
         example = dataset[0]
         ktr = example.metrics.ktr(vocab="key_terms")
@@ -88,7 +88,7 @@ class TestKTRExampleMetric:
         dataset.add(
             ref="the quick brown fox",
             hyp="the quick brown fox",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         example = dataset[0]
         ktr = example.metrics.ktr(vocab="animals")
@@ -106,12 +106,12 @@ class TestKTRDatasetMetric:
         dataset.add(
             ref="patient has diabetes",
             hyp="patient has diabetes",
-            keywords={"key_terms": ["diabetes"]},
+            key_terms={"key_terms": ["diabetes"]},
         )
         dataset.add(
             ref="patient has asthma",
             hyp="patient has astma",
-            keywords={"key_terms": ["asthma"]},
+            key_terms={"key_terms": ["asthma"]},
         )
         return dataset
 
@@ -144,14 +144,14 @@ class TestKTRDatasetMetric:
     def test_empty_dataset(self):
         """Test KTR on empty dataset raises when vocab is not registered."""
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found in dataset keyword vocabularies"):
+        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
             dataset.metrics.ktr(vocab="key_terms").value
 
     def test_all_correct(self):
         """Test KTR is 1.0 when all key terms are correct."""
         dataset = Dataset()
-        dataset.add(ref="diabetes mellitus", hyp="diabetes mellitus", keywords={"key_terms": ["diabetes"]})
-        dataset.add(ref="acute asthma", hyp="acute asthma", keywords={"key_terms": ["asthma"]})
+        dataset.add(ref="diabetes mellitus", hyp="diabetes mellitus", key_terms={"key_terms": ["diabetes"]})
+        dataset.add(ref="acute asthma", hyp="acute asthma", key_terms={"key_terms": ["asthma"]})
         ktr = dataset.metrics.ktr(vocab="key_terms")
         assert ktr.value == 1.0
 

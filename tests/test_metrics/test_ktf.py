@@ -16,7 +16,7 @@ class TestKTFExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         return dataset
 
@@ -27,7 +27,7 @@ class TestKTFExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the dog jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         return dataset
 
@@ -38,7 +38,7 @@ class TestKTFExampleMetric:
         dataset.add(
             ref="fox and rabbit",
             hyp="fox and hamster",
-            keywords={"animals": ["fox", "rabbit"]},
+            key_terms={"animals": ["fox", "rabbit"]},
         )
         return dataset
 
@@ -49,7 +49,7 @@ class TestKTFExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox fox jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         return dataset
 
@@ -71,13 +71,13 @@ class TestKTFExampleMetric:
         dataset.add(
             ref="hello world",
             hyp="hello world",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
-        from bewer.core.keyword import KeywordNotFoundWarning
+        from bewer.core.key_term import KeyTermNotFoundWarning
 
         example = dataset[0]
         ktf = example.metrics.ktf(vocab="animals")
-        with pytest.warns(KeywordNotFoundWarning):
+        with pytest.warns(KeyTermNotFoundWarning):
             assert ktf.value == 0.0
 
     def test_partial_recall_full_precision(self, dataset_partial_recall):
@@ -130,20 +130,20 @@ class TestKTFDatasetMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         dataset.add(
             ref="the rabbit runs",
             hyp="the dog runs",
-            keywords={"animals": ["rabbit"]},
+            key_terms={"animals": ["rabbit"]},
         )
         return dataset
 
     def test_value_all_correct(self):
         """Test KTF = 1.0 when all key terms are correctly transcribed."""
         dataset = Dataset()
-        dataset.add(ref="the fox", hyp="the fox", keywords={"animals": ["fox"]})
-        dataset.add(ref="the rabbit", hyp="the rabbit", keywords={"animals": ["rabbit"]})
+        dataset.add(ref="the fox", hyp="the fox", key_terms={"animals": ["fox"]})
+        dataset.add(ref="the rabbit", hyp="the rabbit", key_terms={"animals": ["rabbit"]})
         ktf = dataset.metrics.ktf(vocab="animals")
         assert ktf.value == 1.0
 
@@ -156,7 +156,7 @@ class TestKTFDatasetMetric:
     def test_empty_dataset(self):
         """Test KTF raises ValueError for unknown vocab."""
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found in dataset keyword vocabularies"):
+        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
             dataset.metrics.ktf(vocab="animals").value
 
     def test_beta_affects_value(self, mixed_dataset):
@@ -191,6 +191,6 @@ class TestKTFMetricAttributes:
     def test_beta_in_short_name(self):
         """Test that beta parameter appears in the metric short name."""
         dataset = Dataset()
-        dataset.add(ref="the fox", hyp="the fox", keywords={"animals": ["fox"]})
+        dataset.add(ref="the fox", hyp="the fox", key_terms={"animals": ["fox"]})
         ktf = dataset.metrics.ktf(vocab="animals", beta=2.0)
         assert "beta=2.0" in ktf.short_name

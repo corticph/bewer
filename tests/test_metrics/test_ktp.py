@@ -16,7 +16,7 @@ class TestKTPExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         return dataset
 
@@ -27,7 +27,7 @@ class TestKTPExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the dog jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         return dataset
 
@@ -38,7 +38,7 @@ class TestKTPExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox fox jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         return dataset
 
@@ -90,7 +90,7 @@ class TestKTPExampleMetric:
         dataset.add(
             ref="patient has diabetes",
             hyp="patient has diabetes",
-            keywords={"medical": ["diabetes"]},
+            key_terms={"medical": ["diabetes"]},
         )
         ktp = dataset[0].metrics.ktp(vocab="medical")
         assert ktp.value == 1.0
@@ -107,12 +107,12 @@ class TestKTPDatasetMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            keywords={"animals": ["fox"]},
+            key_terms={"animals": ["fox"]},
         )
         dataset.add(
             ref="the rabbit runs",
             hyp="the rabbit rabbit runs",
-            keywords={"animals": ["rabbit"]},
+            key_terms={"animals": ["rabbit"]},
         )
         return dataset
 
@@ -139,15 +139,15 @@ class TestKTPDatasetMetric:
     def test_all_correct(self):
         """Test KTP = 1.0 when all transcriptions are correct."""
         dataset = Dataset()
-        dataset.add(ref="the fox", hyp="the fox", keywords={"animals": ["fox"]})
-        dataset.add(ref="the rabbit", hyp="the rabbit", keywords={"animals": ["rabbit"]})
+        dataset.add(ref="the fox", hyp="the fox", key_terms={"animals": ["fox"]})
+        dataset.add(ref="the rabbit", hyp="the rabbit", key_terms={"animals": ["rabbit"]})
         ktp = dataset.metrics.ktp(vocab="animals")
         assert ktp.value == 1.0
 
     def test_empty_dataset(self):
         """Test KTP raises ValueError for unknown vocab."""
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found in dataset keyword vocabularies"):
+        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
             dataset.metrics.ktp(vocab="animals").value
 
 

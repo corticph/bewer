@@ -18,12 +18,12 @@ class TestParameterizedMetrics:
         dataset.add(
             ref="hello world",
             hyp="hello world",
-            keywords={"medical_terms": ["hello"]},
+            key_terms={"medical_terms": ["hello"]},
         )
         dataset.add(
             ref="foo bar",
             hyp="foo baz",
-            keywords={"medical_terms": ["foo"]},
+            key_terms={"medical_terms": ["foo"]},
         )
         return dataset
 
@@ -122,7 +122,7 @@ class TestKeywordAggregatorRefactoring:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
-            keywords={"medical_terms": ["diabetes"]},
+            key_terms={"medical_terms": ["diabetes"]},
         )
         return dataset
 
@@ -159,7 +159,7 @@ class TestExampleMetricParamsAccess:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
-            keywords={"medical_terms": ["diabetes"]},
+            key_terms={"medical_terms": ["diabetes"]},
         )
         return dataset
 
@@ -266,7 +266,7 @@ class TestDeclarativeHyperparams:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
-            keywords={"medical_terms": ["diabetes"]},
+            key_terms={"medical_terms": ["diabetes"]},
         )
 
         # KeywordAggregator has cer_threshold with default 0.2
@@ -281,7 +281,7 @@ class TestDeclarativeHyperparams:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
-            keywords={"medical_terms": ["diabetes"]},
+            key_terms={"medical_terms": ["diabetes"]},
         )
 
         # Override cer_threshold
@@ -296,7 +296,7 @@ class TestDeclarativeHyperparams:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
-            keywords={"medical_terms": ["diabetes"]},
+            key_terms={"medical_terms": ["diabetes"]},
         )
 
         # Try to set unknown param
@@ -315,7 +315,7 @@ class TestDeclarativeHyperparams:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
-            keywords={"medical_terms": ["diabetes"]},
+            key_terms={"medical_terms": ["diabetes"]},
         )
 
         # Try to set wrong type
