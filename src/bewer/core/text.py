@@ -17,7 +17,7 @@ __all__ = ["Text", "TextType", "TokenList"]
 class TextType(str, Enum):
     REF = "ref"
     HYP = "hyp"
-    KEYWORD = "keyword"
+    KEY_TERM = "key_term"
 
 
 def _join_tokens(tokens: "TokenList", normalized: bool = True) -> str:
@@ -48,7 +48,7 @@ class Text:
         raw (str): The original text string.
         standardized (str): The standardized text string after applying the specified standardizer.
         src (Example): The source Example object that this text belongs to.
-        text_type (TextType): The type of the text (reference, hypothesis, or keyword).
+        text_type (TextType): The type of the text (reference, hypothesis, or key term).
     """
 
     def __init__(
@@ -60,9 +60,9 @@ class Text:
         """Initialize the Text object.
 
         Args:
-            raw: The original text string (reference, hypothesis, or keyword).
+            raw: The original text string (reference, hypothesis, or key term).
             src: Parent Example object. Can be set later via set_source().
-            text_type: The type of the text (REF, HYP, or KEYWORD).
+            text_type: The type of the text (REF, HYP, or KEY_TERM).
         """
         self._raw = raw
         self._text_type = text_type

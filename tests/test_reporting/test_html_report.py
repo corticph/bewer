@@ -309,32 +309,32 @@ class TestCustomReportSummary:
         assert "Examples" in result
 
 
-class TestKeywordIndicators:
-    """Tests for keyword indicators in HTML alignment rendering."""
+class TestKeyTermIndicators:
+    """Tests for key term indicators in HTML alignment rendering."""
 
     @pytest.fixture
-    def dataset_with_keywords(self):
-        """Create a dataset with keywords for testing HTML rendering."""
+    def dataset_with_key_terms(self):
+        """Create a dataset with key terms for testing HTML rendering."""
         from bewer.core.dataset import Dataset
 
         dataset = Dataset()
-        dataset.add("the quick brown fox", "the quick brown dog", keywords={"animals": ["fox"]})
+        dataset.add("the quick brown fox", "the quick brown dog", key_terms={"animals": ["fox"]})
         return dataset
 
-    def test_keyword_classes_rendered_in_html(self, dataset_with_keywords):
-        """Test that kw CSS classes appear in rendered HTML when keywords are present."""
-        result = render_report_html(dataset_with_keywords)
+    def test_key_term_classes_rendered_in_html(self, dataset_with_key_terms):
+        """Test that kw CSS classes appear in rendered HTML when key terms are present."""
+        result = render_report_html(dataset_with_key_terms)
         # Legend has one kw span, alignment content should add more
         assert result.count("kw kw-start") > 1
 
-    def test_no_keyword_classes_without_keywords(self, sample_dataset):
-        """Test that kw CSS classes do not appear in alignment content when no keywords are set."""
+    def test_no_key_term_classes_without_key_terms(self, sample_dataset):
+        """Test that kw CSS classes do not appear in alignment content when no key terms are set."""
         result = render_report_html(sample_dataset)
         # Only the legend kw span should be present
         assert result.count("kw kw-start") == 1
 
-    def test_overlapping_keywords_merge_into_run(self):
-        """Test that overlapping keywords merge into a single contiguous run."""
+    def test_overlapping_key_terms_merge_into_run(self):
+        """Test that overlapping key terms merge into a single contiguous run."""
         from bewer.core.dataset import Dataset
 
         dataset = Dataset()
@@ -342,14 +342,14 @@ class TestKeywordIndicators:
         dataset.add(
             "the quick brown fox jumps",
             "the quick brown dog jumps",
-            keywords={"overlapping": ["brown fox", "brown"]},
+            key_terms={"overlapping": ["brown fox", "brown"]},
         )
         result = render_report_html(dataset)
         # The merged run should have one kw-start at "brown" and kw-end at both brown and fox
         assert result.count("w-start") < result.count("kw-end")
 
-    def test_keyword_rendering_is_idempotent(self, dataset_with_keywords):
+    def test_key_term_rendering_is_idempotent(self, dataset_with_key_terms):
         """Test that rendering twice produces the same output."""
-        result1 = render_report_html(dataset_with_keywords)
-        result2 = render_report_html(dataset_with_keywords)
+        result1 = render_report_html(dataset_with_key_terms)
+        result2 = render_report_html(dataset_with_key_terms)
         assert result1 == result2

@@ -79,7 +79,7 @@ class TestTextType:
         """Test TextType enum values."""
         assert TextType.REF == "ref"
         assert TextType.HYP == "hyp"
-        assert TextType.KEYWORD == "keyword"
+        assert TextType.KEY_TERM == "key_term"
 
 
 class TestTextRepr:

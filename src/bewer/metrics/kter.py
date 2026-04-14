@@ -15,7 +15,7 @@ class KTER_(ExampleMetric):
         return self.parent_metric._kt_stats.get_example_metric(self.example).num_fn
 
     @metric_value
-    def num_keywords(self) -> int:
+    def num_key_terms(self) -> int:
         """Get the number of key terms in the reference text."""
         return self.parent_metric._kt_stats.get_example_metric(self.example).num_ref_terms
 
@@ -28,7 +28,7 @@ class KTER_(ExampleMetric):
         return stats.num_fn / stats.num_ref_terms
 
 
-@METRIC_REGISTRY.register("kter", tokenizer="keyterms")
+@METRIC_REGISTRY.register("kter", tokenizer="key_term")
 class KTER(Metric):
     short_name_base = "KTER"
     long_name_base = "Key Term Error Rate"
@@ -57,10 +57,10 @@ class KTER(Metric):
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""
-            is_dynamic_vocab = self.vocab in self.metric.dataset._dynamic_keyword_vocabs
-            is_static_vocab = self.vocab in self.metric.dataset._static_keyword_vocabs
+            is_dynamic_vocab = self.vocab in self.metric.dataset._dynamic_key_term_vocabs
+            is_static_vocab = self.vocab in self.metric.dataset._static_key_term_vocabs
             if not is_dynamic_vocab and not is_static_vocab:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset keyword vocabularies.")
+                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @cached_property
     def _kt_stats(self):
@@ -80,7 +80,7 @@ class KTER(Metric):
         return self._kt_stats.num_fn
 
     @metric_value
-    def num_keywords(self) -> int:
+    def num_key_terms(self) -> int:
         """Get the number of key terms in the reference texts."""
         return self._kt_stats.num_ref_terms
 

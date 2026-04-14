@@ -111,7 +111,7 @@ class _KeywordAggregator(ExampleMetric):
         relaxed_match_count = 0
         correct_terms = []
 
-        if "medical_terms" not in self.example.keywords:
+        if "medical_terms" not in self.example.key_terms:
             return dict(
                 cer_keyword=0.0,
                 total_distance=0.0,
@@ -123,7 +123,7 @@ class _KeywordAggregator(ExampleMetric):
             )
 
         ref = self.example.ref.joined(normalized=True)
-        medical_terms = [kw for kw in self.example.keywords["medical_terms"] if kw.joined(normalized=True) in ref]
+        medical_terms = [kw for kw in self.example.key_terms["medical_terms"] if kw.joined(normalized=True) in ref]
         max_n = max((len(term.tokens) for term in medical_terms), default=0)
         words = self.example.hyp.tokens.normalized
         ngram_matrix = [self._get_ngrams(words, n) for n in range(1, max_n + 1)]

@@ -28,7 +28,7 @@ class KTR_(ExampleMetric):
         return stats.num_tp / stats.num_ref_terms
 
 
-@METRIC_REGISTRY.register("ktr", tokenizer="keyterms")
+@METRIC_REGISTRY.register("ktr", tokenizer="key_term")
 class KTR(Metric):
     short_name_base = "KTR"
     long_name_base = "Key Term Recall"
@@ -57,10 +57,10 @@ class KTR(Metric):
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""
-            is_dynamic_vocab = self.vocab in self.metric.dataset._dynamic_keyword_vocabs
-            is_static_vocab = self.vocab in self.metric.dataset._static_keyword_vocabs
+            is_dynamic_vocab = self.vocab in self.metric.dataset._dynamic_key_term_vocabs
+            is_static_vocab = self.vocab in self.metric.dataset._static_key_term_vocabs
             if not is_dynamic_vocab and not is_static_vocab:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset keyword vocabularies.")
+                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @cached_property
     def _kt_stats(self):

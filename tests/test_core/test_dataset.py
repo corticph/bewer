@@ -64,10 +64,10 @@ class TestDatasetAdd:
         assert empty_dataset[0].index == 0
         assert empty_dataset[1].index == 1
 
-    def test_add_with_keywords(self, empty_dataset):
-        """Test adding example with keywords."""
-        empty_dataset.add("the quick brown fox", "the quick brown dog", keywords={"animals": ["fox"]})
-        assert "animals" in empty_dataset[0].keywords
+    def test_add_with_key_terms(self, empty_dataset):
+        """Test adding example with key terms."""
+        empty_dataset.add("the quick brown fox", "the quick brown dog", key_terms={"animals": ["fox"]})
+        assert "animals" in empty_dataset[0].key_terms
 
 
 class TestDatasetLoadPandas:
@@ -157,72 +157,72 @@ class TestDatasetLoadJsonl:
         finally:
             os.unlink(jsonl_path)
 
-    def test_load_jsonl_with_keyword_cols(self, empty_dataset):
-        """Test loading JSONL with keyword columns."""
+    def test_load_jsonl_with_key_term_cols(self, empty_dataset):
+        """Test loading JSONL with key term columns."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             f.write('{"ref": "the quick brown fox", "hyp": "the quick brown dog", "animals": ["fox"]}\n')
             jsonl_path = f.name
 
         try:
-            empty_dataset.load_jsonl(jsonl_path, keyword_cols=["animals"])
+            empty_dataset.load_jsonl(jsonl_path, key_term_cols=["animals"])
             assert len(empty_dataset) == 1
-            assert "animals" in empty_dataset[0].keywords
+            assert "animals" in empty_dataset[0].key_terms
         finally:
             os.unlink(jsonl_path)
 
 
-class TestDatasetAddKeywordFile:
-    """Tests for Dataset.add_keyword_file() method."""
+class TestDatasetAddKeyTermFile:
+    """Tests for Dataset.add_key_term_file() method."""
 
-    def test_add_keyword_file(self, empty_dataset):
-        """Test loading keywords from a file."""
+    def test_add_key_term_file(self, empty_dataset):
+        """Test loading key terms from a file."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("fox\nbrown\n")
-            keyword_path = f.name
+            key_term_path = f.name
 
         try:
-            empty_dataset.add_keyword_file("animals", keyword_path)
-            assert "animals" in empty_dataset._dynamic_keyword_vocabs
-            kw_raws = {kw.raw for kw in empty_dataset._dynamic_keyword_vocabs["animals"]}
-            assert "fox" in kw_raws
-            assert "brown" in kw_raws
+            empty_dataset.add_key_term_file("animals", key_term_path)
+            assert "animals" in empty_dataset._dynamic_key_term_vocabs
+            kt_raws = {kt.raw for kt in empty_dataset._dynamic_key_term_vocabs["animals"]}
+            assert "fox" in kt_raws
+            assert "brown" in kt_raws
         finally:
-            os.unlink(keyword_path)
+            os.unlink(key_term_path)
 
-    def test_add_keyword_file_not_found(self, empty_dataset):
+    def test_add_key_term_file_not_found(self, empty_dataset):
         """Test that nonexistent file raises FileNotFoundError."""
         with pytest.raises(FileNotFoundError, match="not found"):
-            empty_dataset.add_keyword_file("animals", "/nonexistent/path/keywords.txt")
+            empty_dataset.add_key_term_file("animals", "/nonexistent/path/key_terms.txt")
 
-    def test_add_keyword_file_matches_existing_examples(self, empty_dataset):
-        """Test that keywords from file are matched against existing examples."""
+    def test_add_key_term_file_matches_existing_examples(self, empty_dataset):
+        """Test that key terms from file are matched against existing examples."""
         empty_dataset.add("the quick brown fox", "the quick brown dog")
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("fox\n")
-            keyword_path = f.name
+            key_term_path = f.name
 
         try:
-            empty_dataset.add_keyword_file("animals", keyword_path)
-            assert "animals" in empty_dataset._dynamic_keyword_vocabs
-            matches = empty_dataset[0].get_keyword_matches(vocab="animals")
+            empty_dataset.add_key_term_file("animals", key_term_path)
+            assert "animals" in empty_dataset._dynamic_key_term_vocabs
+            matches = empty_dataset[0].get_key_term_matches(vocab="animals")
             assert len(matches) == 1
         finally:
-            os.unlink(keyword_path)
+            os.unlink(key_term_path)
 
 
-class TestDatasetAddKeywordListValidation:
-    """Tests for input validation in Dataset.add_keyword_list()."""
+class TestDatasetAddKeyTermListValidation:
+    """Tests for input validation in Dataset.add_key_term_list()."""
 
-    def test_add_keyword_list_string_raises(self, empty_dataset):
+    def test_add_key_term_list_string_raises(self, empty_dataset):
         """Test that passing a string raises TypeError."""
         with pytest.raises(TypeError, match="must be an iterable"):
-            empty_dataset.add_keyword_list("test", "not_a_list")
+            empty_dataset.add_key_term_list("test", "not_a_list")
 
-    def test_add_keyword_list_non_iterable_raises(self, empty_dataset):
+    def test_add_key_term_list_non_iterable_raises(self, empty_dataset):
         """Test that passing a non-iterable raises TypeError."""
         with pytest.raises(TypeError, match="must be an iterable"):
-            empty_dataset.add_keyword_list("test", 42)
+            empty_dataset.add_key_term_list("test", 42)
 
 
 class TestDatasetRefsHyps:

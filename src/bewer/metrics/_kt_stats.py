@@ -20,7 +20,7 @@ class _KTStats_(ExampleMetric):
         ).alignment
 
     def _get_ref_matches(self) -> list[slice]:
-        return self.example.get_keyword_matches(
+        return self.example.get_key_term_matches(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subsets=self.params.allow_subsets,
@@ -28,7 +28,7 @@ class _KTStats_(ExampleMetric):
         )
 
     def _get_hyp_matches(self) -> list[slice]:
-        return self.example.get_keyword_matches(
+        return self.example.get_key_term_matches(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subsets=self.params.allow_subsets,
@@ -48,14 +48,14 @@ class _KTStats_(ExampleMetric):
     @metric_value
     def num_tp(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis text."""
-        keyword_matches = self._get_ref_matches()
-        if not keyword_matches:
+        key_term_matches = self._get_ref_matches()
+        if not key_term_matches:
             return 0
         alignment = self._get_alignment()
         num_matches = 0
-        for keyword_match in keyword_matches:
-            start = alignment.ref_index_mapping.get(keyword_match.start)
-            stop = alignment.ref_index_mapping.get(keyword_match.stop - 1) + 1
+        for key_term_match in key_term_matches:
+            start = alignment.ref_index_mapping.get(key_term_match.start)
+            stop = alignment.ref_index_mapping.get(key_term_match.stop - 1) + 1
             is_match = all(alignment[index].type == OpType.MATCH for index in range(start, stop))
             if is_match:
                 num_matches += 1
@@ -72,7 +72,7 @@ class _KTStats_(ExampleMetric):
         return self.num_hyp_terms - self.num_tp
 
 
-@METRIC_REGISTRY.register("_kt_stats", tokenizer="keyterms")
+@METRIC_REGISTRY.register("_kt_stats", tokenizer="key_term")
 class _KTStats(Metric):
     short_name_base = "_KTStats"
     long_name_base = "Key Term Statistics"
@@ -98,10 +98,10 @@ class _KTStats(Metric):
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""
-            is_dynamic_vocab = self.vocab in self.metric.dataset._dynamic_keyword_vocabs
-            is_static_vocab = self.vocab in self.metric.dataset._static_keyword_vocabs
+            is_dynamic_vocab = self.vocab in self.metric.dataset._dynamic_key_term_vocabs
+            is_static_vocab = self.vocab in self.metric.dataset._static_key_term_vocabs
             if not is_dynamic_vocab and not is_static_vocab:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset keyword vocabularies.")
+                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @metric_value
     def num_ref_terms(self) -> int:

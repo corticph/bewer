@@ -5,7 +5,7 @@ from bewer import metrics as metrics
 from bewer import preprocessing as preprocessing
 from bewer import reporting as reporting
 from bewer.core.dataset import Dataset
-from bewer.core.keyword import KeywordNotFoundWarning
+from bewer.core.key_term import KeyTermNotFoundWarning
 
 try:
     __version__ = version("bewer")
@@ -14,7 +14,7 @@ except PackageNotFoundError:
 
 __all__ = [
     "Dataset",
-    "KeywordNotFoundWarning",
+    "KeyTermNotFoundWarning",
     "core",
     "metrics",
     "preprocessing",
