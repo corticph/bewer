@@ -6,6 +6,7 @@ from bewer.metrics.base import (
     METRIC_REGISTRY,
     Metric,
     MetricRegistry,
+    dependency,
     list_registered_metrics,
 )
 
@@ -36,6 +37,126 @@ class TestMetricValueDecorator:
         metric_values = WER.metric_values()
         assert "num_edits" in metric_values["other"]
         assert "ref_length" in metric_values["other"]
+
+
+class TestDependencyDecorator:
+    """Tests for the dependency decorator."""
+
+    def test_dependency_registered_on_class(self):
+        """Test that @dependency registers the property name in _dependencies."""
+
+        class DummyMetric(Metric):
+            short_name_base = "TEST"
+            long_name_base = "Test Metric"
+            description = "Test"
+
+            @dependency
+            def _dep_a(self):
+                pass
+
+            @dependency
+            def _dep_b(self):
+                pass
+
+        assert DummyMetric.dependencies() == ["_dep_a", "_dep_b"]
+
+    def test_dependency_order_preserved(self):
+        """Test that definition order is preserved (no set shuffling)."""
+
+        class DummyMetric(Metric):
+            short_name_base = "TEST"
+            long_name_base = "Test Metric"
+            description = "Test"
+
+            @dependency
+            def _z(self):
+                pass
+
+            @dependency
+            def _a(self):
+                pass
+
+            @dependency
+            def _m(self):
+                pass
+
+        assert DummyMetric.dependencies() == ["_z", "_a", "_m"]
+
+    def test_dependency_inherited(self):
+        """Test that dependencies are collected from base classes via MRO."""
+
+        class BaseMetric(Metric):
+            short_name_base = "BASE"
+            long_name_base = "Base Metric"
+            description = "Base"
+
+            @dependency
+            def _base_dep(self):
+                pass
+
+        class ChildMetric(BaseMetric):
+            short_name_base = "CHILD"
+            long_name_base = "Child Metric"
+            description = "Child"
+
+            @dependency
+            def _child_dep(self):
+                pass
+
+        assert "_base_dep" in ChildMetric.dependencies()
+        assert "_child_dep" in ChildMetric.dependencies()
+
+    def test_dependency_no_duplicates(self):
+        """Test that a dependency name appearing in multiple bases is deduplicated."""
+
+        class BaseMixin(Metric):
+            short_name_base = "MIX"
+            long_name_base = "Mixin"
+            description = "Mixin"
+
+            @dependency
+            def _shared(self):
+                pass
+
+        class ChildMetric(BaseMixin):
+            short_name_base = "CHILD"
+            long_name_base = "Child"
+            description = "Child"
+
+            @dependency
+            def _shared(self):
+                pass
+
+        deps = ChildMetric.dependencies()
+        assert deps.count("_shared") == 1
+
+    def test_dependency_caches_result(self):
+        """Test that @dependency caches like cached_property."""
+        call_count = 0
+
+        class DummyMetric(Metric):
+            short_name_base = "TEST"
+            long_name_base = "Test Metric"
+            description = "Test"
+
+            @dependency
+            def _dep(self):
+                nonlocal call_count
+                call_count += 1
+                return object()
+
+        m = DummyMetric.__new__(DummyMetric)
+        m.__dict__.clear()
+        result1 = DummyMetric._dep.__get__(m, DummyMetric)
+        result2 = DummyMetric._dep.__get__(m, DummyMetric)
+        assert result1 is result2
+        assert call_count == 1
+
+    def test_ktp_has_kt_stats_dependency(self):
+        """Test that KTP registers _kt_stats as a dependency."""
+        from bewer.metrics.ktp import KTP
+
+        assert "_kt_stats" in KTP.dependencies()
 
 
 class TestMetricRegistry:
