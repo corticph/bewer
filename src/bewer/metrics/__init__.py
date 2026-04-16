@@ -4,6 +4,7 @@ from bewer.metrics.base import (
     ExampleMetric,
     Metric,
     MetricParams,
+    dependency,
     list_registered_metrics,
     metric_value,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "ExampleMetric",
     "MetricParams",
     "metric_value",
+    "dependency",
     "WER",
     "CER",
     "KTF",

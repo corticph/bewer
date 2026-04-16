@@ -20,6 +20,7 @@ __all__ = [
     "ExampleMetric",
     "MetricParams",
     "metric_value",
+    "dependency",
     "METRIC_REGISTRY",
     "MetricRegistry",
     "list_registered_metrics",
@@ -71,6 +72,34 @@ class metric_value(cached_property):
 
         obj.__dict__[name] = value
         return value
+
+
+class dependency(cached_property):
+    """Cached property that marks a borrowed metric dependency.
+
+    Use in place of @cached_property when the property retrieves another
+    metric instance from the dataset's metric collection. Behaves identically
+    to cached_property at runtime, but registers the property name in
+    _dependencies on the class for introspection.
+    """
+
+    def __set_name__(self, owner: type, name: str):
+        super().__set_name__(owner, name)
+        deps = owner.__dict__.get("_dependencies")
+        if deps is None:
+            owner._dependencies = []
+            deps = owner._dependencies
+        deps.append(name)
+
+
+def _get_dependencies(cls) -> list[str]:
+    """Get dependency metric names defined in the class and its bases."""
+    deps = []
+    for base in reversed(cls.__mro__):
+        _deps = base.__dict__.get("_dependencies")
+        if _deps:
+            deps.extend(_deps)
+    return list(set(deps))
 
 
 def _get_metric_values(cls) -> dict[str, Union[str, list[str]]]:
@@ -260,6 +289,11 @@ class Metric(ABC):
         return _get_metric_values(cls)
 
     @classmethod
+    def dependencies(cls) -> list[str]:
+        """Get the dependency metric names defined in the class and its bases."""
+        return _get_dependencies(cls)
+
+    @classmethod
     def _get_row_values(cls) -> tuple[str, str, str] | None:
         """Get the table row values for the main and example metric."""
         metric_row_values = _get_metric_table_row_values(cls)
@@ -367,6 +401,11 @@ class ExampleMetric(ABC):
     def metric_values(cls) -> dict[str, Union[str, list[str]]]:
         """Get the metric values defined in the class and its bases."""
         return _get_metric_values(cls)
+
+    @classmethod
+    def dependencies(cls) -> list[str]:
+        """Get the dependency metric names defined in the class and its bases."""
+        return _get_dependencies(cls)
 
 
 class MetricCollection(object):

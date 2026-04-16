@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import cached_property
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, dependency, metric_value
 
 __all__ = ["KTF"]
 
@@ -60,7 +59,7 @@ class KTF(Metric):
             if not is_dynamic_vocab and not is_static_vocab:
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
-    @cached_property
+    @dependency
     def _kt_stats(self):
         """Get the shared _KTStats metric instance."""
         return self.dataset.metrics._kt_stats(
