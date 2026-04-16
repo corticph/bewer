@@ -99,7 +99,7 @@ def _get_dependencies(cls) -> list[str]:
         _deps = base.__dict__.get("_dependencies")
         if _deps:
             deps.extend(_deps)
-    return list(set(deps))
+    return list(dict.fromkeys(deps))
 
 
 def _get_metric_values(cls) -> dict[str, Union[str, list[str]]]:
@@ -111,7 +111,7 @@ def _get_metric_values(cls) -> dict[str, Union[str, list[str]]]:
         if _metric_values:
             main_value = _metric_values["main"] or main_value
             other_values.extend(_metric_values["other"])
-    metric_values = {"main": main_value, "other": list(set(other_values))}
+    metric_values = {"main": main_value, "other": list(dict.fromkeys(other_values))}
     return metric_values
 
 
