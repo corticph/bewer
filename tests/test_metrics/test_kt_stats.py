@@ -161,6 +161,32 @@ class TestKTStatsAlignmentAttributes:
         for seg in stats.tp_alignments + stats.fn_alignments + stats.fp_alignments:
             assert isinstance(seg, Alignment)
 
+    def test_fp_subset_match_excluded(self):
+        """Correctly transcribed subset hyp match is neither TP nor FP when allow_subsets=False."""
+        dataset = Dataset()
+        dataset.add(
+            ref="hello world",
+            hyp="hollow world",
+            key_terms={"vocab": ["hello world", "world"]},
+        )
+        stats = dataset[0].metrics._kt_stats(vocab="vocab", allow_subsets=False)
+        assert stats.fp_alignments == []
+        assert stats.num_fp == 0
+        assert stats.num_fn == 1
+
+    def test_fp_simultaneous_fn_and_fp(self):
+        """A key term substituted for another key term produces both an FN and an FP."""
+        dataset = Dataset()
+        dataset.add(
+            ref="world",
+            hyp="wall",
+            key_terms={"vocab": ["world", "wall"]},
+        )
+        stats = dataset[0].metrics._kt_stats(vocab="vocab")
+        assert len(stats.fn_alignments) == 1
+        assert len(stats.fp_alignments) == 1
+        assert stats.fn_alignments[0] == stats.fp_alignments[0]
+
 
 class TestKTStatsDatasetMetric:
     """Tests for _KTStats (dataset-level Metric) class."""
