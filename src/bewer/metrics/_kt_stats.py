@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.alignment import OpType
+from bewer.alignment import Alignment
 from bewer.core.example import TextType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
@@ -36,6 +36,25 @@ class _KTStats_(ExampleMetric):
         )
 
     @metric_value
+    def _ref_match_classification(self) -> dict[str, list[Alignment]]:
+        """Partition ref key term matches into tp and fn alignment segments."""
+        key_term_matches = self._get_ref_matches()
+        if not key_term_matches:
+            return {"tp": [], "fn": []}
+        alignment = self._get_alignment()
+        tp: list[Alignment] = []
+        fn: list[Alignment] = []
+        for kt_match in key_term_matches:
+            op_start = alignment.ref_index_mapping.get(kt_match.start)
+            op_stop = alignment.ref_index_mapping.get(kt_match.stop - 1) + 1
+            segment: Alignment = alignment[op_start:op_stop]
+            if segment.num_edits == 0:
+                tp.append(segment)
+            else:
+                fn.append(segment)
+        return {"tp": tp, "fn": fn}
+
+    @metric_value
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
         return len(self._get_ref_matches())
@@ -46,30 +65,50 @@ class _KTStats_(ExampleMetric):
         return len(self._get_hyp_matches())
 
     @metric_value
+    def tp_alignments(self) -> list[Alignment]:
+        """Get alignment segments for each correctly transcribed key term (TP)."""
+        return self._ref_match_classification["tp"]
+
+    @metric_value
+    def fn_alignments(self) -> list[Alignment]:
+        """Get alignment segments for each missed key term (FN)."""
+        return self._ref_match_classification["fn"]
+
+    @metric_value
+    def fp_alignments(self) -> list[Alignment]:
+        """Get alignment segments for each spurious key term in the hypothesis (FP).
+
+        A hyp key term match is a FP if not all of its alignment ops are MATCH.
+        All-MATCH hyp matches were correctly transcribed and are excluded, whether
+        or not they correspond to a ref key term (mirroring _ref_match_classification).
+        """
+        hyp_matches = self._get_hyp_matches()
+        if not hyp_matches:
+            return []
+        alignment = self._get_alignment()
+        result: list[Alignment] = []
+        for hyp_match in hyp_matches:
+            op_start = alignment.hyp_index_mapping[hyp_match.start]
+            op_stop = alignment.hyp_index_mapping[hyp_match.stop - 1] + 1
+            segment: Alignment = alignment[op_start:op_stop]
+            if segment.num_edits > 0:
+                result.append(segment)
+        return result
+
+    @metric_value
     def num_tp(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis text."""
-        key_term_matches = self._get_ref_matches()
-        if not key_term_matches:
-            return 0
-        alignment = self._get_alignment()
-        num_matches = 0
-        for key_term_match in key_term_matches:
-            start = alignment.ref_index_mapping.get(key_term_match.start)
-            stop = alignment.ref_index_mapping.get(key_term_match.stop - 1) + 1
-            is_match = all(alignment[index].type == OpType.MATCH for index in range(start, stop))
-            if is_match:
-                num_matches += 1
-        return num_matches
+        return len(self.tp_alignments)
 
     @metric_value
     def num_fn(self) -> int:
         """Get the number of key terms missed in the hypothesis text."""
-        return self.num_ref_terms - self.num_tp
+        return len(self.fn_alignments)
 
     @metric_value
     def num_fp(self) -> int:
         """Get the number of key terms in the hypothesis text that are not in the reference text."""
-        return self.num_hyp_terms - self.num_tp
+        return len(self.fp_alignments)
 
 
 @METRIC_REGISTRY.register("_kt_stats", tokenizer="key_term")
@@ -78,7 +117,13 @@ class _KTStats(Metric):
     long_name_base = "Key Term Statistics"
     description = (
         "Private metric that computes shared key term statistics (num_ref_terms, num_hyp_terms, TP, FN, FP) "
-        "used by KTR, KTER, KTP, and KTF. Not intended for direct use."
+        "used by KTR, KTER, KTP, and KTF. Not intended for direct use. "
+        "Note: the TP/FP/FN categories are practical approximations that do not map directly to their binary "
+        "classification counterparts. A span where one key term is substituted for another is simultaneously an FN "
+        "(missed ref term) and an FP (spurious hyp term). "
+        "Conversely, a correctly transcribed hyp key term may count as neither TP nor FP when allow_subsets=False "
+        "and the ref matches a longer superset phrase (e.g. ref matches 'hello world' but hyp only matches "
+        "the subset 'world')."
     )
     example_cls = _KTStats_
 

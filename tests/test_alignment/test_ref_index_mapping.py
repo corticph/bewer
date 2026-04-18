@@ -52,6 +52,51 @@ class TestRefIndexMapping:
         assert alignment.ref_index_mapping == {}
 
 
+class TestHypIndexMapping:
+    """Tests for hyp_index_mapping cached property."""
+
+    def test_mapping_with_all_hyp_tokens(self):
+        ops = [
+            Op(type=OpType.MATCH, ref="hello", hyp="hello", ref_token_idx=0, hyp_token_idx=0),
+            Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=1, hyp_token_idx=1),
+        ]
+        alignment = Alignment(ops)
+        assert alignment.hyp_index_mapping == {0: 0, 1: 1}
+
+    def test_mapping_skips_deletions(self):
+        """DELETE ops have no hyp_token_idx and should be excluded."""
+        ops = [
+            Op(type=OpType.MATCH, ref="hello", hyp="hello", ref_token_idx=0, hyp_token_idx=0),
+            Op(type=OpType.DELETE, ref="extra", hyp=None, ref_token_idx=1),
+            Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=2, hyp_token_idx=1),
+        ]
+        alignment = Alignment(ops)
+        assert alignment.hyp_index_mapping == {0: 0, 1: 2}
+
+    def test_mapping_includes_insertions(self):
+        """INSERT ops have hyp_token_idx but no ref_token_idx and should be included."""
+        ops = [
+            Op(type=OpType.MATCH, ref="hello", hyp="hello", ref_token_idx=0, hyp_token_idx=0),
+            Op(type=OpType.INSERT, ref=None, hyp="extra", hyp_token_idx=1),
+            Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=1, hyp_token_idx=2),
+        ]
+        alignment = Alignment(ops)
+        assert alignment.hyp_index_mapping == {0: 0, 1: 1, 2: 2}
+
+    def test_mapping_empty_alignment(self):
+        alignment = Alignment()
+        assert alignment.hyp_index_mapping == {}
+
+    def test_mapping_no_hyp_token_idx(self):
+        """Alignments without hyp_token_idx set (e.g. error-align) return empty dict."""
+        ops = [
+            Op(type=OpType.MATCH, ref="hello", hyp="hello"),
+            Op(type=OpType.MATCH, ref="world", hyp="world"),
+        ]
+        alignment = Alignment(ops)
+        assert alignment.hyp_index_mapping == {}
+
+
 class TestOpsFromRefIndex:
     """Tests for ops_from_ref_index method."""
 
