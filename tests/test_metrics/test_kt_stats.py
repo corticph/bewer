@@ -3,6 +3,7 @@
 import pytest
 
 from bewer import Dataset
+from bewer.alignment import Alignment, OpType
 from bewer.metrics.base import METRIC_REGISTRY
 
 
@@ -97,6 +98,94 @@ class TestKTStatsExampleMetric:
         """Test invariant holds when key term is missed."""
         stats = dataset_error[0].metrics._kt_stats(vocab="animals")
         assert stats.num_tp + stats.num_fn == stats.num_ref_terms
+
+
+class TestKTStatsAlignmentAttributes:
+    """Tests for tp_alignments, fn_alignments, fp_alignments on _KTStats_."""
+
+    @pytest.fixture
+    def dataset_correct(self):
+        dataset = Dataset()
+        dataset.add(ref="the fox jumps", hyp="the fox jumps", key_terms={"animals": ["fox"]})
+        return dataset
+
+    @pytest.fixture
+    def dataset_error(self):
+        dataset = Dataset()
+        dataset.add(ref="the fox jumps", hyp="the dog jumps", key_terms={"animals": ["fox"]})
+        return dataset
+
+    @pytest.fixture
+    def dataset_fp(self):
+        dataset = Dataset()
+        dataset.add(ref="the fox jumps", hyp="the fox fox jumps", key_terms={"animals": ["fox"]})
+        return dataset
+
+    def test_tp_alignments_correct(self, dataset_correct):
+        stats = dataset_correct[0].metrics._kt_stats(vocab="animals")
+        assert len(stats.tp_alignments) == 1
+        assert all(op.type == OpType.MATCH for op in stats.tp_alignments[0])
+
+    def test_fn_alignments_correct(self, dataset_correct):
+        stats = dataset_correct[0].metrics._kt_stats(vocab="animals")
+        assert stats.fn_alignments == []
+
+    def test_fp_alignments_correct(self, dataset_correct):
+        stats = dataset_correct[0].metrics._kt_stats(vocab="animals")
+        assert stats.fp_alignments == []
+
+    def test_tp_alignments_error(self, dataset_error):
+        stats = dataset_error[0].metrics._kt_stats(vocab="animals")
+        assert stats.tp_alignments == []
+
+    def test_fn_alignments_error(self, dataset_error):
+        stats = dataset_error[0].metrics._kt_stats(vocab="animals")
+        assert len(stats.fn_alignments) == 1
+        op_types = {op.type for op in stats.fn_alignments[0]}
+        assert OpType.SUBSTITUTE in op_types
+
+    def test_fp_alignments_fp_case(self, dataset_fp):
+        stats = dataset_fp[0].metrics._kt_stats(vocab="animals")
+        assert len(stats.tp_alignments) == 1
+        assert len(stats.fp_alignments) == 1
+
+    def test_count_invariants(self, dataset_correct, dataset_error, dataset_fp):
+        for dataset in (dataset_correct, dataset_error, dataset_fp):
+            stats = dataset[0].metrics._kt_stats(vocab="animals")
+            assert len(stats.tp_alignments) == stats.num_tp
+            assert len(stats.fn_alignments) == stats.num_fn
+            assert len(stats.fp_alignments) == stats.num_fp
+
+    def test_return_types(self, dataset_fp):
+        stats = dataset_fp[0].metrics._kt_stats(vocab="animals")
+        for seg in stats.tp_alignments + stats.fn_alignments + stats.fp_alignments:
+            assert isinstance(seg, Alignment)
+
+    def test_fp_subset_match_excluded(self):
+        """Correctly transcribed subset hyp match is neither TP nor FP when allow_subsets=False."""
+        dataset = Dataset()
+        dataset.add(
+            ref="hello world",
+            hyp="hollow world",
+            key_terms={"vocab": ["hello world", "world"]},
+        )
+        stats = dataset[0].metrics._kt_stats(vocab="vocab", allow_subsets=False)
+        assert stats.fp_alignments == []
+        assert stats.num_fp == 0
+        assert stats.num_fn == 1
+
+    def test_fp_simultaneous_fn_and_fp(self):
+        """A key term substituted for another key term produces both an FN and an FP."""
+        dataset = Dataset()
+        dataset.add(
+            ref="world",
+            hyp="wall",
+            key_terms={"vocab": ["world", "wall"]},
+        )
+        stats = dataset[0].metrics._kt_stats(vocab="vocab")
+        assert len(stats.fn_alignments) == 1
+        assert len(stats.fp_alignments) == 1
+        assert stats.fn_alignments[0] == stats.fp_alignments[0]
 
 
 class TestKTStatsDatasetMetric:

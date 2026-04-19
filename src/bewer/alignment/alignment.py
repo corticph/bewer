@@ -108,6 +108,19 @@ class Alignment(tuple["Op", ...]):
                 mapping[op.ref_token_idx] = i
         return mapping
 
+    @cached_property
+    def hyp_index_mapping(self) -> dict[int, int]:
+        """Create a mapping from hypothesis token index to operation index for quick lookup.
+
+        Requires a token-indexed alignment (word-level Levenshtein). Returns an empty dict
+        for character-level or error-align style alignments where hyp_token_idx is not set.
+        """
+        mapping = {}
+        for i, op in enumerate(self):
+            if op.hyp_token_idx is not None:
+                mapping[op.hyp_token_idx] = i
+        return mapping
+
     def ops_from_ref_index(self, start: int, stop: Optional[int] = None) -> Alignment:
         """Get the ops that correspond to the given reference token index or slice.
 

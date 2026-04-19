@@ -4,10 +4,12 @@ import pytest
 
 from bewer.metrics.base import (
     METRIC_REGISTRY,
+    ExampleMetric,
     Metric,
     MetricRegistry,
     dependency,
     list_registered_metrics,
+    metric_value,
 )
 
 
@@ -37,6 +39,77 @@ class TestMetricValueDecorator:
         metric_values = WER.metric_values()
         assert "num_edits" in metric_values["other"]
         assert "ref_length" in metric_values["other"]
+
+    def test_underscore_name_excluded_by_default(self):
+        """Underscore-named metric_value is excluded from metric_values()['other'] by default."""
+
+        class DummyMetric(ExampleMetric):
+            @metric_value
+            def public_val(self):
+                return 1
+
+            @metric_value
+            def _private_val(self):
+                return 2
+
+        mv = DummyMetric.metric_values()
+        assert "public_val" in mv["other"]
+        assert "_private_val" not in mv["other"]
+        assert "_private_val" not in (mv.get("private") or [])
+
+    def test_underscore_name_appears_with_include_private(self):
+        """Underscore-named metric_value is included when include_private=True."""
+
+        class DummyMetric(ExampleMetric):
+            @metric_value
+            def public_val(self):
+                return 1
+
+            @metric_value
+            def _private_val(self):
+                return 2
+
+        mv = DummyMetric.metric_values(include_private=True)
+        assert "_private_val" in mv["private"]
+        assert "public_val" in mv["other"]
+
+    def test_explicit_private_false_overrides_underscore(self):
+        """@metric_value(private=False) on an underscore name forces it into 'other'."""
+
+        class DummyMetric(ExampleMetric):
+            @metric_value(private=False)
+            def _not_actually_private(self):
+                return 1
+
+        mv = DummyMetric.metric_values()
+        assert "_not_actually_private" in mv["other"]
+
+    def test_explicit_private_true_on_public_name(self):
+        """@metric_value(private=True) on a public name routes it to 'private'."""
+
+        class DummyMetric(ExampleMetric):
+            @metric_value(private=True)
+            def hidden_val(self):
+                return 1
+
+        mv = DummyMetric.metric_values()
+        assert "hidden_val" not in mv["other"]
+        mv_full = DummyMetric.metric_values(include_private=True)
+        assert "hidden_val" in mv_full["private"]
+
+    def test_private_values_deduplicated_across_mro(self):
+        """Private metric values are deduplicated when inherited across multiple bases."""
+
+        class Base(ExampleMetric):
+            @metric_value
+            def _shared(self):
+                return 1
+
+        class Child(Base):
+            pass
+
+        mv = Child.metric_values(include_private=True)
+        assert mv["private"].count("_shared") == 1
 
 
 class TestDependencyDecorator:

@@ -30,8 +30,9 @@ __all__ = [
 
 
 class metric_value(cached_property):
-    def __init__(self, func=None, *, main: bool = False):
+    def __init__(self, func=None, *, main: bool = False, private: bool | None = None):
         self.main = main
+        self._private = private
         if func is not None:
             super().__init__(func)
             update_wrapper(self, func)
@@ -44,17 +45,24 @@ class metric_value(cached_property):
     def __set_name__(self, owner: type, name: str):
         super().__set_name__(owner, name)
 
+        # Determine privacy: explicit flag takes precedence, otherwise infer from leading underscore.
+        private = self._private if self._private is not None else name.startswith("_")
+
         # Create or get the _metric_values dict on the owner class
         metric_values = owner.__dict__.get("_metric_values")
         if metric_values is None:
-            metric_values = {"other": [], "main": None}
+            metric_values = {"other": [], "main": None, "private": []}
             owner._metric_values = metric_values
+        elif "private" not in metric_values:
+            metric_values["private"] = []
 
         # Update the metric values
         if self.main:
             if metric_values["main"] is not None:
                 raise ValueError(f"Multiple main metric values defined in {owner.__name__}.")
             metric_values["main"] = name
+        elif private:
+            metric_values["private"].append(name)
         else:
             metric_values["other"].append(name)
 
@@ -102,17 +110,21 @@ def _get_dependencies(cls) -> list[str]:
     return list(dict.fromkeys(deps))
 
 
-def _get_metric_values(cls) -> dict[str, Union[str, list[str]]]:
+def _get_metric_values(cls, include_private: bool = False) -> dict[str, Union[str, list[str]]]:
     """Get the metric values defined in the class and its bases."""
     main_value = None
     other_values = []
+    private_values = []
     for base in reversed(cls.__mro__):
         _metric_values = base.__dict__.get("_metric_values")
         if _metric_values:
             main_value = _metric_values["main"] or main_value
             other_values.extend(_metric_values["other"])
-    metric_values = {"main": main_value, "other": list(dict.fromkeys(other_values))}
-    return metric_values
+            private_values.extend(_metric_values.get("private", []))
+    result: dict[str, Any] = {"main": main_value, "other": list(dict.fromkeys(other_values))}
+    if include_private:
+        result["private"] = list(dict.fromkeys(private_values))
+    return result
 
 
 def _get_metric_table_row_values(metric: "Metric") -> tuple[str, str, str]:
@@ -284,9 +296,9 @@ class Metric(ABC):
         return self._normalizer
 
     @classmethod
-    def metric_values(cls) -> dict[str, Union[str, list[str]]]:
+    def metric_values(cls, include_private: bool = False) -> dict[str, Union[str, list[str]]]:
         """Get the metric values defined in the class and its bases."""
-        return _get_metric_values(cls)
+        return _get_metric_values(cls, include_private=include_private)
 
     @classmethod
     def dependencies(cls) -> list[str]:
@@ -398,9 +410,9 @@ class ExampleMetric(ABC):
         self._src = src
 
     @classmethod
-    def metric_values(cls) -> dict[str, Union[str, list[str]]]:
+    def metric_values(cls, include_private: bool = False) -> dict[str, Union[str, list[str]]]:
         """Get the metric values defined in the class and its bases."""
-        return _get_metric_values(cls)
+        return _get_metric_values(cls, include_private=include_private)
 
     @classmethod
     def dependencies(cls) -> list[str]:
