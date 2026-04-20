@@ -55,12 +55,12 @@ class TestExamplePrepareAndValidateKeyTerms:
         assert isinstance(example.key_terms["animals"].pop(), Text)
 
     def test_key_term_not_in_ref_warns(self, sample_dataset):
-        """Test that key term not in reference issues warning when trie matches are computed."""
+        """Test that local key term not in reference issues warning when trie matches are computed."""
         sample_dataset.add("hello world", "hello world", key_terms={"missing": ["nonexistent"]})
         example = sample_dataset[-1]
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            example.get_key_term_matches(vocab="missing")
+            example.ref.get_key_term_matches(vocab="missing")
             assert len([x for x in w if issubclass(x.category, KeyTermNotFoundWarning)]) > 0
 
     def test_key_term_not_in_ref_no_matches(self, sample_dataset):
@@ -69,7 +69,7 @@ class TestExamplePrepareAndValidateKeyTerms:
         example = sample_dataset[-1]
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
-            matches = example.get_key_term_matches(vocab="missing")
+            matches = example.ref.get_key_term_matches(vocab="missing")
         assert len(matches) == 0
 
     def test_case_insensitive_key_term_matching(self, sample_dataset):
@@ -96,7 +96,7 @@ class TestExamplePrepareAndValidateKeyTerms:
         """Test that an empty key term list does not cause key term match resolution to fail."""
         sample_dataset.add("hello world", "hello world", key_terms={"greetings": []})
         example = sample_dataset[-1]
-        matches = example.get_key_term_matches(vocab="greetings")
+        matches = example.ref.get_key_term_matches(vocab="greetings")
         assert matches == []
 
 
@@ -118,9 +118,9 @@ class TestExampleVocabs:
         example = sample_dataset[-1]
         assert example.vocabs == {"animals", "colors"}
 
-    def test_vocabs_includes_dynamic_dataset_vocabs(self, sample_dataset):
-        """Test that vocabs includes dynamic key term vocabularies from the parent dataset."""
-        sample_dataset._dynamic_key_term_vocabs["global_terms"] = set()
+    def test_vocabs_includes_global_dataset_vocabs(self, sample_dataset):
+        """Test that vocabs includes global key term vocabularies from the parent dataset."""
+        sample_dataset._global_key_term_vocabs["global_terms"] = set()
         example = sample_dataset[0]
         assert "global_terms" in example.vocabs
 
@@ -131,7 +131,7 @@ class TestExampleVocabs:
             "hello world",
             key_terms={"greetings": ["hello"]},
         )
-        sample_dataset._dynamic_key_term_vocabs["global_terms"] = set()
+        sample_dataset._global_key_term_vocabs["global_terms"] = set()
         example = sample_dataset[-1]
         assert example.vocabs == {"greetings", "global_terms"}
 
@@ -172,11 +172,11 @@ class TestExampleHash:
         assert hash(example1) != hash(example2)
 
 
-class TestExampleGetKeyTermMatches:
-    """Tests for Example.get_key_term_matches() merging example and dataset key terms."""
+class TestTextGetKeyTermMatches:
+    """Tests for Text.get_key_term_matches() using global and local key terms."""
 
-    def test_merges_example_and_dataset_key_terms(self, sample_dataset):
-        """Matches from both example-level and dataset-level key terms are returned."""
+    def test_global_and_local_key_terms_both_matched(self, sample_dataset):
+        """Global vocab (from add() and add_key_term_list) produces all matches by default."""
         sample_dataset.add(
             "the quick brown fox",
             "the quick brown dog",
@@ -184,19 +184,19 @@ class TestExampleGetKeyTermMatches:
         )
         sample_dataset.add_key_term_list("animals", ["brown"])
         example = sample_dataset[-1]
-        matches = example.get_key_term_matches(vocab="animals")
+        matches = example.ref.get_key_term_matches(vocab="animals")
         matched_raws = sorted(example.ref.tokens[m].raw for m in matches)
         assert ["brown"] in matched_raws
         assert ["fox"] in matched_raws
 
-    def test_dataset_only_key_terms_no_warning(self, sample_dataset):
-        """Dataset-level key terms produce matches without KeyTermNotFoundWarning."""
+    def test_global_only_key_terms_no_warning(self, sample_dataset):
+        """Global key terms (no local) produce matches without KeyTermNotFoundWarning."""
         sample_dataset.add("the quick brown fox", "the quick brown dog")
         sample_dataset.add_key_term_list("animals", ["fox"])
         example = sample_dataset[-1]
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            matches = example.get_key_term_matches(vocab="animals")
+            matches = example.ref.get_key_term_matches(vocab="animals")
         assert len(matches) == 1
         assert len([x for x in w if issubclass(x.category, KeyTermNotFoundWarning)]) == 0
 
@@ -207,15 +207,15 @@ class TestExampleGetKeyTermMatches:
         # First call triggers the warning
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
-            example.get_key_term_matches(vocab="missing")
+            example.ref.get_key_term_matches(vocab="missing")
         # Second call should be cached — no new warnings
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            example.get_key_term_matches(vocab="missing")
+            example.ref.get_key_term_matches(vocab="missing")
         assert len([x for x in w if issubclass(x.category, KeyTermNotFoundWarning)]) == 0
 
-    def test_allow_subsets_true_deduplicates_exact(self, sample_dataset):
-        """With allow_subsets=True, exact duplicate matches from both tries are deduplicated."""
+    def test_allow_subset_matches_true_deduplicates_exact(self, sample_dataset):
+        """With allow_subset_matches=True, exact duplicate matches from global vocab are deduplicated."""
         sample_dataset.add(
             "the quick brown fox",
             "the quick brown dog",
@@ -223,11 +223,11 @@ class TestExampleGetKeyTermMatches:
         )
         sample_dataset.add_key_term_list("animals", ["fox"])
         example = sample_dataset[-1]
-        matches = example.get_key_term_matches(vocab="animals", allow_subsets=True)
+        matches = example.ref.get_key_term_matches(vocab="animals", allow_subset_matches=True)
         assert len(matches) == 1
 
-    def test_allow_subsets_false_deduplicates(self, sample_dataset):
-        """With allow_subsets=False, duplicate matches from both tries are deduplicated."""
+    def test_allow_subset_matches_false_deduplicates(self, sample_dataset):
+        """With allow_subset_matches=False, subset matches from global vocab are deduplicated."""
         sample_dataset.add(
             "the quick brown fox",
             "the quick brown dog",
@@ -235,8 +235,35 @@ class TestExampleGetKeyTermMatches:
         )
         sample_dataset.add_key_term_list("animals", ["fox"])
         example = sample_dataset[-1]
-        matches = example.get_key_term_matches(vocab="animals", allow_subsets=False)
+        matches = example.ref.get_key_term_matches(vocab="animals", allow_subset_matches=False)
         assert len(matches) == 1
+
+    def test_only_local_matches_returns_example_level_terms(self, sample_dataset):
+        """only_local_matches=True returns only per-example local key terms."""
+        sample_dataset.add(
+            "the quick brown fox",
+            "the quick brown dog",
+            key_terms={"animals": ["fox"]},
+        )
+        sample_dataset.add_key_term_list("animals", ["brown"])
+        example = sample_dataset[-1]
+        matches = example.ref.get_key_term_matches(vocab="animals", only_local_matches=True)
+        matched_raws = sorted(example.ref.tokens[m].raw for m in matches)
+        assert ["fox"] in matched_raws
+        assert ["brown"] not in matched_raws
+
+    def test_hyp_matching_no_local_verification(self, sample_dataset):
+        """Matching on hyp side does not trigger local term verification warnings."""
+        sample_dataset.add(
+            "the quick brown fox",
+            "the quick brown dog",
+            key_terms={"animals": ["fox"]},
+        )
+        example = sample_dataset[-1]
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            example.hyp.get_key_term_matches(vocab="animals")
+        assert len([x for x in w if issubclass(x.category, KeyTermNotFoundWarning)]) == 0
 
 
 class TestExampleMetrics:

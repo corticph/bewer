@@ -46,18 +46,18 @@ class KTP(Metric):
         Attributes:
             vocab: The vocabulary name to use for key term identification.
             normalized: Whether to use normalized tokens for alignment and key term matching.
-            allow_subsets: Whether to allow subset matches.
+            allow_subset_matches: Whether to allow subset matches.
         """
 
         vocab: str
         normalized: bool = True
-        allow_subsets: bool = True
+        allow_subset_matches: bool = True
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""
-            is_dynamic_vocab = self.vocab in self.metric.dataset._dynamic_key_term_vocabs
-            is_static_vocab = self.vocab in self.metric.dataset._static_key_term_vocabs
-            if not is_dynamic_vocab and not is_static_vocab:
+            is_global_vocab = self.vocab in self.metric.dataset._global_key_term_vocabs
+            is_local_vocab = self.vocab in self.metric.dataset._local_key_term_vocabs
+            if not is_global_vocab and not is_local_vocab:
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @dependency
@@ -66,7 +66,8 @@ class KTP(Metric):
         return self.dataset.metrics._kt_stats(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
-            allow_subsets=self.params.allow_subsets,
+            allow_subset_matches=self.params.allow_subset_matches,
+            only_local_matches=False,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

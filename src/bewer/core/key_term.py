@@ -61,9 +61,7 @@ class KeyTermTrie:
         self.normalized = normalized
         self.add_capitalized = add_capitalized
 
-        # Collect token patterns from key terms, tracking origin
         patterns = []
-        self._pattern_key_terms: dict[tuple[int, ...], set[str]] = {}
         key_term_patterns = []
         for key_term in key_terms:
             tokens = key_term.tokens.normalized if normalized else key_term.tokens.raw
@@ -84,11 +82,6 @@ class KeyTermTrie:
         self._vocab = {w: i for i, w in enumerate({w for p in patterns for w in p})}
         self._unknown = len(self._vocab)
 
-        # Map int_pattern -> set of key term raw strings (for warn_missing)
-        for kt_raw, token_pattern in key_term_patterns:
-            int_pattern = tuple(self._vocab[w] for w in token_pattern)
-            self._pattern_key_terms.setdefault(int_pattern, set()).add(kt_raw)
-
         # Build Aho-Corasick automaton
         self._automaton = ahocorasick.Automaton(ahocorasick.STORE_ANY, ahocorasick.KEY_SEQUENCE)
         seen = set()
@@ -99,47 +92,21 @@ class KeyTermTrie:
                 seen.add(int_pattern)
         self._automaton.make_automaton()
 
-    def find_in_tokens(
-        self,
-        tokens: TokenList,
-        allow_subsets: bool = True,
-        warn_missing: bool = False,
-    ) -> list[slice]:
-        """Find all contiguous token sequences that match any key term in the automaton.
-
-        Args:
-            tokens: The token list to search in.
-            allow_subsets: Whether to allow subset matches (default True).
-            warn_missing: If True, emit a KeyTermNotFoundWarning for each key term whose
-                token pattern was not found in the text. Uses tokens.src to identify the example.
-        """
+    def encode(self, tokens: TokenList) -> tuple[int, ...]:
+        """Encode a token list into the trie's integer vocabulary."""
         token_strings = tokens.normalized if self.normalized else tokens.raw
-        int_text = tuple(self._vocab.get(w, self._unknown) for w in token_strings)
+        return tuple(self._vocab.get(w, self._unknown) for w in token_strings)
 
-        matches = []
-        found_key_terms: set[str] | None = set() if warn_missing else None
+    def find_in_tokens(self, tokens: TokenList) -> tuple[list[slice], list[tuple[int, ...]]]:
+        """Find all key term matches, returning spans and their encoded patterns."""
+        int_text = self.encode(tokens)
+        matches: list[slice] = []
+        patterns: list[tuple[int, ...]] = []
         for end_idx, pattern_len in self._automaton.iter(int_text):
-            start_idx = end_idx - pattern_len + 1
-            matches.append(slice(start_idx, end_idx + 1))
-            if found_key_terms is not None:
-                int_pattern = int_text[start_idx : end_idx + 1]
-                for kt_raw in self._pattern_key_terms.get(int_pattern, ()):
-                    found_key_terms.add(kt_raw)
-
-        if warn_missing:
-            example_index = getattr(getattr(tokens.src, "src", None), "index", None)
-            for kt_raws in self._pattern_key_terms.values():
-                for kt_raw in kt_raws:
-                    if kt_raw not in found_key_terms:
-                        warnings.warn(
-                            f"Key term '{kt_raw}' not found in reference tokens: Example {example_index}.",
-                            KeyTermNotFoundWarning,
-                        )
-
-        if not allow_subsets:
-            matches = _remove_subset_matches(matches)
-
-        return matches
+            start = end_idx - pattern_len + 1
+            matches.append(slice(start, end_idx + 1))
+            patterns.append(int_text[start : end_idx + 1])
+        return matches, patterns
 
 
 def _remove_duplicate_matches(matches: list[slice]) -> list[slice]:
@@ -189,7 +156,7 @@ def get_key_term_trie(
         return cache[trie_key]
 
     key_terms = vocabs.get(vocab, None)
-    if key_terms is None:
+    if not key_terms:
         return None
 
     trie = KeyTermTrie(

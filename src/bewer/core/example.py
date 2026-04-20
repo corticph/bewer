@@ -1,15 +1,8 @@
 from typing import TYPE_CHECKING, Optional
 
-from bewer.core.key_term import (
-    KeyTerm,
-    KeyTermTrie,
-    _remove_duplicate_matches,
-    _remove_subset_matches,
-    get_key_term_trie,
-)
+from bewer.core.key_term import KeyTerm
 from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
-from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
@@ -48,8 +41,6 @@ class Example:
             index: The index of the example in the dataset.
         """
         self._index = index
-        self._cache_key_term_matches = {}
-        self._cache_key_term_tries = {}
         self._pipelines = None
 
         self._src = None
@@ -80,7 +71,7 @@ class Example:
         """Get the set of all key term vocabularies associated with this example."""
         vocabs = set(self.key_terms.keys())
         if self._src is not None:
-            vocabs.update(self._src._dynamic_key_term_vocabs.keys())
+            vocabs.update(self._src._global_key_term_vocabs.keys())
         return vocabs
 
     def set_source(self, src: "Dataset") -> None:
@@ -109,65 +100,6 @@ class Example:
             prepared_key_terms[vocab_name] = set(KeyTerm(key_term, src=self) for key_term in vocab_key_terms)
 
         return prepared_key_terms
-
-    def _get_key_term_trie(
-        self,
-        vocab: str,
-        normalized: bool = True,
-        add_capitalized: bool = False,
-    ) -> Optional["KeyTermTrie"]:
-        """Get or build a trie for the key terms in the specified vocabulary."""
-        return get_key_term_trie(
-            self.key_terms,
-            self._cache_key_term_tries,
-            vocab,
-            normalized=normalized,
-            add_capitalized=add_capitalized,
-        )
-
-    def get_key_term_matches(
-        self,
-        vocab: str,
-        normalized: bool = True,
-        add_capitalized: bool = False,
-        allow_subsets: bool = True,
-        side: TextType = TextType.REF,
-    ) -> list[slice]:
-        if vocab not in self.key_terms and vocab not in self.src._dynamic_key_term_vocabs:
-            return []
-
-        cache_key = (
-            STANDARDIZER_NAME.get(),
-            TOKENIZER_NAME.get(),
-            NORMALIZER_NAME.get() if normalized else None,
-            add_capitalized,
-            allow_subsets,
-            vocab,
-            side,
-        )
-        if cache_key in self._cache_key_term_matches:
-            return self._cache_key_term_matches[cache_key]
-
-        tokens = self.ref.tokens if side == TextType.REF else self.hyp.tokens
-
-        matches = []
-        if vocab in self.key_terms:
-            example_trie = self._get_key_term_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
-            matches += example_trie.find_in_tokens(tokens, warn_missing=(side == TextType.REF))
-
-        if vocab in self.src._dynamic_key_term_vocabs:
-            dataset_trie = self.src._get_key_term_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
-            if dataset_trie is not None:
-                matches += dataset_trie.find_in_tokens(tokens)
-
-        if matches:
-            if allow_subsets:
-                matches = _remove_duplicate_matches(matches)
-            else:
-                matches = _remove_subset_matches(matches)
-
-        self._cache_key_term_matches[cache_key] = matches
-        return matches
 
     def __hash__(self):
         return hash((self.ref, self.hyp, self._index))

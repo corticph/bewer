@@ -160,7 +160,7 @@ def _get_key_term_indicators(alignment: "Alignment") -> tuple[set[int], set[int]
 
     start_indices, stop_indices, open_indices = set(), set(), set()
     for vocab in vocabs:
-        matches = example.get_key_term_matches(vocab=vocab)
+        matches = example.ref.get_key_term_matches(vocab=vocab)
         for match in matches:
             start_op_idx = alignment.ref_index_mapping.get(match.start)
             end_op_idx = alignment.ref_index_mapping.get(match.stop - 1)
