@@ -48,6 +48,7 @@ class KTR(Metric):
             vocab: The vocabulary name to use for key term identification.
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
+            only_local_matches: If True, restrict matching to per-example local key terms only.
         """
 
         vocab: str

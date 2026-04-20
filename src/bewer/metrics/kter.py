@@ -48,6 +48,7 @@ class KTER(Metric):
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches. If False, overlapping key term matches
                 are deduplicated, keeping only the longest match.
+            only_local_matches: If True, restrict matching to per-example local key terms only.
         """
 
         vocab: str

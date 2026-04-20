@@ -144,7 +144,8 @@ class Text:
         By default, matches against the dataset-wide global vocabulary. With
         ``only_local_matches=True``, only the per-example local key terms are used.
         When matching on the reference side, each local key term is also verified:
-        a ``KeyTermNotFoundWarning`` is emitted if a local term is absent, and a
+        a ``KeyTermNotFoundWarning`` is emitted for each local term absent from the reference tokens.
+
         Args:
             vocab: Vocabulary name to match against.
             normalized: Use normalized tokens for matching.
@@ -195,7 +196,9 @@ class Text:
             raw_matches, raw_patterns = global_trie.find_in_tokens(tokens)
 
             if only_local_matches and has_local:
-                local_int_patterns = {global_trie.encode(kt.tokens) for kt in example.key_terms[vocab]}
+                local_int_patterns: set[tuple[int, ...]] = set()
+                for kt in example.key_terms[vocab]:
+                    local_int_patterns.update(global_trie.encode_variants(kt.tokens))
                 matches = [m for m, p in zip(raw_matches, raw_patterns) if p in local_int_patterns]
             else:
                 matches = raw_matches
@@ -203,8 +206,7 @@ class Text:
             if self._text_type == TextType.REF and has_local:
                 matched_patterns = set(raw_patterns)
                 for kt in example.key_terms[vocab]:
-                    local_int_pattern = global_trie.encode(kt.tokens)
-                    if local_int_pattern not in matched_patterns:
+                    if not matched_patterns.intersection(global_trie.encode_variants(kt.tokens)):
                         warnings.warn(
                             f"Key term '{kt.raw}' not found in reference tokens: Example {example.index}.",
                             KeyTermNotFoundWarning,

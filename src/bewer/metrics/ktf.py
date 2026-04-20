@@ -43,6 +43,7 @@ class KTF(Metric):
             allow_subset_matches: Whether to allow subset matches.
             beta: F-score beta parameter. beta=1 gives F1 (equal weight to precision and recall).
                 beta>1 weights recall more heavily; beta<1 weights precision more heavily.
+            only_local_matches: If True, restrict matching to per-example local key terms only.
         """
 
         vocab: str
