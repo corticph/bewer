@@ -52,8 +52,8 @@ class Dataset(object):
         self.config = OmegaConf.load(self.config_path)
         self._pipelines = resolve_pipelines(self.config)
         self.examples = []
-        self._dynamic_key_term_vocabs = {}
-        self._static_key_term_vocabs = {}
+        self._global_key_term_vocabs = {}
+        self._local_key_term_vocabs = {}
         self._cache_key_term_tries = {}
         self.metrics = MetricCollection(self)
 
@@ -84,7 +84,8 @@ class Dataset(object):
         if key_terms is not None:
             key_terms = {name: set(kt_list) for name, kt_list in key_terms.items()}
             for name, kt_set in key_terms.items():
-                self._update_static_key_term_vocab(name, kt_set)
+                self._update_global_key_term_vocab(name, kt_set)
+                self._update_local_key_term_vocab(name, kt_set)
         example = Example(ref, hyp, key_terms=key_terms, src=self, index=len(self))
         self.examples.append(example)
 
@@ -146,7 +147,7 @@ class Dataset(object):
             if not isinstance(key_term, str):
                 raise TypeError(f"key_terms must be an iterable of strings, but got element of type {type(key_term)}")
 
-        self._update_dynamic_key_term_vocab(name, key_terms)
+        self._update_global_key_term_vocab(name, key_terms)
 
     def add_key_term_file(self, name: str, key_term_file: str) -> None:
         """Add a named key term vocabulary to the dataset from a file.
@@ -172,7 +173,7 @@ class Dataset(object):
     ) -> Optional["KeyTermTrie"]:
         """Get a trie for the specified key term vocabulary."""
         return get_key_term_trie(
-            self._dynamic_key_term_vocabs,
+            self._global_key_term_vocabs,
             self._cache_key_term_tries,
             vocab,
             normalized=normalized,
@@ -200,21 +201,21 @@ class Dataset(object):
         else:
             raise ValueError(f"Column {series.name} is not a list (or literal) or string")
 
-    def _update_dynamic_key_term_vocab(self, name: str, key_terms: set[str]) -> None:
-        """Update the dynamic key term vocabulary with new key terms."""
+    def _update_global_key_term_vocab(self, name: str, key_terms: set[str]) -> None:
+        """Update the global key term vocabulary with new key terms."""
         key_terms = set(KeyTerm(key_term, src=self) for key_term in key_terms)
-        if name in self._dynamic_key_term_vocabs:
-            self._dynamic_key_term_vocabs[name].update(key_terms)
+        if name in self._global_key_term_vocabs:
+            self._global_key_term_vocabs[name].update(key_terms)
         else:
-            self._dynamic_key_term_vocabs[name] = set(key_terms)
+            self._global_key_term_vocabs[name] = set(key_terms)
 
-    def _update_static_key_term_vocab(self, name: str, key_terms: set[str]) -> None:
-        """Update the static key term vocabulary with new key terms."""
+    def _update_local_key_term_vocab(self, name: str, key_terms: set[str]) -> None:
+        """Update the local key term vocabulary index with new key terms."""
         key_terms = set(KeyTerm(key_term, src=self) for key_term in key_terms)
-        if name in self._static_key_term_vocabs:
-            self._static_key_term_vocabs[name].update(key_terms)
+        if name in self._local_key_term_vocabs:
+            self._local_key_term_vocabs[name].update(key_terms)
         else:
-            self._static_key_term_vocabs[name] = set(key_terms)
+            self._local_key_term_vocabs[name] = set(key_terms)
 
     def __len__(self) -> int:
         """Get the number of examples in the dataset."""

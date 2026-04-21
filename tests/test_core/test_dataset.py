@@ -182,8 +182,8 @@ class TestDatasetAddKeyTermFile:
 
         try:
             empty_dataset.add_key_term_file("animals", key_term_path)
-            assert "animals" in empty_dataset._dynamic_key_term_vocabs
-            kt_raws = {kt.raw for kt in empty_dataset._dynamic_key_term_vocabs["animals"]}
+            assert "animals" in empty_dataset._global_key_term_vocabs
+            kt_raws = {kt.raw for kt in empty_dataset._global_key_term_vocabs["animals"]}
             assert "fox" in kt_raws
             assert "brown" in kt_raws
         finally:
@@ -204,8 +204,8 @@ class TestDatasetAddKeyTermFile:
 
         try:
             empty_dataset.add_key_term_file("animals", key_term_path)
-            assert "animals" in empty_dataset._dynamic_key_term_vocabs
-            matches = empty_dataset[0].get_key_term_matches(vocab="animals")
+            assert "animals" in empty_dataset._global_key_term_vocabs
+            matches = empty_dataset[0].ref.get_key_term_matches(vocab="animals")
             assert len(matches) == 1
         finally:
             os.unlink(key_term_path)

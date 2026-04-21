@@ -162,14 +162,14 @@ class TestKTStatsAlignmentAttributes:
             assert isinstance(seg, Alignment)
 
     def test_fp_subset_match_excluded(self):
-        """Correctly transcribed subset hyp match is neither TP nor FP when allow_subsets=False."""
+        """Correctly transcribed subset hyp match is neither TP nor FP when allow_subset_matches=False."""
         dataset = Dataset()
         dataset.add(
             ref="hello world",
             hyp="hollow world",
             key_terms={"vocab": ["hello world", "world"]},
         )
-        stats = dataset[0].metrics._kt_stats(vocab="vocab", allow_subsets=False)
+        stats = dataset[0].metrics._kt_stats(vocab="vocab", allow_subset_matches=False)
         assert stats.fp_alignments == []
         assert stats.num_fp == 0
         assert stats.num_fn == 1

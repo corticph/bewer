@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from bewer.alignment import Alignment
-from bewer.core.example import TextType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
 __all__: list[str] = []
@@ -20,19 +19,19 @@ class _KTStats_(ExampleMetric):
         ).alignment
 
     def _get_ref_matches(self) -> list[slice]:
-        return self.example.get_key_term_matches(
+        return self.example.ref.get_key_term_matches(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
-            allow_subsets=self.params.allow_subsets,
-            side=TextType.REF,
+            allow_subset_matches=self.params.allow_subset_matches,
+            only_local_matches=self.params.only_local_matches,
         )
 
     def _get_hyp_matches(self) -> list[slice]:
-        return self.example.get_key_term_matches(
+        return self.example.hyp.get_key_term_matches(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
-            allow_subsets=self.params.allow_subsets,
-            side=TextType.HYP,
+            allow_subset_matches=self.params.allow_subset_matches,
+            only_local_matches=self.params.only_local_matches,
         )
 
     @metric_value
@@ -121,9 +120,9 @@ class _KTStats(Metric):
         "Note: the TP/FP/FN categories are practical approximations that do not map directly to their binary "
         "classification counterparts. A span where one key term is substituted for another is simultaneously an FN "
         "(missed ref term) and an FP (spurious hyp term). "
-        "Conversely, a correctly transcribed hyp key term may count as neither TP nor FP when allow_subsets=False "
-        "and the ref matches a longer superset phrase (e.g. ref matches 'hello world' but hyp only matches "
-        "the subset 'world')."
+        "Conversely, a correctly transcribed hyp key term may count as neither TP nor FP when "
+        "allow_subset_matches=False and the ref matches a longer superset phrase (e.g. ref matches "
+        "'hello world' but hyp only matches the subset 'world')."
     )
     example_cls = _KTStats_
 
@@ -134,18 +133,20 @@ class _KTStats(Metric):
         Attributes:
             vocab: The vocabulary name to use for key term identification.
             normalized: Whether to use normalized tokens for alignment and key term matching.
-            allow_subsets: Whether to allow subset matches.
+            allow_subset_matches: Whether to allow subset matches.
+            only_local_matches: If True, match only per-example local key terms instead of the global vocab.
         """
 
         vocab: str
         normalized: bool = True
-        allow_subsets: bool = True
+        allow_subset_matches: bool = True
+        only_local_matches: bool = False
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""
-            is_dynamic_vocab = self.vocab in self.metric.dataset._dynamic_key_term_vocabs
-            is_static_vocab = self.vocab in self.metric.dataset._static_key_term_vocabs
-            if not is_dynamic_vocab and not is_static_vocab:
+            is_global_vocab = self.vocab in self.metric.dataset._global_key_term_vocabs
+            is_local_vocab = self.vocab in self.metric.dataset._local_key_term_vocabs
+            if not is_global_vocab and not is_local_vocab:
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @metric_value
