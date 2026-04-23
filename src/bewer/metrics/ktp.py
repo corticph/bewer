@@ -14,17 +14,17 @@ class KTP_(ExampleMetric):
         return self.parent_metric._kt_stats.get_example_metric(self.example).num_tp
 
     @metric_value
-    def num_hyp_terms(self) -> int:
-        """Get the number of key term occurrences in the hypothesis text."""
-        return self.parent_metric._kt_stats.get_example_metric(self.example).num_hyp_terms
+    def num_fp(self) -> int:
+        """Get the number of spurious key term occurrences in the hypothesis text."""
+        return self.parent_metric._kt_stats.get_example_metric(self.example).num_fp
 
     @metric_value(main=True)
     def value(self) -> float:
         """Get the example-level key term precision."""
         stats = self.parent_metric._kt_stats.get_example_metric(self.example)
-        if stats.num_hyp_terms == 0:
+        if (stats.num_tp + stats.num_fp) == 0:
             return 0.0
-        return stats.num_tp / stats.num_hyp_terms
+        return stats.num_tp / (stats.num_tp + stats.num_fp)
 
 
 @METRIC_REGISTRY.register("ktp", tokenizer="key_term")
@@ -32,10 +32,9 @@ class KTP(Metric):
     short_name_base = "KTP"
     long_name_base = "Key Term Precision"
     description = (
-        "Key term precision (KTP) is computed as the number of key terms correctly transcribed in the hypothesis "
-        "texts, divided by the total number of key term occurrences found in the hypothesis texts. A key term may "
-        "consist of one or more tokens, but is treated as a single unit for the purpose of KTP calculation. "
-        "KTP answers the question: of all key term occurrences in the hypothesis, how many were correct?"
+        "Key term precision (KTP) is computed as TP / (TP + FP), where TP is the number of key terms correctly "
+        "transcribed and FP is the number of spurious key term occurrences in the hypothesis. A key term may "
+        "consist of one or more tokens, but is treated as a single unit for the purpose of KTP calculation."
     )
     example_cls = KTP_
 
@@ -79,13 +78,13 @@ class KTP(Metric):
         return self._kt_stats.num_tp
 
     @metric_value
-    def num_hyp_terms(self) -> int:
-        """Get the number of key term occurrences in the hypothesis texts."""
-        return self._kt_stats.num_hyp_terms
+    def num_fp(self) -> int:
+        """Get the number of spurious key term occurrences in the hypothesis texts."""
+        return self._kt_stats.num_fp
 
     @metric_value(main=True)
     def value(self) -> float:
         """Get the key term precision."""
-        if self._kt_stats.num_hyp_terms == 0:
+        if (self._kt_stats.num_tp + self._kt_stats.num_fp) == 0:
             return 0.0
-        return self._kt_stats.num_tp / self._kt_stats.num_hyp_terms
+        return self._kt_stats.num_tp / (self._kt_stats.num_tp + self._kt_stats.num_fp)
