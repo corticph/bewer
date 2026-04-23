@@ -22,7 +22,7 @@ class TestKTPExampleMetric:
 
     @pytest.fixture
     def dataset_keyword_error(self):
-        """Dataset where a key term is in ref but absent from hyp (TP=0, num_hyp_terms=0)."""
+        """Dataset where a key term is in ref but absent from hyp (TP=0, FP=0)."""
         dataset = Dataset()
         dataset.add(
             ref="the fox jumps",
@@ -55,7 +55,7 @@ class TestKTPExampleMetric:
         assert ktp.value == 0.0
 
     def test_value_with_false_positive(self, dataset_keyword_fp):
-        """Test KTP = 0.5 when hyp has key term twice but ref has it once (TP=1, num_hyp_terms=2)."""
+        """Test KTP = 0.5 when hyp has key term twice but ref has it once (TP=1, FP=1)."""
         example = dataset_keyword_fp[0]
         ktp = example.metrics.ktp(vocab="animals")
         assert ktp.value == pytest.approx(0.5)
@@ -72,17 +72,17 @@ class TestKTPExampleMetric:
         ktp = example.metrics.ktp(vocab="animals")
         assert ktp.num_matches == 0
 
-    def test_num_hyp_terms_correct(self, dataset_keyword_match):
-        """Test num_hyp_terms = 1 on exact match."""
+    def test_num_fp_correct(self, dataset_keyword_match):
+        """Test num_fp = 0 on exact match."""
         example = dataset_keyword_match[0]
         ktp = example.metrics.ktp(vocab="animals")
-        assert ktp.num_hyp_terms == 1
+        assert ktp.num_fp == 0
 
-    def test_num_hyp_terms_with_fp(self, dataset_keyword_fp):
-        """Test num_hyp_terms = 2 when key term appears twice in hypothesis."""
+    def test_num_fp_with_fp(self, dataset_keyword_fp):
+        """Test num_fp = 1 when key term appears twice in hypothesis (one spurious)."""
         example = dataset_keyword_fp[0]
         ktp = example.metrics.ktp(vocab="animals")
-        assert ktp.num_hyp_terms == 2
+        assert ktp.num_fp == 1
 
     def test_works_with_any_vocab(self):
         """Test KTP is domain-agnostic and works with any vocabulary name."""
@@ -116,11 +116,11 @@ class TestKTPDatasetMetric:
         )
         return dataset
 
-    def test_num_hyp_terms_aggregates(self, ktp_dataset):
-        """Test that dataset num_hyp_terms sums example-level counts."""
+    def test_num_fp_aggregates(self, ktp_dataset):
+        """Test that dataset num_fp sums example-level counts."""
         ktp = ktp_dataset.metrics.ktp(vocab="animals")
-        expected = sum(ex.metrics.ktp(vocab="animals").num_hyp_terms for ex in ktp_dataset)
-        assert ktp.num_hyp_terms == expected
+        expected = sum(ex.metrics.ktp(vocab="animals").num_fp for ex in ktp_dataset)
+        assert ktp.num_fp == expected
 
     def test_num_matches_aggregates(self, ktp_dataset):
         """Test that dataset num_matches sums example-level counts."""
@@ -129,11 +129,11 @@ class TestKTPDatasetMetric:
         assert ktp.num_matches == expected
 
     def test_value_calculation(self, ktp_dataset):
-        """Test dataset-level KTP = num_tp / num_hyp_terms."""
+        """Test dataset-level KTP = num_tp / (num_tp + num_fp)."""
         ktp = ktp_dataset.metrics.ktp(vocab="animals")
-        # Example 1: TP=1, hyp_terms=1. Example 2: TP=1, hyp_terms=2.
+        # Example 1: TP=1, FP=0. Example 2: TP=1, FP=1.
         assert ktp.num_matches == 2
-        assert ktp.num_hyp_terms == 3
+        assert ktp.num_fp == 1
         assert ktp.value == pytest.approx(2 / 3)
 
     def test_all_correct(self):
@@ -172,4 +172,4 @@ class TestKTPMetricAttributes:
     def test_metric_values_other(self):
         values = KTP.metric_values()
         assert "num_matches" in values["other"]
-        assert "num_hyp_terms" in values["other"]
+        assert "num_fp" in values["other"]

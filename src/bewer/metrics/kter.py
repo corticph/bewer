@@ -53,7 +53,7 @@ class KTER(Metric):
 
         vocab: str
         normalized: bool = True
-        allow_subset_matches: bool = True
+        allow_subset_matches: bool = False
         only_local_matches: bool = False
 
         def validate(self) -> None:

@@ -48,7 +48,7 @@ class KTF(Metric):
 
         vocab: str
         normalized: bool = True
-        allow_subset_matches: bool = True
+        allow_subset_matches: bool = False
         beta: float = 1.0
         only_local_matches: bool = False
 

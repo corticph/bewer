@@ -22,9 +22,9 @@ class KTR_(ExampleMetric):
     def value(self) -> float:
         """Get the example-level key term recall."""
         stats = self.parent_metric._kt_stats.get_example_metric(self.example)
-        if stats.num_ref_terms == 0:
+        if (stats.num_tp + stats.num_fn) == 0:
             return 0.0
-        return stats.num_tp / stats.num_ref_terms
+        return stats.num_tp / (stats.num_tp + stats.num_fn)
 
 
 @METRIC_REGISTRY.register("ktr", tokenizer="key_term")
@@ -32,10 +32,9 @@ class KTR(Metric):
     short_name_base = "KTR"
     long_name_base = "Key Term Recall"
     description = (
-        "Key term recall (KTR) is computed as the number of key terms correctly transcribed divided by the total "
-        "number of key terms in the reference texts. A key term may consist of one or more tokens, but is treated as "
-        "a single unit for the purpose of KTR calculation. For inputs with at least one reference key term, KTR is "
-        "the complement of KTER (Key Term Error Rate) for a given vocabulary. Specifically, when num_ref_terms > 0, "
+        "Key term recall (KTR) is computed as TP / (TP + FN), where TP is the number of key terms correctly "
+        "transcribed and FN is the number of key terms missed. A key term may consist of one or more tokens, but is "
+        "treated as a single unit. KTR is the complement of KTER (Key Term Error Rate): when TP + FN > 0, "
         "KTR = 1 - KTER."
     )
     example_cls = KTR_
@@ -53,7 +52,7 @@ class KTR(Metric):
 
         vocab: str
         normalized: bool = True
-        allow_subset_matches: bool = True
+        allow_subset_matches: bool = False
         only_local_matches: bool = False
 
         def validate(self) -> None:
@@ -89,6 +88,6 @@ class KTR(Metric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the key term recall."""
-        if self._kt_stats.num_ref_terms == 0:
+        if (self._kt_stats.num_tp + self._kt_stats.num_fn) == 0:
             return 0.0
-        return self._kt_stats.num_tp / self._kt_stats.num_ref_terms
+        return self._kt_stats.num_tp / (self._kt_stats.num_tp + self._kt_stats.num_fn)

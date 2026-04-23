@@ -134,7 +134,9 @@ def format_key_term(text: str, start: bool = False, end: bool = False) -> str:
     return f'<span class="{kw_class}">{text}</span>'
 
 
-def _get_key_term_indicators(alignment: "Alignment") -> tuple[set[int], set[int], set[int]]:
+def _get_key_term_indicators(
+    alignment: "Alignment", allow_subset_matches: bool = False
+) -> tuple[set[int], set[int], set[int]]:
     """Compute key term span indicators for the given alignment.
 
     Args:
@@ -160,7 +162,7 @@ def _get_key_term_indicators(alignment: "Alignment") -> tuple[set[int], set[int]
 
     start_indices, stop_indices, open_indices = set(), set(), set()
     for vocab in vocabs:
-        matches = example.ref.get_key_term_matches(vocab=vocab)
+        matches = example.ref.get_key_term_matches(vocab=vocab, allow_subset_matches=allow_subset_matches)
         for match in matches:
             start_op_idx = alignment.ref_index_mapping.get(match.start)
             end_op_idx = alignment.ref_index_mapping.get(match.stop - 1)
@@ -178,6 +180,7 @@ def generate_alignment_html_lines(
     alignment: "Alignment",
     max_line_length: int = 100,
     color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+    allow_subset_matches: bool = False,
 ) -> list[tuple[str, str]]:
     """Render the alignment as an HTML table.
 
@@ -196,7 +199,9 @@ def generate_alignment_html_lines(
     ref_line, hyp_line = "", ""
     current_length = 0
 
-    start_indices, stop_indices, open_indices = _get_key_term_indicators(alignment)
+    start_indices, stop_indices, open_indices = _get_key_term_indicators(
+        alignment, allow_subset_matches=allow_subset_matches
+    )
 
     lines = []
     for op_idx, op in enumerate(alignment):
