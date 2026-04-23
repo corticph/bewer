@@ -334,8 +334,9 @@ class TestKeyTermIndicators:
         assert result.count("kw kw-start") == 1
 
     def test_overlapping_key_terms_merge_into_run(self):
-        """Test that overlapping key terms merge into a single contiguous run."""
+        """Test that overlapping key terms merge into a single contiguous run when allow_subset_matches=True."""
         from bewer.core.dataset import Dataset
+        from bewer.reporting.html.alignment import _get_key_term_indicators
 
         dataset = Dataset()
         # "brown fox" and "brown" overlap — their union covers "brown" and "fox"
@@ -344,9 +345,11 @@ class TestKeyTermIndicators:
             "the quick brown dog jumps",
             key_terms={"overlapping": ["brown fox", "brown"]},
         )
-        result = render_report_html(dataset)
-        # The merged run should have one kw-start at "brown" and kw-end at both brown and fox
-        assert result.count("w-start") < result.count("kw-end")
+        example = dataset[0]
+        alignment = example.metrics.levenshtein().alignment
+        start_indices, stop_indices, _ = _get_key_term_indicators(alignment, allow_subset_matches=True)
+        # "brown" ends at its own op and "brown fox" ends at fox's op — two distinct stop indices
+        assert len(stop_indices) > len(start_indices)
 
     def test_key_term_rendering_is_idempotent(self, dataset_with_key_terms):
         """Test that rendering twice produces the same output."""

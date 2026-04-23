@@ -239,16 +239,20 @@ class Alignment(tuple["Op", ...]):
     def _to_html_lines(
         self,
         color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+        allow_subset_matches: bool = False,
     ) -> list[tuple[str, str]]:
         """Render the alignment as an HTML string.
 
         Args:
             color_scheme (type[HTMLAlignmentColors]): Color scheme for display.
+            allow_subset_matches: If True, allow subset key term matches when computing key term indicators.
 
         Returns:
             list[tuple[str, str]]: List of tuples containing HTML strings representing the alignment visualization.
         """
-        return _generate_alignment_html_lines(self, color_scheme=color_scheme)
+        return _generate_alignment_html_lines(
+            self, color_scheme=color_scheme, allow_subset_matches=allow_subset_matches
+        )
 
     def __getitem__(self, index: int | slice) -> Union[Op, "Alignment"]:
         if isinstance(index, slice):
