@@ -16,6 +16,7 @@ from bewer.metrics.ktf import KTF
 from bewer.metrics.kter import KTER
 from bewer.metrics.ktp import KTP
 from bewer.metrics.ktr import KTR
+from bewer.metrics.ktcer import KTCER
 from bewer.metrics.rktr import RKTR
 from bewer.metrics.levenshtein import Levenshtein
 from bewer.metrics.summary import DatasetSummary
@@ -37,6 +38,7 @@ __all__ = [
     "KTER",
     "KTP",
     "KTR",
+    "KTCER",
     "RKTR",
     "Levenshtein",
     "ErrorAlign",
