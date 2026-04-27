@@ -9,12 +9,14 @@ from bewer.metrics.base import (
     metric_value,
 )
 from bewer.metrics._kt_stats import _KTStats  # noqa: F401 (registers "_kt_stats")
+from bewer.metrics._rkt_stats import _RKTStats  # noqa: F401 (registers "_rkt_stats")
 from bewer.metrics.cer import CER
 from bewer.metrics.error_align import ErrorAlign
 from bewer.metrics.ktf import KTF
 from bewer.metrics.kter import KTER
 from bewer.metrics.ktp import KTP
 from bewer.metrics.ktr import KTR
+from bewer.metrics.rktr import RKTR
 from bewer.metrics.levenshtein import Levenshtein
 from bewer.metrics.summary import DatasetSummary
 
@@ -35,6 +37,7 @@ __all__ = [
     "KTER",
     "KTP",
     "KTR",
+    "RKTR",
     "Levenshtein",
     "ErrorAlign",
     "DatasetSummary",

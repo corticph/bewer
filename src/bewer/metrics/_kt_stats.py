@@ -90,6 +90,7 @@ class _KTStats_(ExampleMetric):
             op_start = alignment.hyp_index_mapping[hyp_match.start]
             op_stop = alignment.hyp_index_mapping[hyp_match.stop - 1] + 1
             segment: Alignment = alignment[op_start:op_stop]
+            # TODO: Should we allow spurious edits in the matched range, as long as the target tokens are correct?
             if segment.num_edits > 0:
                 result.append(segment)
         return result
