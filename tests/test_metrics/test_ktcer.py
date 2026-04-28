@@ -48,6 +48,16 @@ class TestKTCERExampleMetric:
         assert ktcer.ref_chars == 8
         assert ktcer.value == pytest.approx(1.0)
 
+    def test_normalized_false_uses_raw_tokens(self):
+        # With normalized=False, casing is preserved; a case mismatch counts as an edit.
+        dataset = Dataset()
+        dataset.add(ref="patient has Diabetes", hyp="patient has diabetes", key_terms={"k": ["Diabetes"]})
+        example = dataset[0]
+        ktcer_normalized = example.metrics.ktcer(vocab="k", normalized=True)
+        ktcer_raw = example.metrics.ktcer(vocab="k", normalized=False)
+        assert ktcer_normalized.value == 0.0
+        assert ktcer_raw.value > 0.0
+
     def test_partial_boundary_penalty_flows_through(self):
         # "blood" key term, hyp "bloodpressure": +1 from hyp_right_partial
         dataset = Dataset()
