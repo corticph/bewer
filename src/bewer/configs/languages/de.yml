@@ -1,0 +1,6 @@
+normalizers:
+  default:
+    bewer.preprocessing.normalization.lowercase:
+    bewer.preprocessing.normalization.transliterate_latin_letters:
+      preserve: "äöüß"
+    bewer.preprocessing.normalization.transliterate_symbols:

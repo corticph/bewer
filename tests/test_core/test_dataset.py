@@ -323,6 +323,61 @@ class TestTextList:
         assert len(combined) == len(refs) + len(hyps)
 
 
+class TestDatasetLanguage:
+    """Tests for Dataset language parameter."""
+
+    def test_default_language_strips_danish_chars(self):
+        """Test that default dataset strips language-specific chars."""
+        ds = Dataset()
+        ds.add("patienten har høj blodtryk", "patienten har hoj blodtryk")
+        normalized = ds[0].ref.tokens.normalized
+        assert "høj" not in normalized
+        assert "hoj" in normalized
+
+    def test_danish_language_preserves_chars(self):
+        """Test that language='da' retains æ/ø/å in normalization."""
+        ds = Dataset(language="da")
+        ds.add("patienten har høj blodtryk", "patienten har hoj blodtryk")
+        normalized = ds[0].ref.tokens.normalized
+        assert "høj" in normalized
+
+    def test_german_language_preserves_chars(self):
+        """Test that language='de' retains ä/ö/ü/ß in normalization."""
+        ds = Dataset(language="de")
+        ds.add("straße", "strasse")
+        normalized = ds[0].ref.tokens.normalized
+        assert "straße" in normalized
+
+    def test_french_language_preserves_chars(self):
+        """Test that language='fr' retains accented chars in normalization."""
+        ds = Dataset(language="fr")
+        ds.add("café", "cafe")
+        normalized = ds[0].ref.tokens.normalized
+        assert "café" in normalized
+
+    def test_english_language_same_as_default(self):
+        """Test that language='en' behaves the same as no language arg."""
+        ds_default = Dataset()
+        ds_en = Dataset(language="en")
+        ds_default.add("café", "cafe")
+        ds_en.add("café", "cafe")
+        assert ds_default[0].ref.tokens.normalized == ds_en[0].ref.tokens.normalized
+
+    def test_unknown_language_raises(self):
+        """Test that an unknown language raises ValueError."""
+        with pytest.raises(ValueError, match="Unknown language"):
+            Dataset(language="xx")
+
+    def test_language_does_not_affect_non_language_pipeline(self):
+        """Test that language overlay only changes normalizer, not other pipeline steps."""
+        ds_default = Dataset()
+        ds_da = Dataset(language="da")
+        ds_default.add("Hello World", "hello world")
+        ds_da.add("Hello World", "hello world")
+        # Standardization should be the same
+        assert ds_default[0].ref.standardized == ds_da[0].ref.standardized
+
+
 class TestTextTokenList:
     """Tests for TextTokenList class."""
 
