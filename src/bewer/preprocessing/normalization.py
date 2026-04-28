@@ -142,9 +142,12 @@ def strip_punctuation(text: str) -> str:
 
 
 @lru_cache(maxsize=2048)
-def _transliterate_latin_letters(char: str) -> str:
+def _transliterate_latin_letters(char: str, preserve: str = "") -> str:
     if len(char) != 1:
         raise ValueError("Input must be a single character.")
+
+    if char in preserve:
+        return char
 
     if unicodedata.category(char)[0] != "L":
         return char  # Non-letter characters are returned unchanged
@@ -156,18 +159,21 @@ def _transliterate_latin_letters(char: str) -> str:
 
 
 @_set_attrs(token_only=False, length_preserving=False)
-def transliterate_latin_letters(text: str) -> str:
-    """Transliterate a single latin Unicode letter to its ASCII equivalent.
+def transliterate_latin_letters(text: str, preserve: str = "") -> str:
+    """Transliterate Latin Unicode letters to their ASCII equivalents.
 
-    In most cases, this means is equivalent to decomposing unicode letters with diacritical marks and removing them.
+    In most cases, this is equivalent to decomposing unicode letters with diacritical marks and
+    removing them. Characters listed in `preserve` are passed through unchanged, allowing
+    language-specific characters (e.g. Danish æ/ø/å) to be retained.
 
     Args:
         text (str): Input string.
+        preserve (str): Characters to leave untouched. Default empty string preserves nothing.
 
     Returns:
-        str: ASCII transliteration of the character.
+        str: ASCII transliteration of the input, with preserved characters left intact.
     """
-    return "".join(_transliterate_latin_letters(c) for c in text)
+    return "".join(_transliterate_latin_letters(c, preserve) for c in text)
 
 
 @lru_cache(maxsize=2048)

@@ -40,16 +40,22 @@ class Dataset(object):
         hyps (TextList): The hypothesis texts in the dataset.
     """
 
-    def __init__(self, config: str | None = None):
+    def __init__(self, config: str | None = None, language: str | None = None):
         """Initialize the Dataset.
 
         The dataset must be populated using one of the load_* methods or manually using the add() method.
 
         Args:
             config (str | None): Path to the configuration file. If None, uses the default configuration.
+            language (str | None): Language code to apply language-specific pipeline settings (e.g. "da",
+                "de", "fr"). If None or "en", uses the default English configuration. Supported languages
+                are determined by the files in bewer/configs/languages/.
         """
         self.config_path = self.get_config_path(config)
         self.config = OmegaConf.load(self.config_path)
+        if language is not None:
+            lang_cfg = OmegaConf.load(self._get_language_config_path(language))
+            self.config = OmegaConf.merge(self.config, lang_cfg)
         self._pipelines = resolve_pipelines(self.config)
         self.examples = []
         self._global_key_term_vocabs = {}
@@ -179,6 +185,17 @@ class Dataset(object):
             normalized=normalized,
             add_capitalized=add_capitalized,
         )
+
+    @staticmethod
+    def _get_language_config_path(language: str):
+        """Resolve the overlay config path for the given language code."""
+        path = resources.files("bewer.configs.languages").joinpath(f"{language}.yml")
+        if not path.is_file():
+            supported = [
+                p.name[:-4] for p in resources.files("bewer.configs.languages").iterdir() if p.name.endswith(".yml")
+            ]
+            raise ValueError(f"Unknown language '{language}'. Supported languages: {sorted(supported)}.")
+        return path
 
     @staticmethod
     def get_config_path(config_path: str | None) -> str:

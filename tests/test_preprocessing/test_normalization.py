@@ -149,6 +149,38 @@ class TestTransliterateLatin:
         assert transliterate_latin_letters.token_only is False
         assert transliterate_latin_letters.length_preserving is False
 
+    def test_preserve_empty_default_strips_all(self):
+        """Test that default preserve='' strips all diacritics."""
+        assert transliterate_latin_letters("æøå") == "aeoa"
+        assert transliterate_latin_letters("äöüß") == "aouss"
+        assert transliterate_latin_letters("éèêë") == "eeee"
+
+    def test_preserve_danish_chars(self):
+        """Test that Danish chars are retained when preserved."""
+        result = transliterate_latin_letters("æøå", preserve="æøå")
+        assert result == "æøå"
+
+    def test_preserve_danish_strips_others(self):
+        """Test that non-preserved diacritics are still stripped."""
+        result = transliterate_latin_letters("café æøå", preserve="æøå")
+        assert result == "cafe æøå"
+
+    def test_preserve_german_chars(self):
+        """Test that German chars are retained when preserved."""
+        result = transliterate_latin_letters("äöüß", preserve="äöüß")
+        assert result == "äöüß"
+
+    def test_preserve_french_chars(self):
+        """Test that French chars are retained when preserved."""
+        preserve = "éèêëçàùîôâûœæ"
+        result = transliterate_latin_letters("café", preserve=preserve)
+        assert result == "café"
+
+    def test_preserve_does_not_affect_non_latin(self):
+        """Test that preserve only applies to Latin chars; non-Latin still pass through."""
+        result = transliterate_latin_letters("日本æ", preserve="æøå")
+        assert result == "日本æ"
+
 
 class TestTransliterateSymbols:
     """Tests for the transliterate_symbols() function."""

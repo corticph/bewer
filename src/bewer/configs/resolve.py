@@ -27,8 +27,8 @@ def _resolve_func_pipeline(name, cfg):
     for func, cfg_params in cfg.items():
         cfg_params = cfg_params or {}
         norm_func = _resolve_function(func)
-        func_params = inspect.signature(norm_func).parameters.items()
-        param_iter = iter(func_params)
+        func_params = inspect.signature(norm_func).parameters
+        param_iter = iter(func_params.items())
 
         # Check that first positional argument is not passed in the config.
         first_param = next(param_iter)[0]
