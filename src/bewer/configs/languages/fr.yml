@@ -1,3 +1,7 @@
+tokenizers:
+  default:
+    bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
+      split_on_escaped: "-/'"
 normalizers:
   default:
     bewer.preprocessing.normalization.lowercase:

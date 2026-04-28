@@ -48,8 +48,8 @@ class Dataset(object):
         Args:
             config (str | None): Path to the configuration file. If None, uses the default configuration.
             language (str | None): Language code to apply language-specific pipeline settings (e.g. "da",
-                "de", "fr"). If None or "en", uses the default English configuration. Supported languages
-                are determined by the files in bewer/configs/languages/.
+                "de", "fr"). If None, uses the default configuration. Supported languages are determined
+                by the files in bewer/configs/languages/.
         """
         self.config_path = self.get_config_path(config)
         self.config = OmegaConf.load(self.config_path)
@@ -189,11 +189,10 @@ class Dataset(object):
     @staticmethod
     def _get_language_config_path(language: str):
         """Resolve the overlay config path for the given language code."""
-        path = resources.files("bewer.configs.languages").joinpath(f"{language}.yml")
+        languages_dir = resources.files("bewer.configs").joinpath("languages")
+        path = languages_dir.joinpath(f"{language}.yml")
         if not path.is_file():
-            supported = [
-                p.name[:-4] for p in resources.files("bewer.configs.languages").iterdir() if p.name.endswith(".yml")
-            ]
+            supported = [p.name[:-4] for p in languages_dir.iterdir() if p.name.endswith(".yml")]
             raise ValueError(f"Unknown language '{language}'. Supported languages: {sorted(supported)}.")
         return path
 
