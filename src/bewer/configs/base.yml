@@ -10,7 +10,7 @@ tokenizers:
     bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
       split_on_escaped: "-/"
   with_punctuation:
-    bewer.preprocessing.tokenization.strip_punctuation_keep_punct_pattern:
+    bewer.preprocessing.tokenization.keep_symbols_and_punctuation_pattern:
       punct_chars: ".,!?:;\"-/()“”«»"
       keep_newlines: true
   key_term:

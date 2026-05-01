@@ -4,7 +4,7 @@ import regex as re
 
 from bewer.preprocessing.tokenization import (
     Tokenizer,
-    strip_punctuation_keep_punct_pattern,
+    keep_symbols_and_punctuation_pattern,
     strip_punctuation_keep_symbols_pattern,
     strip_punctuation_pattern,
     whitespace_pattern,
@@ -172,54 +172,54 @@ class TestStripPunctuationKeepSymbols:
 
 
 class TestStripPunctuationKeepPunct:
-    """Tests for the strip_punctuation_keep_punct_pattern() function."""
+    """Tests for the keep_symbols_and_punctuation_pattern() function."""
 
     def test_returns_compiled_pattern(self):
-        pattern = strip_punctuation_keep_punct_pattern(punct_chars=".,!?")
+        pattern = keep_symbols_and_punctuation_pattern(punct_chars=".,!?")
         assert isinstance(pattern, re.Pattern)
 
     def test_basic_words(self):
-        pattern = strip_punctuation_keep_punct_pattern(punct_chars='.,!?:;"-/()')
+        pattern = keep_symbols_and_punctuation_pattern(punct_chars='.,!?:;"-/()')
         matches = [m.group() for m in pattern.finditer("hello world")]
         assert matches == ["hello", "world"]
 
     def test_punct_as_separate_tokens(self):
-        pattern = strip_punctuation_keep_punct_pattern(punct_chars='.,!?:;"-/()')
+        pattern = keep_symbols_and_punctuation_pattern(punct_chars='.,!?:;"-/()')
         matches = [m.group() for m in pattern.finditer("hello, world!")]
         assert matches == ["hello", ",", "world", "!"]
 
     def test_hyphen_as_separate_token(self):
-        pattern = strip_punctuation_keep_punct_pattern(punct_chars='.,!?:;"-/()')
+        pattern = keep_symbols_and_punctuation_pattern(punct_chars='.,!?:;"-/()')
         matches = [m.group() for m in pattern.finditer("well-known")]
         assert matches == ["well", "-", "known"]
 
     def test_keeps_currency_symbols(self):
-        pattern = strip_punctuation_keep_punct_pattern(punct_chars='.,!?:;"-/()')
+        pattern = keep_symbols_and_punctuation_pattern(punct_chars='.,!?:;"-/()')
         matches = [m.group() for m in pattern.finditer("costs $100")]
         assert matches == ["costs", "$", "100"]
 
     def test_newline_as_separate_token(self):
-        pattern = strip_punctuation_keep_punct_pattern(punct_chars='.,!?:;"-/()')
+        pattern = keep_symbols_and_punctuation_pattern(punct_chars='.,!?:;"-/()')
         matches = [m.group() for m in pattern.finditer("hello\nworld")]
         assert matches == ["hello", "\n", "world"]
 
     def test_keep_newlines_false(self):
-        pattern = strip_punctuation_keep_punct_pattern(punct_chars=".,!?", keep_newlines=False)
+        pattern = keep_symbols_and_punctuation_pattern(punct_chars=".,!?", keep_newlines=False)
         matches = [m.group() for m in pattern.finditer("hello\nworld")]
         assert matches == ["hello", "world"]
 
     def test_parentheses_as_separate_tokens(self):
-        pattern = strip_punctuation_keep_punct_pattern(punct_chars='.,!?:;"-/()')
+        pattern = keep_symbols_and_punctuation_pattern(punct_chars='.,!?:;"-/()')
         matches = [m.group() for m in pattern.finditer("(test)")]
         assert matches == ["(", "test", ")"]
 
     def test_periods_in_abbreviation(self):
-        pattern = strip_punctuation_keep_punct_pattern(punct_chars='.,!?:;"-/()')
+        pattern = keep_symbols_and_punctuation_pattern(punct_chars='.,!?:;"-/()')
         matches = [m.group() for m in pattern.finditer("A.I.")]
         assert matches == ["A", ".", "I", "."]
 
     def test_empty_string(self):
-        pattern = strip_punctuation_keep_punct_pattern(punct_chars='.,!?:;"-/()')
+        pattern = keep_symbols_and_punctuation_pattern(punct_chars='.,!?:;"-/()')
         matches = [m.group() for m in pattern.finditer("")]
         assert matches == []
 

@@ -13,7 +13,7 @@ __all__ = [
     "whitespace_pattern",
     "strip_punctuation_pattern",
     "strip_punctuation_keep_symbols_pattern",
-    "strip_punctuation_keep_punct_pattern",
+    "keep_symbols_and_punctuation_pattern",
 ]
 
 
@@ -67,7 +67,7 @@ def strip_punctuation_keep_symbols_pattern(
     return re.compile(rf"([{math_currency}])|({strip_pattern.pattern})", re.V1)
 
 
-def strip_punctuation_keep_punct_pattern(
+def keep_symbols_and_punctuation_pattern(
     punct_chars: str,
     keep_newlines: bool = True,
 ) -> re.Pattern:
