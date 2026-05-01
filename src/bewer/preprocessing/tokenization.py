@@ -8,7 +8,13 @@ from typing import Union
 
 import regex as re
 
-__all__ = ["Tokenizer", "whitespace_pattern", "strip_punctuation_pattern", "strip_punctuation_keep_symbols_pattern"]
+__all__ = [
+    "Tokenizer",
+    "whitespace_pattern",
+    "strip_punctuation_pattern",
+    "strip_punctuation_keep_symbols_pattern",
+    "strip_punctuation_keep_punct_pattern",
+]
 
 
 def whitespace_pattern() -> re.Pattern:
@@ -59,6 +65,28 @@ def strip_punctuation_keep_symbols_pattern(
         split_on_pattern=math_currency,
     )
     return re.compile(rf"([{math_currency}])|({strip_pattern.pattern})", re.V1)
+
+
+def strip_punctuation_keep_punct_pattern(
+    punct_chars: str,
+    keep_newlines: bool = True,
+) -> re.Pattern:
+    """Return a pattern like strip_punctuation_keep_symbols_pattern but also emits specified punctuation as tokens.
+
+    Args:
+        punct_chars: Characters to emit as individual tokens (e.g. '.,!?').
+        keep_newlines: If True, newlines are also emitted as individual tokens.
+
+    Returns:
+        re.Pattern: The compiled regex pattern.
+    """
+    base_pattern = strip_punctuation_keep_symbols_pattern(split_on_escaped=punct_chars)
+    escaped = re.escape(punct_chars)
+    newline_alt = r"\n" if keep_newlines else ""
+    return re.compile(
+        rf"([{escaped}{newline_alt}])|{base_pattern.pattern}",
+        re.V1,
+    )
 
 
 class Tokenizer(object):
