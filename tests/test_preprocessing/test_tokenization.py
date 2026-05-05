@@ -145,6 +145,11 @@ class TestStripPunctuationKeepSymbols:
         matches = [m.group() for m in pattern.finditer("95% accuracy")]
         assert matches == ["95", "%", "accuracy"]
 
+    def test_keeps_degree_symbol(self):
+        pattern = strip_punctuation_keep_symbols_pattern()
+        matches = [m.group() for m in pattern.finditer("37° Celsius")]
+        assert matches == ["37", "°", "Celsius"]
+
     def test_keeps_math_symbols(self):
         pattern = strip_punctuation_keep_symbols_pattern()
         matches = [m.group() for m in pattern.finditer("a+b=c")]
