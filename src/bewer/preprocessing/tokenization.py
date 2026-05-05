@@ -51,7 +51,7 @@ def strip_punctuation_keep_symbols_pattern(
 ) -> re.Pattern:
     """
     Return a regex pattern that matches tokens without internal whitespace or punctuation per specified characters, but
-    keeps currency symbols, math symbols, and percent signs as separate tokens.
+    keeps currency symbols, math symbols, percent signs, and the degree symbol as separate tokens.
 
     Args:
         split_on_escaped (str): A string of characters to split on in addition to whitespace. Will be escaped.
@@ -59,7 +59,7 @@ def strip_punctuation_keep_symbols_pattern(
     Returns:
         re.Pattern: The compiled regex pattern.
     """
-    math_currency = r"\p{Sm}\p{Sc}%"
+    math_currency = r"\p{Sm}\p{Sc}%°"
     strip_pattern = strip_punctuation_pattern(
         split_on_escaped=split_on_escaped,
         split_on_pattern=math_currency,
