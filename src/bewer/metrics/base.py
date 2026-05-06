@@ -26,6 +26,7 @@ __all__ = [
     "list_registered_metrics",
     "MetricCollection",
     "ExampleMetricCollection",
+    "ConfidenceInterval",
 ]
 
 
@@ -341,6 +342,43 @@ class Metric(ABC):
         example_metric.set_source(example)
         self._examples[example._index] = example_metric
         return example_metric
+
+    def compute_confidence_interval(
+        self,
+        level: float = 0.95,
+        *,
+        n_resamples: int = 1000,
+        seed: Optional[int] = None,
+        method: str = "bootstrap",
+    ) -> "ConfidenceInterval":
+        """Compute a confidence interval for this metric's main value via
+        bootstrap resampling of examples (with replacement).
+
+        Args:
+            level: Confidence level in (0, 1). Default 0.95.
+            n_resamples: Number of bootstrap resamples. Default 1000.
+            seed: Optional seed for reproducibility.
+            method: Currently only "bootstrap" is supported.
+
+        Returns:
+            A ConfidenceInterval. Iterable as (low, high) for tuple unpacking.
+
+        Raises:
+            ValueError: if level is not in (0, 1), n_resamples < 1, the metric
+                has no main value, or the dataset is empty.
+            TypeError: if the metric's main value is not numeric.
+            NotImplementedError: if method is not "bootstrap".
+        """
+        if method != "bootstrap":
+            raise NotImplementedError(f"Unknown CI method: {method!r}")
+        from bewer.metrics.confidence import bootstrap_confidence_interval
+
+        return bootstrap_confidence_interval(
+            self,
+            level=level,
+            n_resamples=n_resamples,
+            seed=seed,
+        )
 
 
 class ExampleMetric(ABC):
@@ -779,3 +817,6 @@ def list_registered_metrics(show_private: bool = False) -> list[str]:
         return list(METRIC_REGISTRY.metric_factories.keys())
     else:
         return [name for name in METRIC_REGISTRY.metric_factories.keys() if not name.startswith("_")]
+
+
+from bewer.metrics.confidence import ConfidenceInterval  # noqa: E402
