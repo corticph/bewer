@@ -8,6 +8,7 @@ from bewer.metrics.base import (
     list_registered_metrics,
     metric_value,
 )
+from bewer.metrics.confidence import ConfidenceInterval
 from bewer.metrics._kt_stats import _KTStats  # noqa: F401 (registers "_kt_stats")
 from bewer.metrics._rkt_stats import _RKTStats  # noqa: F401 (registers "_rkt_stats")
 from bewer.metrics.cer import CER
@@ -32,6 +33,7 @@ __all__ = [
     "MetricParams",
     "metric_value",
     "dependency",
+    "ConfidenceInterval",
     "WER",
     "CER",
     "KTF",
