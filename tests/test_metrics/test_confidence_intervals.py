@@ -317,9 +317,9 @@ class TestAggregationCorrectness:
         n = 3
         samples = []
         for _ in range(n_resamples):
-            idx = [rng.randrange(n) for _ in range(n)]
-            total_edits = sum(per_example[i][0] for i in idx)
-            total_ref = sum(per_example[i][1] for i in idx)
+            sampled = rng.choices(per_example, k=n)
+            total_edits = sum(p[0] for p in sampled)
+            total_ref = sum(p[1] for p in sampled)
             samples.append(float(total_edits) / total_ref if total_ref > 0 else float(total_edits))
         samples.sort()
         alpha = (1.0 - 0.9) / 2.0
