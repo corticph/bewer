@@ -131,7 +131,7 @@ def bootstrap_confidence_interval(
     rng = random.Random(seed)
     samples: list[float] = []
     for _ in range(n_resamples):
-        resampled = [examples[rng.randrange(n)] for _ in range(n)]
+        resampled = rng.choices(examples, k=n)
         shadow = _make_shadow(metric, resampled)
         samples.append(float(getattr(shadow, main_name)))
 
