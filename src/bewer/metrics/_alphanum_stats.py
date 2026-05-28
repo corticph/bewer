@@ -114,11 +114,12 @@ class _AlphaNumStats(Metric):
         """Parameters for the _AlphaNumStats metric.
 
         Attributes:
-            pattern: Regex pattern matched against each token's case-preserving form via `fullmatch`.
-                Defaults to ALPHANUM_DEFAULT_PATTERN, which catches initialisms (MRI), acronyms (NATO),
-                chemical/unit notation (CH3, mmHg), mixed-case medical/brand terms (HbA1c, iPhone),
-                and digit-prefixed entities with an uppercase tail (3D, 5G). Uses Unicode properties
-                so Greek letters integrate naturally (ΔG, μM, β2).
+            pattern: Regex pattern matched against each token's case-preserving form (Token.raw) via
+                `fullmatch`. Defaults to ALPHANUM_DEFAULT_PATTERN, which matches tokens that either
+                (a) contain at least one uppercase letter and are not the shape
+                <single uppercase letter><lowercase letters>, or (b) consist of one or more letters
+                followed by at least one digit. The pattern uses Unicode letter properties (\\p{Lu},
+                \\p{Ll}, \\p{L}), so Greek letters and other scripts are classified by case.
         """
 
         pattern: str = ALPHANUM_DEFAULT_PATTERN

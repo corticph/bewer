@@ -36,14 +36,17 @@ class AlphaNumP(Metric):
     description = (
         "Alphanumerical entity precision (AlphaNumP) is computed as TP / (TP + FP), where TP is the number of "
         "alphanumerical entities correctly transcribed in the hypothesis and FP is the number of spurious "
-        "alphanumerical entities. Entities are detected via a regex predicate over each token's "
-        "case-preserving form, covering initialisms (MRI, FBI), acronyms (NATO), chemical/unit notation "
-        "(CH3, mmHg, CO2), mixed-case medical/brand terms (HbA1c, mRNA, iPhone), and digit-prefixed "
-        "entities with an uppercase tail (3D, 5G). The default pattern is Unicode-aware: Greek letters "
-        "integrate naturally (ΔG, μM, β2). Each match is a single token. Note: this metric is inherently "
-        "case-sensitive — ASR systems that emit lowercase-only output will show low recall on case-only "
-        "entities (e.g. mri vs MRI counts as a miss), and period-style abbreviations (Dr., e.g.) are not "
-        "detected because the default tokenizer splits on periods."
+        "alphanumerical entities. Entities are detected via a regex predicate applied to each token's "
+        "case-preserving form (Token.raw). The default pattern matches a token when either: (a) it contains "
+        "at least one uppercase letter and is not the shape <single uppercase letter><lowercase letters> "
+        "(so ordinary capitalised words such as 'Patient', 'Hello', 'The' are excluded, while tokens with "
+        "an internal uppercase letter, multiple uppercase letters, or non-letter characters alongside an "
+        "uppercase letter are kept), or (b) it consists of one or more letters followed by at least one "
+        "digit. The pattern uses Unicode letter properties (\\p{Lu}, \\p{Ll}, \\p{L}), so Greek letters "
+        "and other scripts are classified by case and integrate naturally. Each match is a single token. "
+        "Note: this metric is inherently case-sensitive — ASR systems that emit lowercase-only output "
+        "will lose case-only entities (e.g. 'mri' vs 'MRI' counts as a miss). Period-separated tokens "
+        "(e.g. 'Dr.', 'e.g.') are not detected because the default tokenizer splits on periods."
     )
     example_cls = AlphaNumP_
 
