@@ -9,8 +9,12 @@ from bewer.metrics.base import (
     metric_value,
 )
 from bewer.metrics.confidence import ConfidenceInterval
+from bewer.metrics._alphanum_stats import _AlphaNumStats  # noqa: F401 (registers "_alphanum_stats")
 from bewer.metrics._kt_stats import _KTStats  # noqa: F401 (registers "_kt_stats")
 from bewer.metrics._rkt_stats import _RKTStats  # noqa: F401 (registers "_rkt_stats")
+from bewer.metrics.alphanum_f import AlphaNumF
+from bewer.metrics.alphanum_p import AlphaNumP
+from bewer.metrics.alphanum_r import AlphaNumR
 from bewer.metrics.cer import CER
 from bewer.metrics.error_align import ErrorAlign
 from bewer.metrics.ktf import KTF
@@ -36,6 +40,9 @@ __all__ = [
     "ConfidenceInterval",
     "WER",
     "CER",
+    "AlphaNumF",
+    "AlphaNumP",
+    "AlphaNumR",
     "KTF",
     "KTER",
     "KTP",
