@@ -51,14 +51,18 @@ class TestAlphaNumDefaultPattern:
             "ΔG",
             "ΔΩ",
             "α2A",
-            # All-uppercase ordinary words — also case-distinctive by definition
-            "THE",
-            "STOP",
-            "NO",
         ],
     )
     def test_matches(self, token):
         assert DEFAULT.fullmatch(token) is not None, f"expected match for {token!r}"
+
+    @pytest.mark.parametrize("token", ["THE", "HELLO", "STOP", "NO", "OK"])
+    def test_documented_false_positives(self, token):
+        """All-uppercase ordinary words satisfy the regex's case-distinctive rule, but
+        semantically they're shouted everyday words rather than abbreviations. We label
+        these as documented false positives — they're the price of the rule that ≥2
+        uppercase letters in a non-init-cap shape are entity-like."""
+        assert DEFAULT.fullmatch(token) is not None
 
     @pytest.mark.parametrize(
         "token",
