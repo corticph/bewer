@@ -107,6 +107,75 @@ class TestAlphaNumDefaultPattern:
         assert DEFAULT.fullmatch(token) is not None
 
 
+class TestHyphenatedCompoundsAtRegexLevel:
+    """Tests that the default pattern handles hyphen-joined compound strings.
+
+    These check the regex itself (operating on the joined compound string), not the
+    multi-token slicing — TestMatchTokenRegex covers the helper end-to-end.
+    """
+
+    @pytest.mark.parametrize(
+        "compound",
+        [
+            "CT-scan",
+            "X-ray",
+            "T-cell",
+            "B-cell",
+            "D-glucose",
+            "L-glucose",
+            "pre-MRI",
+            "non-COVID",
+            "post-MI",
+            "5-HT",
+            "vitamin-D",
+            "MRI-CT",
+            "pre-COVID-19",
+            "Hello-MRI",
+            "pre-MRI-scan",
+            "5-HT-receptor",
+        ],
+    )
+    def test_compound_entities_match(self, compound):
+        assert DEFAULT.fullmatch(compound) is not None, f"expected match for {compound!r}"
+
+    @pytest.mark.parametrize(
+        "compound",
+        [
+            # Ordinary capitalised compounds — must NOT match
+            "Hello-World",
+            "Patient-Care",
+            # Lowercase compounds
+            "up-to-date",
+            "state-of-the-art",
+            "mother-in-law",
+            "cul-de-sac",
+            "and-or",
+            "blue-green",
+            "e-mail",
+            "e-commerce",
+            # Lowercase Greek prefix (no case signal anywhere in compound)
+            "α-helix",
+            "β-blocker",
+        ],
+    )
+    def test_compound_non_entities_reject(self, compound):
+        assert DEFAULT.fullmatch(compound) is None, f"expected reject for {compound!r}"
+
+    @pytest.mark.parametrize(
+        "compound",
+        [
+            # Single uppercase letter + lowercase part — indistinguishable from X-ray
+            # without a vocabulary. Documented limitation.
+            "T-shirt",
+            "D-day",
+            "A-frame",
+            "S-curve",
+        ],
+    )
+    def test_compound_documented_false_positives(self, compound):
+        assert DEFAULT.fullmatch(compound) is not None
+
+
 class TestMatchTokenRegex:
     """Tests for match_token_regex against a real TokenList."""
 
@@ -164,3 +233,119 @@ class TestMatchTokenRegex:
         strict = re.compile(r"MRI")
         matches = match_token_regex(tokens, strict)
         assert matches == []  # "preMRI" is not a fullmatch for "MRI"
+
+
+class TestHyphenatedCompoundsAtHelperLevel:
+    """Tests that match_token_regex correctly groups hyphen-connected tokens into
+    multi-token slices when the joined compound matches the pattern."""
+
+    def test_ct_scan_is_two_token_slice(self):
+        dataset = Dataset()
+        dataset.add(ref="patient had a CT-scan", hyp="")
+        tokens = dataset[0].ref.tokens
+        # Tokens: patient, had, a, CT, scan
+        matches = match_token_regex(tokens, DEFAULT)
+        assert matches == [slice(3, 5)]
+        assert [tokens[k].raw for k in range(3, 5)] == ["CT", "scan"]
+
+    def test_x_ray_is_two_token_slice(self):
+        dataset = Dataset()
+        dataset.add(ref="patient had an X-ray", hyp="")
+        tokens = dataset[0].ref.tokens
+        # Tokens: patient, had, an, X, ray
+        matches = match_token_regex(tokens, DEFAULT)
+        assert matches == [slice(3, 5)]
+        assert [tokens[k].raw for k in range(3, 5)] == ["X", "ray"]
+
+    def test_pre_mri_is_two_token_slice(self):
+        dataset = Dataset()
+        dataset.add(ref="the pre-MRI screening", hyp="")
+        tokens = dataset[0].ref.tokens
+        matches = match_token_regex(tokens, DEFAULT)
+        # Tokens: the, pre, MRI, screening
+        assert matches == [slice(1, 3)]
+        assert [tokens[k].raw for k in range(1, 3)] == ["pre", "MRI"]
+
+    def test_three_part_compound(self):
+        dataset = Dataset()
+        dataset.add(ref="the 5-HT-receptor pathway", hyp="")
+        tokens = dataset[0].ref.tokens
+        # Tokens: the, 5, HT, receptor, pathway
+        matches = match_token_regex(tokens, DEFAULT)
+        assert matches == [slice(1, 4)]
+        assert [tokens[k].raw for k in range(1, 4)] == ["5", "HT", "receptor"]
+
+    def test_mixed_ct_scan_and_x_ray(self):
+        dataset = Dataset()
+        dataset.add(ref="patient had a CT-scan and an X-ray", hyp="")
+        tokens = dataset[0].ref.tokens
+        matches = match_token_regex(tokens, DEFAULT)
+        # Tokens: patient, had, a, CT, scan, and, an, X, ray
+        assert matches == [slice(3, 5), slice(7, 9)]
+
+    def test_compound_alongside_single_token_match(self):
+        dataset = Dataset()
+        dataset.add(ref="MRI shows a CT-scan", hyp="")
+        tokens = dataset[0].ref.tokens
+        # Tokens: MRI, shows, a, CT, scan
+        matches = match_token_regex(tokens, DEFAULT)
+        assert matches == [slice(0, 1), slice(3, 5)]
+
+    def test_ordinary_capitalised_compound_no_match(self):
+        dataset = Dataset()
+        dataset.add(ref="the Hello-World example", hyp="")
+        tokens = dataset[0].ref.tokens
+        matches = match_token_regex(tokens, DEFAULT)
+        assert matches == []
+
+    def test_up_to_date_no_match(self):
+        dataset = Dataset()
+        dataset.add(ref="keep it up-to-date please", hyp="")
+        tokens = dataset[0].ref.tokens
+        matches = match_token_regex(tokens, DEFAULT)
+        assert matches == []
+
+    def test_email_no_match(self):
+        dataset = Dataset()
+        dataset.add(ref="send me an e-mail", hyp="")
+        tokens = dataset[0].ref.tokens
+        matches = match_token_regex(tokens, DEFAULT)
+        assert matches == []
+
+    def test_spaces_around_hyphen_disable_compound(self):
+        """X - ray with surrounding spaces is not a compound (the gap contains spaces, not just
+        hyphens). Falls back to single-token matching, which neither X (length 1) nor ray match."""
+        dataset = Dataset()
+        dataset.add(ref="patient had an X - ray", hyp="")
+        tokens = dataset[0].ref.tokens
+        matches = match_token_regex(tokens, DEFAULT)
+        assert matches == []
+
+    def test_single_uppercase_letter_plus_lowercase_compound_matches_as_documented_fp(self):
+        """T-shirt looks structurally identical to X-ray; we accept this as a documented
+        false positive — the metric cannot tell them apart without a vocabulary."""
+        dataset = Dataset()
+        dataset.add(ref="wearing a T-shirt today", hyp="")
+        tokens = dataset[0].ref.tokens
+        # Tokens: wearing, a, T, shirt, today
+        matches = match_token_regex(tokens, DEFAULT)
+        assert matches == [slice(2, 4)]
+
+    def test_compound_partial_fallback_to_single_token(self):
+        """When the compound does NOT match but a single token within it does (via branch 2,
+        e.g. letter+digit), the helper falls back to per-token matching within the group."""
+        dataset = Dataset()
+        dataset.add(ref="random-b12-text", hyp="")
+        tokens = dataset[0].ref.tokens
+        # Tokens: random, b12, text. Compound 'random-b12-text' has no uppercase → branch 1
+        # fails. Branch 2 doesn't allow '-' in body, so compound match fails. Per-token:
+        # b12 matches branch 2.
+        matches = match_token_regex(tokens, DEFAULT)
+        assert matches == [slice(1, 2)]
+        assert tokens[1].raw == "b12"
+
+    def test_empty_token_list(self):
+        dataset = Dataset()
+        dataset.add(ref="", hyp="")
+        tokens = dataset[0].ref.tokens
+        assert match_token_regex(tokens, DEFAULT) == []

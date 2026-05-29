@@ -11,23 +11,63 @@ __all__ = ["ALPHANUM_DEFAULT_PATTERN", "match_token_regex"]
 
 
 ALPHANUM_DEFAULT_PATTERN = (
-    # Token contains an uppercase letter AND is not an ordinary capitalised word
-    # (e.g. Patient, Hello). Catches MRI, HbA1c, mmHg, iPhone, mRNA, ΔG, μM, 5G, 3D,
-    # CO2, HbS, eGFR, ΔΩ, etc.
-    r"(?=.*\p{Lu})(?!\p{Lu}\p{Ll}+\Z)[\p{L}\d]{2,}"
+    # Branch 1: token (or hyphen-joined compound) has at least one uppercase letter
+    # AND is not an "ordinary capitalised compound" (one or more parts that are each
+    # either an init-cap word or an all-lowercase word, joined by hyphens). Catches
+    # single tokens like MRI, mmHg, HbA1c, mRNA, eGFR, CH3, 3D, 5G, μM, ΔG, and
+    # hyphen-joined compounds like CT-scan, X-ray, T-cell, pre-MRI, non-COVID,
+    # 5-HT, MRI-CT, pre-COVID-19.
+    r"(?=.*\p{Lu})"
+    r"(?!(?:\p{Lu}\p{Ll}+|\p{Ll}+)(?:-(?:\p{Lu}\p{Ll}+|\p{Ll}+))*\Z)"
+    r"[\p{L}\d][-\p{L}\d]*[\p{L}\d]"
     r"|"
-    # All-lowercase or mixed-script letter+digit tokens (β2, o2, b12, hello1, ...).
-    # Without an uppercase signal these are caught here so case-mismatches between
-    # ref and hyp still register as FN/FP via the alignment.
+    # Branch 2: letter(s) followed by at least one digit. Catches all-lowercase
+    # letter+digit tokens (β2, o2, b12, hello1) so case-mismatches between ref and
+    # hyp still register on the alignment as FN/FP.
     r"\p{L}+\d[\p{L}\d]*"
 )
 
 
 def match_token_regex(tokens: "TokenList", pattern: re.Pattern) -> list[slice]:
-    """Return one slice(i, i+1) per token whose raw form matches the pattern.
+    """Return slices for tokens — or hyphen-connected token groups — matching the pattern.
 
-    Matching is performed against `Token.raw` (case-preserving, post-standardization,
-    pre-normalization) using `pattern.fullmatch` — so the predicate applies to the
-    whole token, not a substring.
+    A run of consecutive tokens whose adjacent character gaps in the standardized
+    source text consist of one or more hyphens (and nothing else) is treated as a
+    compound candidate: the joined substring of the standardized text is matched
+    against `pattern.fullmatch`. If it matches, the entire run is returned as one
+    slice. Otherwise each token in the run is matched individually against
+    `Token.raw` via `pattern.fullmatch`.
     """
-    return [slice(i, i + 1) for i, token in enumerate(tokens) if pattern.fullmatch(token.raw)]
+    n = len(tokens)
+    if n == 0:
+        return []
+    standardized = tokens[0].src.standardized if tokens[0].src is not None else None
+
+    matches: list[slice] = []
+    i = 0
+    while i < n:
+        # Extend the hyphen-connected run as far as possible.
+        j = i
+        if standardized is not None:
+            while j + 1 < n and _hyphens_only(standardized, tokens[j].end, tokens[j + 1].start):
+                j += 1
+        # Compound match takes priority over per-token match within the run.
+        if j > i:
+            compound = standardized[tokens[i].start : tokens[j].end]
+            if pattern.fullmatch(compound):
+                matches.append(slice(i, j + 1))
+                i = j + 1
+                continue
+        # Fall back to per-token matching across the run.
+        for k in range(i, j + 1):
+            if pattern.fullmatch(tokens[k].raw):
+                matches.append(slice(k, k + 1))
+        i = j + 1
+    return matches
+
+
+def _hyphens_only(text: str, start: int, end: int) -> bool:
+    """True iff `text[start:end]` is one or more hyphen characters and nothing else."""
+    if end <= start:
+        return False
+    return all(c == "-" for c in text[start:end])

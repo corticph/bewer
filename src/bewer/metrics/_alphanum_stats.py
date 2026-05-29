@@ -114,12 +114,13 @@ class _AlphaNumStats(Metric):
         """Parameters for the _AlphaNumStats metric.
 
         Attributes:
-            pattern: Regex pattern matched against each token's case-preserving form (Token.raw) via
-                `fullmatch`. Defaults to ALPHANUM_DEFAULT_PATTERN, which matches tokens that either
-                (a) contain at least one uppercase letter and are not the shape
-                <single uppercase letter><lowercase letters>, or (b) consist of one or more letters
-                followed by at least one digit. The pattern uses Unicode letter properties (\\p{Lu},
-                \\p{Ll}, \\p{L}), so Greek letters and other scripts are classified by case.
+            pattern: Regex pattern matched against each token's case-preserving form, and against
+                hyphen-joined runs of consecutive tokens, via `fullmatch`. Defaults to
+                ALPHANUM_DEFAULT_PATTERN, which matches a candidate string that either (a) contains at
+                least one uppercase letter and is not an ordinary capitalised compound (init-cap or
+                all-lowercase parts joined by hyphens), or (b) consists of one or more letters
+                followed by at least one digit. Uses Unicode letter properties (\\p{Lu}, \\p{Ll},
+                \\p{L}), so Greek letters and other scripts are classified by case.
         """
 
         pattern: str = ALPHANUM_DEFAULT_PATTERN

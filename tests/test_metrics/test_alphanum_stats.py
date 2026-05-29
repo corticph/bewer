@@ -168,6 +168,114 @@ class TestAlphaNumStatsDatasetMetric:
         assert stats.num_fp == expected
 
 
+class TestAlphaNumStatsHyphenatedCompounds:
+    """Tests that hyphenated multi-token entities (CT-scan, X-ray, pre-MRI, ...) are
+    detected as compound entities and that the TP/FN/FP plumbing handles multi-token
+    slices correctly through the alignment."""
+
+    def test_ct_scan_perfect_match(self):
+        dataset = Dataset()
+        dataset.add(ref="patient had a CT-scan", hyp="patient had a CT-scan")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_ref_terms == 1
+        assert stats.num_tp == 1
+        assert stats.num_fn == 0
+        assert stats.num_fp == 0
+
+    def test_x_ray_perfect_match(self):
+        dataset = Dataset()
+        dataset.add(ref="patient had an X-ray", hyp="patient had an X-ray")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_ref_terms == 1
+        assert stats.num_tp == 1
+
+    def test_ct_scan_case_lost(self):
+        """ref CT-scan vs hyp ct-scan: case signal lost → ref entity is FN, hyp has no entity."""
+        dataset = Dataset()
+        dataset.add(ref="patient had a CT-scan", hyp="patient had a ct-scan")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_tp == 0
+        assert stats.num_fn == 1
+        assert stats.num_fp == 0
+
+    def test_x_ray_case_lost(self):
+        """ref X-ray vs hyp x-ray: lowercase x has no case signal — FN, no FP."""
+        dataset = Dataset()
+        dataset.add(ref="patient had an X-ray", hyp="patient had an x-ray")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_tp == 0
+        assert stats.num_fn == 1
+        assert stats.num_fp == 0
+
+    def test_compound_dropped(self):
+        """ref CT-scan vs hyp 'exam': entire compound is missed → FN."""
+        dataset = Dataset()
+        dataset.add(ref="patient had a CT-scan", hyp="patient had an exam")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_tp == 0
+        assert stats.num_fn == 1
+        assert stats.num_fp == 0
+
+    def test_compound_partial_loss(self):
+        """ref CT-scan vs hyp CT: scan dropped → compound is FN."""
+        dataset = Dataset()
+        dataset.add(ref="patient had a CT-scan today", hyp="patient had a CT today")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_tp == 0
+        assert stats.num_fn == 1
+
+    def test_compound_hyphen_dropped_keeps_tp(self):
+        """ref CT-scan vs hyp 'CT scan' (no hyphen): tokens are identical so alignment
+        is all-match. The ref compound spans the same MATCH ops → counted as TP."""
+        dataset = Dataset()
+        dataset.add(ref="patient had a CT-scan", hyp="patient had a CT scan")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_tp == 1
+        assert stats.num_fn == 0
+        assert stats.num_fp == 0
+
+    def test_compound_spurious_in_hyp_is_fp(self):
+        """hyp invents an X-ray that wasn't in ref."""
+        dataset = Dataset()
+        dataset.add(ref="patient had an exam", hyp="patient had an X-ray")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_tp == 0
+        assert stats.num_fn == 0
+        assert stats.num_fp == 1
+
+    def test_mixed_ct_scan_and_x_ray(self):
+        dataset = Dataset()
+        dataset.add(
+            ref="patient had a CT-scan and an X-ray yesterday",
+            hyp="patient had a CT-scan and an X-ray yesterday",
+        )
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_ref_terms == 2
+        assert stats.num_tp == 2
+
+    def test_ordinary_capitalised_compound_no_entity(self):
+        """Hello-World should NOT be detected as an entity."""
+        dataset = Dataset()
+        dataset.add(ref="the Hello-World example", hyp="the Hello-World example")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_ref_terms == 0
+        assert stats.num_tp == 0
+
+    def test_pre_mri_compound(self):
+        dataset = Dataset()
+        dataset.add(ref="the pre-MRI screening", hyp="the pre-MRI screening")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_ref_terms == 1
+        assert stats.num_tp == 1
+
+    def test_5_ht_compound(self):
+        dataset = Dataset()
+        dataset.add(ref="the 5-HT receptor pathway", hyp="the 5-HT receptor pathway")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_ref_terms == 1
+        assert stats.num_tp == 1
+
+
 class TestAlphaNumStatsCustomPattern:
     """Tests for user-supplied regex patterns."""
 
