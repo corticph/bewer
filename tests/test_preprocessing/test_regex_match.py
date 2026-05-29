@@ -51,6 +51,10 @@ class TestAlphaNumDefaultPattern:
             "ΔG",
             "ΔΩ",
             "α2A",
+            # All-uppercase ordinary words — also case-distinctive by definition
+            "THE",
+            "STOP",
+            "NO",
         ],
     )
     def test_matches(self, token):
@@ -95,11 +99,6 @@ class TestAlphaNumDefaultPattern:
     def test_rejects(self, token):
         assert DEFAULT.fullmatch(token) is None, f"expected reject for {token!r}"
 
-    @pytest.mark.parametrize("token", ["THE", "STOP", "NO"])
-    def test_documented_false_positives(self, token):
-        """Shouted ordinary words match the all-uppercase branch — accepted limitation."""
-        assert DEFAULT.fullmatch(token) is not None
-
     @pytest.mark.parametrize("token", ["β2", "o2", "b12", "hello1"])
     def test_all_lowercase_letter_digit_match(self, token):
         """All-lowercase letter+digit tokens are caught by the second branch so case mismatches
@@ -117,34 +116,45 @@ class TestHyphenatedCompoundsAtRegexLevel:
     @pytest.mark.parametrize(
         "compound",
         [
+            # Abbreviation + word
             "CT-scan",
             "X-ray",
             "T-cell",
             "B-cell",
             "D-glucose",
             "L-glucose",
+            # Prefix + abbreviation
             "pre-MRI",
             "non-COVID",
             "post-MI",
+            # Multi-part with digits
             "5-HT",
             "vitamin-D",
-            "MRI-CT",
             "pre-COVID-19",
+            # Abbreviation + abbreviation
+            "MRI-CT",
+            # Mixed shapes
             "Hello-MRI",
             "pre-MRI-scan",
             "5-HT-receptor",
+            # Single-uppercase prefix + lowercase part — structurally identical to X-ray.
+            # The regex correctly identifies these as case-distinctive.
+            "T-shirt",
+            "D-day",
+            "A-frame",
+            "S-curve",
         ],
     )
-    def test_compound_entities_match(self, compound):
+    def test_compound_matches(self, compound):
         assert DEFAULT.fullmatch(compound) is not None, f"expected match for {compound!r}"
 
     @pytest.mark.parametrize(
         "compound",
         [
-            # Ordinary capitalised compounds — must NOT match
+            # Ordinary capitalised compounds
             "Hello-World",
             "Patient-Care",
-            # Lowercase compounds
+            # All-lowercase compounds
             "up-to-date",
             "state-of-the-art",
             "mother-in-law",
@@ -153,27 +163,13 @@ class TestHyphenatedCompoundsAtRegexLevel:
             "blue-green",
             "e-mail",
             "e-commerce",
-            # Lowercase Greek prefix (no case signal anywhere in compound)
+            # Lowercase Greek prefix (no uppercase letter anywhere in compound)
             "α-helix",
             "β-blocker",
         ],
     )
-    def test_compound_non_entities_reject(self, compound):
+    def test_compound_rejects(self, compound):
         assert DEFAULT.fullmatch(compound) is None, f"expected reject for {compound!r}"
-
-    @pytest.mark.parametrize(
-        "compound",
-        [
-            # Single uppercase letter + lowercase part — indistinguishable from X-ray
-            # without a vocabulary. Documented limitation.
-            "T-shirt",
-            "D-day",
-            "A-frame",
-            "S-curve",
-        ],
-    )
-    def test_compound_documented_false_positives(self, compound):
-        assert DEFAULT.fullmatch(compound) is not None
 
 
 class TestMatchTokenRegex:
@@ -321,9 +317,9 @@ class TestHyphenatedCompoundsAtHelperLevel:
         matches = match_token_regex(tokens, DEFAULT)
         assert matches == []
 
-    def test_single_uppercase_letter_plus_lowercase_compound_matches_as_documented_fp(self):
-        """T-shirt looks structurally identical to X-ray; we accept this as a documented
-        false positive — the metric cannot tell them apart without a vocabulary."""
+    def test_single_uppercase_letter_plus_lowercase_compound_matches(self):
+        """T-shirt has the same case-distinctive shape as X-ray (single uppercase letter
+        joined by hyphen to lowercase) and is correctly matched as a multi-token entity."""
         dataset = Dataset()
         dataset.add(ref="wearing a T-shirt today", hyp="")
         tokens = dataset[0].ref.tokens

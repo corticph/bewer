@@ -44,7 +44,7 @@ class AlphaNumP(Metric):
         "while 'MRI', 'mmHg', 'CT-scan', 'X-ray', 'pre-MRI', 'MRI-CT' are kept), or (b) it consists of one "
         "or more letters followed by at least one digit. The pattern uses Unicode letter properties "
         "(\\p{Lu}, \\p{Ll}, \\p{L}), so Greek letters and other scripts are classified by case and "
-        "integrate naturally. Note: this metric is inherently case-sensitive — ASR systems that emit "
+        "integrate naturally. This metric is inherently case-sensitive — ASR systems that emit "
         "lowercase-only output will lose case-only entities (e.g. 'mri' vs 'MRI' counts as a miss). "
         "Period-separated tokens (e.g. 'Dr.', 'e.g.') are not detected because the default tokenizer "
         "splits on periods."
