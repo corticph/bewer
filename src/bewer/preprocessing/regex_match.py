@@ -7,7 +7,7 @@ import regex as re
 if TYPE_CHECKING:
     from bewer.core.text import TokenList
 
-__all__ = ["ALPHANUM_DEFAULT_PATTERN", "match_token_regex"]
+__all__ = ["ALPHANUM_DEFAULT_PATTERN", "match_token_regex", "tokens_are_hyphen_connected"]
 
 
 ALPHANUM_DEFAULT_PATTERN = (
@@ -25,6 +25,11 @@ ALPHANUM_DEFAULT_PATTERN = (
     # letter+digit tokens (β2, o2, b12, hello1) so case-mismatches between ref and
     # hyp still register on the alignment as FN/FP.
     r"\p{L}+\d[\p{L}\d]*"
+    r"|"
+    # Branch 3: any token or compound containing at least one Greek letter
+    # (μg, α, β2 already by branch 2, α-helix, β-blocker, γδ, ΔG already by branch 1).
+    # Greek letters are always treated as entity-bearing regardless of case.
+    r"(?=.*\p{Greek})[\p{L}\d][-\p{L}\d]*"
 )
 
 
@@ -64,6 +69,25 @@ def match_token_regex(tokens: "TokenList", pattern: re.Pattern) -> list[slice]:
                 matches.append(slice(k, k + 1))
         i = j + 1
     return matches
+
+
+def tokens_are_hyphen_connected(tokens: "TokenList", start: int, stop: int) -> bool:
+    """True iff each adjacent pair of tokens in `tokens[start:stop]` is joined in the
+    standardized source text by one or more hyphens (and nothing else).
+
+    Trivially returns True if the range has fewer than 2 tokens. Returns False if the
+    tokens have no source attached (cannot inspect the gaps between them).
+    """
+    if stop - start < 2:
+        return True
+    src = tokens[start].src
+    if src is None:
+        return False
+    text = src.standardized
+    for k in range(start, stop - 1):
+        if not _hyphens_only(text, tokens[k].end, tokens[k + 1].start):
+            return False
+    return True
 
 
 def _hyphens_only(text: str, start: int, end: int) -> bool:

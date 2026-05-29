@@ -224,15 +224,26 @@ class TestAlphaNumStatsHyphenatedCompounds:
         assert stats.num_tp == 0
         assert stats.num_fn == 1
 
-    def test_compound_hyphen_dropped_keeps_tp(self):
-        """ref CT-scan vs hyp 'CT scan' (no hyphen): tokens are identical so alignment
-        is all-match. The ref compound spans the same MATCH ops → counted as TP."""
+    def test_compound_hyphen_dropped_is_fn(self):
+        """ref CT-scan vs hyp 'CT scan' (no hyphen): tokens are individually MATCH on the
+        alignment, but the hyp side does not preserve the hyphen — strict hyphen handling
+        treats the ref compound as FN."""
         dataset = Dataset()
         dataset.add(ref="patient had a CT-scan", hyp="patient had a CT scan")
         stats = dataset[0].metrics._alphanum_stats()
-        assert stats.num_tp == 1
-        assert stats.num_fn == 0
+        assert stats.num_tp == 0
+        assert stats.num_fn == 1
         assert stats.num_fp == 0
+
+    def test_hyp_invents_hyphen_is_fp(self):
+        """ref 'CT scan' (no hyphen) vs hyp 'CT-scan': hyp invented a compound entity that
+        was not in ref. The ref single CT is TP (case preserved), but the hyp compound is FP."""
+        dataset = Dataset()
+        dataset.add(ref="patient had a CT scan", hyp="patient had a CT-scan")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_tp == 1  # ref CT (single) is correctly transcribed
+        assert stats.num_fn == 0
+        assert stats.num_fp == 1  # hyp introduced a CT-scan compound
 
     def test_compound_spurious_in_hyp_is_fp(self):
         """hyp invents an X-ray that wasn't in ref."""
@@ -274,6 +285,49 @@ class TestAlphaNumStatsHyphenatedCompounds:
         stats = dataset[0].metrics._alphanum_stats()
         assert stats.num_ref_terms == 1
         assert stats.num_tp == 1
+
+    def test_greek_compound_perfect_match(self):
+        """α-helix is detected as a compound entity (Greek branch)."""
+        dataset = Dataset()
+        dataset.add(ref="the α-helix structure", hyp="the α-helix structure")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_ref_terms == 1
+        assert stats.num_tp == 1
+
+    def test_greek_compound_hyphen_dropped_is_fn(self):
+        """α-helix with hyphen dropped is FN per strict hyphen handling."""
+        dataset = Dataset()
+        dataset.add(ref="the α-helix structure", hyp="the α helix structure")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_tp == 0
+        assert stats.num_fn == 1
+
+
+class TestAlphaNumStatsGreekTokens:
+    """Tests that single-token Greek-letter entities are detected."""
+
+    def test_single_greek_letter_is_entity(self):
+        dataset = Dataset()
+        dataset.add(ref="treatment with α and β agonists", hyp="treatment with α and β agonists")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_ref_terms == 2
+        assert stats.num_tp == 2
+
+    def test_greek_with_lowercase_latin_suffix(self):
+        """μg (micrograms) is an entity because it contains a Greek letter."""
+        dataset = Dataset()
+        dataset.add(ref="dose of 50 μg per kg", hyp="dose of 50 μg per kg")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_ref_terms == 1
+        assert stats.num_tp == 1
+
+    def test_greek_letter_substituted_in_hyp(self):
+        """Greek letter replaced with a Latin lookalike in hyp → ref entity is FN."""
+        dataset = Dataset()
+        dataset.add(ref="treatment with α agonist", hyp="treatment with a agonist")
+        stats = dataset[0].metrics._alphanum_stats()
+        assert stats.num_tp == 0
+        assert stats.num_fn == 1
 
 
 class TestAlphaNumStatsCustomPattern:

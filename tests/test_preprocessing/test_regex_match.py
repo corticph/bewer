@@ -73,15 +73,9 @@ class TestAlphaNumDefaultPattern:
             "hello",
             "world",
             "patient",
-            # Single-letter tokens
+            # Single Latin letters
             "A",
             "I",
-            "μ",
-            "α",
-            "β",
-            # All-lowercase mixed-script (no case signal, no digit)
-            "μg",
-            "αv",
             # Ordinals (English + French + Dutch)
             "1st",
             "2nd",
@@ -98,6 +92,28 @@ class TestAlphaNumDefaultPattern:
     )
     def test_rejects(self, token):
         assert DEFAULT.fullmatch(token) is None, f"expected reject for {token!r}"
+
+    @pytest.mark.parametrize(
+        "token",
+        [
+            # Single Greek letters (any Greek character makes a token an entity)
+            "α",
+            "β",
+            "γ",
+            "δ",
+            "μ",
+            "Δ",
+            "Ω",
+            # Greek + Latin lowercase
+            "μg",
+            "αv",
+            # All Greek
+            "γδ",
+        ],
+    )
+    def test_greek_tokens_match(self, token):
+        """Any token containing a Greek letter is treated as an entity."""
+        assert DEFAULT.fullmatch(token) is not None, f"expected match for {token!r}"
 
     @pytest.mark.parametrize("token", ["β2", "o2", "b12", "hello1"])
     def test_all_lowercase_letter_digit_match(self, token):
@@ -143,6 +159,10 @@ class TestHyphenatedCompoundsAtRegexLevel:
             "D-day",
             "A-frame",
             "S-curve",
+            # Greek-letter compounds (any Greek char anywhere in compound)
+            "α-helix",
+            "β-blocker",
+            "γ-radiation",
         ],
     )
     def test_compound_matches(self, compound):
@@ -163,9 +183,6 @@ class TestHyphenatedCompoundsAtRegexLevel:
             "blue-green",
             "e-mail",
             "e-commerce",
-            # Lowercase Greek prefix (no uppercase letter anywhere in compound)
-            "α-helix",
-            "β-blocker",
         ],
     )
     def test_compound_rejects(self, compound):
