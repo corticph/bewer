@@ -225,9 +225,25 @@ class Vocabulary(ABC):
     ) -> list[slice]:
         """Return token-index spans where this vocabulary matches ``text``.
 
-        The returned spans are *raw*: duplicate/subset cleanup is applied by the caller
+        The returned spans are *raw*: duplicate and subset cleanup is applied by the caller
         (:meth:`Text.get_key_term_matches`), so it is intentionally not a parameter here and the
-        contract stays identical across vocabulary types.
+        contract stays identical across vocabulary types. Not every parameter is meaningful for
+        every subclass; ones that do not apply are accepted for interface uniformity and ignored
+        (see each subclass for specifics).
+
+        Args:
+            text: The text whose tokens are searched. ``text.src`` gives the owning example (and
+                thereby the dataset), which subclasses may use to resolve their term set.
+            normalized: Match against the normalized token surface (``text.tokens.normalized``)
+                rather than the raw surface. Both subclasses honor this.
+            add_capitalized: Only honored by :class:`EnumeratedVocabulary`, and only when
+                ``normalized=False``: also match a leading-capitalized variant of each key term.
+            only_local_matches: Only honored by :class:`EnumeratedVocabulary`: restrict a globally
+                pooled vocabulary to the example's own annotated key terms.
+
+        Returns:
+            A list of slices over ``text.tokens``, each covering one matched key term span. May
+            contain duplicate or overlapping spans; the caller deduplicates.
         """
         raise NotImplementedError
 
