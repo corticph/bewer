@@ -10,7 +10,14 @@ from omegaconf import OmegaConf
 
 from bewer.configs.resolve import resolve_pipelines
 from bewer.core.example import Example
-from bewer.core.key_term import KeyTerm, get_key_term_trie
+from bewer.core.key_term import (
+    EnumeratedVocabulary,
+    FunctionVocabulary,
+    KeyTerm,
+    Vocabulary,
+    VocabularyFunction,
+    get_key_term_trie,
+)
 from bewer.core.text import TokenList
 from bewer.metrics.base import MetricCollection
 
@@ -58,9 +65,10 @@ class Dataset(object):
             self.config = OmegaConf.merge(self.config, lang_cfg)
         self._pipelines = resolve_pipelines(self.config)
         self.examples = []
-        self._global_key_term_vocabs = {}
-        self._local_key_term_vocabs = {}
-        self._cache_key_term_tries = {}
+        self._function_vocabs: dict[str, FunctionVocabulary] = {}
+        self._global_key_term_vocabs: dict[str, set[KeyTerm]] = {}
+        self._local_key_term_vocabs: dict[str, set[KeyTerm]] = {}
+        self._cache_key_term_tries: dict[tuple, Optional[KeyTermTrie]] = {}
         self.metrics = MetricCollection(self)
 
     @property
@@ -174,6 +182,42 @@ class Dataset(object):
 
         self.add_key_term_list(name, key_terms)
 
+    def add_key_term_function(self, name: str, fn: VocabularyFunction) -> None:
+        """Add a function-based key term vocabulary to the dataset.
+
+        The vocabulary is defined by a function that scans a text's tokens and returns the token-index spans it
+        matches. The function receives a :class:`~bewer.core.text.TokenList` (exposing both ``.raw`` and ``.normalized``
+        token strings) and the ``normalized`` flag of the current matching request, and must return a ``list[slice]``
+        of contiguous spans within the token sequence. The ``normalized`` flag lets one function match the same
+        surface form the caller asked for, e.g. ``toks = tokens.normalized if normalized else tokens.raw``.
+
+        Args:
+            name (str): The name of the key term vocabulary.
+            fn (VocabularyFunction): A callable ``(TokenList, normalized) -> list[slice]`` returning matched spans.
+
+        Raises:
+            ValueError: If ``name`` is already used by an enumerated key term vocabulary.
+        """
+        if name in self._global_key_term_vocabs or name in self._local_key_term_vocabs:
+            raise ValueError(f"Vocabulary '{name}' already exists as an enumerated key term vocabulary.")
+        self._function_vocabs[name] = FunctionVocabulary(name, fn)
+
+    def _get_vocabulary(self, name: str) -> Optional[Vocabulary]:
+        """Resolve a vocabulary name to a :class:`Vocabulary`, or None if it is not registered."""
+        if name in self._function_vocabs:
+            return self._function_vocabs[name]
+        if name in self._global_key_term_vocabs or name in self._local_key_term_vocabs:
+            return EnumeratedVocabulary(name, self)
+        return None
+
+    def has_vocab(self, name: str) -> bool:
+        """Return whether a key term vocabulary (enumerated or function-based) is registered."""
+        return (
+            name in self._function_vocabs
+            or name in self._global_key_term_vocabs
+            or name in self._local_key_term_vocabs
+        )
+
     def _get_key_term_trie(
         self, vocab: str, normalized: bool = True, add_capitalized: bool = False
     ) -> Optional["KeyTermTrie"]:
@@ -219,6 +263,8 @@ class Dataset(object):
 
     def _update_global_key_term_vocab(self, name: str, key_terms: set[str]) -> None:
         """Update the global key term vocabulary with new key terms."""
+        if name in self._function_vocabs:
+            raise ValueError(f"Vocabulary '{name}' already exists as a function-based key term vocabulary.")
         key_terms = set(KeyTerm(key_term, src=self) for key_term in key_terms)
         if name in self._global_key_term_vocabs:
             self._global_key_term_vocabs[name].update(key_terms)

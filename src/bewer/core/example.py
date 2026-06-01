@@ -72,6 +72,7 @@ class Example:
         vocabs = set(self.key_terms.keys())
         if self._src is not None:
             vocabs.update(self._src._global_key_term_vocabs.keys())
+            vocabs.update(self._src._function_vocabs.keys())
         return vocabs
 
     def set_source(self, src: "Dataset") -> None:

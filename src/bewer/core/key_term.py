@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Optional, Union
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Callable, Optional, Union
 
 import ahocorasick
 
@@ -12,7 +13,20 @@ if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
     from bewer.core.example import Example
 
-__all__ = ["KeyTerm", "KeyTermNotFoundWarning"]
+__all__ = [
+    "KeyTerm",
+    "KeyTermNotFoundWarning",
+    "Vocabulary",
+    "EnumeratedVocabulary",
+    "FunctionVocabulary",
+    "VocabularyFunction",
+]
+
+# A function-based vocabulary scans a text's tokens and returns the token-index spans it matches.
+# It receives the full TokenList (exposing both ``.raw`` and ``.normalized`` token strings) and the
+# ``normalized`` flag of the current matching request, so it can match the same surface form the
+# caller asked for. Returned spans may cover one or several tokens.
+VocabularyFunction = Callable[["TokenList", bool], "list[slice]"]
 
 
 class KeyTermNotFoundWarning(UserWarning):
@@ -71,8 +85,16 @@ class KeyTermTrie:
             key_term_patterns.append((key_term.raw, token_pattern))
             patterns.append(token_pattern)
 
-        # Handle capitalization variants
-        if add_capitalized and not normalized:
+        # Handle capitalization variants.
+        # Gated to raw matching: this assumes that when normalized=True the normalizer has already
+        # folded case (true for normalizers.default, which lowercases). That assumption does NOT
+        # hold for a normalizer without lowercasing (e.g. normalizers.legacy = NFC only) — there,
+        # normalized tokens keep their original case yet this widening is still suppressed, so
+        # case-insensitive matching is unavailable in that config.
+        # Note this is an approximation, not full case-insensitivity: only the first token is varied
+        # (via str.capitalize), so it catches sentence-initial / proper-noun spellings but not
+        # all-caps or internally-cased variants.
+        if add_capitalized and not normalized:  # TODO: Maybe drop the `and not normalized` condition.
             for _, p in key_term_patterns:
                 first_cap = p[0].capitalize()
                 if first_cap != p[0]:
@@ -177,3 +199,147 @@ def get_key_term_trie(
     )
     cache[trie_key] = trie
     return trie
+
+
+class Vocabulary(ABC):
+    """A named vocabulary that locates key term spans within a Text's tokens.
+
+    A vocabulary defines *which* token spans count as key terms. Subclasses differ only in how
+    membership is decided: :class:`EnumeratedVocabulary` matches against an explicit set of key
+    terms (via an Aho-Corasick trie), while :class:`FunctionVocabulary` defers to a user-supplied
+    function. Downstream metrics (KTR, KTP, KTF, ...) consume the resulting spans without caring
+    how they were produced.
+    """
+
+    def __init__(self, name: str):
+        self.name = name
+
+    @abstractmethod
+    def find_matches(
+        self,
+        text: Text,
+        *,
+        normalized: bool = True,
+        add_capitalized: bool = False,
+        only_local_matches: bool = False,
+    ) -> list[slice]:
+        """Return token-index spans where this vocabulary matches ``text``.
+
+        The returned spans are *raw*: duplicate/subset cleanup is applied by the caller
+        (:meth:`Text.get_key_term_matches`), so it is intentionally not a parameter here and the
+        contract stays identical across vocabulary types.
+        """
+        raise NotImplementedError
+
+
+class EnumeratedVocabulary(Vocabulary):
+    """A vocabulary backed by an explicit set of key terms, matched with an Aho-Corasick trie.
+
+    The key terms themselves live on the owning :class:`~bewer.core.dataset.Dataset` (global vocab)
+    and :class:`~bewer.core.example.Example` objects (per-example local terms); this wrapper reads
+    them on demand so the existing storage and caching are reused unchanged.
+    """
+
+    def __init__(self, name: str, dataset: "Dataset"):
+        super().__init__(name)
+        self.dataset = dataset
+
+    def find_matches(
+        self,
+        text: Text,
+        *,
+        normalized: bool = True,
+        add_capitalized: bool = False,
+        only_local_matches: bool = False,
+    ) -> list[slice]:
+        example = text.src
+        dataset = self.dataset
+        vocab = self.name
+
+        has_local = example is not None and vocab in example.key_terms
+        has_global = vocab in dataset._global_key_term_vocabs
+
+        if not has_local and not has_global:
+            return []
+
+        tokens = text.tokens
+        matches: list[slice] = []
+
+        global_trie = (
+            dataset._get_key_term_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
+            if has_global
+            else None
+        )
+
+        if global_trie is not None:
+            raw_matches, raw_patterns = global_trie.find_in_tokens(tokens)
+
+            if only_local_matches and has_local:
+                local_int_patterns: set[tuple[int, ...]] = set()
+                for kt in example.key_terms[vocab]:
+                    local_int_patterns.update(global_trie.encode_variants(kt.tokens))
+                matches = [m for m, p in zip(raw_matches, raw_patterns) if p in local_int_patterns]
+            else:
+                matches = raw_matches
+
+            if text.text_type == TextType.REF and has_local:
+                matched_patterns = set(raw_patterns)
+                for kt in example.key_terms[vocab]:
+                    if not matched_patterns.intersection(global_trie.encode_variants(kt.tokens)):
+                        warnings.warn(
+                            f"Key term '{kt.raw}' not found in reference tokens: Example {example.index}.",
+                            KeyTermNotFoundWarning,
+                        )
+
+        return matches
+
+
+class FunctionVocabulary(Vocabulary):
+    """A vocabulary whose members are defined functionally rather than enumerated.
+
+    The wrapped function receives a :class:`~bewer.core.text.TokenList` and the ``normalized`` flag
+    of the current matching request, and returns the token-index spans (``list[slice]``) it matches.
+    This makes it possible to express open-ended vocabularies such as "any alphanumeric term"
+    (e.g. ``MRI``, ``HbA1c``) via a regular expression, without listing every possible term in advance.
+
+    ``add_capitalized`` is accepted for interface uniformity but ignored: it is a trie-specific
+    pattern-expansion detail of :class:`EnumeratedVocabulary`, whereas a function controls case
+    handling directly within its own matching logic.
+    """
+
+    def __init__(self, name: str, fn: VocabularyFunction):
+        super().__init__(name)
+        if not callable(fn):
+            raise TypeError(f"Vocabulary function for '{name}' must be callable, got {type(fn)}.")
+        self.fn = fn
+
+    def find_matches(
+        self,
+        text: Text,
+        *,
+        normalized: bool = True,
+        add_capitalized: bool = False,
+        only_local_matches: bool = False,
+    ) -> list[slice]:
+        if only_local_matches:
+            raise ValueError(
+                f"only_local_matches is not supported for the function-based vocabulary '{self.name}': "
+                "function vocabularies have no per-example local key terms."
+            )
+
+        tokens = text.tokens
+        matches = list(self.fn(tokens, normalized))
+
+        n = len(tokens)
+        for match in matches:
+            if not isinstance(match, slice):
+                raise TypeError(
+                    f"Function vocabulary '{self.name}' must return a list of slices, got {type(match)}."
+                )
+            start, stop = match.start, match.stop
+            if match.step not in (None, 1) or start is None or stop is None or not 0 <= start < stop <= n:
+                raise ValueError(
+                    f"Function vocabulary '{self.name}' returned an invalid span {match} for a token "
+                    f"sequence of length {n}; spans must be contiguous slices within [0, {n})."
+                )
+        return matches

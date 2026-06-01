@@ -133,9 +133,7 @@ class _RKTStats(Metric):
         only_local_matches: bool = False
 
         def validate(self) -> None:
-            is_global_vocab = self.vocab in self.metric.dataset._global_key_term_vocabs
-            is_local_vocab = self.vocab in self.metric.dataset._local_key_term_vocabs
-            if not is_global_vocab and not is_local_vocab:
+            if not self.metric.dataset.has_vocab(self.vocab):
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @metric_value
