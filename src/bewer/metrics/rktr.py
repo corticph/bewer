@@ -79,9 +79,7 @@ class RKTR(Metric):
         def validate(self) -> None:
             if not 0.0 <= self.threshold <= 1.0:
                 raise ValueError(f"threshold must be between 0.0 and 1.0, got {self.threshold}.")
-            is_global_vocab = self.vocab in self.metric.dataset._global_key_term_vocabs
-            is_local_vocab = self.vocab in self.metric.dataset._local_key_term_vocabs
-            if not is_global_vocab and not is_local_vocab:
+            if not self.metric.dataset.has_vocab(self.vocab):
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @dependency

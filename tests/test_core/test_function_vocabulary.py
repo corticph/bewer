@@ -133,6 +133,16 @@ class TestFunctionVocabMetrics:
         dataset.add_key_term_function("alnum", alphanumeric)
         assert dataset.metrics.ktr(vocab="alnum").value == pytest.approx(1.0)
 
+    def test_rktr_with_function_vocab(self):
+        """RKTR (and its threshold) operate over a function vocab without raising on validate."""
+        dataset = Dataset()
+        # One alphanumeric ref term, transcribed with a single-character error (HbA1c -> HbA1d).
+        dataset.add("patient HbA1c", "patient HbA1d")
+        dataset.add_key_term_function("alnum", alphanumeric)
+        # Strict threshold rejects the near-miss; a relaxed threshold accepts it.
+        assert dataset.metrics.rktr(vocab="alnum", threshold=0.0).value == pytest.approx(0.0)
+        assert dataset.metrics.rktr(vocab="alnum", threshold=0.2).value == pytest.approx(1.0)
+
     def test_metric_rejects_unknown_vocab(self):
         dataset = Dataset()
         dataset.add("patient HbA1c normal", "patient HbA1c normal")
