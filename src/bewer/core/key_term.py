@@ -302,9 +302,12 @@ class FunctionVocabulary(Vocabulary):
     This makes it possible to express open-ended vocabularies such as "any alphanumeric term"
     (e.g. ``MRI``, ``HbA1c``) via a regular expression, without listing every possible term in advance.
 
-    ``add_capitalized`` is accepted for interface uniformity but ignored: it is a trie-specific
-    pattern-expansion detail of :class:`EnumeratedVocabulary`, whereas a function controls case
-    handling directly within its own matching logic.
+    ``add_capitalized`` and ``only_local_matches`` are accepted for interface uniformity but ignored.
+    ``add_capitalized`` is a trie-specific pattern-expansion detail of :class:`EnumeratedVocabulary`,
+    whereas a function controls case handling directly within its own matching logic.
+    ``only_local_matches`` scopes a globally-pooled enumerated vocabulary back down to an example's
+    own annotated terms; a function vocabulary has no such pool (it is evaluated fresh per text), so
+    the flag is a no-op — consistent with a global-only enumerated vocabulary, which also ignores it.
     """
 
     def __init__(self, name: str, fn: VocabularyFunction):
@@ -321,12 +324,6 @@ class FunctionVocabulary(Vocabulary):
         add_capitalized: bool = False,
         only_local_matches: bool = False,
     ) -> list[slice]:
-        if only_local_matches:
-            raise ValueError(
-                f"only_local_matches is not supported for the function-based vocabulary '{self.name}': "
-                "function vocabularies have no per-example local key terms."
-            )
-
         tokens = text.tokens
         matches = list(self.fn(tokens, normalized))
 

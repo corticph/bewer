@@ -91,11 +91,15 @@ class TestFunctionVocabMatching:
         # Raw tokens keep the capital "A", so the same function finds nothing.
         assert empty_dataset[0].ref.get_key_term_matches(vocab="aspirin", normalized=False) == []
 
-    def test_only_local_matches_raises(self, empty_dataset):
-        empty_dataset.add("patient HbA1c was high", "patient HbA1c was high")
+    def test_only_local_matches_is_a_noop(self, empty_dataset):
+        """A function vocab has no global pool, so only_local_matches is ignored (returns all matches)."""
+        empty_dataset.add("patient HbA1c was B12 high", "patient HbA1c was B12 high")
         empty_dataset.add_key_term_function("alnum", alphanumeric)
-        with pytest.raises(ValueError, match="only_local_matches is not supported"):
-            empty_dataset[0].ref.get_key_term_matches(vocab="alnum", only_local_matches=True)
+        ref = empty_dataset[0].ref
+        local = ref.get_key_term_matches(vocab="alnum", only_local_matches=True)
+        glob = ref.get_key_term_matches(vocab="alnum", only_local_matches=False)
+        assert local == glob
+        assert len(local) == 2
 
     def test_invalid_span_type_raises(self, empty_dataset):
         empty_dataset.add("patient HbA1c was high", "patient HbA1c was high")
