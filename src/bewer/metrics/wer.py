@@ -55,12 +55,12 @@ class WER(Metric):
     @metric_value
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference texts."""
-        return sum([self.get_example_metric(example).num_edits for example in self._src])
+        return sum(em.num_edits for em in self)
 
     @metric_value
     def ref_length(self) -> int:
         """Get the number of tokens in the reference texts."""
-        return sum([self.get_example_metric(example).ref_length for example in self._src])
+        return sum(em.ref_length for em in self)
 
     @metric_value(main=True)
     def value(self) -> float:

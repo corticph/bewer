@@ -153,24 +153,24 @@ class _KTStats(Metric):
     @metric_value
     def num_ref_terms(self) -> int:
         """Get the total number of key terms in the reference texts."""
-        return sum(self.get_example_metric(example).num_ref_terms for example in self._src)
+        return sum(em.num_ref_terms for em in self)
 
     @metric_value
     def num_hyp_terms(self) -> int:
         """Get the total number of key terms in the hypothesis texts."""
-        return sum(self.get_example_metric(example).num_hyp_terms for example in self._src)
+        return sum(em.num_hyp_terms for em in self)
 
     @metric_value
     def num_tp(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis texts."""
-        return sum(self.get_example_metric(example).num_tp for example in self._src)
+        return sum(em.num_tp for em in self)
 
     @metric_value
     def num_fn(self) -> int:
         """Get the number of key terms missed in the hypothesis texts."""
-        return sum(self.get_example_metric(example).num_fn for example in self._src)
+        return sum(em.num_fn for em in self)
 
     @metric_value
     def num_fp(self) -> int:
         """Get the number of key terms in the hypothesis texts that are not in the reference texts."""
-        return sum(self.get_example_metric(example).num_fp for example in self._src)
+        return sum(em.num_fp for em in self)

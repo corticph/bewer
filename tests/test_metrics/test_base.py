@@ -351,7 +351,7 @@ class TestMetricCollection:
 class TestExampleMetricCollection:
     """Tests for ExampleMetricCollection class."""
 
-    def test_get_example_metric(self, sample_example):
+    def test_get_metric_factory(self, sample_example):
         """Test getting an example-level metric factory."""
         wer_factory = sample_example.metrics.get("wer")
         assert wer_factory is not None
@@ -441,3 +441,72 @@ class TestMetricClass:
 
         wer = WER(name="test", src=sample_dataset, normalizer="custom")
         assert wer._normalizer == "custom"
+
+
+class TestMetricSequenceProtocol:
+    """Tests for the Metric __len__/__iter__/__getitem__ sequence protocol."""
+
+    def test_len_matches_dataset(self, sample_dataset):
+        """len(metric) equals the number of examples in the dataset."""
+        wer = sample_dataset.metrics.wer()
+        assert len(wer) == len(sample_dataset)
+
+    def test_getitem_returns_example_metric(self, sample_dataset):
+        """Indexing returns the ExampleMetric for that positional example."""
+        from bewer.metrics.wer import WER_
+
+        wer = sample_dataset.metrics.wer()
+        em = wer[0]
+        assert isinstance(em, WER_)
+        assert em.example is sample_dataset[0]
+
+    def test_getitem_is_cached(self, sample_dataset):
+        """Repeated access returns the identical cached object."""
+        wer = sample_dataset.metrics.wer()
+        assert wer[0] is wer[0]
+
+    def test_iter_matches_getitem(self, sample_dataset):
+        """Iteration yields the same objects (and order) as positional indexing."""
+        wer = sample_dataset.metrics.wer()
+        iterated = list(wer)
+        assert len(iterated) == len(wer)
+        for i, em in enumerate(iterated):
+            assert em is wer[i]
+
+    def test_negative_index(self, sample_dataset):
+        """Negative indices behave like list indexing."""
+        wer = sample_dataset.metrics.wer()
+        assert wer[-1] is wer[len(wer) - 1]
+
+    def test_slice_returns_list(self, sample_dataset):
+        """Slicing returns a list of ExampleMetric objects."""
+        wer = sample_dataset.metrics.wer()
+        sliced = wer[0:2]
+        assert isinstance(sliced, list)
+        assert len(sliced) == 2
+        assert sliced[0] is wer[0]
+        assert sliced[1] is wer[1]
+
+    def test_out_of_range_raises_index_error(self, sample_dataset):
+        """Out-of-range integer indices raise IndexError."""
+        wer = sample_dataset.metrics.wer()
+        with pytest.raises(IndexError):
+            _ = wer[len(wer)]
+
+    def test_no_example_cls_raises_type_error(self, sample_dataset):
+        """Metrics without an example_cls are not iterable/indexable."""
+        from bewer.metrics.base import Metric
+
+        class NoExampleMetric(Metric):
+            short_name_base = "NEM"
+            long_name_base = "No Example Metric"
+            description = "A metric with no example-level metric."
+            example_cls = None
+
+        metric = NoExampleMetric(src=sample_dataset)
+        with pytest.raises(TypeError):
+            len(metric)
+        with pytest.raises(TypeError):
+            _ = metric[0]
+        with pytest.raises(TypeError):
+            iter(metric)

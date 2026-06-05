@@ -141,4 +141,4 @@ class _RKTStats(Metric):
     @metric_value
     def num_ref_terms(self) -> int:
         """Get the total number of key terms in the reference texts."""
-        return sum(self.get_example_metric(example).num_ref_terms for example in self._src)
+        return sum(em.num_ref_terms for em in self)

@@ -11,17 +11,17 @@ class KTP_(ExampleMetric):
     @metric_value
     def num_matches(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis text."""
-        return self.parent_metric._kt_stats.get_example_metric(self.example).num_tp
+        return self.parent_metric._kt_stats[self.example.index].num_tp
 
     @metric_value
     def num_fp(self) -> int:
         """Get the number of spurious key term occurrences in the hypothesis text."""
-        return self.parent_metric._kt_stats.get_example_metric(self.example).num_fp
+        return self.parent_metric._kt_stats[self.example.index].num_fp
 
     @metric_value(main=True)
     def value(self) -> float:
         """Get the example-level key term precision."""
-        stats = self.parent_metric._kt_stats.get_example_metric(self.example)
+        stats = self.parent_metric._kt_stats[self.example.index]
         if (stats.num_tp + stats.num_fp) == 0:
             return 0.0
         return stats.num_tp / (stats.num_tp + stats.num_fp)

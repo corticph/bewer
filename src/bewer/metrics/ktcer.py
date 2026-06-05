@@ -11,12 +11,12 @@ class KTCER_(ExampleMetric):
     @metric_value
     def num_char_edits(self) -> int:
         """Get the total character edits across all key term occurrences in the example."""
-        return sum(ts.char_edits for ts in self.parent_metric._rkt_stats.get_example_metric(self.example).term_stats)
+        return sum(ts.char_edits for ts in self.parent_metric._rkt_stats[self.example.index].term_stats)
 
     @metric_value
     def ref_chars(self) -> int:
         """Get the total reference character count across all key term occurrences in the example."""
-        return sum(ts.ref_chars for ts in self.parent_metric._rkt_stats.get_example_metric(self.example).term_stats)
+        return sum(ts.ref_chars for ts in self.parent_metric._rkt_stats[self.example.index].term_stats)
 
     @metric_value(main=True)
     def value(self) -> float:
@@ -76,12 +76,12 @@ class KTCER(Metric):
     @metric_value
     def num_char_edits(self) -> int:
         """Get the total character edits across all key term occurrences."""
-        return sum(self.get_example_metric(example).num_char_edits for example in self._src)
+        return sum(em.num_char_edits for em in self)
 
     @metric_value
     def ref_chars(self) -> int:
         """Get the total reference character count across all key term occurrences."""
-        return sum(self.get_example_metric(example).ref_chars for example in self._src)
+        return sum(em.ref_chars for em in self)
 
     @metric_value(main=True)
     def value(self) -> float:

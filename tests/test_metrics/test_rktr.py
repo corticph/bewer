@@ -167,7 +167,7 @@ class TestRKTRPartialPenalty:
             key_terms={"k": ["blood"]},
         )
         example = dataset[0]
-        ts = dataset.metrics._rkt_stats(vocab="k").get_example_metric(example).term_stats
+        ts = dataset.metrics._rkt_stats(vocab="k")[example.index].term_stats
         assert ts[0].char_edits == 1
         assert ts[0].ref_chars == 5
         rktr = example.metrics.rktr(vocab="k", threshold=0.0)
@@ -185,7 +185,7 @@ class TestRKTRPartialPenalty:
             key_terms={"k": ["pressure"]},
         )
         example = dataset[0]
-        ts = dataset.metrics._rkt_stats(vocab="k").get_example_metric(example).term_stats
+        ts = dataset.metrics._rkt_stats(vocab="k")[example.index].term_stats
         assert ts[0].char_edits == 1
         assert ts[0].ref_chars == 8
         rktr = example.metrics.rktr(vocab="k", threshold=0.0)
@@ -204,7 +204,7 @@ class TestRKTRPartialPenalty:
             key_terms={"k": ["blood pressure"]},
         )
         example = dataset[0]
-        ts = dataset.metrics._rkt_stats(vocab="k").get_example_metric(example).term_stats
+        ts = dataset.metrics._rkt_stats(vocab="k")[example.index].term_stats
         assert ts[0].char_edits == 1
         assert ts[0].ref_chars == 14
 
