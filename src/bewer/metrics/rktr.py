@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from bewer.alignment import Alignment
+from bewer.metrics._kt_params import KeyTermMetricParams
 from bewer.metrics._rkt_stats import TermStat
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_value
 
 __all__ = ["RKTR"]
 
@@ -58,31 +59,20 @@ class RKTR(Metric):
     example_cls = RKTR_
 
     @dataclass
-    class param_schema(MetricParams):
+    class param_schema(KeyTermMetricParams):
         """Parameters for the RKTR metric.
 
         Attributes:
-            vocab: The vocabulary name to use for key term identification.
-            normalized: Whether to use normalized tokens for alignment and key term matching.
-            allow_subset_matches: Whether to allow subset matches.
-            only_local_matches: If True, restrict matching to per-example local key terms only.
             threshold: Maximum character error rate for a key term to be classified as TP. Default 0.0
                 means exact match (equivalent to KTR).
         """
 
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
-        only_local_matches: bool = False
         threshold: float = 0.0
 
         def validate(self) -> None:
             if not 0.0 <= self.threshold <= 1.0:
                 raise ValueError(f"threshold must be between 0.0 and 1.0, got {self.threshold}.")
-            is_global_vocab = self.vocab in self.metric.dataset._global_key_term_vocabs
-            is_local_vocab = self.vocab in self.metric.dataset._local_key_term_vocabs
-            if not is_global_vocab and not is_local_vocab:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
+            super().validate()
 
     @dependency
     def _rkt_stats(self):
@@ -91,7 +81,7 @@ class RKTR(Metric):
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
-            only_local_matches=self.params.only_local_matches,
+            local_only_matches=self.params.local_only_matches,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

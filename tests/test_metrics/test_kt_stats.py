@@ -298,7 +298,7 @@ class TestKTStatsSharing:
 
     def test_different_vocabs_different_instances(self, dataset):
         """Different vocab params produce different _KTStats instances."""
-        dataset.add_key_term_list("verbs", ["jumps"])
+        dataset.add_vocabulary_from_list("verbs", ["jumps"])
         ktr_animals = dataset.metrics.ktr(vocab="animals")
         ktr_verbs = dataset.metrics.ktr(vocab="verbs")
         assert ktr_animals._kt_stats is not ktr_verbs._kt_stats
@@ -313,3 +313,31 @@ class TestKTStatsSharing:
         """Accessing _kt_stats twice on the same metric returns the identical object."""
         ktr = dataset.metrics.ktr(vocab="animals")
         assert ktr._kt_stats is ktr._kt_stats
+
+
+class TestKTStatsLocalOnlyMatches:
+    """Tests that local_only_matches threads through the key term stats metric."""
+
+    @pytest.fixture
+    def leaking_dataset(self):
+        """Example 1 annotates only 'runs', but example 0's term 'fox' also appears in its text."""
+        dataset = Dataset()
+        dataset.add(ref="the fox jumps", hyp="the fox jumps", key_terms={"animals": ["fox"]})
+        dataset.add(ref="the fox runs", hyp="the fox runs", key_terms={"animals": ["runs"]})
+        return dataset
+
+    def test_default_counts_union_terms(self, leaking_dataset):
+        """By default every union term is matched, so example 1 counts both 'fox' and 'runs'."""
+        stats = leaking_dataset[1].metrics._kt_stats(vocab="animals")
+        assert stats.num_ref_terms == 2
+
+    def test_local_only_scopes_counts_to_annotated_terms(self, leaking_dataset):
+        """With local_only_matches, example 1 counts only its own annotated term 'runs'."""
+        stats = leaking_dataset[1].metrics._kt_stats(vocab="animals", local_only_matches=True)
+        assert stats.num_ref_terms == 1
+
+    def test_local_only_produces_distinct_metric_instance(self, leaking_dataset):
+        """local_only_matches participates in metric identity like the other key term params."""
+        default = leaking_dataset.metrics.ktr(vocab="animals")
+        scoped = leaking_dataset.metrics.ktr(vocab="animals", local_only_matches=True)
+        assert default._kt_stats is not scoped._kt_stats

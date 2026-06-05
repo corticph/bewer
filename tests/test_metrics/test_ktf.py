@@ -1,5 +1,7 @@
 """Tests for bewer.metrics.ktf module."""
 
+import logging
+
 import pytest
 
 from bewer import Dataset
@@ -65,7 +67,7 @@ class TestKTFExampleMetric:
         ktf = example.metrics.ktf(vocab="animals")
         assert ktf.value == 0.0
 
-    def test_value_zero_denominator(self):
+    def test_value_zero_denominator(self, caplog):
         """Test KTF = 0.0 when TP=FN=FP=0 (key term not found in ref or hyp)."""
         dataset = Dataset()
         dataset.add(
@@ -73,12 +75,12 @@ class TestKTFExampleMetric:
             hyp="hello world",
             key_terms={"animals": ["fox"]},
         )
-        from bewer.core.key_term import KeyTermNotFoundWarning
 
         example = dataset[0]
         ktf = example.metrics.ktf(vocab="animals")
-        with pytest.warns(KeyTermNotFoundWarning):
+        with caplog.at_level(logging.WARNING, logger="bewer.core.vocabulary"):
             assert ktf.value == 0.0
+        assert "not found in reference tokens" in caplog.text
 
     def test_partial_recall_full_precision(self, dataset_partial_recall):
         """Test F1 = 2/3 when TP=1, FN=1, FP=0 (full precision, partial recall)."""

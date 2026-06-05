@@ -1,9 +1,12 @@
 """Tests for bewer.core.example module."""
 
-import warnings
+import logging
 
-from bewer.core.key_term import KeyTermNotFoundWarning
+import pytest
+
 from bewer.core.text import Text, TextType
+
+_KEY_TERM_NOT_FOUND = "not found in reference tokens"
 
 
 class TestExampleInit:
@@ -54,22 +57,19 @@ class TestExamplePrepareAndValidateKeyTerms:
         assert len(example.key_terms["animals"]) == 1
         assert isinstance(example.key_terms["animals"].pop(), Text)
 
-    def test_key_term_not_in_ref_warns(self, sample_dataset):
-        """Test that local key term not in reference issues warning when trie matches are computed."""
+    def test_key_term_not_in_ref_warns(self, sample_dataset, caplog):
+        """Test that a local key term not in the reference logs a warning when matches are computed."""
         sample_dataset.add("hello world", "hello world", key_terms={"missing": ["nonexistent"]})
         example = sample_dataset[-1]
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level(logging.WARNING, logger="bewer.core.vocabulary"):
             example.ref.get_key_term_matches(vocab="missing")
-            assert len([x for x in w if issubclass(x.category, KeyTermNotFoundWarning)]) > 0
+        assert _KEY_TERM_NOT_FOUND in caplog.text
 
     def test_key_term_not_in_ref_no_matches(self, sample_dataset):
         """Test that key term not in reference produces no matches."""
         sample_dataset.add("hello world", "hello world", key_terms={"missing": ["nonexistent"]})
         example = sample_dataset[-1]
-        with warnings.catch_warnings(record=True):
-            warnings.simplefilter("always")
-            matches = example.ref.get_key_term_matches(vocab="missing")
+        matches = example.ref.get_key_term_matches(vocab="missing")
         assert len(matches) == 0
 
     def test_case_insensitive_key_term_matching(self, sample_dataset):
@@ -120,18 +120,18 @@ class TestExampleVocabs:
 
     def test_vocabs_includes_global_dataset_vocabs(self, sample_dataset):
         """Test that vocabs includes global key term vocabularies from the parent dataset."""
-        sample_dataset._global_key_term_vocabs["global_terms"] = set()
+        sample_dataset.add_vocabulary_from_list("global_terms", [])
         example = sample_dataset[0]
         assert "global_terms" in example.vocabs
 
     def test_vocabs_merges_example_and_dataset_vocabs(self, sample_dataset):
-        """Test that vocabs merges both example-level and dataset-level vocabularies."""
+        """Test that vocabs merges both example-level (local) and dataset-level (global) vocabularies."""
         sample_dataset.add(
             "hello world",
             "hello world",
             key_terms={"greetings": ["hello"]},
         )
-        sample_dataset._global_key_term_vocabs["global_terms"] = set()
+        sample_dataset.add_vocabulary_from_list("global_terms", [])
         example = sample_dataset[-1]
         assert example.vocabs == {"greetings", "global_terms"}
 
@@ -175,95 +175,76 @@ class TestExampleHash:
 class TestTextGetKeyTermMatches:
     """Tests for Text.get_key_term_matches() using global and local key terms."""
 
-    def test_global_and_local_key_terms_both_matched(self, sample_dataset):
-        """Global vocab (from add() and add_key_term_list) produces all matches by default."""
+    def test_local_name_cannot_be_reused_as_global(self, sample_dataset):
+        """A name used as a per-example (local) vocab cannot be reused as a global vocab."""
         sample_dataset.add(
             "the quick brown fox",
             "the quick brown dog",
             key_terms={"animals": ["fox"]},
         )
-        sample_dataset.add_key_term_list("animals", ["brown"])
-        example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals")
-        matched_raws = sorted(example.ref.tokens[m].raw for m in matches)
-        assert ["brown"] in matched_raws
-        assert ["fox"] in matched_raws
+        with pytest.raises(ValueError, match="already registered"):
+            sample_dataset.add_vocabulary_from_list("animals", ["brown"])
 
-    def test_global_only_key_terms_no_warning(self, sample_dataset):
-        """Global key terms (no local) produce matches without KeyTermNotFoundWarning."""
+    def test_global_only_key_terms_no_warning(self, sample_dataset, caplog):
+        """Global key terms (no local) produce matches without a not-found warning."""
         sample_dataset.add("the quick brown fox", "the quick brown dog")
-        sample_dataset.add_key_term_list("animals", ["fox"])
+        sample_dataset.add_vocabulary_from_list("animals", ["fox"])
         example = sample_dataset[-1]
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level(logging.WARNING, logger="bewer.core.vocabulary"):
             matches = example.ref.get_key_term_matches(vocab="animals")
         assert len(matches) == 1
-        assert len([x for x in w if issubclass(x.category, KeyTermNotFoundWarning)]) == 0
+        assert _KEY_TERM_NOT_FOUND not in caplog.text
 
-    def test_cached_no_duplicate_warnings(self, sample_dataset):
-        """Second call returns cached result and does not re-emit warnings."""
+    def test_cached_no_duplicate_warnings(self, sample_dataset, caplog):
+        """Second call returns the cached result and does not re-log the warning."""
         sample_dataset.add("hello world", "hello world", key_terms={"missing": ["nonexistent"]})
         example = sample_dataset[-1]
         # First call triggers the warning
-        with warnings.catch_warnings(record=True):
-            warnings.simplefilter("always")
+        example.ref.get_key_term_matches(vocab="missing")
+        # Second call should be cached — no new log records
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="bewer.core.vocabulary"):
             example.ref.get_key_term_matches(vocab="missing")
-        # Second call should be cached — no new warnings
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            example.ref.get_key_term_matches(vocab="missing")
-        assert len([x for x in w if issubclass(x.category, KeyTermNotFoundWarning)]) == 0
+        assert _KEY_TERM_NOT_FOUND not in caplog.text
 
-    def test_allow_subset_matches_true_deduplicates_exact(self, sample_dataset):
-        """With allow_subset_matches=True, exact duplicate matches from global vocab are deduplicated."""
-        sample_dataset.add(
-            "the quick brown fox",
-            "the quick brown dog",
-            key_terms={"animals": ["fox"]},
-        )
-        sample_dataset.add_key_term_list("animals", ["fox"])
+    def test_allow_subset_matches_true_keeps_subset(self, sample_dataset):
+        """With allow_subset_matches=True, a shorter term nested in a longer one is kept."""
+        sample_dataset.add("the quick brown fox", "the quick brown dog")
+        sample_dataset.add_vocabulary_from_list("phrases", ["quick brown", "brown"])
         example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals", allow_subset_matches=True)
+        matches = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=True)
+        assert len(matches) == 2
+
+    def test_allow_subset_matches_false_removes_subset(self, sample_dataset):
+        """With allow_subset_matches=False, a term subsumed by a longer match is dropped."""
+        sample_dataset.add("the quick brown fox", "the quick brown dog")
+        sample_dataset.add_vocabulary_from_list("phrases", ["quick brown", "brown"])
+        example = sample_dataset[-1]
+        matches = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
         assert len(matches) == 1
 
-    def test_allow_subset_matches_false_deduplicates(self, sample_dataset):
-        """With allow_subset_matches=False, subset matches from global vocab are deduplicated."""
-        sample_dataset.add(
-            "the quick brown fox",
-            "the quick brown dog",
-            key_terms={"animals": ["fox"]},
-        )
-        sample_dataset.add_key_term_list("animals", ["fox"])
+    def test_local_vocab_scoped_per_example(self, sample_dataset):
+        """With local_only_matches, a term is matched only within the example that declares it."""
+        sample_dataset.add("the quick brown fox", "the quick brown fox", key_terms={"animals": ["fox"]})
+        sample_dataset.add("the fox runs fast", "the fox runs fast", key_terms={"animals": ["runs"]})
         example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals", allow_subset_matches=False)
-        assert len(matches) == 1
+        matches = example.ref.get_key_term_matches(vocab="animals", local_only_matches=True)
+        matched_raws = sorted(example.ref.tokens[m.span].raw for m in matches)
+        assert ["runs"] in matched_raws
+        # "fox" is a key term of the other example only; under local_only_matches it must not leak here.
+        assert ["fox"] not in matched_raws
 
-    def test_only_local_matches_returns_example_level_terms(self, sample_dataset):
-        """only_local_matches=True returns only per-example local key terms."""
-        sample_dataset.add(
-            "the quick brown fox",
-            "the quick brown dog",
-            key_terms={"animals": ["fox"]},
-        )
-        sample_dataset.add_key_term_list("animals", ["brown"])
-        example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals", only_local_matches=True)
-        matched_raws = sorted(example.ref.tokens[m].raw for m in matches)
-        assert ["fox"] in matched_raws
-        assert ["brown"] not in matched_raws
-
-    def test_hyp_matching_no_local_verification(self, sample_dataset):
-        """Matching on hyp side does not trigger local term verification warnings."""
+    def test_hyp_matching_no_local_verification(self, sample_dataset, caplog):
+        """Matching on the hyp side does not trigger local term verification warnings."""
         sample_dataset.add(
             "the quick brown fox",
             "the quick brown dog",
             key_terms={"animals": ["fox"]},
         )
         example = sample_dataset[-1]
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level(logging.WARNING, logger="bewer.core.vocabulary"):
             example.hyp.get_key_term_matches(vocab="animals")
-        assert len([x for x in w if issubclass(x.category, KeyTermNotFoundWarning)]) == 0
+        assert _KEY_TERM_NOT_FOUND not in caplog.text
 
 
 class TestExampleMetrics:

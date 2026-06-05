@@ -135,7 +135,7 @@ def format_key_term(text: str, start: bool = False, end: bool = False) -> str:
 
 
 def _get_key_term_indicators(
-    alignment: "Alignment", allow_subset_matches: bool = False
+    alignment: "Alignment", allow_subset_matches: bool = False, local_only_matches: bool = False
 ) -> tuple[set[int], set[int], set[int]]:
     """Compute key term span indicators for the given alignment.
 
@@ -162,10 +162,12 @@ def _get_key_term_indicators(
 
     start_indices, stop_indices, open_indices = set(), set(), set()
     for vocab in vocabs:
-        matches = example.ref.get_key_term_matches(vocab=vocab, allow_subset_matches=allow_subset_matches)
+        matches = example.ref.get_key_term_matches(
+            vocab=vocab, allow_subset_matches=allow_subset_matches, local_only_matches=local_only_matches
+        )
         for match in matches:
-            start_op_idx = alignment.ref_index_mapping.get(match.start)
-            end_op_idx = alignment.ref_index_mapping.get(match.stop - 1)
+            start_op_idx = alignment.ref_index_mapping.get(match.span.start)
+            end_op_idx = alignment.ref_index_mapping.get(match.span.stop - 1)
             if start_op_idx is None or end_op_idx is None:
                 continue
             start_indices.add(start_op_idx)
@@ -181,6 +183,7 @@ def generate_alignment_html_lines(
     max_line_length: int = 100,
     color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
     allow_subset_matches: bool = False,
+    local_only_matches: bool = False,
 ) -> list[tuple[str, str]]:
     """Render the alignment as an HTML table.
 
@@ -200,7 +203,7 @@ def generate_alignment_html_lines(
     current_length = 0
 
     start_indices, stop_indices, open_indices = _get_key_term_indicators(
-        alignment, allow_subset_matches=allow_subset_matches
+        alignment, allow_subset_matches=allow_subset_matches, local_only_matches=local_only_matches
     )
 
     lines = []

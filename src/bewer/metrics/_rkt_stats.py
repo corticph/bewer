@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import NamedTuple
 
 from rapidfuzz.distance import Levenshtein
 
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
+from bewer.core.key_term import Match
+from bewer.metrics._kt_params import KeyTermMetricParams
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
 
 __all__: list[str] = []
 
@@ -67,12 +68,12 @@ class _RKTStats_(ExampleMetric):
             normalizer=self.normalizer,
         ).alignment
 
-    def _get_ref_matches(self) -> list[slice]:
+    def _get_ref_matches(self) -> list[Match]:
         return self.example.ref.get_key_term_matches(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
-            only_local_matches=self.params.only_local_matches,
+            local_only_matches=self.params.local_only_matches,
         )
 
     @metric_value
@@ -88,8 +89,8 @@ class _RKTStats_(ExampleMetric):
         alignment = self._get_alignment()
         stats: list[TermStat] = []
         for kt_match in key_term_matches:
-            op_start = alignment.ref_index_mapping.get(kt_match.start)
-            op_stop = alignment.ref_index_mapping.get(kt_match.stop - 1) + 1
+            op_start = alignment.ref_index_mapping.get(kt_match.span.start)
+            op_stop = alignment.ref_index_mapping.get(kt_match.span.stop - 1) + 1
             segment: Alignment = alignment[op_start:op_stop]
             ref_text = _join_op_refs(segment)
             hyp_text = _join_op_hyps(segment)
@@ -116,27 +117,7 @@ class _RKTStats(Metric):
     )
     example_cls = _RKTStats_
 
-    @dataclass
-    class param_schema(MetricParams):
-        """Parameters for the _RKTStats metric.
-
-        Attributes:
-            vocab: The vocabulary name to use for key term identification.
-            normalized: Whether to use normalized tokens for alignment and key term matching.
-            allow_subset_matches: Whether to allow subset matches.
-            only_local_matches: If True, match only per-example local key terms.
-        """
-
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
-        only_local_matches: bool = False
-
-        def validate(self) -> None:
-            is_global_vocab = self.vocab in self.metric.dataset._global_key_term_vocabs
-            is_local_vocab = self.vocab in self.metric.dataset._local_key_term_vocabs
-            if not is_global_vocab and not is_local_vocab:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
+    param_schema = KeyTermMetricParams
 
     @metric_value
     def num_ref_terms(self) -> int:

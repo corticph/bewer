@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, dependency, metric_value
+from bewer.metrics._kt_params import KeyTermMetricParams
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_value
 
 __all__ = ["KTP"]
 
@@ -37,27 +36,7 @@ class KTP(Metric):
         "consist of one or more tokens, but is treated as a single unit for the purpose of KTP calculation."
     )
     example_cls = KTP_
-
-    @dataclass
-    class param_schema(MetricParams):
-        """Parameters for the KTP metric.
-
-        Attributes:
-            vocab: The vocabulary name to use for key term identification.
-            normalized: Whether to use normalized tokens for alignment and key term matching.
-            allow_subset_matches: Whether to allow subset matches.
-        """
-
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
-
-        def validate(self) -> None:
-            """Validate that the metric can be computed with the given parameters and source data."""
-            is_global_vocab = self.vocab in self.metric.dataset._global_key_term_vocabs
-            is_local_vocab = self.vocab in self.metric.dataset._local_key_term_vocabs
-            if not is_global_vocab and not is_local_vocab:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
+    param_schema = KeyTermMetricParams
 
     @dependency
     def _kt_stats(self):
@@ -66,7 +45,7 @@ class KTP(Metric):
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
-            only_local_matches=False,
+            local_only_matches=self.params.local_only_matches,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

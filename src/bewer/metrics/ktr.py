@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, dependency, metric_value
+from bewer.metrics._kt_params import KeyTermMetricParams
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_value
 
 __all__ = ["KTR"]
 
@@ -38,29 +37,7 @@ class KTR(Metric):
         "KTR = 1 - KTER."
     )
     example_cls = KTR_
-
-    @dataclass
-    class param_schema(MetricParams):
-        """Parameters for the KTR metric.
-
-        Attributes:
-            vocab: The vocabulary name to use for key term identification.
-            normalized: Whether to use normalized tokens for alignment and key term matching.
-            allow_subset_matches: Whether to allow subset matches.
-            only_local_matches: If True, restrict matching to per-example local key terms only.
-        """
-
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
-        only_local_matches: bool = False
-
-        def validate(self) -> None:
-            """Validate that the metric can be computed with the given parameters and source data."""
-            is_global_vocab = self.vocab in self.metric.dataset._global_key_term_vocabs
-            is_local_vocab = self.vocab in self.metric.dataset._local_key_term_vocabs
-            if not is_global_vocab and not is_local_vocab:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
+    param_schema = KeyTermMetricParams
 
     @dependency
     def _kt_stats(self):
@@ -69,7 +46,7 @@ class KTR(Metric):
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
-            only_local_matches=self.params.only_local_matches,
+            local_only_matches=self.params.local_only_matches,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

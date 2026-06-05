@@ -1,9 +1,10 @@
 """Tests for bewer.metrics.kwer module."""
 
+import logging
+
 import pytest
 
 from bewer import Dataset
-from bewer.core.key_term import KeyTermNotFoundWarning
 from bewer.metrics.kter import KTER, KTER_
 
 
@@ -127,7 +128,7 @@ class TestKTERExampleMetric:
         assert kter.num_errors == 2
         assert kter.value == 1.0
 
-    def test_keyword_not_in_ref(self):
+    def test_keyword_not_in_ref(self, caplog):
         """Test that key terms not found in reference are not counted."""
         dataset = Dataset()
         dataset.add(
@@ -137,11 +138,12 @@ class TestKTERExampleMetric:
         )
         example = dataset[0]
         kter = example.metrics.kter(vocab="terms")
-        with pytest.warns(KeyTermNotFoundWarning):
+        with caplog.at_level(logging.WARNING, logger="bewer.core.vocabulary"):
             assert kter.num_key_terms == 0
+        assert "not found in reference tokens" in caplog.text
         assert kter.num_errors == 0
 
-    def test_no_keywords_returns_zero(self):
+    def test_no_keywords_returns_zero(self, caplog):
         """Test value is 0 when there are no key terms to evaluate."""
         dataset = Dataset()
         dataset.add(
@@ -151,8 +153,9 @@ class TestKTERExampleMetric:
         )
         example = dataset[0]
         kter = example.metrics.kter(vocab="terms")
-        with pytest.warns(KeyTermNotFoundWarning):
+        with caplog.at_level(logging.WARNING, logger="bewer.core.vocabulary"):
             assert kter.value == 0.0
+        assert "not found in reference tokens" in caplog.text
 
 
 class TestKTERNormalization:

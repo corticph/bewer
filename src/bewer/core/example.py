@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING, Optional
 
-from bewer.core.key_term import KeyTerm
 from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
 
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
+    from bewer.core.key_term import KeyTerm
 
 __all__ = ["Example"]
 
@@ -17,7 +17,8 @@ class Example:
     Attributes:
         ref (Text): Reference text object.
         hyp (Text): Hypothesis text object.
-        key_terms (dict[str, set[KeyTerm]]): Key terms grouped by vocabulary name.
+        key_terms (dict[str, set[KeyTerm]]): Resolved key terms grouped by vocabulary name,
+            filtered to the canonical terms this example regards.
         metrics (ExampleMetricCollection): Metrics collection for this example.
     """
 
@@ -36,8 +37,10 @@ class Example:
         Args:
             ref: Reference text.
             hyp: Hypothesis text.
-            key_terms: Key terms associated with the example. Missing terms are retained; warnings are emitted
-                during key term trie matching if a term cannot be matched in the reference tokens.
+            key_terms: Key terms associated with the example, grouped by vocabulary name. The raw
+                strings are retained; the canonical KeyTerm objects are resolved (and deduped) by
+                the owning Vocabulary. A warning is logged during matching if a regarded term cannot
+                be found in the reference tokens.
             src: Parent Dataset object (required).
             index: The index of the example in the dataset.
         """
@@ -46,10 +49,13 @@ class Example:
         self._src = src
         self._pipelines = src.pipelines
 
+        # Raw per-vocabulary annotation strings. The single source of truth for resolved
+        # (canonical) terms is the Vocabulary; `key_terms` below is a derived view.
+        self._key_term_strings = self._prepare_key_term_strings(key_terms)
+
         self.metrics = ExampleMetricCollection(self)
         self.ref = Text(ref, src=self, text_type=TextType.REF)
         self.hyp = Text(hyp, src=self, text_type=TextType.HYP)
-        self.key_terms = self._prepare_key_terms(key_terms)
 
     @property
     def index(self) -> Optional[int]:
@@ -66,24 +72,36 @@ class Example:
         return self._pipelines
 
     @property
+    def key_terms(self) -> "dict[str, set[KeyTerm]]":
+        """The canonical key terms this example regards, grouped by vocabulary name.
+
+        Derived from each named vocabulary's resolved terms, filtered to those whose
+        ``examples`` back-reference includes this example. Vocabularies the example
+        annotates but contributes no resolved terms to are omitted.
+        """
+        result: dict[str, set[KeyTerm]] = {}
+        for name in self._key_term_strings:
+            if not self._src.has_vocabulary(name):
+                continue
+            vocab = self._src.get_vocabulary(name)
+            terms = {kt for kt in vocab.key_terms if self in kt.examples}
+            if terms:
+                result[name] = terms
+        return result
+
+    @property
     def vocabs(self) -> set[str]:
         """Get the set of all key term vocabularies associated with this example."""
-        vocabs = set(self.key_terms.keys())
-        vocabs.update(self._src._global_key_term_vocabs.keys())
+        vocabs = set(self._key_term_strings.keys())
+        vocabs.update(self._src._vocabularies.keys())
         return vocabs
 
-    def _prepare_key_terms(self, key_terms: dict[str, set[str]] | None) -> dict[str, set[KeyTerm]]:
-        """Prepare key terms dictionary by converting key terms to KeyTerm objects."""
+    @staticmethod
+    def _prepare_key_term_strings(key_terms: dict[str, list[str]] | None) -> dict[str, set[str]]:
+        """Store the raw per-vocabulary annotation strings (empty groups retained)."""
         if key_terms is None:
             return {}
-
-        prepared_key_terms = {}
-        for vocab_name, vocab_key_terms in key_terms.items():
-            if len(vocab_key_terms) == 0:
-                continue
-            prepared_key_terms[vocab_name] = set(KeyTerm(key_term, src=self) for key_term in vocab_key_terms)
-
-        return prepared_key_terms
+        return {vocab_name: set(terms) for vocab_name, terms in key_terms.items()}
 
     def __hash__(self):
         return hash((self.ref, self.hyp, self._index))

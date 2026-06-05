@@ -1,7 +1,12 @@
 """Tests for bewer.core.key_term module."""
 
-from bewer.core.key_term import KeyTerm, KeyTermTrie, _remove_subset_matches
+from bewer.core.key_term import KeyTerm, KeyTermTrie, Match, _remove_subset_matches
 from bewer.core.text import Text, TextType, TokenList
+
+
+def _match(start: int, stop: int) -> Match:
+    """Build a Match spanning ``[start, stop)`` for span-based filtering tests."""
+    return Match(span=slice(start, stop), text=None, key_terms=frozenset())
 
 
 class TestKeyTermInit:
@@ -153,33 +158,58 @@ class TestTokenListIndices:
 
 
 class TestRemoveSubsetMatches:
-    """Tests for _remove_subset_matches() function."""
+    """Tests for _remove_subset_matches() function (operating on Match spans)."""
 
     def test_empty_input(self):
         assert _remove_subset_matches([]) == []
 
     def test_no_overlaps(self):
-        matches = [slice(0, 1), slice(2, 3), slice(5, 7)]
+        matches = [_match(0, 1), _match(2, 3), _match(5, 7)]
         result = _remove_subset_matches(matches)
         assert len(result) == 3
 
     def test_subset_removed(self):
         """A shorter match contained within a longer match is removed."""
-        matches = [slice(1, 4), slice(1, 3)]
+        matches = [_match(1, 4), _match(1, 3)]
         result = _remove_subset_matches(matches)
-        assert result == [slice(1, 4)]
+        assert [(m.span.start, m.span.stop) for m in result] == [(1, 4)]
 
     def test_adjacent_kept(self):
         """Adjacent non-overlapping matches are preserved."""
-        matches = [slice(0, 2), slice(2, 4)]
+        matches = [_match(0, 2), _match(2, 4)]
         result = _remove_subset_matches(matches)
         assert len(result) == 2
 
     def test_identical_deduplicated(self):
         """Identical matches are deduplicated to one."""
-        matches = [slice(1, 3), slice(1, 3)]
+        matches = [_match(1, 3), _match(1, 3)]
         result = _remove_subset_matches(matches)
-        assert result == [slice(1, 3)]
+        assert [(m.span.start, m.span.stop) for m in result] == [(1, 3)]
+
+
+class TestMatchShape:
+    """Tests for the Match dataclass and the trie reverse map."""
+
+    def test_match_carries_span_text_and_key_terms(self, sample_dataset):
+        """A returned Match exposes its span, source text, and matched key term(s)."""
+        sample_dataset.add("the quick brown fox", "the quick brown dog", key_terms={"animals": ["fox"]})
+        text = sample_dataset[-1].ref
+        matches = text.get_key_term_matches(vocab="animals")
+        assert len(matches) == 1
+        match = matches[0]
+        assert isinstance(match, Match)
+        assert match.text is text
+        assert text.tokens[match.span].raw == ["fox"]
+        assert {kt.raw for kt in match.key_terms} == {"fox"}
+
+    def test_collision_maps_span_to_multiple_key_terms(self, sample_dataset):
+        """Distinct raw strings normalizing to the same token pattern share a span's Match."""
+        # "fox" and "FOX" normalize to the same token, so a single span maps to both terms.
+        sample_dataset.add("the quick brown fox", "the quick brown dog")
+        sample_dataset.add_vocabulary_from_list("animals", ["fox", "FOX"])
+        matches = sample_dataset[-1].ref.get_key_term_matches(vocab="animals")
+        assert len(matches) == 1
+        assert {kt.raw for kt in matches[0].key_terms} == {"fox", "FOX"}
 
 
 class TestTextGetKeyTermMatchesAllowSubsets:
@@ -206,7 +236,7 @@ class TestTextGetKeyTermMatchesAllowSubsets:
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
         assert len(matches) == 1
-        matched = example.ref.tokens[matches[0]]
+        matched = example.ref.tokens[matches[0].span]
         assert matched.raw == ["quick", "brown"]
 
 
@@ -244,22 +274,7 @@ class TestTokenListSrc:
         tokens = TokenList((), src=stub_parent)
         assert tokens.src is stub_parent
 
-
-class TestKeyTermNotFoundWarningImport:
-    """Tests for KeyTermNotFoundWarning import paths."""
-
-    def test_importable_from_key_term_module(self):
-        from bewer.core.key_term import KeyTermNotFoundWarning as W1
-
-        assert issubclass(W1, UserWarning)
-
-    def test_importable_from_top_level(self):
-        from bewer import KeyTermNotFoundWarning as W2
-
-        assert issubclass(W2, UserWarning)
-
-    def test_same_class(self):
-        from bewer import KeyTermNotFoundWarning as W1
-        from bewer.core.key_term import KeyTermNotFoundWarning as W2
-
-        assert W1 is W2
+    def test_default_src_is_none(self):
+        """A bare TokenList() has src == None."""
+        tokens = TokenList()
+        assert tokens.src is None

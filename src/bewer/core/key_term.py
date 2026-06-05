@@ -1,45 +1,59 @@
 from __future__ import annotations
 
-import warnings
-from typing import TYPE_CHECKING, Optional, Union
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import ahocorasick
 
 from bewer.core.text import Text, TextType, TokenList
-from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
-    from bewer.core.dataset import Dataset
     from bewer.core.example import Example
+    from bewer.core.vocabulary import Vocabulary
 
-__all__ = ["KeyTerm", "KeyTermNotFoundWarning"]
-
-
-class KeyTermNotFoundWarning(UserWarning):
-    pass
-
-
-warnings.filterwarnings("always", category=KeyTermNotFoundWarning)
+__all__ = ["KeyTerm", "Match"]
 
 
 class KeyTerm(Text):
     """A key term that can locate itself within reference text tokens.
 
-    Inherits standardized, tokens, and pipeline caching from Text.
-    Adds contiguous token matching against a reference TokenList.
+    Inherits standardized, tokens, and pipeline caching from Text. A ``KeyTerm`` is
+    canonical: there is one instance per raw string within a vocabulary, deduped by the
+    owning :class:`Vocabulary`. Its ``src`` is that vocabulary (which back-references the
+    dataset and provides the active ``pipelines``), and ``examples`` records every example
+    that regards the term.
     """
 
     def __init__(
         self,
         raw: str,
         *,
-        src: Union["Example", "Dataset"],
+        src: "Vocabulary",
     ):
         super().__init__(raw=raw, src=src, text_type=TextType.KEY_TERM)
+        # Examples that regard this term. Mutable back-reference; intentionally *not* part
+        # of __hash__ (which stays (raw, text_type)), so canonical dedup-by-raw is unaffected.
+        self.examples: set["Example"] = set()
 
     def __repr__(self):
         text = self.raw if len(self.raw) <= 46 else self.raw[:46] + "..."
         return f'KeyTerm("{text}")'
+
+
+@dataclass(frozen=True)
+class Match:
+    """A located key term occurrence within a text.
+
+    Attributes:
+        span: The token span (slice) of the match within ``text``'s tokens.
+        text: The Text the match was found in.
+        key_terms: The key term(s) whose token pattern produced this match. A span maps to
+            more than one key term when distinct raw strings normalize to the same pattern.
+    """
+
+    span: slice
+    text: Text
+    key_terms: frozenset[KeyTerm]
 
 
 class KeyTermTrie:
@@ -62,35 +76,36 @@ class KeyTermTrie:
         self.normalized = normalized
         self.add_capitalized = add_capitalized
 
-        patterns = []
-        key_term_patterns = []
+        # Map each token pattern (string tuple) to the key term(s) that produce it, so a
+        # matched span can be mapped back to its KeyTerm(s). Capitalized variants map back
+        # to the same KeyTerm.
+        pattern_to_terms: dict[tuple[str, ...], set[KeyTerm]] = {}
         for key_term in key_terms:
             tokens = key_term.tokens.normalized if normalized else key_term.tokens.raw
             token_pattern = tuple(tokens)
             if not token_pattern:
                 continue
-            key_term_patterns.append((key_term.raw, token_pattern))
-            patterns.append(token_pattern)
-
-        # Handle capitalization variants
-        if add_capitalized and not normalized:
-            for _, p in key_term_patterns:
-                first_cap = p[0].capitalize()
-                if first_cap != p[0]:
-                    patterns.append((first_cap,) + p[1:])
+            pattern_to_terms.setdefault(token_pattern, set()).add(key_term)
+            if add_capitalized and not normalized:
+                first_cap = token_pattern[0].capitalize()
+                if first_cap != token_pattern[0]:
+                    cap_pattern = (first_cap,) + token_pattern[1:]
+                    pattern_to_terms.setdefault(cap_pattern, set()).add(key_term)
 
         # Build vocab: token string -> int for KEY_SEQUENCE mode
-        self._vocab = {w: i for i, w in enumerate({w for p in patterns for w in p})}
+        self._vocab = {w: i for i, w in enumerate({w for p in pattern_to_terms for w in p})}
         self._unknown = len(self._vocab)
+
+        # Encoded pattern -> key term(s) reverse map.
+        self._pattern_to_terms: dict[tuple[int, ...], set[KeyTerm]] = {}
+        for pattern, terms in pattern_to_terms.items():
+            encoded = tuple(self._vocab[w] for w in pattern)
+            self._pattern_to_terms.setdefault(encoded, set()).update(terms)
 
         # Build Aho-Corasick automaton
         self._automaton = ahocorasick.Automaton(ahocorasick.STORE_ANY, ahocorasick.KEY_SEQUENCE)
-        seen = set()
-        for pattern in patterns:
-            int_pattern = tuple(self._vocab[w] for w in pattern)
-            if int_pattern not in seen:
-                self._automaton.add_word(int_pattern, len(pattern))
-                seen.add(int_pattern)
+        for encoded in self._pattern_to_terms:
+            self._automaton.add_word(encoded, len(encoded))
         self._automaton.make_automaton()
 
     def encode(self, tokens: TokenList) -> tuple[int, ...]:
@@ -98,15 +113,9 @@ class KeyTermTrie:
         token_strings = tokens.normalized if self.normalized else tokens.raw
         return tuple(self._vocab.get(w, self._unknown) for w in token_strings)
 
-    def encode_variants(self, tokens: TokenList) -> set[tuple[int, ...]]:
-        """Return all encoded patterns for a token list, including capitalized variant if enabled."""
-        variants = {self.encode(tokens)}
-        if self.add_capitalized and not self.normalized and tokens:
-            raw = tokens.raw
-            cap_first = raw[0].capitalize()
-            if cap_first != raw[0]:
-                variants.add(tuple(self._vocab.get(w, self._unknown) for w in [cap_first] + raw[1:]))
-        return variants
+    def terms_for_pattern(self, pattern: tuple[int, ...]) -> set[KeyTerm]:
+        """Return the key term(s) whose token pattern matches the encoded ``pattern``."""
+        return self._pattern_to_terms.get(pattern, set())
 
     def find_in_tokens(self, tokens: TokenList) -> tuple[list[slice], list[tuple[int, ...]]]:
         """Find all key term matches, returning spans and their encoded patterns."""
@@ -120,61 +129,29 @@ class KeyTermTrie:
         return matches, patterns
 
 
-def _remove_duplicate_matches(matches: list[slice]) -> list[slice]:
-    """Remove exact duplicate matches, preserving order."""
+def _remove_duplicate_matches(matches: list[Match]) -> list[Match]:
+    """Remove exact duplicate matches (by span), preserving order."""
     seen: set[tuple[int, int]] = set()
     result = []
     for m in matches:
-        key = (m.start, m.stop)
+        key = (m.span.start, m.span.stop)
         if key not in seen:
             seen.add(key)
             result.append(m)
     return result
 
 
-def _remove_subset_matches(matches: list[slice]) -> list[slice]:
-    """Remove matches that are subsets of other matches, preferring longer matches."""
+def _remove_subset_matches(matches: list[Match]) -> list[Match]:
+    """Remove matches whose span is a subset of another match's span, preferring longer matches."""
     if not matches:
         return matches
     # Sort by start ascending, then by length descending
-    matches.sort(key=lambda s: (s.start, s.start - s.stop))
-    result = [matches[0]]
-    for m in matches[1:]:
+    ordered = sorted(matches, key=lambda m: (m.span.start, m.span.start - m.span.stop))
+    result = [ordered[0]]
+    for m in ordered[1:]:
         prev = result[-1]
         # Skip if fully contained within previous match
-        if m.start >= prev.start and m.stop <= prev.stop:
+        if m.span.start >= prev.span.start and m.span.stop <= prev.span.stop:
             continue
         result.append(m)
     return result
-
-
-def get_key_term_trie(
-    vocabs: dict[str, set[KeyTerm]],
-    cache: dict[tuple, Optional[KeyTermTrie]],
-    vocab: str,
-    normalized: bool = True,
-    add_capitalized: bool = False,
-) -> Optional[KeyTermTrie]:
-    """Get or build a trie for the key terms in the specified vocabulary."""
-    trie_key = (
-        STANDARDIZER_NAME.get(),
-        TOKENIZER_NAME.get(),
-        NORMALIZER_NAME.get() if normalized else None,
-        add_capitalized,
-        vocab,
-    )
-    if trie_key in cache:
-        return cache[trie_key]
-
-    key_terms = vocabs.get(vocab, None)
-    if not key_terms:
-        cache[trie_key] = None
-        return None
-
-    trie = KeyTermTrie(
-        key_terms,
-        normalized=normalized,
-        add_capitalized=add_capitalized,
-    )
-    cache[trie_key] = trie
-    return trie
