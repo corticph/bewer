@@ -316,8 +316,9 @@ class Metric(ABC):
             example_metric_row_values = None
         return (metric_row_values, example_metric_row_values)
 
-    def get_example_metric(self, example: "Example") -> "ExampleMetric":
-        """Get the ExampleMetric object for a given example index."""
+    def get_example_metric(self, example: "Example") -> Optional["ExampleMetric"]:
+        """Get the ExampleMetric object for a given example index, or None if this
+        metric defines no example_cls."""
         if example._index in self._examples:
             return self._examples[example._index]
         if self.example_cls is None:
