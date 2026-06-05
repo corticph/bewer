@@ -12,9 +12,9 @@ class TestTextRaw:
         """Test that raw property returns the original text."""
         assert sample_text.raw == "hello world"
 
-    def test_raw_raises_when_none(self):
+    def test_raw_raises_when_none(self, stub_parent):
         """Test that raw raises ValueError when _raw is None."""
-        text = Text(raw=None)
+        text = Text(raw=None, src=stub_parent)
         with pytest.raises(ValueError, match="Raw text is None"):
             _ = text.raw
 
@@ -28,9 +28,9 @@ class TestTextStandardized:
         standardized = sample_text.standardized
         assert isinstance(standardized, str)
 
-    def test_standardized_raises_without_pipeline(self):
+    def test_standardized_raises_without_pipeline(self, stub_parent):
         """Test that standardized raises ValueError without pipeline."""
-        text = Text(raw="hello")
+        text = Text(raw="hello", src=stub_parent)
         with pytest.raises(ValueError, match="No standardizers found"):
             _ = text.standardized
 
@@ -48,9 +48,9 @@ class TestTextTokens:
         tokens = sample_text.tokens
         assert len(tokens) == 2  # "hello" and "world"
 
-    def test_tokens_raises_without_pipeline(self):
+    def test_tokens_raises_without_pipeline(self, stub_parent):
         """Test that tokens raises ValueError without pipeline."""
-        text = Text(raw="hello world")
+        text = Text(raw="hello world", src=stub_parent)
         with pytest.raises(ValueError):
             _ = text.tokens
 

@@ -1,6 +1,5 @@
 """Tests for bewer.core.token module."""
 
-import pytest
 import regex as re
 
 from bewer.core.token import Token
@@ -9,119 +8,113 @@ from bewer.core.token import Token
 class TestTokenInit:
     """Tests for Token.__init__()."""
 
-    def test_basic_initialization(self):
+    def test_basic_initialization(self, stub_parent):
         """Test basic token initialization."""
-        token = Token(raw="hello", start=0, end=5)
+        token = Token(raw="hello", start=0, end=5, src=stub_parent)
         assert token.raw == "hello"
         assert token.start == 0
         assert token.end == 5
 
-    def test_with_index(self):
+    def test_with_index(self, stub_parent):
         """Test token initialization with index."""
-        token = Token(raw="world", start=6, end=11, index=1)
+        token = Token(raw="world", start=6, end=11, index=1, src=stub_parent)
         assert token.index == 1
 
-    def test_slice_property(self):
+    def test_slice_property(self, stub_parent):
         """Test that slice property is correctly set."""
-        token = Token(raw="test", start=10, end=14)
+        token = Token(raw="test", start=10, end=14, src=stub_parent)
         assert token.slice == slice(10, 14)
 
-    def test_default_index_none(self):
+    def test_default_index_none(self, stub_parent):
         """Test that index defaults to None."""
-        token = Token(raw="hello", start=0, end=5)
+        token = Token(raw="hello", start=0, end=5, src=stub_parent)
         assert token.index is None
 
-    def test_normalized_cache_initialized(self):
+    def test_normalized_cache_initialized(self, stub_parent):
         """Test that normalized cache is initialized as empty dict."""
-        token = Token(raw="hello", start=0, end=5)
+        token = Token(raw="hello", start=0, end=5, src=stub_parent)
         assert token._cache_normalized == {}
 
-    def test_src_none_by_default(self):
-        """Test that src defaults to None."""
-        token = Token(raw="hello", start=0, end=5)
-        assert token.src is None
+    def test_src_is_required(self, stub_parent):
+        """Test that the provided src is stored."""
+        token = Token(raw="hello", start=0, end=5, src=stub_parent)
+        assert token.src is stub_parent
 
 
 class TestTokenFromMatch:
     """Tests for Token.from_match()."""
 
-    def test_basic_from_match(self):
+    def test_basic_from_match(self, stub_parent):
         """Test creating token from regex match."""
         pattern = re.compile(r"\S+")
         match = pattern.search("hello world", 0)
-        token = Token.from_match(match, index=0)
+        token = Token.from_match(match, index=0, src=stub_parent)
         assert token.raw == "hello"
         assert token.start == 0
         assert token.end == 5
         assert token.index == 0
 
-    def test_from_match_middle_of_string(self):
+    def test_from_match_middle_of_string(self, stub_parent):
         """Test creating token from match in middle of string."""
         pattern = re.compile(r"\S+")
         text = "hello world"
         matches = list(pattern.finditer(text))
-        token = Token.from_match(matches[1], index=1)
+        token = Token.from_match(matches[1], index=1, src=stub_parent)
         assert token.raw == "world"
         assert token.start == 6
         assert token.end == 11
 
-    def test_from_match_with_src(self):
+    def test_from_match_stores_src(self, stub_parent):
         """Test creating token with source text reference."""
         pattern = re.compile(r"\S+")
         match = pattern.search("hello")
-        token = Token.from_match(match, index=0, src=None)
-        assert token.src is None
+        token = Token.from_match(match, index=0, src=stub_parent)
+        assert token.src is stub_parent
 
 
 class TestTokenEquality:
     """Tests for Token.__eq__()."""
 
-    def test_equal_tokens(self):
+    def test_equal_tokens(self, stub_parent):
         """Test that identical tokens are equal."""
-        token1 = Token(raw="hello", start=0, end=5)
-        token2 = Token(raw="hello", start=0, end=5)
+        token1 = Token(raw="hello", start=0, end=5, src=stub_parent)
+        token2 = Token(raw="hello", start=0, end=5, src=stub_parent)
         assert token1 == token2
 
-    def test_different_raw(self):
+    def test_different_raw(self, stub_parent):
         """Test tokens with different raw values are not equal."""
-        token1 = Token(raw="hello", start=0, end=5)
-        token2 = Token(raw="world", start=0, end=5)
+        token1 = Token(raw="hello", start=0, end=5, src=stub_parent)
+        token2 = Token(raw="world", start=0, end=5, src=stub_parent)
         assert token1 != token2
 
-    def test_different_start(self):
+    def test_different_start(self, stub_parent):
         """Test tokens with different start positions are not equal."""
-        token1 = Token(raw="hello", start=0, end=5)
-        token2 = Token(raw="hello", start=1, end=5)
+        token1 = Token(raw="hello", start=0, end=5, src=stub_parent)
+        token2 = Token(raw="hello", start=1, end=5, src=stub_parent)
         assert token1 != token2
 
-    def test_different_end(self):
+    def test_different_end(self, stub_parent):
         """Test tokens with different end positions are not equal."""
-        token1 = Token(raw="hello", start=0, end=5)
-        token2 = Token(raw="hello", start=0, end=6)
+        token1 = Token(raw="hello", start=0, end=5, src=stub_parent)
+        token2 = Token(raw="hello", start=0, end=6, src=stub_parent)
         assert token1 != token2
 
-    def test_comparison_with_non_token(self):
+    def test_comparison_with_non_token(self, stub_parent):
         """Test comparison with non-Token objects returns False."""
-        token = Token(raw="hello", start=0, end=5)
+        token = Token(raw="hello", start=0, end=5, src=stub_parent)
         assert token != "hello"
         assert token != 42
         assert token is not None
 
-    def test_index_not_considered_in_equality(self):
+    def test_index_not_considered_in_equality(self, stub_parent):
         """Test that index is not considered in equality."""
-        token1 = Token(raw="hello", start=0, end=5, index=0)
-        token2 = Token(raw="hello", start=0, end=5, index=1)
+        token1 = Token(raw="hello", start=0, end=5, index=0, src=stub_parent)
+        token2 = Token(raw="hello", start=0, end=5, index=1, src=stub_parent)
         assert token1 == token2
 
 
 class TestTokenInctx:
     """Tests for Token.inctx() context extraction."""
-
-    def test_inctx_raises_without_src_text(self):
-        """Test that inctx raises ValueError without source text."""
-        token = Token(raw="hello", start=0, end=5)
-        with pytest.raises(ValueError, match="Source text is not set"):
-            token.inctx()
 
     def test_inctx_with_dataset_context(self, sample_dataset):
         """Test inctx with proper context from dataset."""
@@ -147,12 +140,12 @@ class TestTokenInctx:
 class TestTokenRepr:
     """Tests for Token.__repr__()."""
 
-    def test_repr(self):
+    def test_repr(self, stub_parent):
         """Test string representation."""
-        token = Token(raw="hello", start=0, end=5)
+        token = Token(raw="hello", start=0, end=5, src=stub_parent)
         assert repr(token) == 'Token("hello")'
 
-    def test_repr_with_special_chars(self):
+    def test_repr_with_special_chars(self, stub_parent):
         """Test repr with special characters in token."""
-        token = Token(raw="hello!", start=0, end=6)
+        token = Token(raw="hello!", start=0, end=6, src=stub_parent)
         assert repr(token) == 'Token("hello!")'

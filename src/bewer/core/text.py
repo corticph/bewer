@@ -10,6 +10,7 @@ from bewer.core.token import Token
 from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
+    from bewer.core.dataset import Dataset
     from bewer.core.example import Example
 
 __all__ = ["Text", "TextType", "TokenList"]
@@ -55,14 +56,15 @@ class Text:
     def __init__(
         self,
         raw: str | None,
-        src: Optional["Example"] = None,
+        *,
+        src: "Example",
         text_type: Optional[TextType] = None,
     ):
         """Initialize the Text object.
 
         Args:
             raw: The original text string (reference, hypothesis, or key term).
-            src: Parent Example object. Can be set later via set_source().
+            src: Parent Example object (required).
             text_type: The type of the text (REF, HYP, or KEY_TERM).
         """
         self._raw = raw
@@ -72,10 +74,8 @@ class Text:
         self._cache_tokens = {}
         self._cache_key_term_matches = {}
 
-        self._src = None
-        self._pipelines = None
-        if src is not None:
-            self.set_source(src)
+        self._src = src
+        self._pipelines = src.pipelines
 
     @property
     def raw(self) -> str:
@@ -84,7 +84,7 @@ class Text:
         return self._raw
 
     @property
-    def src(self) -> Optional["Example"]:
+    def src(self) -> "Example":
         """Get the parent Example object."""
         return self._src
 
@@ -105,23 +105,6 @@ class Text:
     def tokens(self, tokenizer) -> "TokenList":
         """The list of Token objects produced by the active tokenizer."""
         return TokenList.from_matches(tokenizer(self.standardized), src=self)
-
-    def set_source(self, src: "Example") -> None:
-        """Set the parent Example object.
-
-        Args:
-            src: The parent Example object.
-
-        Raises:
-            ValueError: If source is already set.
-        """
-        if self._src is not None:
-            raise ValueError("Source already set for Text")
-
-        self._src = src
-
-        # Cache pipeline reference
-        self._pipelines = src.pipelines if src is not None else None
 
     def joined(self, normalized: bool = True) -> str:
         """Get the joined text from tokens.
@@ -157,10 +140,10 @@ class Text:
             List of slices representing matched token spans.
         """
         example = self._src
-        dataset = example.src if example is not None else None
+        dataset = example.src
 
-        has_local = example is not None and vocab in example.key_terms
-        has_global = dataset is not None and vocab in dataset._global_key_term_vocabs
+        has_local = vocab in example.key_terms
+        has_global = vocab in dataset._global_key_term_vocabs
 
         if not has_local and not has_global:
             return []
@@ -232,24 +215,24 @@ class Text:
 class TokenList(tuple["Token", ...]):
     """An immutable sequence of Token objects."""
 
-    def __new__(cls, iterable=(), src=None):
+    def __new__(cls, iterable=(), *, src):
         return super().__new__(cls, iterable)
 
-    def __init__(self, iterable=(), src: Optional["Text"] = None):
+    def __init__(self, iterable=(), *, src: Union["Text", "Dataset"]):
         self._normalized_index_cache: dict[str, dict[str, set[int]]] = {}
         self._normalized_cache: dict[str, list[str]] = {}
         self._src = src
 
     @property
-    def src(self) -> Optional["Text"]:
-        """Get the source Text object."""
+    def src(self) -> Union["Text", "Dataset"]:
+        """Get the source object (the owning Text, or the Dataset for aggregate token lists)."""
         return self._src
 
     @classmethod
     def from_matches(
         cls,
         matches: "Iterable[re.Match]",
-        src: Optional["Text"] = None,
+        src: "Text",
     ) -> "TokenList":
         """Create a TokenList from an iterable of regex match objects.
 
@@ -357,11 +340,11 @@ class TokenList(tuple["Token", ...]):
 
     def __getitem__(self, index: int | slice) -> Union["Token", "TokenList"]:
         if isinstance(index, slice):
-            return TokenList(super().__getitem__(index))
+            return TokenList(super().__getitem__(index), src=self._src)
         return super().__getitem__(index)
 
     def __add__(self, other: "TokenList") -> "TokenList":
-        return TokenList(super().__add__(other))
+        return TokenList(super().__add__(other), src=self._src)
 
     def __repr__(self):
         tokens = self[:60]

@@ -74,7 +74,7 @@ class Dataset(object):
         Returns:
             TextList: The reference texts.
         """
-        return TextList([example.ref for example in self.examples])
+        return TextList([example.ref for example in self.examples], src=self)
 
     @cached_property
     def hyps(self) -> "TextList":
@@ -83,7 +83,7 @@ class Dataset(object):
         Returns:
             TextList: The hypothesis texts.
         """
-        return TextList([example.hyp for example in self.examples])
+        return TextList([example.hyp for example in self.examples], src=self)
 
     def add(self, ref: str, hyp: str, key_terms: dict[str, list[str]] | None = None) -> None:
         """Add an example to the dataset."""
@@ -253,8 +253,16 @@ class Dataset(object):
 class TextList(tuple["Text", ...]):
     """An immutable sequence of Text objects."""
 
-    def __new__(cls, iterable=()):
+    def __new__(cls, iterable=(), *, src):
         return super().__new__(cls, iterable)
+
+    def __init__(self, iterable=(), *, src: "Dataset"):
+        self._src = src
+
+    @property
+    def src(self) -> "Dataset":
+        """Get the owning Dataset."""
+        return self._src
 
     @property
     def raw(self) -> list[str]:
@@ -281,15 +289,15 @@ class TextList(tuple["Text", ...]):
         Returns:
             TextTokenList: The tokens.
         """
-        return TextTokenList([text.tokens for text in self])
+        return TextTokenList([text.tokens for text in self], src=self._src)
 
     def __getitem__(self, index: int | slice) -> Union["Text", "TextList"]:
         if isinstance(index, slice):
-            return TextList(super().__getitem__(index))
+            return TextList(super().__getitem__(index), src=self._src)
         return super().__getitem__(index)
 
     def __add__(self, other: "TextList") -> "TextList":
-        return TextList(super().__add__(other))
+        return TextList(super().__add__(other), src=self._src)
 
     def __repr__(self):
         texts = self[:60]
@@ -302,8 +310,16 @@ class TextList(tuple["Text", ...]):
 class TextTokenList(tuple["TokenList", ...]):
     """An immutable sequence of TokenList objects."""
 
-    def __new__(cls, iterable=()):
+    def __new__(cls, iterable=(), *, src):
         return super().__new__(cls, iterable)
+
+    def __init__(self, iterable=(), *, src: "Dataset"):
+        self._src = src
+
+    @property
+    def src(self) -> "Dataset":
+        """Get the owning Dataset."""
+        return self._src
 
     @property
     def raw(self) -> list[list[str]]:
@@ -330,15 +346,15 @@ class TextTokenList(tuple["TokenList", ...]):
         Returns:
             TokenList: The flattened TokenList.
         """
-        return TokenList(chain(*self))
+        return TokenList(chain(*self), src=self._src)
 
     def __getitem__(self, index: int | slice) -> Union["TokenList", "TextTokenList"]:
         if isinstance(index, slice):
-            return TextTokenList(super().__getitem__(index))
+            return TextTokenList(super().__getitem__(index), src=self._src)
         return super().__getitem__(index)
 
     def __add__(self, other: "TextTokenList") -> "TextTokenList":
-        return TextTokenList(super().__add__(other))
+        return TextTokenList(super().__add__(other), src=self._src)
 
     def __repr__(self):
         text_tokens = self[:60]

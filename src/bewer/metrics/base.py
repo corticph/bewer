@@ -173,7 +173,7 @@ class MetricParams:
     def validate(self) -> None:
         """Override to validate params against the source metric/dataset.
 
-        Called after set_source(), so self.metric.src is the Dataset.
+        Called from Metric.__init__ after src is set, so self.metric.src is the Dataset.
         """
         pass
 
@@ -187,8 +187,8 @@ class Metric(ABC):
     def __init__(
         self,
         name: Optional[str] = None,
-        src: Optional["Dataset"] = None,
         *,
+        src: "Dataset",
         standardizer: str = DEFAULT,
         tokenizer: str = DEFAULT,
         normalizer: str = DEFAULT,
@@ -198,7 +198,7 @@ class Metric(ABC):
 
         Args:
             name: Metric name. Defaults to the lowercase class name.
-            src: Dataset object for computing the metric. Can be set later via set_source().
+            src: Dataset object for computing the metric (required).
             standardizer: Standardizer pipeline name.
             tokenizer: Tokenizer pipeline name.
             normalizer: Normalizer pipeline name.
@@ -240,9 +240,9 @@ class Metric(ABC):
                 raise ValueError(f"Metric {self.short_name_base} does not accept parameters")
             self.params = None
 
-        self._src = None
-        if src is not None:
-            self.set_source(src)
+        self._src = src
+        if self.params is not None:
+            self.params.validate()
 
     @property
     def short_name(self) -> str:
@@ -267,12 +267,12 @@ class Metric(ABC):
         pass
 
     @property
-    def src(self) -> Optional["Dataset"]:
+    def src(self) -> "Dataset":
         """Get the parent Dataset object."""
         return self._src
 
     @property
-    def dataset(self) -> Optional["Dataset"]:
+    def dataset(self) -> "Dataset":
         """Alias for src property."""
         return self._src
 
@@ -316,30 +316,13 @@ class Metric(ABC):
             example_metric_row_values = None
         return (metric_row_values, example_metric_row_values)
 
-    def set_source(self, src: "Dataset") -> None:
-        """Set the parent Dataset object and validate parameters if needed.
-
-        Args:
-            src: The parent Dataset object.
-
-        Raises:
-            ValueError: If source is already set or if parameters are invalid for this dataset.
-        """
-        if self._src is not None:
-            raise ValueError("Source already set for Metric")
-        self._src = src
-
-        if self.params is not None:
-            self.params.validate()
-
     def get_example_metric(self, example: "Example") -> "ExampleMetric":
         """Get the ExampleMetric object for a given example index."""
         if example._index in self._examples:
             return self._examples[example._index]
         if self.example_cls is None:
             return None
-        example_metric = self.example_cls(parent_metric=self)
-        example_metric.set_source(example)
+        example_metric = self.example_cls(parent_metric=self, src=example)
         self._examples[example._index] = example_metric
         return example_metric
 
@@ -385,19 +368,17 @@ class ExampleMetric(ABC):
     def __init__(
         self,
         parent_metric: "Metric",
-        src: Optional["Example"] = None,
+        *,
+        src: "Example",
     ):
         """Initialize the ExampleMetric object.
 
         Args:
             parent_metric: The parent Metric object.
-            src: Parent Example object. Can be set later via set_source().
+            src: Parent Example object (required).
         """
         self.parent_metric = parent_metric
-
-        self._src = None
-        if src is not None:
-            self.set_source(src)
+        self._src = src
 
     @property
     def params(self) -> Optional["MetricParams"]:
@@ -405,12 +386,12 @@ class ExampleMetric(ABC):
         return self.parent_metric.params
 
     @property
-    def src(self) -> Optional["Example"]:
+    def src(self) -> "Example":
         """Get the parent Example object."""
         return self._src
 
     @property
-    def example(self) -> Optional["Example"]:
+    def example(self) -> "Example":
         """Alias for src property."""
         return self._src
 
@@ -433,19 +414,6 @@ class ExampleMetric(ABC):
     def normalizer(self) -> str:
         """Get the normalizer for the metric."""
         return self.parent_metric.normalizer
-
-    def set_source(self, src: "Example") -> None:
-        """Set the parent Example object.
-
-        Args:
-            src: The parent Example object.
-
-        Raises:
-            ValueError: If source is already set.
-        """
-        if self._src is not None:
-            raise ValueError("Source already set for ExampleMetric")
-        self._src = src
 
     @classmethod
     def metric_values(cls, include_private: bool = False) -> dict[str, Union[str, list[str]]]:
@@ -538,8 +506,7 @@ class MetricCollection(object):
                 ) from e
 
             # Create new metric instance
-            metric_instance = METRIC_REGISTRY.create_metric(name, **kwargs)
-            metric_instance.set_source(self._src)
+            metric_instance = METRIC_REGISTRY.create_metric(name, src=self._src, **kwargs)
 
             # Cache and return
             self._metric_cache[cache_key] = metric_instance
@@ -562,7 +529,7 @@ class ExampleMetricCollection(object):
     def __init__(self, src: "Example"):
         """Initialize the ExampleMetricCollection object."""
         self._src_example = src
-        self._src_collection = src.src.metrics if src.src is not None else None
+        self._src_collection = src.src.metrics
         self._cache = {}
 
     def get(self, name: str):
@@ -741,11 +708,12 @@ class MetricRegistry:
 
         return {**final_pipeline, **final_params}
 
-    def create_metric(self, name: str, **kwargs) -> "Metric":
+    def create_metric(self, name: str, *, src: "Dataset", **kwargs) -> "Metric":
         """Create a metric instance with merged defaults and overrides.
 
         Args:
             name: The registered metric name.
+            src: The Dataset the metric is computed for (required).
             **kwargs: Parameters and pipeline overrides. Can include:
                 - standardizer, tokenizer, normalizer (pipeline overrides)
                 - Any metric-specific parameters
@@ -763,7 +731,7 @@ class MetricRegistry:
         pipeline_args = {k: resolved[k] for k in pipeline_keys}
         metric_params = {k: v for k, v in resolved.items() if k not in pipeline_keys}
 
-        return self.metric_metadata[name]["metric_cls"](name=name, **pipeline_args, **metric_params)
+        return self.metric_metadata[name]["metric_cls"](name=name, src=src, **pipeline_args, **metric_params)
 
     def register(
         self,

@@ -104,7 +104,14 @@ class Op:
 
     @property
     def src(self) -> "Alignment" | None:
-        """Get the parent Alignment object."""
+        """Get the parent Alignment object.
+
+        Unlike the rest of the hierarchy, ``Op.src`` is bound *after* construction (by the
+        wrapping ``Alignment.__init__``) rather than being required at construction time: an
+        ``Alignment`` is a tuple built *from* its ``Op`` objects, so the ops necessarily exist
+        before the ``Alignment`` does. It is therefore the one back-reference that remains
+        deferred/optional by design.
+        """
         return self._src
 
     def set_source(self, src: "Alignment") -> None:
@@ -126,7 +133,7 @@ class Op:
         if self._ref_span is not None:
             return self._ref_span
         if self.ref_token_idx is not None:
-            if self._src is None or self._src.src is None:
+            if self._src is None:
                 return None
             return self._src.src.ref.tokens[self.ref_token_idx].slice
         return None
@@ -137,7 +144,7 @@ class Op:
         if self._hyp_span is not None:
             return self._hyp_span
         if self.hyp_token_idx is not None:
-            if self._src is None or self._src.src is None:
+            if self._src is None:
                 return None
             return self._src.src.hyp.tokens[self.hyp_token_idx].slice
         return None

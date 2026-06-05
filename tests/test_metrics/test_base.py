@@ -414,31 +414,30 @@ class TestMetricClass:
         assert isinstance(pipeline, tuple)
         assert len(pipeline) == 3
 
-    def test_set_source(self, sample_dataset):
-        """Test that set_source sets the dataset."""
+    def test_src_set_at_construction(self, sample_dataset):
+        """Test that the src passed at construction is stored."""
         from bewer.metrics.wer import WER
 
-        metric = WER(name="test_wer")
-        metric.set_source(sample_dataset)
+        metric = WER(name="test_wer", src=sample_dataset)
         assert metric.src is sample_dataset
 
-    def test_init_standardizer(self):
+    def test_init_standardizer(self, sample_dataset):
         """Test that standardizer can be set via __init__."""
         from bewer.metrics.wer import WER
 
-        wer = WER(name="test", standardizer="custom")
+        wer = WER(name="test", src=sample_dataset, standardizer="custom")
         assert wer._standardizer == "custom"
 
-    def test_init_tokenizer(self):
+    def test_init_tokenizer(self, sample_dataset):
         """Test that tokenizer can be set via __init__."""
         from bewer.metrics.wer import WER
 
-        wer = WER(name="test", tokenizer="custom")
+        wer = WER(name="test", src=sample_dataset, tokenizer="custom")
         assert wer._tokenizer == "custom"
 
-    def test_init_normalizer(self):
+    def test_init_normalizer(self, sample_dataset):
         """Test that normalizer can be set via __init__."""
         from bewer.metrics.wer import WER
 
-        wer = WER(name="test", normalizer="custom")
+        wer = WER(name="test", src=sample_dataset, normalizer="custom")
         assert wer._normalizer == "custom"

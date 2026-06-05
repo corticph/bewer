@@ -1,5 +1,7 @@
 """Tests for Alignment.ref_index_mapping and ops_from_ref_index methods."""
 
+from unittest.mock import Mock
+
 import pytest
 
 from bewer.alignment import Alignment, Op, OpType
@@ -14,7 +16,7 @@ class TestRefIndexMapping:
             Op(type=OpType.MATCH, ref="hello", hyp="hello", ref_token_idx=0),
             Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=1),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.ref_index_mapping == {0: 0, 1: 1}
 
     def test_mapping_skips_insertions(self):
@@ -24,7 +26,7 @@ class TestRefIndexMapping:
             Op(type=OpType.INSERT, ref=None, hyp="extra"),
             Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=1),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.ref_index_mapping == {0: 0, 1: 2}
 
     def test_mapping_includes_deletions(self):
@@ -34,7 +36,7 @@ class TestRefIndexMapping:
             Op(type=OpType.DELETE, ref="missing", hyp=None, ref_token_idx=1),
             Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=2),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.ref_index_mapping == {0: 0, 1: 1, 2: 2}
 
     def test_mapping_includes_substitutions(self):
@@ -43,12 +45,12 @@ class TestRefIndexMapping:
             Op(type=OpType.MATCH, ref="the", hyp="the", ref_token_idx=0),
             Op(type=OpType.SUBSTITUTE, ref="fox", hyp="dog", ref_token_idx=1),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.ref_index_mapping == {0: 0, 1: 1}
 
     def test_mapping_empty_alignment(self):
         """Test mapping for an empty alignment."""
-        alignment = Alignment()
+        alignment = Alignment(src=Mock())
         assert alignment.ref_index_mapping == {}
 
 
@@ -60,7 +62,7 @@ class TestHypIndexMapping:
             Op(type=OpType.MATCH, ref="hello", hyp="hello", ref_token_idx=0, hyp_token_idx=0),
             Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=1, hyp_token_idx=1),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.hyp_index_mapping == {0: 0, 1: 1}
 
     def test_mapping_skips_deletions(self):
@@ -70,7 +72,7 @@ class TestHypIndexMapping:
             Op(type=OpType.DELETE, ref="extra", hyp=None, ref_token_idx=1),
             Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=2, hyp_token_idx=1),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.hyp_index_mapping == {0: 0, 1: 2}
 
     def test_mapping_includes_insertions(self):
@@ -80,11 +82,11 @@ class TestHypIndexMapping:
             Op(type=OpType.INSERT, ref=None, hyp="extra", hyp_token_idx=1),
             Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=1, hyp_token_idx=2),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.hyp_index_mapping == {0: 0, 1: 1, 2: 2}
 
     def test_mapping_empty_alignment(self):
-        alignment = Alignment()
+        alignment = Alignment(src=Mock())
         assert alignment.hyp_index_mapping == {}
 
     def test_mapping_no_hyp_token_idx(self):
@@ -93,7 +95,7 @@ class TestHypIndexMapping:
             Op(type=OpType.MATCH, ref="hello", hyp="hello"),
             Op(type=OpType.MATCH, ref="world", hyp="world"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.hyp_index_mapping == {}
 
 
@@ -109,7 +111,7 @@ class TestOpsFromRefIndex:
             Op(type=OpType.SUBSTITUTE, ref="brown", hyp="red", ref_token_idx=2),
             Op(type=OpType.MATCH, ref="fox", hyp="fox", ref_token_idx=3),
         ]
-        return Alignment(ops)
+        return Alignment(ops, src=Mock())
 
     def test_single_index_returns_single_op(self, alignment_with_mixed_ops):
         """Test that a single start index returns a list with one op."""
@@ -146,7 +148,7 @@ class TestOpsFromRefIndex:
             Op(type=OpType.INSERT, ref=None, hyp="extra"),
             Op(type=OpType.MATCH, ref="world", hyp="world", ref_token_idx=1),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         result = alignment.ops_from_ref_index(0, 1)
         assert len(result) == 3
         assert result[1].type == OpType.INSERT
