@@ -18,7 +18,7 @@ class TestAlignmentProperties:
             Op(type=OpType.MATCH, ref="b", hyp="b"),
             Op(type=OpType.SUBSTITUTE, ref="c", hyp="d"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.num_matches == 2
 
     def test_num_substitutions(self):
@@ -28,7 +28,7 @@ class TestAlignmentProperties:
             Op(type=OpType.SUBSTITUTE, ref="c", hyp="d"),
             Op(type=OpType.MATCH, ref="e", hyp="e"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.num_substitutions == 2
 
     def test_num_insertions(self):
@@ -38,7 +38,7 @@ class TestAlignmentProperties:
             Op(type=OpType.INSERT, ref=None, hyp="b"),
             Op(type=OpType.MATCH, ref="c", hyp="c"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.num_insertions == 2
 
     def test_num_deletions(self):
@@ -48,7 +48,7 @@ class TestAlignmentProperties:
             Op(type=OpType.DELETE, ref="b", hyp=None),
             Op(type=OpType.MATCH, ref="c", hyp="c"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.num_deletions == 2
 
     def test_num_edits(self):
@@ -59,7 +59,7 @@ class TestAlignmentProperties:
             Op(type=OpType.DELETE, ref="d", hyp=None),
             Op(type=OpType.MATCH, ref="e", hyp="e"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.num_edits == 3
 
     def test_counts_from_constructor(self):
@@ -69,7 +69,7 @@ class TestAlignmentProperties:
             Op(type=OpType.SUBSTITUTE, ref="b", hyp="c"),
             Op(type=OpType.INSERT, ref=None, hyp="d"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert alignment.num_matches == 1
         assert alignment.num_substitutions == 1
         assert alignment.num_insertions == 1
@@ -77,32 +77,19 @@ class TestAlignmentProperties:
     def test_immutable(self):
         """Test that Alignment is immutable (tuple-based)."""
         ops = [Op(type=OpType.MATCH, ref="a", hyp="a")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         with pytest.raises(TypeError):
             alignment[0] = Op(type=OpType.MATCH, ref="b", hyp="b")
 
 
-class TestAlignmentSetSource:
-    """Tests for set_source method."""
+class TestAlignmentSource:
+    """Tests for the Alignment.src back-reference (set at construction)."""
 
-    def test_set_source_stores_example(self):
-        """Test that set_source stores the example."""
-        alignment = Alignment()
+    def test_src_stored_at_construction(self):
+        """Test that the example passed at construction is stored as src."""
         mock_example = Mock()
-        alignment.set_source(mock_example)
+        alignment = Alignment(src=mock_example)
         assert alignment.src is mock_example
-
-    def test_set_source_raises_on_reassignment(self):
-        """Test that set_source raises ValueError on reassignment (single assignment only)."""
-        alignment = Alignment()
-        mock_example1 = Mock()
-        mock_example2 = Mock()
-
-        alignment.set_source(mock_example1)
-        assert alignment.src is mock_example1
-
-        with pytest.raises(ValueError, match="Source already set"):
-            alignment.set_source(mock_example2)
 
 
 class TestAlignmentToDicts:
@@ -111,7 +98,7 @@ class TestAlignmentToDicts:
     def test_to_dicts_returns_list(self):
         """Test that to_dicts returns a list."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         result = alignment.to_dicts()
         assert isinstance(result, list)
 
@@ -120,7 +107,7 @@ class TestAlignmentToDicts:
         mock_op = Mock()
         mock_op.to_dict.return_value = {"type": "match"}
 
-        alignment = Alignment([mock_op])
+        alignment = Alignment([mock_op], src=Mock())
         result = alignment.to_dicts()
 
         mock_op.to_dict.assert_called_once()
@@ -128,7 +115,7 @@ class TestAlignmentToDicts:
 
     def test_to_dicts_empty_alignment(self):
         """Test to_dicts with empty alignment."""
-        alignment = Alignment()
+        alignment = Alignment(src=Mock())
         result = alignment.to_dicts()
         assert result == []
 
@@ -139,7 +126,7 @@ class TestAlignmentToJson:
     def test_to_json_returns_string(self):
         """Test that to_json returns a JSON string."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
 
         with patch.object(Op, "to_dict", return_value={"type": "match"}):
             result = alignment.to_json()
@@ -151,7 +138,7 @@ class TestAlignmentToJson:
     def test_to_json_writes_to_file(self, tmp_path):
         """Test that to_json writes to file when path is provided."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
 
         output_file = tmp_path / "alignment.json"
 
@@ -164,7 +151,7 @@ class TestAlignmentToJson:
     def test_to_json_raises_if_file_exists_without_overwrite(self, tmp_path):
         """Test that to_json raises if file exists and overwrite is False."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
 
         output_file = tmp_path / "alignment.json"
         output_file.write_text("existing content")
@@ -175,7 +162,7 @@ class TestAlignmentToJson:
     def test_to_json_overwrites_if_allowed(self, tmp_path):
         """Test that to_json overwrites file when allow_overwrite is True."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
 
         output_file = tmp_path / "alignment.json"
         output_file.write_text("existing content")
@@ -190,7 +177,7 @@ class TestAlignmentToJson:
     def test_to_json_creates_parent_directories(self, tmp_path):
         """Test that to_json creates parent directories if they don't exist."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
 
         output_file = tmp_path / "nested" / "dir" / "alignment.json"
 
@@ -203,7 +190,7 @@ class TestAlignmentToJson:
     def test_to_json_raises_if_path_is_directory(self, tmp_path):
         """Test that to_json raises if path is a directory."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
 
         with pytest.raises(ValueError, match="directory"):
             alignment.to_json(path=str(tmp_path))
@@ -254,7 +241,7 @@ class TestAlignmentSlicing:
             Op(type=OpType.MATCH, ref="a", hyp="a"),
             Op(type=OpType.MATCH, ref="b", hyp="b"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         result = alignment[0]
         assert isinstance(result, Op)
         assert result.ref == "a"
@@ -266,7 +253,7 @@ class TestAlignmentSlicing:
             Op(type=OpType.MATCH, ref="b", hyp="b"),
             Op(type=OpType.MATCH, ref="c", hyp="c"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         result = alignment[0:2]
         assert isinstance(result, Alignment)
         assert len(result) == 2
@@ -278,7 +265,7 @@ class TestAlignmentRepr:
     def test_repr_short_alignment(self):
         """Test repr with short alignment."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         result = repr(alignment)
         assert "Alignment" in result
         assert "test" in result
@@ -286,6 +273,6 @@ class TestAlignmentRepr:
     def test_repr_long_alignment_truncates(self):
         """Test repr truncates long alignments."""
         ops = [Op(type=OpType.MATCH, ref=f"word{i}", hyp=f"word{i}") for i in range(100)]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         result = repr(alignment)
         assert "..." in result  # Should be truncated

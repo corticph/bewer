@@ -3,6 +3,7 @@
 import json
 import os
 import tempfile
+from unittest.mock import Mock
 
 import pytest
 
@@ -191,7 +192,7 @@ class TestAlignment:
 
     def test_alignment_is_tuple(self):
         """Test that Alignment is a tuple."""
-        alignment = Alignment()
+        alignment = Alignment(src=Mock())
         assert isinstance(alignment, tuple)
 
     def test_alignment_from_list(self):
@@ -200,7 +201,7 @@ class TestAlignment:
             Op(type=OpType.MATCH, ref="hello", hyp="hello"),
             Op(type=OpType.SUBSTITUTE, ref="world", hyp="earth"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert len(alignment) == 2
 
     def test_to_dicts(self):
@@ -209,7 +210,7 @@ class TestAlignment:
             Op(type=OpType.MATCH, ref="hello", hyp="hello"),
             Op(type=OpType.DELETE, ref="world", hyp=None),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         dicts = alignment.to_dicts()
         assert len(dicts) == 2
         assert dicts[0]["type"] == "MATCH"
@@ -218,7 +219,7 @@ class TestAlignment:
     def test_to_json_returns_string(self):
         """Test to_json returns JSON string."""
         ops = [Op(type=OpType.MATCH, ref="hello", hyp="hello")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         json_str = alignment.to_json()
         assert isinstance(json_str, str)
         # Verify it's valid JSON
@@ -228,7 +229,7 @@ class TestAlignment:
     def test_to_json_writes_file(self):
         """Test to_json writes to file."""
         ops = [Op(type=OpType.MATCH, ref="hello", hyp="hello")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
 
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = os.path.join(tmpdir, "alignment.json")
@@ -241,7 +242,7 @@ class TestAlignment:
     def test_to_json_raises_on_existing_file(self):
         """Test to_json raises if file exists without allow_overwrite."""
         ops = [Op(type=OpType.MATCH, ref="hello", hyp="hello")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as f:
             filepath = f.name
@@ -255,7 +256,7 @@ class TestAlignment:
     def test_to_json_allows_overwrite(self):
         """Test to_json overwrites with allow_overwrite=True."""
         ops = [Op(type=OpType.MATCH, ref="hello", hyp="hello")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as f:
             filepath = f.name
@@ -269,7 +270,7 @@ class TestAlignment:
     def test_to_json_raises_on_directory_path(self):
         """Test to_json raises if path is a directory."""
         ops = [Op(type=OpType.MATCH, ref="hello", hyp="hello")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(ValueError, match="directory"):
@@ -278,7 +279,7 @@ class TestAlignment:
     def test_to_json_creates_parent_dirs(self):
         """Test to_json creates parent directories."""
         ops = [Op(type=OpType.MATCH, ref="hello", hyp="hello")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
 
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = os.path.join(tmpdir, "nested", "dir", "alignment.json")
@@ -295,7 +296,7 @@ class TestAlignmentSlicing:
             Op(type=OpType.MATCH, ref="hello", hyp="hello"),
             Op(type=OpType.DELETE, ref="world", hyp=None),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         assert isinstance(alignment[0], Op)
         assert alignment[0].type == OpType.MATCH
 
@@ -306,7 +307,7 @@ class TestAlignmentSlicing:
             Op(type=OpType.MATCH, ref="b", hyp="b"),
             Op(type=OpType.MATCH, ref="c", hyp="c"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         sliced = alignment[0:2]
         assert isinstance(sliced, Alignment)
         assert len(sliced) == 2
@@ -321,13 +322,13 @@ class TestAlignmentRepr:
             Op(type=OpType.MATCH, ref="hello", hyp="hello"),
             Op(type=OpType.DELETE, ref="world", hyp=None),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         repr_str = repr(alignment)
         assert "Alignment" in repr_str
 
     def test_repr_truncates_long(self):
         """Test that repr truncates long alignments."""
         ops = [Op(type=OpType.MATCH, ref=f"w{i}", hyp=f"w{i}") for i in range(100)]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=Mock())
         repr_str = repr(alignment)
         assert "..." in repr_str

@@ -31,15 +31,15 @@ class Alignment(tuple["Op", ...]):
         num_deletions (int): Number of deletion operations.
     """
 
-    def __new__(cls, iterable: Iterable["Op"] = (), src: Optional["Example"] = None) -> "Alignment":
+    def __new__(cls, iterable: Iterable["Op"] = (), *, src: "Example") -> "Alignment":
         return super().__new__(cls, iterable)
 
-    def __init__(self, iterable: Iterable["Op"] = (), src: Optional["Example"] = None) -> None:
+    def __init__(self, iterable: Iterable["Op"] = (), *, src: "Example") -> None:
         """Initialize Alignment.
 
         Args:
             iterable: Iterable of Op objects.
-            src: Parent Example object. Can be set later via set_source().
+            src: Parent Example object (required).
         """
         self._op_counts = Counter()
         for op in self:
@@ -47,9 +47,7 @@ class Alignment(tuple["Op", ...]):
             if op.src is None:
                 op.set_source(self)
 
-        self._src = None
-        if src is not None:
-            self.set_source(src)
+        self._src = src
 
     @property
     def num_matches(self) -> int:
@@ -174,22 +172,9 @@ class Alignment(tuple["Op", ...]):
         return None
 
     @property
-    def src(self) -> Optional["Example"]:
+    def src(self) -> "Example":
         """Get the parent Example object."""
         return self._src
-
-    def set_source(self, src: "Example") -> None:
-        """Set the parent Example object.
-
-        Args:
-            src: The parent Example object.
-
-        Raises:
-            ValueError: If source is already set.
-        """
-        if self._src is not None:
-            raise ValueError("Source already set for Alignment")
-        self._src = src
 
     def to_dicts(self) -> list[dict]:
         """Dump the alignment to a list of dictionaries.
@@ -233,7 +218,7 @@ class Alignment(tuple["Op", ...]):
                 interpreted as a fraction of the terminal width.
             color_scheme (ColorScheme): Color scheme for display.
         """
-        title = None if self._src is None else f"   Example {self._src.index}"
+        title = f"   Example {self._src.index}"
         display_basic_aligned(self, max_line_length=max_line_length, title=title, color_scheme=color_scheme)
 
     def _to_html_lines(
@@ -256,7 +241,7 @@ class Alignment(tuple["Op", ...]):
 
     def __getitem__(self, index: int | slice) -> Union[Op, "Alignment"]:
         if isinstance(index, slice):
-            return Alignment(super().__getitem__(index))
+            return Alignment(super().__getitem__(index), src=self._src)
         return super().__getitem__(index)
 
     def __repr__(self):

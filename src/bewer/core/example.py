@@ -26,7 +26,8 @@ class Example:
         ref: str,
         hyp: str,
         key_terms: dict[str, list[str]] | None = None,
-        src: Optional["Dataset"] = None,
+        *,
+        src: "Dataset",
         index: Optional[int] = None,
     ):
         """
@@ -37,15 +38,13 @@ class Example:
             hyp: Hypothesis text.
             key_terms: Key terms associated with the example. Missing terms are retained; warnings are emitted
                 during key term trie matching if a term cannot be matched in the reference tokens.
-            src: Parent Dataset object. Can be set later via set_source().
+            src: Parent Dataset object (required).
             index: The index of the example in the dataset.
         """
         self._index = index
-        self._pipelines = None
 
-        self._src = None
-        if src is not None:
-            self.set_source(src)
+        self._src = src
+        self._pipelines = src.pipelines
 
         self.metrics = ExampleMetricCollection(self)
         self.ref = Text(ref, src=self, text_type=TextType.REF)
@@ -58,7 +57,7 @@ class Example:
         return self._index
 
     @property
-    def src(self) -> Optional["Dataset"]:
+    def src(self) -> "Dataset":
         """Get the parent Dataset object."""
         return self._src
 
@@ -70,23 +69,8 @@ class Example:
     def vocabs(self) -> set[str]:
         """Get the set of all key term vocabularies associated with this example."""
         vocabs = set(self.key_terms.keys())
-        if self._src is not None:
-            vocabs.update(self._src._global_key_term_vocabs.keys())
+        vocabs.update(self._src._global_key_term_vocabs.keys())
         return vocabs
-
-    def set_source(self, src: "Dataset") -> None:
-        """Set the parent Dataset object.
-
-        Args:
-            src: The parent Dataset object.
-
-        Raises:
-            ValueError: If source is already set.
-        """
-        if self._src is not None:
-            raise ValueError("Source already set for Example")
-        self._src = src
-        self._pipelines = src.pipelines
 
     def _prepare_key_terms(self, key_terms: dict[str, set[str]] | None) -> dict[str, set[KeyTerm]]:
         """Prepare key terms dictionary by converting key terms to KeyTerm objects."""

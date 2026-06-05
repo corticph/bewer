@@ -5,6 +5,26 @@ import pytest
 from bewer.core.dataset import Dataset
 
 
+class StubParent:
+    """Lightweight stand-in for a parent in the src hierarchy.
+
+    Now that ``src`` is required at construction time, unit tests that build a
+    ``Token``/``Text``/``TokenList`` in isolation (without a real ``Dataset``)
+    use this stub as the parent. It exposes only the attributes children read:
+    ``pipelines`` (consumed by the pipeline caching descriptor) and ``raw``.
+    """
+
+    def __init__(self, *, pipelines=None, raw=""):
+        self.pipelines = pipelines
+        self.raw = raw
+
+
+@pytest.fixture
+def stub_parent():
+    """A minimal parent object for constructing core objects in isolation."""
+    return StubParent()
+
+
 @pytest.fixture
 def sample_dataset():
     """Create a Dataset with a few ref/hyp pairs for testing."""

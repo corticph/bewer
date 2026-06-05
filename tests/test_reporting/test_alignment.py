@@ -6,7 +6,16 @@ import pytest
 from rich.text import Text
 
 from bewer.alignment import Alignment, Op, OpType
-from bewer.reporting.python.alignment import (
+
+
+class MockExample:
+    """Minimal Example stand-in: Alignment only reads ``index`` for display titles."""
+
+    def __init__(self, index=0):
+        self.index = index
+
+
+from bewer.reporting.python.alignment import (  # noqa: E402
     ColorScheme,
     DefaultColorScheme,
     display_basic_aligned,
@@ -256,7 +265,7 @@ class TestDisplayBasicAligned:
             Op(type=OpType.MATCH, ref="hello", hyp="hello"),
             Op(type=OpType.MATCH, ref="world", hyp="world"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample())
         # Should not raise
         with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment)
@@ -270,7 +279,7 @@ class TestDisplayBasicAligned:
             Op(type=OpType.INSERT, ref=None, hyp="big"),
             Op(type=OpType.DELETE, ref="sat", hyp=None),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample())
         with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment)
             mock_console.return_value.print.assert_called_once()
@@ -278,7 +287,7 @@ class TestDisplayBasicAligned:
     def test_display_basic_aligned_with_title(self):
         """Test display_basic_aligned with a title."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample())
         with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment, title="Test Title")
             mock_console.return_value.print.assert_called_once()
@@ -290,7 +299,7 @@ class TestDisplayBasicAligned:
     def test_display_basic_aligned_with_integer_max_line_length(self):
         """Test display_basic_aligned with integer max_line_length."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample())
         with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment, max_line_length=80)
             mock_console.return_value.print.assert_called_once()
@@ -298,7 +307,7 @@ class TestDisplayBasicAligned:
     def test_display_basic_aligned_with_float_max_line_length(self):
         """Test display_basic_aligned with float max_line_length (fraction of terminal)."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample())
         with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment, max_line_length=0.5)
             mock_console.return_value.print.assert_called_once()
@@ -306,7 +315,7 @@ class TestDisplayBasicAligned:
     def test_display_basic_aligned_invalid_float_max_line_length(self):
         """Test display_basic_aligned raises for invalid float max_line_length."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample())
         with pytest.raises(ValueError, match="must be in the range"):
             display_basic_aligned(alignment, max_line_length=0.0)
         with pytest.raises(ValueError, match="must be in the range"):
@@ -316,7 +325,7 @@ class TestDisplayBasicAligned:
         """Test display_basic_aligned wraps when exceeding max line length."""
         # Create a long alignment that should wrap
         ops = [Op(type=OpType.MATCH, ref=f"word{i}", hyp=f"word{i}") for i in range(20)]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample())
         with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment, max_line_length=50)
             mock_console.return_value.print.assert_called_once()
@@ -327,14 +336,14 @@ class TestDisplayBasicAligned:
             Op(type=OpType.MATCH, ref="test", hyp="test", hyp_right_partial=True),
             Op(type=OpType.MATCH, ref="ing", hyp="ing"),
         ]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample())
         with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment)
             mock_console.return_value.print.assert_called_once()
 
     def test_display_basic_aligned_empty_alignment(self):
         """Test display_basic_aligned with empty alignment."""
-        alignment = Alignment()
+        alignment = Alignment(src=MockExample())
         with patch("bewer.reporting.python.alignment.Console") as mock_console:
             display_basic_aligned(alignment)
             mock_console.return_value.print.assert_called_once()
@@ -346,7 +355,7 @@ class TestAlignmentDisplayMethod:
     def test_alignment_display_calls_display_basic_aligned(self):
         """Test that Alignment.display() calls display_basic_aligned."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample())
         with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display()
             mock_display.assert_called_once()
@@ -354,7 +363,7 @@ class TestAlignmentDisplayMethod:
     def test_alignment_display_passes_max_line_length(self):
         """Test that Alignment.display() passes max_line_length parameter."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample())
         with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display(max_line_length=100)
             mock_display.assert_called_once()
@@ -364,49 +373,27 @@ class TestAlignmentDisplayMethod:
     def test_alignment_display_passes_color_scheme(self):
         """Test that Alignment.display() passes color_scheme parameter."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample())
         with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display(color_scheme=DefaultColorScheme)
             mock_display.assert_called_once()
 
     def test_alignment_display_with_source_example(self):
-        """Test Alignment.display() includes title when source is set."""
+        """Test Alignment.display() includes title from the source example."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
-        alignment = Alignment(ops)
+        alignment = Alignment(ops, src=MockExample(42))
 
-        # Create a mock example
-        class MockExample:
-            index = 42
-
-        alignment.set_source(MockExample())
         with patch("bewer.alignment.alignment.display_basic_aligned") as mock_display:
             alignment.display()
             call_kwargs = mock_display.call_args[1]
             assert "42" in call_kwargs["title"]
 
 
-class TestAlignmentSetSource:
-    """Tests for Alignment.set_source() method."""
+class TestAlignmentSource:
+    """Tests for the Alignment.src back-reference (set at construction)."""
 
-    def test_set_source_stores_example(self):
-        """Test that set_source stores the example."""
-        alignment = Alignment()
-
-        class MockExample:
-            index = 5
-
-        example = MockExample()
-        alignment.set_source(example)
+    def test_src_stored_at_construction(self):
+        """Test that the example passed at construction is stored as src."""
+        example = MockExample(5)
+        alignment = Alignment(src=example)
         assert alignment.src is example
-
-    def test_set_source_raises_on_reassignment(self):
-        """Test that set_source raises ValueError on reassignment (single assignment only)."""
-        alignment = Alignment()
-
-        class MockExample:
-            def __init__(self, idx):
-                self.index = idx
-
-        alignment.set_source(MockExample(1))
-        with pytest.raises(ValueError, match="Source already set"):
-            alignment.set_source(MockExample(2))

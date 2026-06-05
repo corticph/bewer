@@ -30,7 +30,8 @@ class Token:
         start: int,
         end: int,
         index: Optional[int] = None,
-        src: Optional["Text"] = None,
+        *,
+        src: "Text",
     ):
         """Initialize Token.
 
@@ -39,7 +40,7 @@ class Token:
             start: Starting character index in the source text.
             end: Ending character index in the source text.
             index: Token index in the token list.
-            src: Parent Text object. Can be set later via set_source().
+            src: Parent Text object (required).
         """
         self._raw = raw
         self.start = start
@@ -49,30 +50,13 @@ class Token:
 
         self._cache_normalized = {}
 
-        self._src = None
-        self._pipelines = None
-        if src is not None:
-            self.set_source(src)
-
-    @property
-    def src(self) -> Optional["Text"]:
-        """Get the parent Text object."""
-        return self._src
-
-    def set_source(self, src: "Text") -> None:
-        """Set the parent Text object.
-
-        Args:
-            src: The parent Text object.
-
-        Raises:
-            ValueError: If source is already set.
-        """
-        if self._src is not None:
-            raise ValueError("Source already set for Token")
-
         self._src = src
         self._pipelines = src.pipelines
+
+    @property
+    def src(self) -> "Text":
+        """Get the parent Text object."""
+        return self._src
 
     @property
     def raw(self) -> str:
@@ -95,8 +79,6 @@ class Token:
         Returns:
             str: The context string.
         """
-        if self._src is None:
-            raise ValueError("Source text is not set. Cannot get context.")
         start = max(0, self.start - width)
         end = min(len(self._src.raw), self.end + width)
         ctx_span = self._src.raw[start:end]
@@ -113,7 +95,7 @@ class Token:
         cls,
         match: re.Match,
         index: int,
-        src: Optional["Text"] = None,
+        src: "Text",
     ) -> "Token":
         """
         Create a Token object from a regex match object.
@@ -121,7 +103,7 @@ class Token:
         Args:
             match (re.Match): The regex match object.
             index (int): Token index in the token list.
-            src (Text): Parent Text object.
+            src (Text): Parent Text object (required).
 
         Returns:
             Token: The created Token object.

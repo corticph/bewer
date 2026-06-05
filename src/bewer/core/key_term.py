@@ -32,7 +32,8 @@ class KeyTerm(Text):
     def __init__(
         self,
         raw: str,
-        src: Optional[Union["Example", "Dataset"]] = None,
+        *,
+        src: Union["Example", "Dataset"],
     ):
         super().__init__(raw=raw, src=src, text_type=TextType.KEY_TERM)
 

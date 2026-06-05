@@ -239,10 +239,10 @@ class TestTokenListSrc:
         tokens = text.tokens
         assert tokens.src is text
 
-    def test_default_src_is_none(self):
-        """A bare TokenList() has src == None."""
-        tokens = TokenList()
-        assert tokens.src is None
+    def test_src_is_stored(self, stub_parent):
+        """A TokenList stores the src it was constructed with."""
+        tokens = TokenList((), src=stub_parent)
+        assert tokens.src is stub_parent
 
 
 class TestKeyTermNotFoundWarningImport:
