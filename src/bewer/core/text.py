@@ -10,7 +10,6 @@ from bewer.core.token import Token
 from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
-    from bewer.core.dataset import Dataset
     from bewer.core.example import Example
 
 __all__ = ["Text", "TextType", "TokenList"]
@@ -215,24 +214,31 @@ class Text:
 class TokenList(tuple["Token", ...]):
     """An immutable sequence of Token objects."""
 
-    def __new__(cls, iterable=(), *, src):
+    def __new__(cls, iterable=(), src=None):
         return super().__new__(cls, iterable)
 
-    def __init__(self, iterable=(), *, src: Union["Text", "Dataset"]):
+    def __init__(self, iterable=(), src: Optional["Text"] = None):
         self._normalized_index_cache: dict[str, dict[str, set[int]]] = {}
         self._normalized_cache: dict[str, list[str]] = {}
         self._src = src
 
     @property
-    def src(self) -> Union["Text", "Dataset"]:
-        """Get the source object (the owning Text, or the Dataset for aggregate token lists)."""
+    def src(self) -> Optional["Text"]:
+        """Get the source Text object, if any.
+
+        Unlike the rest of the hierarchy, a ``TokenList`` is not required to have a
+        ``src``: it is pure metadata that nothing reads, and there is no single owning
+        ``Text`` for the aggregate produced by ``TextTokenList.flat`` or for a
+        cross-source concatenation. Individual ``Token`` objects always carry their own
+        (required) ``Text`` src, which is what drives normalization/pipeline resolution.
+        """
         return self._src
 
     @classmethod
     def from_matches(
         cls,
         matches: "Iterable[re.Match]",
-        src: "Text",
+        src: Optional["Text"] = None,
     ) -> "TokenList":
         """Create a TokenList from an iterable of regex match objects.
 
@@ -340,11 +346,11 @@ class TokenList(tuple["Token", ...]):
 
     def __getitem__(self, index: int | slice) -> Union["Token", "TokenList"]:
         if isinstance(index, slice):
-            return TokenList(super().__getitem__(index), src=self._src)
+            return TokenList(super().__getitem__(index))
         return super().__getitem__(index)
 
     def __add__(self, other: "TokenList") -> "TokenList":
-        return TokenList(super().__add__(other), src=self._src)
+        return TokenList(super().__add__(other))
 
     def __repr__(self):
         tokens = self[:60]
