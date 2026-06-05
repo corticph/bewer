@@ -11,7 +11,7 @@ class KTF_(ExampleMetric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the example-level key term F-score."""
-        stats = self.parent_metric._kt_stats[self.example._index]
+        stats = self.parent_metric._kt_stats[self.example.index]
         beta_sq = self.params.beta**2
         denominator = (1 + beta_sq) * stats.num_tp + beta_sq * stats.num_fn + stats.num_fp
         if denominator == 0:

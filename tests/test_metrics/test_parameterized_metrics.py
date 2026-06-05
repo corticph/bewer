@@ -184,7 +184,7 @@ class TestExampleMetricParamsAccess:
         example = keyword_dataset.examples[0]
         # Access the example metric for the parameterized parent
         # This requires getting it through the parameterized parent's cache
-        kwa_example = kwa[example._index]
+        kwa_example = kwa[example.index]
         assert kwa_example.params.cer_threshold == 0.1
 
 

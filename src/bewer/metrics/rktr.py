@@ -19,13 +19,13 @@ class RKTR_(ExampleMetric):
     @metric_value
     def tp_alignments(self) -> list[Alignment]:
         """Get alignment segments for each key term classified as TP."""
-        stats = self.parent_metric._rkt_stats[self.example._index].term_stats
+        stats = self.parent_metric._rkt_stats[self.example.index].term_stats
         return [ts.segment for ts in stats if _is_tp(ts, self.params.threshold)]
 
     @metric_value
     def fn_alignments(self) -> list[Alignment]:
         """Get alignment segments for each key term classified as FN."""
-        stats = self.parent_metric._rkt_stats[self.example._index].term_stats
+        stats = self.parent_metric._rkt_stats[self.example.index].term_stats
         return [ts.segment for ts in stats if not _is_tp(ts, self.params.threshold)]
 
     @metric_value
@@ -36,7 +36,7 @@ class RKTR_(ExampleMetric):
     @metric_value
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
-        return self.parent_metric._rkt_stats[self.example._index].num_ref_terms
+        return self.parent_metric._rkt_stats[self.example.index].num_ref_terms
 
     @metric_value(main=True)
     def value(self) -> float:
@@ -101,7 +101,7 @@ class RKTR(Metric):
     def num_relaxed_matches(self) -> int:
         """Get the number of key terms classified as TP across all hypothesis texts."""
         return sum(
-            sum(1 for ts in self._rkt_stats[ex._index].term_stats if _is_tp(ts, self.params.threshold))
+            sum(1 for ts in self._rkt_stats[ex.index].term_stats if _is_tp(ts, self.params.threshold))
             for ex in self._src
         )
 

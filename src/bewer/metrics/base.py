@@ -319,10 +319,10 @@ class Metric(ABC):
     def _example_metric(self, example: "Example") -> "ExampleMetric":
         """Get (creating and caching if needed) the ExampleMetric object for a
         given example. Internal helper backing the sequence protocol below."""
-        if example._index in self._examples:
-            return self._examples[example._index]
+        if example.index in self._examples:
+            return self._examples[example.index]
         example_metric = self.example_cls(parent_metric=self, src=example)
-        self._examples[example._index] = example_metric
+        self._examples[example.index] = example_metric
         return example_metric
 
     def __len__(self) -> int:
@@ -587,7 +587,7 @@ class ExampleMetricCollection(object):
             parent_metric = parent_metric_factory(**kwargs)
 
             # Get example metric from parent
-            example_metric_instance = parent_metric[self._src_example._index]
+            example_metric_instance = parent_metric[self._src_example.index]
 
             # Cache and return
             self._cache[cache_key] = example_metric_instance
