@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import MISSING, dataclass, fields
 from functools import cached_property, update_wrapper
-from typing import TYPE_CHECKING, Any, Optional, Union, get_type_hints
+from typing import TYPE_CHECKING, Any, Iterator, Optional, Union, get_type_hints
 
 from typeguard import check_type
 
@@ -316,16 +316,31 @@ class Metric(ABC):
             example_metric_row_values = None
         return (metric_row_values, example_metric_row_values)
 
-    def get_example_metric(self, example: "Example") -> Optional["ExampleMetric"]:
-        """Get the ExampleMetric object for a given example index, or None if this
-        metric defines no example_cls."""
+    def _example_metric(self, example: "Example") -> "ExampleMetric":
+        """Get (creating and caching if needed) the ExampleMetric object for a
+        given example. Internal helper backing the sequence protocol below."""
         if example._index in self._examples:
             return self._examples[example._index]
-        if self.example_cls is None:
-            return None
         example_metric = self.example_cls(parent_metric=self, src=example)
         self._examples[example._index] = example_metric
         return example_metric
+
+    def __len__(self) -> int:
+        if self.example_cls is None:
+            raise TypeError(f"{type(self).__name__} has no example-level metric")
+        return len(self._src)
+
+    def __iter__(self) -> "Iterator[ExampleMetric]":
+        if self.example_cls is None:
+            raise TypeError(f"{type(self).__name__} has no example-level metric")
+        return (self._example_metric(example) for example in self._src)
+
+    def __getitem__(self, index):
+        if self.example_cls is None:
+            raise TypeError(f"{type(self).__name__} has no example-level metric")
+        if isinstance(index, slice):
+            return [self._example_metric(ex) for ex in self._src[index]]
+        return self._example_metric(self._src[index])
 
     def compute_confidence_interval(
         self,
@@ -572,7 +587,7 @@ class ExampleMetricCollection(object):
             parent_metric = parent_metric_factory(**kwargs)
 
             # Get example metric from parent
-            example_metric_instance = parent_metric.get_example_metric(self._src_example)
+            example_metric_instance = parent_metric[self._src_example._index]
 
             # Cache and return
             self._cache[cache_key] = example_metric_instance

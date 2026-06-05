@@ -11,17 +11,17 @@ class KTER_(ExampleMetric):
     @metric_value
     def num_errors(self) -> int:
         """Get the number of key terms incorrectly transcribed in the hypothesis text."""
-        return self.parent_metric._kt_stats.get_example_metric(self.example).num_fn
+        return self.parent_metric._kt_stats[self.example._index].num_fn
 
     @metric_value
     def num_key_terms(self) -> int:
         """Get the number of key terms in the reference text."""
-        return self.parent_metric._kt_stats.get_example_metric(self.example).num_ref_terms
+        return self.parent_metric._kt_stats[self.example._index].num_ref_terms
 
     @metric_value(main=True)
     def value(self) -> float:
         """Get the example-level key term error rate."""
-        stats = self.parent_metric._kt_stats.get_example_metric(self.example)
+        stats = self.parent_metric._kt_stats[self.example._index]
         if stats.num_ref_terms == 0:
             return float(stats.num_fn)
         return stats.num_fn / stats.num_ref_terms
