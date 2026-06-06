@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional
 
 import regex as re
@@ -31,7 +33,7 @@ class Token:
         end: int,
         index: Optional[int] = None,
         *,
-        src: "Text",
+        src: Text,
     ):
         """Initialize Token.
 
@@ -54,7 +56,7 @@ class Token:
         self._pipelines = src.pipelines
 
     @property
-    def src(self) -> "Text":
+    def src(self) -> Text:
         """Get the parent Text object."""
         return self._src
 
@@ -95,8 +97,8 @@ class Token:
         cls,
         match: re.Match,
         index: int,
-        src: "Text",
-    ) -> "Token":
+        src: Text,
+    ) -> Token:
         """
         Create a Token object from a regex match object.
 
