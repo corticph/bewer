@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import ahocorasick
 
@@ -28,12 +28,14 @@ class KeyTerm(Text):
         self,
         raw: str,
         *,
-        src: "Vocabulary",
+        src: Vocabulary,
     ):
-        super().__init__(raw=raw, src=src, text_type=TextType.KEY_TERM)
+        # KeyTerm reuses Text's machinery but is sourced from a Vocabulary; Text only reads
+        # ``src.pipelines``, so cast to satisfy the Example-typed base signature.
+        super().__init__(raw=raw, src=cast("Example", src), text_type=TextType.KEY_TERM)
         # Examples that regard this term. Mutable back-reference; intentionally *not* part
         # of __hash__ (which stays (raw, text_type)), so canonical dedup-by-raw is unaffected.
-        self.examples: set["Example"] = set()
+        self.examples: set[Example] = set()
 
     def __repr__(self):
         text = self.raw if len(self.raw) <= 46 else self.raw[:46] + "..."

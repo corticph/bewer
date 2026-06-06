@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Mapping, Optional, Union
+from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Mapping, Optional, Union, cast
 
 from bewer.core.caching import pipeline_cached_property
 from bewer.core.key_term import (
@@ -30,7 +30,10 @@ logger = logging.getLogger(__name__)
 # of strings yields *global* terms (matched in every example, no example association).
 # Returning a mapping (or iterable of pairs) of example index -> terms yields *local* terms,
 # each associated with the given example. An empty result is treated as a global no-op.
-VocabularyExtractor = Callable[["Dataset"], Union[Iterable[str], "Mapping[int, Iterable[str]]"]]
+VocabularyExtractor = Callable[
+    ["Dataset"],
+    Union[Iterable[str], "Mapping[int, Iterable[str]]", "Iterable[tuple[int, Iterable[str]]]"],
+]
 
 
 class Vocabulary:
@@ -69,7 +72,7 @@ class Vocabulary:
                 terms. May be combined with ``terms``; the final key term set is their union.
         """
         self.name = name
-        self._dataset: Optional["Dataset"] = None
+        self._dataset: Optional[Dataset] = None
         self._explicit_terms: set[str] = set(terms) if terms is not None else set()
         self._extractor: Optional[VocabularyExtractor] = extractor
         # Canonical KeyTerm instances, keyed by raw string (rebuilt on each resolution).
@@ -82,7 +85,7 @@ class Vocabulary:
         self._cache_key_terms: dict = {}
 
     @property
-    def dataset(self) -> Optional["Dataset"]:
+    def dataset(self) -> Optional[Dataset]:
         """The dataset this vocabulary is registered with, if any."""
         return self._dataset
 
@@ -97,7 +100,7 @@ class Vocabulary:
     _pipelines = pipelines
 
     @classmethod
-    def from_list(cls, name: str, terms: Iterable[str]) -> "Vocabulary":
+    def from_list(cls, name: str, terms: Iterable[str]) -> Vocabulary:
         """Create a vocabulary from a list of key term strings."""
         if isinstance(terms, str) or not isinstance(terms, Iterable):
             raise TypeError("terms must be an iterable of strings")
@@ -108,7 +111,7 @@ class Vocabulary:
         return cls(name, terms=terms)
 
     @classmethod
-    def from_file(cls, name: str, path: str | Path) -> "Vocabulary":
+    def from_file(cls, name: str, path: str | Path) -> Vocabulary:
         """Create a vocabulary from a file with one key term per line."""
         path = Path(path)
         if not path.is_file():
@@ -118,7 +121,7 @@ class Vocabulary:
         return cls.from_list(name, terms)
 
     @classmethod
-    def from_function(cls, name: str, fn: VocabularyExtractor) -> "Vocabulary":
+    def from_function(cls, name: str, fn: VocabularyExtractor) -> Vocabulary:
         """Create a vocabulary whose terms are extracted lazily by ``fn(dataset)``."""
         if not callable(fn):
             raise TypeError("fn must be callable")
@@ -139,7 +142,7 @@ class Vocabulary:
             raise ValueError(f"Vocabulary '{self.name}' is not bound to a dataset.")
 
         # Collect, per raw string, the set of examples that regard it (empty => global).
-        associations: dict[str, set["Example"]] = defaultdict(set)
+        associations: dict[str, set[Example]] = defaultdict(set)
         for raw in self._explicit_terms:
             associations.setdefault(raw, set())
         if self._extractor is not None:
@@ -161,11 +164,12 @@ class Vocabulary:
             key_terms.add(key_term)
         return key_terms
 
-    def _extracted_associations(self) -> Iterator[tuple[str, Optional["Example"]]]:
+    def _extracted_associations(self) -> Iterator[tuple[str, Optional[Example]]]:
         """Yield (raw, example) pairs from the extractor; example is None for global terms."""
+        assert self._extractor is not None and self._dataset is not None
         extracted = self._extractor(self._dataset)
         if isinstance(extracted, Mapping):
-            for index, terms in extracted.items():
+            for index, terms in cast(Mapping[int, Iterable[str]], extracted).items():
                 example = self._dataset[index]
                 for term in terms:
                     yield term, example
@@ -186,14 +190,14 @@ class Vocabulary:
                     )
                 yield term, None
         else:
-            for index, terms in items:
+            for index, terms in cast(Iterable[tuple[int, Iterable[str]]], items):
                 example = self._dataset[index]
                 for term in terms:
                     yield term, example
 
     def find_in(
         self,
-        text: "Text",
+        text: Text,
         *,
         normalized: bool = True,
         add_capitalized: bool = False,
@@ -254,7 +258,7 @@ class Vocabulary:
         self._match_cache[cache_key] = matches
         return matches
 
-    def _bind(self, dataset: "Dataset") -> None:
+    def _bind(self, dataset: Dataset) -> None:
         """Wire the dataset back-reference. Called by Dataset.add_vocabulary / _ensure_vocabulary."""
         if self._dataset is not None and self._dataset is not dataset:
             raise ValueError(f"Vocabulary '{self.name}' is already bound to a different dataset.")

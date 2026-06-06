@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import ast
 from functools import cached_property
 from importlib import resources
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Union
+from typing import TYPE_CHECKING, Iterable, Union, overload
 
 import pandas as pd
 from omegaconf import OmegaConf
@@ -65,7 +67,7 @@ class Dataset(object):
         return self._pipelines
 
     @cached_property
-    def refs(self) -> "TextList":
+    def refs(self) -> TextList:
         """Get the reference texts as a TextList object.
 
         Returns:
@@ -74,7 +76,7 @@ class Dataset(object):
         return TextList([example.ref for example in self.examples])
 
     @cached_property
-    def hyps(self) -> "TextList":
+    def hyps(self) -> TextList:
         """Get the hypothesis texts as a TextList object.
 
         Returns:
@@ -82,7 +84,7 @@ class Dataset(object):
         """
         return TextList([example.hyp for example in self.examples])
 
-    def add(self, ref: str, hyp: str, key_terms: dict[str, list[str]] | None = None) -> None:
+    def add(self, ref: str, hyp: str, key_terms: dict[str, Iterable[str]] | None = None) -> None:
         """Add an example to the dataset.
 
         Any vocabulary names in ``key_terms`` are registered (if not already present); the
@@ -94,7 +96,7 @@ class Dataset(object):
         self._add_example(ref, hyp, key_terms=key_terms)
         self._invalidate_caches()
 
-    def _add_example(self, ref: str, hyp: str, key_terms: dict[str, list[str]] | None = None) -> None:
+    def _add_example(self, ref: str, hyp: str, key_terms: dict[str, Iterable[str]] | None = None) -> None:
         """Append a single example without invalidating caches (used for bulk loading)."""
         if key_terms is not None:
             key_terms = {name: set(kt_list) for name, kt_list in key_terms.items()}
@@ -221,21 +223,21 @@ class Dataset(object):
             example.metrics._cache.clear()
 
     @staticmethod
-    def _get_language_config_path(language: str):
+    def _get_language_config_path(language: str) -> Path:
         """Resolve the overlay config path for the given language code."""
         languages_dir = resources.files("bewer.configs").joinpath("languages")
         path = languages_dir.joinpath(f"{language}.yml")
         if not path.is_file():
             supported = [p.name[:-4] for p in languages_dir.iterdir() if p.name.endswith(".yml")]
             raise ValueError(f"Unknown language '{language}'. Supported languages: {sorted(supported)}.")
-        return path
+        return Path(str(path))
 
     @staticmethod
-    def get_config_path(config_path: str | None) -> str:
+    def get_config_path(config_path: str | None) -> Path:
         """Get the configuration path."""
         if config_path is None or not Path(config_path).is_file():
             config_path = "base" if config_path is None else config_path
-            return resources.files("bewer.configs").joinpath(f"{config_path}.yml")
+            return Path(str(resources.files("bewer.configs").joinpath(f"{config_path}.yml")))
         return Path(config_path).resolve()
 
     def _infer_key_term_column(self, series: pd.Series) -> pd.Series:
@@ -293,7 +295,7 @@ class TextList(tuple["Text", ...]):
         return [text.standardized for text in self]
 
     @property
-    def tokens(self) -> "TextTokenList":
+    def tokens(self) -> TextTokenList:
         """Get the tokens as a TextTokenList object.
 
         Returns:
@@ -301,12 +303,18 @@ class TextList(tuple["Text", ...]):
         """
         return TextTokenList([text.tokens for text in self])
 
-    def __getitem__(self, index: int | slice) -> Union["Text", "TextList"]:
+    @overload
+    def __getitem__(self, index: int) -> Text: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> TextList: ...
+
+    def __getitem__(self, index: int | slice) -> Union[Text, TextList]:
         if isinstance(index, slice):
             return TextList(super().__getitem__(index))
         return super().__getitem__(index)
 
-    def __add__(self, other: "TextList") -> "TextList":
+    def __add__(self, other: TextList) -> TextList:
         return TextList(super().__add__(other))
 
     def __repr__(self):
@@ -317,7 +325,7 @@ class TextList(tuple["Text", ...]):
         return f"TextList([\n {texts_str}]\n)"
 
 
-class TextTokenList(tuple["TokenList", ...]):
+class TextTokenList(tuple[TokenList, ...]):
     """An immutable sequence of TokenList objects."""
 
     def __new__(cls, iterable=()):
@@ -342,7 +350,7 @@ class TextTokenList(tuple["TokenList", ...]):
         return [tokens.normalized for tokens in self]
 
     @property
-    def flat(self) -> "TokenList":
+    def flat(self) -> TokenList:
         """Flatten the TextTokenList into a TokenList.
 
         Returns:
@@ -350,12 +358,18 @@ class TextTokenList(tuple["TokenList", ...]):
         """
         return TokenList(chain(*self))
 
-    def __getitem__(self, index: int | slice) -> Union["TokenList", "TextTokenList"]:
+    @overload
+    def __getitem__(self, index: int) -> TokenList: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> TextTokenList: ...
+
+    def __getitem__(self, index: int | slice) -> Union[TokenList, TextTokenList]:
         if isinstance(index, slice):
             return TextTokenList(super().__getitem__(index))
         return super().__getitem__(index)
 
-    def __add__(self, other: "TextTokenList") -> "TextTokenList":
+    def __add__(self, other: TextTokenList) -> TextTokenList:
         return TextTokenList(super().__add__(other))
 
     def __repr__(self):

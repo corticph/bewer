@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Iterable, Optional, Union, overload
 
 import regex as re
 
@@ -21,7 +23,7 @@ class TextType(str, Enum):
     KEY_TERM = "key_term"
 
 
-def _join_tokens(tokens: "TokenList", normalized: bool = True) -> str:
+def _join_tokens(tokens: TokenList, normalized: bool = True) -> str:
     """Join tokens into a single string, preserving original spacing.
 
     Args:
@@ -56,7 +58,7 @@ class Text:
         self,
         raw: str | None,
         *,
-        src: "Example",
+        src: Example,
         text_type: Optional[TextType] = None,
     ):
         """Initialize the Text object.
@@ -82,7 +84,7 @@ class Text:
         return self._raw
 
     @property
-    def src(self) -> "Example":
+    def src(self) -> Example:
         """Get the parent Example object."""
         return self._src
 
@@ -100,7 +102,7 @@ class Text:
         return standardizer(self.raw)
 
     @pipeline_cached_property(TOKENIZER_NAME)
-    def tokens(self, tokenizer) -> "TokenList":
+    def tokens(self, tokenizer) -> TokenList:
         """The list of Token objects produced by the active tokenizer."""
         return TokenList.from_matches(tokenizer(self.standardized), src=self)
 
@@ -119,7 +121,7 @@ class Text:
         add_capitalized: bool = False,
         allow_subset_matches: bool = False,
         local_only_matches: bool = False,
-    ) -> "list[Match]":
+    ) -> list[Match]:
         """Find key term matches in this text's tokens.
 
         Matching is delegated to the named :class:`Vocabulary`, which matches the union of
@@ -160,19 +162,19 @@ class Text:
         return f'Text("{text}")'
 
 
-class TokenList(tuple["Token", ...]):
+class TokenList(tuple[Token, ...]):
     """An immutable sequence of Token objects."""
 
     def __new__(cls, iterable=(), src=None):
         return super().__new__(cls, iterable)
 
-    def __init__(self, iterable=(), src: Optional["Text"] = None):
+    def __init__(self, iterable=(), src: Optional[Text] = None):
         self._normalized_index_cache: dict[str, dict[str, set[int]]] = {}
         self._normalized_cache: dict[str, list[str]] = {}
         self._src = src
 
     @property
-    def src(self) -> Optional["Text"]:
+    def src(self) -> Optional[Text]:
         """Get the source Text object, if any.
 
         Unlike the rest of the hierarchy, a ``TokenList`` is not required to have a
@@ -186,9 +188,9 @@ class TokenList(tuple["Token", ...]):
     @classmethod
     def from_matches(
         cls,
-        matches: "Iterable[re.Match]",
-        src: Optional["Text"] = None,
-    ) -> "TokenList":
+        matches: Iterable[re.Match],
+        src: Text,
+    ) -> TokenList:
         """Create a TokenList from an iterable of regex match objects.
 
         Args:
@@ -293,12 +295,18 @@ class TokenList(tuple["Token", ...]):
             tokens_str += ", ..."
         return f"TokenList([{tokens_str}])"
 
-    def __getitem__(self, index: int | slice) -> Union["Token", "TokenList"]:
+    @overload
+    def __getitem__(self, index: int) -> Token: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> TokenList: ...
+
+    def __getitem__(self, index: int | slice) -> Union[Token, TokenList]:
         if isinstance(index, slice):
             return TokenList(super().__getitem__(index))
         return super().__getitem__(index)
 
-    def __add__(self, other: "TokenList") -> "TokenList":
+    def __add__(self, other: TokenList) -> TokenList:
         return TokenList(super().__add__(other))
 
     def __repr__(self):

@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Optional
 
 from bewer.core.text import Text, TextType
@@ -26,9 +29,9 @@ class Example:
         self,
         ref: str,
         hyp: str,
-        key_terms: dict[str, list[str]] | None = None,
+        key_terms: dict[str, Iterable[str]] | None = None,
         *,
-        src: "Dataset",
+        src: Dataset,
         index: Optional[int] = None,
     ):
         """
@@ -63,7 +66,7 @@ class Example:
         return self._index
 
     @property
-    def src(self) -> "Dataset":
+    def src(self) -> Dataset:
         """Get the parent Dataset object."""
         return self._src
 
@@ -72,7 +75,7 @@ class Example:
         return self._pipelines
 
     @property
-    def key_terms(self) -> "dict[str, set[KeyTerm]]":
+    def key_terms(self) -> dict[str, set[KeyTerm]]:
         """The canonical key terms this example regards, grouped by vocabulary name.
 
         Derived from each named vocabulary's resolved terms, filtered to those whose
@@ -97,7 +100,7 @@ class Example:
         return vocabs
 
     @staticmethod
-    def _prepare_key_term_strings(key_terms: dict[str, list[str]] | None) -> dict[str, set[str]]:
+    def _prepare_key_term_strings(key_terms: dict[str, Iterable[str]] | None) -> dict[str, set[str]]:
         """Store the raw per-vocabulary annotation strings (empty groups retained)."""
         if key_terms is None:
             return {}
