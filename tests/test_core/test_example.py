@@ -4,7 +4,7 @@ import logging
 
 import pytest
 
-from bewer.core.text import Text, TextType
+from bewer.core.text import Text, TextType, TokenizedText
 
 _KEY_TERM_NOT_FOUND = "not found in reference tokens"
 
@@ -50,12 +50,12 @@ class TestExamplePrepareAndValidateKeyTerms:
         assert example.key_terms == {}
 
     def test_valid_key_terms_converted(self, sample_dataset):
-        """Test that valid key terms are converted to Text objects."""
+        """Test that valid key terms are converted to TokenizedText (KeyTerm) objects."""
         sample_dataset.add("the quick brown fox", "the quick brown dog", key_terms={"animals": ["fox"]})
         example = sample_dataset[-1]
         assert "animals" in example.key_terms
         assert len(example.key_terms["animals"]) == 1
-        assert isinstance(example.key_terms["animals"].pop(), Text)
+        assert isinstance(example.key_terms["animals"].pop(), TokenizedText)
 
     def test_key_term_not_in_ref_warns(self, sample_dataset, caplog):
         """Test that a local key term not in the reference logs a warning when matches are computed."""
