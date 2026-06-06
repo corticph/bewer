@@ -7,7 +7,7 @@ from bewer.preprocessing.context import NORMALIZER_NAME
 from bewer.reporting.python.utils import highlight_span
 
 if TYPE_CHECKING:
-    from bewer.core.text import Text
+    from bewer.core.text import TokenizedText
 
 __all__ = ["Token"]
 
@@ -31,7 +31,7 @@ class Token:
         end: int,
         index: Optional[int] = None,
         *,
-        src: "Text",
+        src: "TokenizedText",
     ):
         """Initialize Token.
 
@@ -40,7 +40,7 @@ class Token:
             start: Starting character index in the source text.
             end: Ending character index in the source text.
             index: Token index in the token list.
-            src: Parent Text object (required).
+            src: Parent TokenizedText object (required).
         """
         self._raw = raw
         self.start = start
@@ -54,8 +54,8 @@ class Token:
         self._pipelines = src.pipelines
 
     @property
-    def src(self) -> "Text":
-        """Get the parent Text object."""
+    def src(self) -> "TokenizedText":
+        """Get the parent TokenizedText object (a ``Text`` or ``KeyTerm``)."""
         return self._src
 
     @property
@@ -95,7 +95,7 @@ class Token:
         cls,
         match: re.Match,
         index: int,
-        src: "Text",
+        src: "TokenizedText",
     ) -> "Token":
         """
         Create a Token object from a regex match object.
@@ -103,7 +103,7 @@ class Token:
         Args:
             match (re.Match): The regex match object.
             index (int): Token index in the token list.
-            src (Text): Parent Text object (required).
+            src (TokenizedText): Parent TokenizedText object (required).
 
         Returns:
             Token: The created Token object.

@@ -1,7 +1,7 @@
 """Tests for bewer.core.key_term module."""
 
 from bewer.core.key_term import KeyTerm, KeyTermTrie, Match, _remove_subset_matches
-from bewer.core.text import Text, TextType, TokenList
+from bewer.core.text import Text, TextType, TokenizedText, TokenList
 
 
 def _match(start: int, stop: int) -> Match:
@@ -12,9 +12,10 @@ def _match(start: int, stop: int) -> Match:
 class TestKeyTermInit:
     """Tests for KeyTerm initialization."""
 
-    def test_is_subclass_of_text(self):
-        """Test that KeyTerm is a subclass of Text."""
-        assert issubclass(KeyTerm, Text)
+    def test_is_subclass_of_tokenized_text(self):
+        """Test that KeyTerm is a sibling of Text under TokenizedText, not a Text subclass."""
+        assert issubclass(KeyTerm, TokenizedText)
+        assert not issubclass(KeyTerm, Text)
 
     def test_text_type_is_key_term(self, sample_dataset):
         """Test that KeyTerm always has TextType.KEY_TERM."""
@@ -22,12 +23,19 @@ class TestKeyTermInit:
         kt = next(iter(sample_dataset[-1].key_terms["greetings"]))
         assert kt.text_type == TextType.KEY_TERM
 
-    def test_isinstance_text(self, sample_dataset):
-        """Test that KeyTerm instances are also Text instances."""
+    def test_isinstance_tokenized_text(self, sample_dataset):
+        """Test that KeyTerm instances are TokenizedText instances but not Text instances."""
         sample_dataset.add("hello world", "hello world", key_terms={"greetings": ["hello"]})
         kt = next(iter(sample_dataset[-1].key_terms["greetings"]))
-        assert isinstance(kt, Text)
+        assert isinstance(kt, TokenizedText)
+        assert not isinstance(kt, Text)
         assert isinstance(kt, KeyTerm)
+
+    def test_has_no_get_key_term_matches(self, sample_dataset):
+        """Test that KeyTerm does not expose the ref/hyp-only get_key_term_matches method."""
+        sample_dataset.add("hello world", "hello world", key_terms={"greetings": ["hello"]})
+        kt = next(iter(sample_dataset[-1].key_terms["greetings"]))
+        assert not hasattr(kt, "get_key_term_matches")
 
 
 class TestKeyTermProperties:

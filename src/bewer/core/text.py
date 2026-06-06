@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, Iterable, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, Generic, Iterable, Mapping, Optional, Protocol, TypeVar, Union, overload
 
 import regex as re
 
@@ -14,13 +14,25 @@ if TYPE_CHECKING:
     from bewer.core.example import Example
     from bewer.core.key_term import Match
 
-__all__ = ["Text", "TextType", "TokenList"]
+__all__ = ["HasPipelines", "Text", "TextType", "TokenizedText", "TokenList"]
 
 
 class TextType(str, Enum):
     REF = "ref"
     HYP = "hyp"
     KEY_TERM = "key_term"
+
+
+class HasPipelines(Protocol):
+    """Protocol for objects that expose the active preprocessing ``pipelines``.
+
+    Implemented by :class:`Example` (the source of a ref/hyp :class:`Text`) and
+    :class:`Vocabulary` (the source of a :class:`KeyTerm`); it is the bound on a
+    :class:`TokenizedText`'s source type.
+    """
+
+    @property
+    def pipelines(self) -> Mapping[str, Any]: ...
 
 
 def _join_tokens(tokens: TokenList, normalized: bool = True) -> str:
@@ -44,13 +56,21 @@ def _join_tokens(tokens: TokenList, normalized: bool = True) -> str:
     return joined.strip()
 
 
-class Text:
-    """BeWER text representation.
+S = TypeVar("S", bound=HasPipelines)
+
+
+class TokenizedText(Generic[S]):
+    """Shared text machinery, generic over its source type ``S`` (a :class:`HasPipelines`).
+
+    Owns the preprocessing pipeline (standardization -> tokenization), the per-pipeline
+    caches, and the ``raw``/``src``/``text_type`` accessors. :class:`Text` (sourced from an
+    :class:`Example`) and :class:`KeyTerm` (sourced from a :class:`Vocabulary`) are sibling
+    subclasses; each binds ``S`` to its concrete source so ``src`` types precisely.
 
     Attributes:
         raw (str): The original text string.
-        standardized (str): The standardized text string after applying the specified standardizer.
-        src (Example): The source Example object that this text belongs to.
+        standardized (str): The standardized text string after applying the active standardizer.
+        src (S): The source object that this text belongs to and resolves pipelines from.
         text_type (TextType): The type of the text (reference, hypothesis, or key term).
     """
 
@@ -58,14 +78,14 @@ class Text:
         self,
         raw: str | None,
         *,
-        src: Example,
+        src: S,
         text_type: Optional[TextType] = None,
     ):
-        """Initialize the Text object.
+        """Initialize the TokenizedText object.
 
         Args:
             raw: The original text string (reference, hypothesis, or key term).
-            src: Parent Example object (required).
+            src: The source object that resolves pipelines (required).
             text_type: The type of the text (REF, HYP, or KEY_TERM).
         """
         self._raw = raw
@@ -84,8 +104,8 @@ class Text:
         return self._raw
 
     @property
-    def src(self) -> Example:
-        """Get the parent Example object."""
+    def src(self) -> S:
+        """Get the source object that this text belongs to."""
         return self._src
 
     @property
@@ -114,6 +134,21 @@ class Text:
         """
         return _join_tokens(self.tokens, normalized=normalized)
 
+    def __hash__(self):
+        return hash((self.raw, self._text_type))
+
+    def __repr__(self):
+        text = self.raw if len(self.raw) <= 46 else self.raw[:46] + "..."
+        return f'{type(self).__name__}("{text}")'
+
+
+class Text(TokenizedText["Example"]):
+    """BeWER reference/hypothesis text, sourced from an :class:`Example`.
+
+    Adds reference/hypothesis-only behaviour (:meth:`get_key_term_matches`) on top of the
+    shared :class:`TokenizedText` machinery. Its ``src`` is the owning :class:`Example`.
+    """
+
     def get_key_term_matches(
         self,
         vocab: str,
@@ -139,7 +174,7 @@ class Text:
         Returns:
             List of :class:`Match` objects representing matched token spans and their key terms.
         """
-        example = self._src
+        example: Example = self._src
         dataset = example.src
 
         vocabulary = dataset._vocabularies.get(vocab)
@@ -154,13 +189,6 @@ class Text:
             only_local_matches=only_local_matches,
         )
 
-    def __hash__(self):
-        return hash((self.raw, self._text_type))
-
-    def __repr__(self):
-        text = self.raw if len(self.raw) <= 46 else self.raw[:46] + "..."
-        return f'Text("{text}")'
-
 
 class TokenList(tuple[Token, ...]):
     """An immutable sequence of Token objects."""
@@ -168,20 +196,20 @@ class TokenList(tuple[Token, ...]):
     def __new__(cls, iterable=(), src=None):
         return super().__new__(cls, iterable)
 
-    def __init__(self, iterable=(), src: Optional[Text] = None):
+    def __init__(self, iterable=(), src: Optional[TokenizedText] = None):
         self._normalized_index_cache: dict[str, dict[str, set[int]]] = {}
         self._normalized_cache: dict[str, list[str]] = {}
         self._src = src
 
     @property
-    def src(self) -> Optional[Text]:
-        """Get the source Text object, if any.
+    def src(self) -> Optional[TokenizedText]:
+        """Get the source TokenizedText object, if any.
 
         Unlike the rest of the hierarchy, a ``TokenList`` is not required to have a
         ``src``: it is pure metadata that nothing reads, and there is no single owning
-        ``Text`` for the aggregate produced by ``TextTokenList.flat`` or for a
+        ``TokenizedText`` for the aggregate produced by ``TextTokenList.flat`` or for a
         cross-source concatenation. Individual ``Token`` objects always carry their own
-        (required) ``Text`` src, which is what drives normalization/pipeline resolution.
+        (required) ``TokenizedText`` src, which is what drives normalization/pipeline resolution.
         """
         return self._src
 
@@ -189,13 +217,13 @@ class TokenList(tuple[Token, ...]):
     def from_matches(
         cls,
         matches: Iterable[re.Match],
-        src: Text,
+        src: TokenizedText,
     ) -> TokenList:
         """Create a TokenList from an iterable of regex match objects.
 
         Args:
             matches: An iterable of regex Match objects.
-            src: The source Text object, if available.
+            src: The source TokenizedText object (a ``Text`` or ``KeyTerm``).
 
         Returns:
             TokenList: A list of Token objects created from the matches.

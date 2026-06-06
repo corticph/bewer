@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import ahocorasick
 
-from bewer.core.text import Text, TextType, TokenList
+from bewer.core.text import Text, TextType, TokenizedText, TokenList
 
 if TYPE_CHECKING:
     from bewer.core.example import Example
@@ -14,14 +14,14 @@ if TYPE_CHECKING:
 __all__ = ["KeyTerm", "Match"]
 
 
-class KeyTerm(Text):
-    """A key term that can locate itself within reference text tokens.
+class KeyTerm(TokenizedText["Vocabulary"]):
+    """A key term that can be located within reference text tokens.
 
-    Inherits standardized, tokens, and pipeline caching from Text. A ``KeyTerm`` is
-    canonical: there is one instance per raw string within a vocabulary, deduped by the
-    owning :class:`Vocabulary`. Its ``src`` is that vocabulary (which back-references the
-    dataset and provides the active ``pipelines``), and ``examples`` records every example
-    that regards the term.
+    A sibling of :class:`Text` under :class:`TokenizedText`, reusing its standardization,
+    tokenization, and pipeline caching. A ``KeyTerm`` is canonical: there is one instance
+    per raw string within a vocabulary, deduped by the owning :class:`Vocabulary`. Its
+    ``src`` is that vocabulary (which back-references the dataset and provides the active
+    ``pipelines``), and ``examples`` records every example that regards the term.
     """
 
     def __init__(
@@ -30,16 +30,10 @@ class KeyTerm(Text):
         *,
         src: Vocabulary,
     ):
-        # KeyTerm reuses Text's machinery but is sourced from a Vocabulary; Text only reads
-        # ``src.pipelines``, so cast to satisfy the Example-typed base signature.
-        super().__init__(raw=raw, src=cast("Example", src), text_type=TextType.KEY_TERM)
+        super().__init__(raw=raw, src=src, text_type=TextType.KEY_TERM)
         # Examples that regard this term. Mutable back-reference; intentionally *not* part
         # of __hash__ (which stays (raw, text_type)), so canonical dedup-by-raw is unaffected.
         self.examples: set[Example] = set()
-
-    def __repr__(self):
-        text = self.raw if len(self.raw) <= 46 else self.raw[:46] + "..."
-        return f'KeyTerm("{text}")'
 
 
 @dataclass(frozen=True)
