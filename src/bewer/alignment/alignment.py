@@ -185,7 +185,7 @@ class Alignment(tuple["Op", ...]):
         return [op.to_dict() for op in self]
 
     def to_json(self, path: str | None = None, allow_overwrite: bool = False) -> str:
-        """Dump the alignment to a JSON string.
+        """Dump the alignment to a JSON string and optionally write to a file.
 
         Args:
             path (str | None): If provided, write the JSON string to this file.
@@ -195,14 +195,14 @@ class Alignment(tuple["Op", ...]):
         """
         json_str = json.dumps(self.to_dicts(), indent=2)
         if path is not None:
-            path = Path(path)
-            if path.is_dir():
+            path_obj = Path(path)
+            if path_obj.is_dir():
                 raise ValueError("Provided path is a directory, expected a file path.")
-            if path.exists() and not allow_overwrite:
-                raise FileExistsError(f"File {path} already exists.")
-            if not path.parent.exists():
-                path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, "w") as f:
+            if path_obj.exists() and not allow_overwrite:
+                raise FileExistsError(f"File {path_obj} already exists.")
+            if not path_obj.parent.exists():
+                path_obj.parent.mkdir(parents=True, exist_ok=True)
+            with open(path_obj, "w") as f:
                 f.write(json_str)
         return json_str
 
