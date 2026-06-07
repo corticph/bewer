@@ -28,12 +28,9 @@ logger = logging.getLogger(__name__)
 
 # A vocabulary extractor derives key terms from a dataset on demand. Returning an iterable
 # of strings yields *global* terms (matched in every example, no example association).
-# Returning a mapping (or iterable of pairs) of example index -> terms yields *local* terms,
-# each associated with the given example. An empty result is treated as a global no-op.
-VocabularyExtractor = Callable[
-    ["Dataset"],
-    Union[Iterable[str], "Mapping[int, Iterable[str]]", "Iterable[tuple[int, Iterable[str]]]"],
-]
+# Returning a mapping of example index -> terms yields *local* terms, each associated with
+# the given example. An empty result is treated as a global no-op.
+VocabularyExtractor = Callable[["Dataset"], Union[Iterable[str], "Mapping[int, Iterable[str]]"]]
 
 
 class Vocabulary:
@@ -167,7 +164,10 @@ class Vocabulary:
     def _extracted_associations(self) -> Iterator[tuple[str, Optional[Example]]]:
         """Yield (raw, example) pairs from the extractor; example is None for global terms."""
         assert self._extractor is not None and self._dataset is not None
-        extracted = self._extractor(self._dataset)
+        try:
+            extracted = self._extractor(self._dataset)
+        except Exception as e:
+            raise RuntimeError(f"Error running extractor for vocabulary '{self.name}': {e}") from e
         if isinstance(extracted, Mapping):
             for index, terms in cast(Mapping[int, Iterable[str]], extracted).items():
                 example = self._dataset[index]
@@ -179,21 +179,13 @@ class Vocabulary:
                 f"Extractor for vocabulary '{self.name}' must return an iterable of strings or a "
                 f"mapping of example index to terms."
             )
-        items = list(extracted)
-        if not items:
-            return  # Empty result: global no-op.
-        if isinstance(items[0], str):
-            for term in items:
-                if not isinstance(term, str):
-                    raise TypeError(
-                        f"Extractor for vocabulary '{self.name}' returned a mix of strings and non-strings."
-                    )
-                yield term, None
-        else:
-            for index, terms in cast(Iterable[tuple[int, Iterable[str]]], items):
-                example = self._dataset[index]
-                for term in terms:
-                    yield term, example
+        for term in extracted:
+            if not isinstance(term, str):
+                raise TypeError(
+                    f"Extractor for vocabulary '{self.name}' must return an iterable of strings or a "
+                    f"mapping of example index to terms, but got element of type {type(term)}."
+                )
+            yield term, None
 
     def find_in(
         self,
