@@ -55,7 +55,7 @@ class ComplexTermMetricParams(KeyTermMetricParams):
         super().validate()
 
 
-@METRIC_REGISTRY.register("ctr", tokenizer="complex_term")
+@METRIC_REGISTRY.register("ctr", tokenizer="complex_term", normalizer="cased")
 class CTR(KTR):
     short_name_base = "CTR"
     long_name_base = "Complex Term Recall"
@@ -68,7 +68,7 @@ class CTR(KTR):
     param_schema = ComplexTermMetricParams
 
 
-@METRIC_REGISTRY.register("ctp", tokenizer="complex_term")
+@METRIC_REGISTRY.register("ctp", tokenizer="complex_term", normalizer="cased")
 class CTP(KTP):
     short_name_base = "CTP"
     long_name_base = "Complex Term Precision"
@@ -80,7 +80,7 @@ class CTP(KTP):
     param_schema = ComplexTermMetricParams
 
 
-@METRIC_REGISTRY.register("ctf", tokenizer="complex_term")
+@METRIC_REGISTRY.register("ctf", tokenizer="complex_term", normalizer="cased")
 class CTF(KTF):
     short_name_base = "CTF"
     long_name_base = "Complex Term F-Score"
