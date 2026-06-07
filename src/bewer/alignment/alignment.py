@@ -244,6 +244,11 @@ class Alignment(tuple["Op", ...]):
             local_only_matches=local_only_matches,
         )
 
+    @overload
+    def __getitem__(self, index: int) -> Op: ...
+    
+    @overload
+    def __getitem__(self, index: slice) -> Alignment: ...
 
     def __getitem__(self, index: int | slice) -> Union[Op, "Alignment"]:
         if isinstance(index, slice):
