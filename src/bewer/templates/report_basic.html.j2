@@ -214,7 +214,7 @@
 
 
 {% set alignment_gallery -%}
-{%- with example_iterator=dataset, alignments=alignments, color_scheme=alignment_color_scheme, labels=alignment_labels, allow_subset_matches=allow_subset_matches, local_only_matches=local_only_matches -%}
+{%- with example_iterator=dataset, alignments=alignments, color_scheme=alignment_color_scheme, labels=alignment_labels, allow_subset_matches=allow_subset_matches, only_local_matches=only_local_matches -%}
 {%- include 'alignment_gallery.html.j2' -%}
 {%- endwith -%}
 {%- endset -%}

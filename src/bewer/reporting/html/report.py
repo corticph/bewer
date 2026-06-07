@@ -86,7 +86,7 @@ def render_report_html(
     report_alignment: ReportAlignment | None = None,
     metadata: dict[str, str] | None = None,
     allow_subset_matches: bool = False,
-    local_only_matches: bool = False,
+    only_local_matches: bool = False,
 ) -> str:
     """Render an HTML report with alignment visualizations for all examples in a dataset.
 
@@ -106,7 +106,7 @@ def render_report_html(
             DEFAULT_REPORT_ALIGNMENT.
         metadata: Optional dict of key-value pairs to display in the report metadata line.
         allow_subset_matches: If True, allow subset key term matches when highlighting key terms.
-        local_only_matches: If True, scope key term highlighting to terms regarded by each example.
+        only_local_matches: If True, scope key term highlighting to terms regarded by each example.
 
     Returns:
         The rendered HTML report string.
@@ -157,7 +157,7 @@ def render_report_html(
         alignment_labels=alignment_labels,
         metadata=metadata,
         allow_subset_matches=allow_subset_matches,
-        local_only_matches=local_only_matches,
+        only_local_matches=only_local_matches,
     )
 
     return html
@@ -177,7 +177,7 @@ def generate_report(
     report_alignment: ReportAlignment | None = None,
     metadata: dict[str, str] | None = None,
     allow_subset_matches: bool = False,
-    local_only_matches: bool = False,
+    only_local_matches: bool = False,
 ) -> str:
     """Generate an HTML report with alignment visualizations for all examples.
 
@@ -199,7 +199,7 @@ def generate_report(
             DEFAULT_REPORT_ALIGNMENT.
         metadata: Optional dict of key-value pairs to display in the report metadata line.
         allow_subset_matches: If True, allow subset key term matches when highlighting key terms.
-        local_only_matches: If True, scope key term highlighting to terms regarded by each example.
+        only_local_matches: If True, scope key term highlighting to terms regarded by each example.
 
     Returns:
         The rendered HTML report string.
@@ -216,7 +216,7 @@ def generate_report(
         report_alignment=report_alignment,
         metadata=metadata,
         allow_subset_matches=allow_subset_matches,
-        local_only_matches=local_only_matches,
+        only_local_matches=only_local_matches,
     )
 
     if path is not None:

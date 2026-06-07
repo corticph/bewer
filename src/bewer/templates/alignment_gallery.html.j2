@@ -10,7 +10,7 @@
 
 {% for example in example_iterator -%}
 {% set alignment_content -%}
-{%- with example=example, alignment=alignments[loop.index0], color_scheme=color_scheme, labels=labels, title_index=loop.index, allow_subset_matches=allow_subset_matches, local_only_matches=local_only_matches -%}
+{%- with example=example, alignment=alignments[loop.index0], color_scheme=color_scheme, labels=labels, title_index=loop.index, allow_subset_matches=allow_subset_matches, only_local_matches=only_local_matches -%}
 {%- include 'alignment_container.html.j2' -%}
 {%- endwith -%}
 {%- endset -%}

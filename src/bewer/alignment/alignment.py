@@ -225,14 +225,14 @@ class Alignment(tuple["Op", ...]):
         self,
         color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
         allow_subset_matches: bool = False,
-        local_only_matches: bool = False,
+        only_local_matches: bool = False,
     ) -> list[tuple[str, str]]:
         """Render the alignment as an HTML string.
 
         Args:
             color_scheme (type[HTMLAlignmentColors]): Color scheme for display.
             allow_subset_matches: If True, allow subset key term matches when computing key term indicators.
-            local_only_matches: If True, scope key term indicators to terms regarded by this example.
+            only_local_matches: If True, scope key term indicators to terms regarded by this example.
 
         Returns:
             list[tuple[str, str]]: List of tuples containing HTML strings representing the alignment visualization.
@@ -241,7 +241,7 @@ class Alignment(tuple["Op", ...]):
             self,
             color_scheme=color_scheme,
             allow_subset_matches=allow_subset_matches,
-            local_only_matches=local_only_matches,
+            only_local_matches=only_local_matches,
         )
 
     @overload
