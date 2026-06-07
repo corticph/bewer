@@ -26,6 +26,7 @@ poetry run pytest tests/test_metrics/ -k "test_wer"  # Run tests matching patter
 ### Linting and Formatting
 ```bash
 make pre-commit              # Run all pre-commit hooks
+make pre-commit-pipeline     # Run pre-commit hooks scoped to the preprocessing pipeline
 poetry run ruff check .      # Run ruff linter
 poetry run ruff format .     # Format code with ruff
 ```
@@ -48,27 +49,41 @@ poetry run twine check dist/*  # Validate built packages
 **Dataset** (`src/bewer/core/dataset.py`)
 - Main entry point for the framework
 - Manages collections of Examples and provides lazy metric computation
-- Supports loading data from CSV, pandas DataFrames (with planned HuggingFace support)
+- Loads data via `load_csv`, `load_jsonl`, and `load_pandas`; `load_dataset` (HuggingFace) is a stub that raises `NotImplementedError`
+- Registers vocabularies: `add_vocabulary`, `add_vocabulary_from_list`, `add_vocabulary_from_file`, `add_vocabulary_from_function`
 - Configuration system based on OmegaConf with YAML config files
 
 **Example** (`src/bewer/core/example.py`)
 - Represents a single reference-hypothesis pair
-- Contains Text objects (ref/hyp) and optional keywords
+- Contains Text objects (ref/hyp) and optional key terms
 - Each Example has its own MetricCollection for per-example metrics
 
-**Text** (`src/bewer/core/text.py`)
-- Immutable text representation with preprocessing pipeline
-- Stores original and standardized text and caches tokenization results
-- Normalization is applied per-token via the active normalizer pipeline
-- Lazy evaluation of preprocessing stages
+**Text / TokenizedText** (`src/bewer/core/text.py`)
+- `TokenizedText` is the base class providing standardization, tokenization, and pipeline caching; `Text` (a reference or hypothesis) and `KeyTerm` are its two subclasses
+- Immutable: stores original and standardized text and caches tokenization/normalization results
+- Normalization is applied per-token via the active normalizer pipeline; preprocessing stages are evaluated lazily
+- Also defines `TextType` (ref/hyp/key-term enum) and `TokenList`
+
+**Token** (`src/bewer/core/token.py`)
+- A single token: raw string, char offsets/slice, position index, and lazily-normalized form
+
+**KeyTerm** (`src/bewer/core/key_term.py`)
+- A term to locate within reference tokens; a sibling of `Text` under `TokenizedText`, canonicalized (deduped by raw string) per owning `Vocabulary`
+- `Match` records a located span; matching uses an Aho-Corasick trie (`pyahocorasick`)
+
+**Vocabulary** (`src/bewer/core/vocabulary.py`)
+- A named source of key terms that locates them in text. Terms come from explicit lists/files (`from_list`/`from_file`), lazy extraction functions (`from_function`), and per-example annotations — combined as a union and matched via one Aho-Corasick trie
+- `VocabularyExtractor` is a `(dataset) -> terms` callable: returning `Iterable[str]` yields *global* terms; returning `Mapping[int, Iterable[str]]` yields per-example *local* terms (see `bewer.extractors`)
+- `only_local_matches` is a matching-time policy controlling whether a term matches everywhere or only in the examples that regard it
+
+**Pipeline caching** (`src/bewer/core/caching.py`)
+- `pipeline_cached_property`: a context-sensitive descriptor that caches preprocessing-stage results keyed by the active pipeline
 
 **Preprocessing Pipeline** (`src/bewer/preprocessing/`)
-- Three-stage pipeline: standardization → tokenization → token-level normalization
-- Configured via YAML (`src/bewer/configs/base.yml`)
-- Each stage is a series of function applications
-- Standardizers: Unicode normalization (NFC)
-- Tokenizers: Whitespace-based with customizable symbol handling
-- Normalizers: Lowercase, transliteration, symbol removal/translation (applied to tokens)
+- Three-stage pipeline: standardization → tokenization → token-level normalization, each a series of YAML-configured function applications (`src/bewer/configs/base.yml`)
+- The active pipeline stage is tracked through context vars in `context.py`
+- Standardizers & normalizers (`normalization.py`): NFC plus apostrophe/hyphen/slash variant normalization (standardize stage); lowercase, Latin transliteration, symbol transliteration/removal (normalize stage)
+- Tokenizers (`tokenization.py`): regex-pattern tokenizers — punctuation-stripping, symbol-keeping, plain-whitespace, and legacy variants. Named tokenizer configs in `base.yml` include `default`, `key_term`, and `complex_term` (like `key_term` but does not split on hyphens, for strict complex-term scoring)
 
 ### Metrics System
 
@@ -83,12 +98,27 @@ poetry run twine check dist/*  # Validate built packages
 - CER (Character Error Rate): `cer.py`
 - Levenshtein distance: `levenshtein.py`
 - Error alignment metrics: `error_align.py` (uses external error-align package)
+- Key-term metrics (KTR/KTP/KTF): recall/precision/F-score over a key-term vocabulary — `ktr.py`, `ktp.py`, `ktf.py`
+- Key-term error-rate and CER variants (KTER/KTCER): `kter.py`, `ktcer.py`
+- Relaxed key-term recall (RKTR): `rktr.py`
+- Complex-term metrics (CTR/CTP/CTF): `complex_term.py` — subclass the key-term metrics over auto-extracted complex terms (acronyms, alphanumerics, hyphen compounds, Greek-bearing tokens); auto-register a `complex_terms` vocabulary on first use, so `dataset.metrics.ctr().value` works out of the box. They run under the `complex_term` tokenizer (no hyphen splitting), so the hyphen is part of a term's canonical form and is scored strictly — `CT scan` does NOT match `CT-scan` (unlike word-level metrics)
+- Dataset summary (DatasetSummary): `summary.py`
+- Confidence intervals (ConfidenceInterval): `confidence.py`
 - Legacy Corti metrics: `corti_legacy_metrics.py`
+
+### Vocabulary Extractors (`src/bewer/extractors/`)
+
+Library of pre-defined `VocabularyExtractor` callables — `(dataset) -> terms` functions that derive key terms on demand and are registered via `Dataset.add_vocabulary_from_function` (or wrapped with `Vocabulary.from_function`).
+
+- **`ComplexTermExtractor`** (`extractors/complex_term.py`): scans each example's *reference* for complex terms (acronyms, alphanumerics, hyphen compounds, Greek-bearing tokens), returning a per-example (local) vocabulary that backs the complex-term metrics (CTR/CTP/CTF). It reads `example.ref.tokens` under the active tokenizer and expects the `complex_term` pipeline (no hyphen split), so a compound like `CT-scan` is a single token
+- Its regex matching primitive lives in the same module: `match_token_regex` (full-matches each token against a compiled pattern, returning unit slices) and `COMPLEX_TERM_DEFAULT_PATTERN`. No cross-token grouping — compounds arrive whole from the `complex_term` tokenizer
+- Exposed at the package top level as `bewer.extractors`
 
 ### Alignment System (`src/bewer/alignment/`)
 
 - Text alignment for error analysis (insertions, deletions, substitutions)
-- Operation types defined in `op_type.py`
+- `Alignment` (`alignment.py`): a tuple of `Op`s representing the aligned operation sequence
+- `Op` (`op.py`): a single alignment operation; operation types (`OpType`) defined in `op_type.py`
 - Used by metrics and reporting components
 
 ### Reporting (`src/bewer/reporting/`)
@@ -107,26 +137,31 @@ poetry run twine check dist/*  # Validate built packages
 
 Configuration is managed through YAML files with OmegaConf:
 
-- Default config: `src/bewer/configs/base.yml`
+- Default config: `src/bewer/configs/base.yml`; language-specific overrides in `src/bewer/configs/languages/` (`da`, `de`, `en`, `fr`)
 - Defines preprocessing pipelines (standardizers, tokenizers, normalizers)
 - Extensible: users can provide custom configs
 - Pipeline resolution happens in `configs/resolve.py`
+- Section-key constants (`standardizers`/`tokenizers`/`normalizers`/`default`) live in `src/bewer/flags.py`
 
-Example config structure:
+Example config structure (the `default` pipelines from `base.yml`):
 ```yaml
 standardizers:
   default:
     bewer.preprocessing.normalization.nfc:
+    bewer.preprocessing.normalization.normalize_apostrophe_variants:
+    bewer.preprocessing.normalization.normalize_hyphen_variants:
+    bewer.preprocessing.normalization.normalize_slash_variants:
 
 tokenizers:
   default:
-    bewer.preprocessing.tokenization.whitespace_strip_symbols_and_custom:
-      split_on: "-/"
+    bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
+      split_on_escaped: "-/"
 
 normalizers:
   default:
     bewer.preprocessing.normalization.lowercase:
     bewer.preprocessing.normalization.transliterate_latin_letters:
+    bewer.preprocessing.normalization.transliterate_symbols:
 ```
 
 ## Testing Conventions
@@ -150,11 +185,15 @@ normalizers:
 
 **Core Dependencies**:
 - pandas: Data handling
-- regex, rapidfuzz: Text processing and matching
-- pyyaml, omegaconf: Configuration management
+- regex, rapidfuzz, levenshtein: Text processing, fuzzy and edit-distance matching
+- pyahocorasick: Aho-Corasick trie for key-term / vocabulary matching
+- unidecode: Latin transliteration in the normalizer pipeline
+- pyyaml, omegaconf, hydra-core: Configuration management
 - error-align: External alignment library (Corti package)
 - jinja2: HTML template rendering
 - rich: CLI output formatting
+- typeguard: Runtime type checking
+- fuzzywuzzy: Temporary, for legacy Corti metrics (to be removed)
 
 **Build System**:
 - Uses both Poetry (development) and Hatch (packaging)
@@ -165,6 +204,7 @@ normalizers:
 
 - The preprocessing pipeline is immutable and lazy - Text objects cache results
 - Metrics are computed lazily and cached - avoid manual cache invalidation
-- Keywords must exist in reference text or a warning is issued
+- Keywords must exist in reference text or a warning is logged
 - The project uses semantic versioning via git tags (hatch-vcs)
 - Pre-commit hooks include poetry-lock which auto-updates on pyproject.toml changes
+- Always update the README and this CLAUDE.md with any architectural or workflow changes to keep documentation current
