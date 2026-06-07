@@ -28,7 +28,6 @@ normalizers:
     bewer.preprocessing.normalization.transliterate_latin_letters:
     bewer.preprocessing.normalization.transliterate_symbols:
   cased:
-    # Case-preserving (default without lowercase); used by the complex-term metrics.
     bewer.preprocessing.normalization.transliterate_latin_letters:
     bewer.preprocessing.normalization.transliterate_symbols:
   legacy:
