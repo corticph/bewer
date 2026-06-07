@@ -28,12 +28,9 @@ logger = logging.getLogger(__name__)
 
 # A vocabulary extractor derives key terms from a dataset on demand. Returning an iterable
 # of strings yields *global* terms (matched in every example, no example association).
-# Returning a mapping (or iterable of pairs) of example index -> terms yields *local* terms,
-# each associated with the given example. An empty result is treated as a global no-op.
-VocabularyExtractor = Callable[
-    ["Dataset"],
-    Union[Iterable[str], "Mapping[int, Iterable[str]]", "Iterable[tuple[int, Iterable[str]]]"],
-]
+# Returning a mapping of example index -> terms yields *local* terms, each associated with
+# the given example. An empty result is treated as a global no-op.
+VocabularyExtractor = Callable[["Dataset"], Union[Iterable[str], "Mapping[int, Iterable[str]]"]]
 
 
 class Vocabulary:
