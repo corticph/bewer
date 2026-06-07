@@ -17,8 +17,6 @@ tokenizers:
     bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
       split_on_escaped: "-/'"
   complex_term:
-    # Like key_term, but does NOT split on hyphens: complex terms (CT-scan, D-glucose,
-    # HbA1c) keep the hyphen as part of the canonical form, so it is scored strictly.
     bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
       split_on_escaped: "/'"
   legacy:
