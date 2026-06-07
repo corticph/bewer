@@ -12,6 +12,7 @@ from bewer.metrics.confidence import ConfidenceInterval
 from bewer.metrics._kt_stats import _KTStats  # noqa: F401 (registers "_kt_stats")
 from bewer.metrics._rkt_stats import _RKTStats  # noqa: F401 (registers "_rkt_stats")
 from bewer.metrics.cer import CER
+from bewer.metrics.complex_term import CTF, CTP, CTR
 from bewer.metrics.error_align import ErrorAlign
 from bewer.metrics.ktf import KTF
 from bewer.metrics.kter import KTER
@@ -36,6 +37,9 @@ __all__ = [
     "ConfidenceInterval",
     "WER",
     "CER",
+    "CTR",
+    "CTP",
+    "CTF",
     "KTF",
     "KTER",
     "KTP",
