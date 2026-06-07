@@ -143,26 +143,7 @@ Configuration is managed through YAML files with OmegaConf:
 - Pipeline resolution happens in `configs/resolve.py`
 - Section-key constants (`standardizers`/`tokenizers`/`normalizers`/`default`) live in `src/bewer/flags.py`
 
-Example config structure (the `default` pipelines from `base.yml`):
-```yaml
-standardizers:
-  default:
-    bewer.preprocessing.normalization.nfc:
-    bewer.preprocessing.normalization.normalize_apostrophe_variants:
-    bewer.preprocessing.normalization.normalize_hyphen_variants:
-    bewer.preprocessing.normalization.normalize_slash_variants:
-
-tokenizers:
-  default:
-    bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
-      split_on_escaped: "-/"
-
-normalizers:
-  default:
-    bewer.preprocessing.normalization.lowercase:
-    bewer.preprocessing.normalization.transliterate_latin_letters:
-    bewer.preprocessing.normalization.transliterate_symbols:
-```
+Structure: three top-level sections — `standardizers`, `tokenizers`, `normalizers` — each mapping a pipeline name (`default`, `key_term`, …) to an ordered list of `bewer.preprocessing.*` functions with optional kwargs. Rather than duplicate the pipeline definitions here (which drifts out of date), see [`src/bewer/configs/base.yml`](src/bewer/configs/base.yml) for the canonical, current set and the available named pipelines.
 
 ## Testing Conventions
 
