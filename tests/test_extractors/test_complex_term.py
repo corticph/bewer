@@ -35,27 +35,31 @@ class TestComplexTermDefaultPattern:
     @pytest.mark.parametrize(
         "token",
         [
-            "MRI",
-            "NATO",  # all-caps acronyms (>=2 uppercase in a segment)
-            "mmHg",
+            "MRI",  # all-caps acronyms (>=2 uppercase in a segment)
+            "NATO",
+            "mmHg",  # mixed-case, lowercase-first
             "iPhone",
-            "mRNA",  # mixed-case, lowercase-first
-            "HbA1c",
-            "DNase",  # mixed-case, uppercase-first
-            "CO2",
-            "B12",  # letter-then-digit
-            "3D",
-            "5HT",  # digit-then-uppercase
-            "μM",
+            "mRNA",
+            "HbA1c",  # mixed-case, uppercase-first
+            "DNase",
+            "CO2",  # letter-then-digit
+            "B12",
+            "3D",  # digit-then-uppercase
+            "5HT",
+            "b12",  # all-lowercase letter+digit (so ref/hyp case mismatches surface)
+            "hello1",
+            "THE",  # all-caps everyday words (documented false positives)
+            "OK",
+            "μM",  # Greek anywhere
             "ΔG",
-            "γδ",  # Greek anywhere
-            "CT-scan",
-            "pre-MRI",  # hyphenated: >=2 uppercase in a segment
-            "X-ray",
+            "γδ",
+            "CT-scan",  # hyphenated: >=2 uppercase in a segment
+            "pre-MRI",
+            "X-ray",  # hyphenated: lone uppercase-letter segment
             "D-glucose",
-            "T-shirt",  # hyphenated: lone uppercase-letter segment
-            "5-HT-receptor",
-            "random-b12-text",  # hyphenated: digit promotes whole compound
+            "T-shirt",
+            "5-HT-receptor",  # hyphenated: digit promotes whole compound
+            "random-b12-text",
             "α-helix",  # hyphenated: Greek anywhere
         ],
     )
@@ -65,31 +69,21 @@ class TestComplexTermDefaultPattern:
     @pytest.mark.parametrize(
         "token",
         [
-            "Patient",
-            "hello",  # ordinary capitalised / lowercase words
-            "A",
-            "I",  # single letters
-            "1st",
-            "1er",  # ordinals (en / fr)
+            "Patient",  # ordinary capitalised / lowercase words
+            "hello",
+            "A",  # single letters
+            "I",
+            "1st",  # ordinals (en / fr)
+            "1er",
             "2024",  # pure digits
-            "Hello-World",
-            "Patient-Care",  # title-case compounds (one uppercase per segment)
-            "up-to-date",
-            "e-mail",  # lowercase compounds
+            "Hello-World",  # title-case compounds (one uppercase per segment)
+            "Patient-Care",
+            "up-to-date",  # lowercase compounds
+            "e-mail",
         ],
     )
     def test_rejects(self, token):
         assert DEFAULT.fullmatch(token) is None, f"expected reject for {token!r}"
-
-    @pytest.mark.parametrize("token", ["THE", "OK"])
-    def test_all_caps_words_are_documented_false_positives(self, token):
-        """All-caps everyday words satisfy the >=2-uppercase rule; accepted as a known cost."""
-        assert DEFAULT.fullmatch(token) is not None
-
-    @pytest.mark.parametrize("token", ["b12", "hello1"])
-    def test_all_lowercase_letter_digit_matches(self, token):
-        """Lowercase letter+digit still qualifies, so ref/hyp case mismatches surface."""
-        assert DEFAULT.fullmatch(token) is not None
 
 
 class TestMatchTokenRegex:
