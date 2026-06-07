@@ -315,7 +315,7 @@ class TokenList(tuple[Token, ...]):
         mapping = self._normalized_index_mapping if normalized else self._raw_index_mapping
         return mapping.get(text, set())
 
-    def _sub_repr(self):
+    def sub_repr(self):
         """Used internally by TextTokenList.__repr__"""
         tokens = self[:5]
         tokens_str = ",  ".join([repr(token) for token in tokens])

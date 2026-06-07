@@ -142,6 +142,9 @@ normalizers:
 - Ruff linting with E, F, and I rules enabled
 - Pre-commit hooks enforce formatting, linting, and security checks
 - Type hints expected (py.typed marker present)
+- Method/attribute visibility follows the Python convention that a leading underscore (`_foo`) marks a
+  member as internal to its **own class** — i.e. only accessed via `self`. Anything called or read across
+  an object boundary (by a collaborating class) must be public, with no leading underscore.
 
 ## Dependencies
 

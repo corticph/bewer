@@ -9,7 +9,7 @@
             <th colspan="3">Example {{ title_index | default('-', true) }}</th>
         </tr>
 
-        {%- for ref_line, hyp_line in alignment._to_html_lines(color_scheme=color_scheme, allow_subset_matches=allow_subset_matches|default(false), only_local_matches=only_local_matches|default(false)) %}
+        {%- for ref_line, hyp_line in alignment.to_html_lines(color_scheme=color_scheme, allow_subset_matches=allow_subset_matches|default(false), only_local_matches=only_local_matches|default(false)) %}
         <tr class="alignment-row">
             <td class="alignment-table-lines">{{loop.index}}</td>
             <td class="alignment-table-names">{{ labels.REF }}</td>
