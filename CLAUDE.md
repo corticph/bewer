@@ -101,7 +101,7 @@ poetry run twine check dist/*  # Validate built packages
 - Key-term metrics (KTR/KTP/KTF): recall/precision/F-score over a key-term vocabulary — `ktr.py`, `ktp.py`, `ktf.py`
 - Key-term error-rate and CER variants (KTER/KTCER): `kter.py`, `ktcer.py`
 - Relaxed key-term recall (RKTR): `rktr.py`
-- Complex-term metrics (CTR/CTP/CTF): `complex_term.py` — subclass the key-term metrics over auto-extracted complex terms (acronyms, alphanumerics, hyphen compounds, Greek-bearing tokens); auto-register a `complex_terms` vocabulary on first use, so `dataset.metrics.ctr().value` works out of the box. They run under the `complex_term` tokenizer (no hyphen splitting), so the hyphen is part of a term's canonical form and is scored strictly — `CT scan` does NOT match `CT-scan` (unlike word-level metrics)
+- Complex-term metrics (CTR/CTP/CTF): `complex_term.py` — subclass the key-term metrics over auto-extracted complex terms (acronyms, alphanumerics, hyphen compounds, Greek-bearing tokens); auto-register a `complex_terms` vocabulary on first use, so `dataset.metrics.ctr().value` works out of the box. They run under the `complex_term` tokenizer (no hyphen splitting) and the `cased` normalizer (no lowercasing), so a term's surface form is scored strictly — neither `CT scan` nor `ct-scan`/`mri` match a `CT-scan`/`MRI` term (unlike word-level metrics)
 - Dataset summary (DatasetSummary): `summary.py`
 - Confidence intervals (ConfidenceInterval): `confidence.py`
 - Legacy Corti metrics: `corti_legacy_metrics.py`

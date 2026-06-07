@@ -60,6 +60,16 @@ class TestComplexTermRecall:
         assert ctr.num_matches == 0
         assert ctr.value == 0.0
 
+    def test_casing_is_scored_strictly(self):
+        """Casing is part of a complex term's identity: the `cased` normalizer preserves case,
+        so a hypothesis writing 'mri' does NOT match a reference 'MRI'."""
+        dataset = Dataset()
+        dataset.add(ref="patient had an MRI", hyp="patient had an mri")
+        ctr = dataset.metrics.ctr()
+        assert ctr.num_ref_terms == 1  # 'MRI'
+        assert ctr.num_matches == 0
+        assert ctr.value == 0.0
+
 
 class TestComplexTermPrecision:
     def test_perfect_precision(self):
