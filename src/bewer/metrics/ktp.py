@@ -45,7 +45,7 @@ class KTP(Metric):
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
-            local_only_matches=self.params.local_only_matches,
+            only_local_matches=self.params.only_local_matches,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

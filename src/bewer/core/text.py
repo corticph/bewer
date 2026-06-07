@@ -120,12 +120,12 @@ class Text:
         normalized: bool = True,
         add_capitalized: bool = False,
         allow_subset_matches: bool = False,
-        local_only_matches: bool = False,
+        only_local_matches: bool = False,
     ) -> list[Match]:
         """Find key term matches in this text's tokens.
 
         Matching is delegated to the named :class:`Vocabulary`, which matches the union of
-        its terms here. With ``local_only_matches=True`` only terms regarded by this text's
+        its terms here. With ``only_local_matches=True`` only terms regarded by this text's
         example are kept. When matching on the reference side, a warning is logged for each
         term the example regards that is absent from the reference tokens.
 
@@ -134,7 +134,7 @@ class Text:
             normalized: Use normalized tokens for matching.
             add_capitalized: Add capitalized first-token variants (raw mode only).
             allow_subset_matches: If False, discard matches that are subsets of longer matches.
-            local_only_matches: If True, scope matches to terms regarded by this text's example.
+            only_local_matches: If True, scope matches to terms regarded by this text's example.
 
         Returns:
             List of :class:`Match` objects representing matched token spans and their key terms.
@@ -151,7 +151,7 @@ class Text:
             normalized=normalized,
             add_capitalized=add_capitalized,
             allow_subset_matches=allow_subset_matches,
-            local_only_matches=local_only_matches,
+            only_local_matches=only_local_matches,
         )
 
     def __hash__(self):

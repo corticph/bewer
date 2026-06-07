@@ -48,7 +48,7 @@ class Vocabulary:
     - per-example annotations (the ``key_terms`` passed when examples are added).
 
     Whether a term is matched everywhere or only within the examples that regard it is a
-    *matching-time policy* controlled by the ``local_only_matches`` flag of :meth:`find_in`,
+    *matching-time policy* controlled by the ``only_local_matches`` flag of :meth:`find_in`,
     not a storage distinction. A single Aho-Corasick trie is built over the union of terms;
     local scoping is a post-hoc filter.
 
@@ -202,12 +202,12 @@ class Vocabulary:
         normalized: bool = True,
         add_capitalized: bool = False,
         allow_subset_matches: bool = False,
-        local_only_matches: bool = False,
+        only_local_matches: bool = False,
     ) -> list[Match]:
         """Find key term matches in ``text``'s tokens.
 
         A single trie is built over the union of the vocabulary's terms. When
-        ``local_only_matches`` is True, a match is kept only if at least one of its key
+        ``only_local_matches`` is True, a match is kept only if at least one of its key
         terms is regarded by ``text``'s example (so global-only terms and examples with no
         regarded terms yield nothing); when False, every union term matches everywhere.
 
@@ -219,7 +219,7 @@ class Vocabulary:
             normalized: Use normalized tokens for matching.
             add_capitalized: Add capitalized first-token variants (raw mode only).
             allow_subset_matches: If False, discard matches whose span is a subset of a longer match.
-            local_only_matches: If True, scope matches to terms regarded by this text's example.
+            only_local_matches: If True, scope matches to terms regarded by this text's example.
 
         Returns:
             A list of :class:`Match` objects.
@@ -227,7 +227,7 @@ class Vocabulary:
         example = text.src
         example_index = example.index if example is not None else None
         pipeline_key = self._pipeline_key(normalized, add_capitalized)
-        cache_key = (example_index, text.text_type, allow_subset_matches, local_only_matches) + pipeline_key
+        cache_key = (example_index, text.text_type, allow_subset_matches, only_local_matches) + pipeline_key
         if cache_key in self._match_cache:
             return self._match_cache[cache_key]
 
@@ -251,7 +251,7 @@ class Vocabulary:
                         "Key term '%s' not found in reference tokens: Example %s.", key_term.raw, example_index
                     )
 
-        if local_only_matches:
+        if only_local_matches:
             matches = [m for m in matches if any(example in kt.examples for kt in m.key_terms)]
 
         matches = self._filter_matches(matches, allow_subset_matches)

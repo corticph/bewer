@@ -23,7 +23,7 @@ class _KTStats_(ExampleMetric):
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
-            local_only_matches=self.params.local_only_matches,
+            only_local_matches=self.params.only_local_matches,
         )
 
     def _get_hyp_matches(self) -> list[Match]:
@@ -31,7 +31,7 @@ class _KTStats_(ExampleMetric):
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
-            local_only_matches=self.params.local_only_matches,
+            only_local_matches=self.params.only_local_matches,
         )
 
     @metric_value

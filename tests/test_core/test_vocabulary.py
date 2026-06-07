@@ -99,7 +99,7 @@ class TestMixedSources:
 
 class TestLocalOnlyMatches:
     def test_default_matches_everywhere(self):
-        """By default (local_only_matches=False) every union term matches in every text."""
+        """By default (only_local_matches=False) every union term matches in every text."""
         ds = Dataset()
         ds.add("paracetamol helps", "paracetamol helps", key_terms={"drugs": ["paracetamol"]})
         ds.add("ibuprofen and paracetamol", "ibuprofen and paracetamol", key_terms={"drugs": ["ibuprofen"]})
@@ -113,11 +113,11 @@ class TestLocalOnlyMatches:
         ds = Dataset()
         ds.add("paracetamol helps", "paracetamol helps", key_terms={"drugs": ["paracetamol"]})
         ds.add("ibuprofen and paracetamol", "ibuprofen and paracetamol", key_terms={"drugs": ["ibuprofen"]})
-        matched = _matched_token_lists(ds[1].ref.get_key_term_matches("drugs", local_only_matches=True), ds[1].ref)
+        matched = _matched_token_lists(ds[1].ref.get_key_term_matches("drugs", only_local_matches=True), ds[1].ref)
         assert ["ibuprofen"] in matched
         assert ["paracetamol"] not in matched
         # ...but the term is still kept in the example that regards it.
-        matched0 = _matched_token_lists(ds[0].ref.get_key_term_matches("drugs", local_only_matches=True), ds[0].ref)
+        matched0 = _matched_token_lists(ds[0].ref.get_key_term_matches("drugs", only_local_matches=True), ds[0].ref)
         assert ["paracetamol"] in matched0
 
     def test_local_only_example_with_no_terms_matches_nothing(self):
@@ -125,15 +125,15 @@ class TestLocalOnlyMatches:
         ds = Dataset()
         ds.add("paracetamol helps", "paracetamol helps", key_terms={"drugs": ["paracetamol"]})
         ds.add("the paracetamol talk", "the paracetamol talk", key_terms={"drugs": []})
-        assert ds[1].ref.get_key_term_matches("drugs", local_only_matches=True) == []
+        assert ds[1].ref.get_key_term_matches("drugs", only_local_matches=True) == []
 
     def test_local_only_global_terms_yield_nothing(self):
-        """Global-only terms have empty .examples, so local_only_matches yields nothing for them."""
+        """Global-only terms have empty .examples, so only_local_matches yields nothing for them."""
         ds = Dataset()
         ds.add("the fox", "the fox")
         ds.add_vocabulary_from_list("animals", ["fox"])
-        assert ds[0].ref.get_key_term_matches("animals", local_only_matches=True) == []
-        assert len(ds[0].ref.get_key_term_matches("animals", local_only_matches=False)) == 1
+        assert ds[0].ref.get_key_term_matches("animals", only_local_matches=True) == []
+        assert len(ds[0].ref.get_key_term_matches("animals", only_local_matches=False)) == 1
 
 
 class TestFunctionExtraction:
@@ -174,7 +174,7 @@ class TestFunctionExtraction:
         assert by_raw["alpha"].examples == {ds[0]}
         assert by_raw["beta"].examples == {ds[1]}
         # Under local_only, each example matches only its own term.
-        matched = _matched_token_lists(ds[0].ref.get_key_term_matches("derived", local_only_matches=True), ds[0].ref)
+        matched = _matched_token_lists(ds[0].ref.get_key_term_matches("derived", only_local_matches=True), ds[0].ref)
         assert matched == [["alpha"]]
 
     def test_extractor_reruns_after_mutation(self):

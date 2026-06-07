@@ -15,14 +15,14 @@ class KeyTermMetricParams(MetricParams):
         vocab: The vocabulary name to use for key term identification.
         normalized: Whether to use normalized tokens for alignment and key term matching.
         allow_subset_matches: Whether to allow subset matches.
-        local_only_matches: Whether to scope matches to the terms each example regards
+        only_local_matches: Whether to scope matches to the terms each example regards
             (examples with no regarded terms then contribute no matches).
     """
 
     vocab: str
     normalized: bool = True
     allow_subset_matches: bool = False
-    local_only_matches: bool = False
+    only_local_matches: bool = False
 
     def validate(self) -> None:
         """Validate that the referenced vocabulary exists on the dataset."""

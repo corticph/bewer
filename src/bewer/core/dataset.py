@@ -90,7 +90,7 @@ class Dataset(object):
         Any vocabulary names in ``key_terms`` are registered (if not already present); the
         annotated terms become part of those vocabularies and are associated with this
         example. By default a term matches in every example's text; pass
-        ``local_only_matches=True`` when matching to scope terms to the examples that
+        ``only_local_matches=True`` when matching to scope terms to the examples that
         regard them.
         """
         self._add_example(ref, hyp, key_terms=key_terms)

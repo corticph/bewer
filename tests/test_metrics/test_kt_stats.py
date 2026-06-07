@@ -316,7 +316,7 @@ class TestKTStatsSharing:
 
 
 class TestKTStatsLocalOnlyMatches:
-    """Tests that local_only_matches threads through the key term stats metric."""
+    """Tests that only_local_matches threads through the key term stats metric."""
 
     @pytest.fixture
     def leaking_dataset(self):
@@ -332,12 +332,12 @@ class TestKTStatsLocalOnlyMatches:
         assert stats.num_ref_terms == 2
 
     def test_local_only_scopes_counts_to_annotated_terms(self, leaking_dataset):
-        """With local_only_matches, example 1 counts only its own annotated term 'runs'."""
-        stats = leaking_dataset[1].metrics._kt_stats(vocab="animals", local_only_matches=True)
+        """With only_local_matches, example 1 counts only its own annotated term 'runs'."""
+        stats = leaking_dataset[1].metrics._kt_stats(vocab="animals", only_local_matches=True)
         assert stats.num_ref_terms == 1
 
     def test_local_only_produces_distinct_metric_instance(self, leaking_dataset):
-        """local_only_matches participates in metric identity like the other key term params."""
+        """only_local_matches participates in metric identity like the other key term params."""
         default = leaking_dataset.metrics.ktr(vocab="animals")
-        scoped = leaking_dataset.metrics.ktr(vocab="animals", local_only_matches=True)
+        scoped = leaking_dataset.metrics.ktr(vocab="animals", only_local_matches=True)
         assert default._kt_stats is not scoped._kt_stats

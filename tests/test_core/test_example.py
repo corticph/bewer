@@ -224,14 +224,14 @@ class TestTextGetKeyTermMatches:
         assert len(matches) == 1
 
     def test_local_vocab_scoped_per_example(self, sample_dataset):
-        """With local_only_matches, a term is matched only within the example that declares it."""
+        """With only_local_matches, a term is matched only within the example that declares it."""
         sample_dataset.add("the quick brown fox", "the quick brown fox", key_terms={"animals": ["fox"]})
         sample_dataset.add("the fox runs fast", "the fox runs fast", key_terms={"animals": ["runs"]})
         example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals", local_only_matches=True)
+        matches = example.ref.get_key_term_matches(vocab="animals", only_local_matches=True)
         matched_raws = sorted(example.ref.tokens[m.span].raw for m in matches)
         assert ["runs"] in matched_raws
-        # "fox" is a key term of the other example only; under local_only_matches it must not leak here.
+        # "fox" is a key term of the other example only; under only_local_matches it must not leak here.
         assert ["fox"] not in matched_raws
 
     def test_hyp_matching_no_local_verification(self, sample_dataset, caplog):
