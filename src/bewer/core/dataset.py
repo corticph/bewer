@@ -160,7 +160,7 @@ class Dataset(object):
         """
         if vocabulary.name in self._vocabularies:
             raise ValueError(f"Vocabulary '{vocabulary.name}' is already registered.")
-        vocabulary._bind(self)
+        vocabulary.bind(self)
         self._vocabularies[vocabulary.name] = vocabulary
         self._invalidate_caches()
         return vocabulary
@@ -208,7 +208,7 @@ class Dataset(object):
         if existing is not None:
             return existing
         vocabulary = Vocabulary(name)
-        vocabulary._bind(self)
+        vocabulary.bind(self)
         self._vocabularies[name] = vocabulary
         return vocabulary
 
@@ -374,7 +374,7 @@ class TextTokenList(tuple[TokenList, ...]):
 
     def __repr__(self):
         text_tokens = self[:60]
-        text_tokens_str = ",\n ".join([tokens._sub_repr() for tokens in text_tokens])
+        text_tokens_str = ",\n ".join([tokens.sub_repr() for tokens in text_tokens])
         if len(self) > 60:
             text_tokens_str += ",\n ..."
         return f"TextTokenList([\n {text_tokens_str}]\n)"

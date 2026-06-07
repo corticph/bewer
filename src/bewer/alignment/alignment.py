@@ -221,7 +221,7 @@ class Alignment(tuple["Op", ...]):
         title = f"   Example {self._src.index}"
         display_basic_aligned(self, max_line_length=max_line_length, title=title, color_scheme=color_scheme)
 
-    def _to_html_lines(
+    def to_html_lines(
         self,
         color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
         allow_subset_matches: bool = False,
@@ -246,7 +246,7 @@ class Alignment(tuple["Op", ...]):
 
     @overload
     def __getitem__(self, index: int) -> Op: ...
-    
+
     @overload
     def __getitem__(self, index: slice) -> Alignment: ...
 

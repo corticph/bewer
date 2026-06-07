@@ -250,7 +250,7 @@ class Vocabulary:
         self._match_cache[cache_key] = matches
         return matches
 
-    def _bind(self, dataset: Dataset) -> None:
+    def bind(self, dataset: Dataset) -> None:
         """Wire the dataset back-reference. Called by Dataset.add_vocabulary / _ensure_vocabulary."""
         if self._dataset is not None and self._dataset is not dataset:
             raise ValueError(f"Vocabulary '{self.name}' is already bound to a different dataset.")

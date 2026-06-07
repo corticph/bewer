@@ -197,7 +197,7 @@ class TestAlignmentToJson:
 
 
 class TestAlignmentToHtmlLines:
-    """Tests for _to_html_lines method."""
+    """Tests for to_html_lines method."""
 
     def _create_mock_example(self):
         """Helper to create a mock example with keywords and vocabs attributes."""
@@ -207,17 +207,17 @@ class TestAlignmentToHtmlLines:
         return mock_example
 
     def test_to_html_lines_returns_list_of_tuples(self):
-        """Test that _to_html_lines returns a list of tuples."""
+        """Test that to_html_lines returns a list of tuples."""
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
         alignment = Alignment(ops, src=self._create_mock_example())
-        result = alignment._to_html_lines()
+        result = alignment.to_html_lines()
 
         assert isinstance(result, list)
         assert all(isinstance(item, tuple) for item in result)
         assert all(len(item) == 2 for item in result)
 
     def test_to_html_lines_with_custom_color_scheme(self):
-        """Test that _to_html_lines accepts custom color scheme."""
+        """Test that to_html_lines accepts custom color scheme."""
         from bewer.reporting.html.color_schemes import HTMLDefaultAlignmentColors
 
         class CustomColorScheme(HTMLDefaultAlignmentColors):
@@ -225,7 +225,7 @@ class TestAlignmentToHtmlLines:
 
         ops = [Op(type=OpType.MATCH, ref="test", hyp="test")]
         alignment = Alignment(ops, src=self._create_mock_example())
-        result = alignment._to_html_lines(color_scheme=CustomColorScheme)
+        result = alignment.to_html_lines(color_scheme=CustomColorScheme)
 
         # Verify custom color is used
         ref_line, _ = result[0]
