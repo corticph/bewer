@@ -8,6 +8,7 @@ import ahocorasick
 from bewer.core.text import Text, TextType, TokenList
 
 if TYPE_CHECKING:
+    from bewer.core.dataset import Dataset
     from bewer.core.example import Example
     from bewer.core.vocabulary import Vocabulary
 
@@ -15,27 +16,28 @@ __all__ = ["KeyTerm", "Match"]
 
 
 class KeyTerm(Text):
-    """A canonical key term belonging to a :class:`Vocabulary`.
+    """A canonical key term, owned by its :class:`Dataset`.
 
     Inherits standardized, tokens, and pipeline caching from Text. A ``KeyTerm`` is
-    canonical: there is one instance per raw string within a vocabulary, deduped by the
-    owning :class:`Vocabulary`. Its ``src`` is that vocabulary (which back-references the
-    dataset and provides the active ``pipelines``), and ``examples`` records every example
-    that regards the term.
+    canonical: one instance per raw string per dataset, interned by the dataset. Membership
+    is two symmetric many-to-many sets: ``vocabularies`` (the lexicons that contain it) and
+    ``examples`` (the examples that regard it). Its ``src`` is the dataset, which provides
+    the active ``pipelines``.
     """
 
     def __init__(
         self,
         raw: str,
         *,
-        src: Vocabulary,
+        src: Dataset,
     ):
-        # KeyTerm reuses Text's machinery but is sourced from a Vocabulary; Text only reads
+        # KeyTerm reuses Text's machinery but is sourced from a Dataset; Text only reads
         # ``src.pipelines``, so cast to satisfy the Example-typed base signature.
         super().__init__(raw=raw, src=cast("Example", src), text_type=TextType.KEY_TERM)
-        # Examples that regard this term. Mutable back-reference; intentionally *not* part
-        # of __hash__ (which stays (raw, text_type)), so canonical dedup-by-raw is unaffected.
+        # Membership back-references. Mutable and intentionally *not* part of __hash__
+        # (which stays (raw, text_type)), so canonical dedup-by-raw is unaffected.
         self.examples: set[Example] = set()
+        self.vocabularies: set[Vocabulary] = set()
 
     def __repr__(self):
         text = self.raw if len(self.raw) <= 46 else self.raw[:46] + "..."

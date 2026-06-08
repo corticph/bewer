@@ -292,9 +292,38 @@ class TestVocabularyCombine:
         ds.add_vocabulary(Vocabulary.from_list("v", ["alpha"]) + Vocabulary.from_list("v", ["beta"]))
         assert {kt.raw for kt in ds.get_vocabulary("v").key_terms} == {"alpha", "beta"}
 
-    def test_combine_different_names_raises(self):
-        with pytest.raises(ValueError, match="different names"):
-            Vocabulary.from_list("a", ["x"]).combine(Vocabulary.from_list("b", ["y"]))
+    def test_combine_across_names_with_explicit_name(self):
+        ds = Dataset()
+        ds.add("alpha beta", "alpha beta")
+        drugs = Vocabulary.from_list("drugs", ["alpha"])
+        anatomy = Vocabulary.from_list("anatomy", ["beta"])
+        ds.add_vocabulary(drugs.combine(anatomy, name="medical"))
+        assert {kt.raw for kt in ds.get_vocabulary("medical").key_terms} == {"alpha", "beta"}
+
+    def test_shared_term_reports_multiple_vocabularies(self):
+        """A term reachable via several registered vocabularies is one canonical object."""
+        ds = Dataset()
+        ds.add("alpha beta", "alpha beta")
+        ds.add_vocabulary_from_list("drugs", ["alpha"])
+        ds.add_vocabulary_from_list("anatomy", ["beta"])
+        ds.add_vocabulary(ds.get_vocabulary("drugs").combine(ds.get_vocabulary("anatomy"), name="medical"))
+        (alpha,) = (kt for kt in ds.key_terms.values() if kt.raw == "alpha")
+        assert alpha is ds.key_terms["alpha"]
+        assert {v.name for v in alpha.vocabularies} == {"drugs", "medical"}
+        assert alpha in ds.get_vocabulary("drugs").key_terms
+        assert alpha in ds.get_vocabulary("medical").key_terms
+
+    def test_combine_preserves_annotations(self):
+        """Combining vocabularies that carry per-example annotations does not lose them."""
+        ds = Dataset()
+        ds.add("the alpha", "the alpha", key_terms={"drugs": ["alpha"]})
+        ds.add("the beta", "the beta", key_terms={"anatomy": ["beta"]})
+        ds.add_vocabulary(ds.get_vocabulary("drugs").combine(ds.get_vocabulary("anatomy"), name="medical"))
+        medical = ds.get_vocabulary("medical")
+        assert {kt.raw for kt in medical.key_terms} == {"alpha", "beta"}
+        # only_local scoping still works per example through the combined vocabulary.
+        assert len(ds[0].ref.get_key_term_matches("medical", only_local_matches=True)) == 1
+        assert len(ds[1].ref.get_key_term_matches("medical", only_local_matches=True)) == 1
 
     def test_combine_result_is_detached_even_when_operands_bound(self):
         ds = Dataset()

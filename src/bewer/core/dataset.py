@@ -5,13 +5,14 @@ from functools import cached_property
 from importlib import resources
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Union, overload
+from typing import TYPE_CHECKING, Iterable, Optional, Union, overload
 
 import pandas as pd
 from omegaconf import OmegaConf
 
 from bewer.configs.resolve import resolve_pipelines
 from bewer.core.example import Example
+from bewer.core.key_term import KeyTerm
 from bewer.core.text import TokenList
 from bewer.core.vocabulary import Vocabulary, VocabularyExtractor
 from bewer.metrics.base import MetricCollection
@@ -60,6 +61,7 @@ class Dataset(object):
         self._pipelines = resolve_pipelines(self.config)
         self.examples = []
         self._vocabularies: dict[str, Vocabulary] = {}
+        self._key_terms_cache: Optional[dict[str, KeyTerm]] = None
         self.metrics = MetricCollection(self)
 
     @property
@@ -216,10 +218,55 @@ class Dataset(object):
         self._vocabularies[name] = vocabulary
         return vocabulary
 
+    @property
+    def key_terms(self) -> dict[str, KeyTerm]:
+        """Canonical key terms, interned per raw string with membership wired (lazy, cached).
+
+        One :class:`KeyTerm` per raw string; each carries the ``vocabularies`` that contain it
+        and the ``examples`` that regard it. Shared across vocabularies, so a term added via
+        several vocabularies (or by combining them) is a single object with multiple
+        ``vocabularies`` entries.
+        """
+        if self._key_terms_cache is None:
+            self._key_terms_cache = self._resolve_key_terms()
+        return self._key_terms_cache
+
+    def _resolve_key_terms(self) -> dict[str, KeyTerm]:
+        """Intern canonical KeyTerms over all vocabularies and per-example annotations."""
+        registry: dict[str, KeyTerm] = {}
+
+        def intern(raw: str) -> KeyTerm:
+            kt = registry.get(raw)
+            if kt is None:
+                kt = registry[raw] = KeyTerm(raw, src=self)
+            return kt
+
+        # Map each annotation name to the vocabularies that draw per-example terms from it
+        # (a name maps to several once vocabularies are combined).
+        vocabs_by_annotation_name: dict[str, list[Vocabulary]] = {}
+        for vocabulary in self._vocabularies.values():
+            for raw, example in vocabulary._iter_sources():
+                kt = intern(raw)
+                kt.vocabularies.add(vocabulary)
+                if example is not None:
+                    kt.examples.add(example)
+            for name in vocabulary._annotation_names:
+                vocabs_by_annotation_name.setdefault(name, []).append(vocabulary)
+        for example in self.examples:
+            for name, raws in example._key_term_strings.items():
+                vocabs = vocabs_by_annotation_name.get(name, ())
+                for raw in raws:
+                    kt = intern(raw)
+                    kt.examples.add(example)
+                    for vocabulary in vocabs:
+                        kt.vocabularies.add(vocabulary)
+        return registry
+
     def _invalidate_caches(self) -> None:
         """Invalidate cached terms, tries, matches, and metrics after a mutation."""
         self.__dict__.pop("refs", None)
         self.__dict__.pop("hyps", None)
+        self._key_terms_cache = None
         for vocabulary in self._vocabularies.values():
             vocabulary.invalidate_caches()
         self.metrics._metric_cache.clear()

@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import logging
-from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Mapping, Optional, cast
 
-from bewer.core.caching import pipeline_cached_property
 from bewer.core.key_term import (
     KeyTerm,
     KeyTermTrie,
@@ -33,27 +31,24 @@ VocabularyExtractor = Callable[["Dataset"], "Mapping[int, Iterable[str]]"]
 
 
 class Vocabulary:
-    """A named source of key terms that can locate its terms within a text.
+    """A named lexicon of key terms that can locate its terms within a text.
 
-    A vocabulary unifies two concerns: *extraction* (where the key terms come from) and
-    *matching* (finding those terms in a text's tokens). Terms may come from three sources,
-    combined freely as a union:
-
-    - explicit enumeration (:meth:`from_list`, :meth:`from_file`),
-    - lazy extraction by a function (:meth:`from_function`), and
-    - per-example annotations (the ``key_terms`` passed when examples are added).
+    A vocabulary holds *sources* of terms — explicit enumeration (:meth:`from_list`,
+    :meth:`from_file`) and lazy extraction by a function (:meth:`from_function`) — plus the
+    per-example annotations (the ``key_terms`` passed when examples are added) that name it.
+    The terms themselves are canonical :class:`KeyTerm` objects owned by the dataset (see
+    :attr:`Dataset.key_terms`); :attr:`key_terms` is this lexicon's slice of them. A vocabulary
+    does not hold the example-regard links — those live on the canonical term.
 
     Whether a term is matched everywhere or only within the examples that regard it is a
-    *matching-time policy* controlled by the ``only_local_matches`` flag of :meth:`find_in`,
-    not a storage distinction. A single Aho-Corasick trie is built over the union of terms;
-    local scoping is a post-hoc filter.
+    *matching-time policy* controlled by the ``only_local_matches`` flag of :meth:`find_in`.
+    A single Aho-Corasick trie is built over the lexicon; local scoping is a post-hoc filter.
 
     Vocabularies are constructed detached from any dataset; the back-reference is wired when
-    the vocabulary is registered via :meth:`Dataset.add_vocabulary`.
-
-    Two same-name vocabularies are *combinable*: :meth:`combine` (and the ``+`` operator)
-    unions their sources into a new detached vocabulary. Registering a vocabulary whose name
-    is already present folds its sources into the existing instance rather than replacing it.
+    the vocabulary is registered via :meth:`Dataset.add_vocabulary`. Vocabularies are
+    *combinable*: :meth:`combine` (and ``+``) unions their sources into a new detached
+    vocabulary (names need not match); registering a vocabulary whose name already exists
+    folds its sources into the existing instance.
     """
 
     def __init__(
@@ -77,29 +72,18 @@ class Vocabulary:
         # Lazily-run extractors; a vocabulary may accumulate several when same-name
         # vocabularies are combined (see :meth:`combine`). All are run and their terms unioned.
         self._extractors: list[VocabularyExtractor] = [extractor] if extractor is not None else []
-        # Canonical KeyTerm instances, keyed by raw string (rebuilt on each resolution).
-        self._terms_by_raw: dict[str, KeyTerm] = {}
-        # Caches keyed by pipeline state. The trie is keyed by pipeline only; matches are
-        # additionally keyed by example, text type, and the matching flags.
+        # Names under which per-example annotations feed this lexicon. Just its own name until
+        # combined: a combined vocabulary draws annotations from all its constituents' names.
+        self._annotation_names: set[str] = {name}
+        # Matching caches keyed by pipeline state. The trie is keyed by pipeline only; matches
+        # are additionally keyed by example, text type, and the matching flags.
         self._trie_cache: dict[tuple, Optional[KeyTermTrie]] = {}
         self._match_cache: dict[tuple, list[Match]] = {}
-        # Per-pipeline cache for the `key_terms` descriptor (see pipeline_cached_property).
-        self._cache_key_terms: dict = {}
 
     @property
     def dataset(self) -> Optional[Dataset]:
         """The dataset this vocabulary is registered with, if any."""
         return self._dataset
-
-    @property
-    def pipelines(self):
-        """The bound dataset's preprocessing pipelines."""
-        if self._dataset is None:
-            raise ValueError(f"Vocabulary '{self.name}' is not bound to a dataset.")
-        return self._dataset.pipelines
-
-    # The pipeline caching descriptor reads `instance._pipelines`; alias it to the property.
-    _pipelines = pipelines
 
     @classmethod
     def from_list(cls, name: str, terms: Iterable[str]) -> Vocabulary:
@@ -129,20 +113,18 @@ class Vocabulary:
             raise TypeError("fn must be callable")
         return cls(name, extractor=fn)
 
-    def combine(self, other: Vocabulary) -> Vocabulary:
-        """Combine with another same-name vocabulary into a new detached vocabulary.
+    def combine(self, other: Vocabulary, *, name: Optional[str] = None) -> Vocabulary:
+        """Combine with another vocabulary into a new detached vocabulary named ``name``.
 
-        The result unions both vocabularies' explicit terms and extractors. Per-example
-        annotations live on the examples (keyed by name) and so are shared automatically. The
-        result is detached regardless of the operands' binding; it is bound when registered
-        via :meth:`Dataset.add_vocabulary`.
-
-        Raises:
-            ValueError: If the two vocabularies have different names.
+        The result unions both vocabularies' explicit terms, extractors, and the annotation
+        names they draw from (so per-example annotations under either constituent's name flow
+        into the combined lexicon); ``name`` defaults to this vocabulary's name. The names need
+        not match — terms are canonical at the
+        dataset level, so a combined vocabulary genuinely contains the same shared :class:`KeyTerm`
+        objects (each then listing the combined vocabulary among its ``vocabularies``). The
+        result is detached regardless of the operands' binding; it is bound when registered.
         """
-        if other.name != self.name:
-            raise ValueError(f"Cannot combine vocabularies with different names: '{self.name}' and '{other.name}'.")
-        combined = Vocabulary(self.name)
+        combined = Vocabulary(name if name is not None else self.name)
         combined._merge_sources(self)
         combined._merge_sources(other)
         return combined
@@ -151,43 +133,24 @@ class Vocabulary:
         return self.combine(other)
 
     def _merge_sources(self, other: Vocabulary) -> None:
-        """Fold another vocabulary's explicit terms and extractors into this one, in place."""
+        """Fold another vocabulary's sources (explicit terms, extractors, annotation names) in place."""
         self._explicit_terms |= other._explicit_terms
         self._extractors += other._extractors
+        self._annotation_names |= other._annotation_names
 
-    @pipeline_cached_property(NORMALIZER_NAME)
-    def key_terms(self, _normalizer) -> set[KeyTerm]:
-        """The vocabulary's key terms, resolved (and cached) per active pipeline.
-
-        ``_normalizer`` is intentionally unused: only the per-pipeline cache key matters,
-        since key terms are normalized through the active pipeline when matched.
-        """
-        return self._resolve_key_terms()
-
-    def _resolve_key_terms(self) -> set[KeyTerm]:
-        """Build the canonical KeyTerms (deduped by raw) and wire their example back-refs."""
+    @property
+    def key_terms(self) -> set[KeyTerm]:
+        """This lexicon's slice of the dataset's canonical key terms."""
         if self._dataset is None:
             raise ValueError(f"Vocabulary '{self.name}' is not bound to a dataset.")
+        return {kt for kt in self._dataset.key_terms.values() if self in kt.vocabularies}
 
-        # Collect, per raw string, the set of examples that regard it (empty => global).
-        associations: dict[str, set[Example]] = defaultdict(set)
+    def _iter_sources(self) -> Iterator[tuple[str, Optional[Example]]]:
+        """Yield (raw, example) from this vocabulary's own sources; example is None for explicit terms."""
         for raw in self._explicit_terms:
-            associations.setdefault(raw, set())
+            yield raw, None
         for position, extractor in enumerate(self._extractors, start=1):
-            for raw, example in self._extracted_associations(extractor, position):
-                associations[raw].add(example)
-        for example in self._dataset:
-            for raw in example._key_term_strings.get(self.name, ()):
-                associations[raw].add(example)
-
-        self._terms_by_raw = {}
-        key_terms: set[KeyTerm] = set()
-        for raw, examples in associations.items():
-            key_term = KeyTerm(raw, src=self)
-            key_term.examples.update(examples)
-            self._terms_by_raw[raw] = key_term
-            key_terms.add(key_term)
-        return key_terms
+            yield from self._extracted_associations(extractor, position)
 
     def _extracted_associations(self, extractor: VocabularyExtractor, position: int) -> Iterator[tuple[str, Example]]:
         """Yield (raw, example) pairs from a single extractor's per-example mapping.
@@ -279,11 +242,9 @@ class Vocabulary:
         self._dataset = dataset
 
     def invalidate_caches(self) -> None:
-        """Drop cached terms, tries, and matches so they are rebuilt on next access."""
+        """Drop cached tries and matches so they are rebuilt on next access."""
         self._trie_cache.clear()
         self._match_cache.clear()
-        self._terms_by_raw.clear()
-        self._cache_key_terms.clear()
 
     @staticmethod
     def _pipeline_key(normalized: bool, add_capitalized: bool) -> tuple:
