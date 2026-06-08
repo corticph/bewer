@@ -1,5 +1,3 @@
-"""Tests for bewer.core.key_term module."""
-
 from bewer.core.key_term import KeyTerm, KeyTermTrie, Match, _remove_subset_matches
 from bewer.core.text import Text, TextType, TokenList
 

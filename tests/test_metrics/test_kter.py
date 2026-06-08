@@ -1,5 +1,3 @@
-"""Tests for bewer.metrics.kwer module."""
-
 import logging
 
 import pytest

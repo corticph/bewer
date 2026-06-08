@@ -15,7 +15,7 @@ __all__ = ["KeyTerm", "Match"]
 
 
 class KeyTerm(Text):
-    """A key term that can locate itself within reference text tokens.
+    """A canonical key term belonging to a :class:`Vocabulary`.
 
     Inherits standardized, tokens, and pipeline caching from Text. A ``KeyTerm`` is
     canonical: there is one instance per raw string within a vocabulary, deduped by the

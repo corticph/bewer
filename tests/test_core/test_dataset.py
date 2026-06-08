@@ -1,5 +1,3 @@
-"""Tests for bewer.core.dataset module."""
-
 import os
 import tempfile
 

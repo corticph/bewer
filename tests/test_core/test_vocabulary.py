@@ -1,5 +1,3 @@
-"""Tests for bewer.core.vocabulary and its integration with Dataset."""
-
 import tempfile
 from pathlib import Path
 
@@ -137,14 +135,14 @@ class TestLocalOnlyMatches:
 
 
 class TestFunctionExtraction:
-    def test_global_extractor_is_lazy_and_cached(self):
+    def test_extractor_is_lazy_and_cached(self):
         ds = Dataset()
         ds.add("paracetamol and ibuprofen", "paracetamol and ibuprofen")
         calls = []
 
         def extractor(dataset):
             calls.append(1)
-            return {tok for ex in dataset for tok in ex.ref.raw.split()}
+            return {i: ex.ref.raw.split() for i, ex in enumerate(dataset)}
 
         ds.add_vocabulary_from_function("derived", extractor)
         assert calls == []  # not invoked until terms are needed
@@ -155,13 +153,12 @@ class TestFunctionExtraction:
         ds[0].ref.get_key_term_matches("derived")
         assert len(calls) == 1  # cached, not re-extracted
 
-    def test_global_extractor_terms_have_no_example_backrefs(self):
+    def test_non_mapping_extractor_result_raises(self):
         ds = Dataset()
         ds.add("alpha beta", "alpha beta")
-        ds.add_vocabulary_from_function("derived", lambda d: {"alpha"})
-        (kt,) = ds.get_vocabulary("derived").key_terms
-        assert kt.raw == "alpha"
-        assert kt.examples == set()
+        ds.add_vocabulary_from_function("derived", lambda d: ["alpha"])
+        with pytest.raises(TypeError):
+            ds.get_vocabulary("derived").key_terms
 
     def test_local_extractor_mapping_associates_terms_with_examples(self):
         """A mapping of example index -> terms produces local terms scoped to those examples."""
@@ -183,8 +180,8 @@ class TestFunctionExtraction:
         extractions = []
 
         def extractor(dataset):
-            terms = {ex.ref.raw for ex in dataset}
-            extractions.append(set(terms))
+            terms = {i: [ex.ref.raw] for i, ex in enumerate(dataset)}
+            extractions.append({raw for raws in terms.values() for raw in raws})
             return terms
 
         ds.add_vocabulary_from_function("derived", extractor)
@@ -194,10 +191,10 @@ class TestFunctionExtraction:
         assert len(ds[1].ref.get_key_term_matches("derived")) == 1
         assert extractions == [{"alpha"}, {"alpha", "beta"}]
 
-    def test_empty_extractor_result_is_global_noop(self):
+    def test_empty_extractor_result_is_noop(self):
         ds = Dataset()
         ds.add("alpha", "alpha")
-        ds.add_vocabulary_from_function("derived", lambda d: [])
+        ds.add_vocabulary_from_function("derived", lambda d: {})
         assert ds.get_vocabulary("derived").key_terms == set()
         assert ds[0].ref.get_key_term_matches("derived") == []
 
@@ -214,19 +211,23 @@ class TestMatchKeyTerms:
 
 
 class TestVocabularyRegistration:
-    def test_duplicate_name_raises(self):
+    def test_duplicate_name_folds_into_existing_instance(self):
+        """Registering an existing name folds in its terms and returns the same instance."""
         ds = Dataset()
-        ds.add_vocabulary_from_list("v", ["a"])
-        with pytest.raises(ValueError, match="already registered"):
-            ds.add_vocabulary_from_list("v", ["b"])
+        ds.add("a b", "a b")
+        first = ds.add_vocabulary_from_list("v", ["a"])
+        second = ds.add_vocabulary_from_list("v", ["b"])
+        assert second is first
+        assert {kt.raw for kt in ds.get_vocabulary("v").key_terms} == {"a", "b"}
 
-    def test_register_over_annotation_name_raises(self):
-        """add_vocabulary refuses to overwrite a name already auto-registered by annotations."""
+    def test_register_over_annotation_name_combines(self):
+        """Registering a vocabulary over an annotation-registered name folds in its terms."""
         ds = Dataset()
         ds.add("the fox", "the fox", key_terms={"animals": ["fox"]})
-        assert isinstance(ds.get_vocabulary("animals"), Vocabulary)
-        with pytest.raises(ValueError, match="already registered"):
-            ds.add_vocabulary_from_list("animals", ["dog"])
+        annotation_vocab = ds.get_vocabulary("animals")
+        registered = ds.add_vocabulary_from_list("animals", ["dog"])
+        assert registered is annotation_vocab
+        assert {kt.raw for kt in ds.get_vocabulary("animals").key_terms} == {"fox", "dog"}
 
     def test_annotation_after_explicit_merges(self):
         """Annotating an existing vocabulary's name reuses it and merges the terms."""
@@ -244,6 +245,64 @@ class TestVocabularyRegistration:
         ds = Dataset()
         vocab = ds.add_vocabulary(Vocabulary.from_list("animals", ["fox"]))
         assert vocab.dataset is ds
+
+
+class TestVocabularyCombine:
+    def test_list_and_function_sources_combine(self):
+        ds = Dataset()
+        ds.add("alpha beta", "alpha beta")
+        ds.add_vocabulary_from_list("v", ["alpha"])
+        ds.add_vocabulary_from_function("v", lambda d: {0: ["beta"]})
+        assert {kt.raw for kt in ds.get_vocabulary("v").key_terms} == {"alpha", "beta"}
+
+    def test_file_and_function_sources_combine(self):
+        ds = Dataset()
+        ds.add("alpha beta", "alpha beta")
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("alpha\n")
+            path = f.name
+        try:
+            ds.add_vocabulary_from_file("v", path)
+            ds.add_vocabulary_from_function("v", lambda d: {0: ["beta"]})
+            assert {kt.raw for kt in ds.get_vocabulary("v").key_terms} == {"alpha", "beta"}
+        finally:
+            Path(path).unlink()
+
+    def test_two_extractors_both_run_and_union(self):
+        ds = Dataset()
+        ds.add("alpha beta", "alpha beta")
+        ds.add_vocabulary_from_function("v", lambda d: {0: ["alpha"]})
+        ds.add_vocabulary_from_function("v", lambda d: {0: ["beta"]})
+        assert {kt.raw for kt in ds.get_vocabulary("v").key_terms} == {"alpha", "beta"}
+
+    def test_combine_returns_detached_union(self):
+        a = Vocabulary.from_list("v", ["alpha"])
+        b = Vocabulary.from_function("v", lambda d: {0: ["beta"]})
+        combined = a.combine(b)
+        assert combined.name == "v"
+        assert combined.dataset is None  # detached until registered
+        ds = Dataset()
+        ds.add("alpha beta", "alpha beta")
+        ds.add_vocabulary(combined)
+        assert {kt.raw for kt in ds.get_vocabulary("v").key_terms} == {"alpha", "beta"}
+
+    def test_add_operator_combines(self):
+        ds = Dataset()
+        ds.add("alpha beta", "alpha beta")
+        ds.add_vocabulary(Vocabulary.from_list("v", ["alpha"]) + Vocabulary.from_list("v", ["beta"]))
+        assert {kt.raw for kt in ds.get_vocabulary("v").key_terms} == {"alpha", "beta"}
+
+    def test_combine_different_names_raises(self):
+        with pytest.raises(ValueError, match="different names"):
+            Vocabulary.from_list("a", ["x"]).combine(Vocabulary.from_list("b", ["y"]))
+
+    def test_combine_result_is_detached_even_when_operands_bound(self):
+        ds = Dataset()
+        ds.add("alpha beta", "alpha beta")
+        a = ds.add_vocabulary_from_list("v", ["alpha"])
+        assert a.dataset is ds
+        combined = a.combine(Vocabulary.from_list("v", ["beta"]))
+        assert combined.dataset is None
 
 
 class TestCacheInvalidation:

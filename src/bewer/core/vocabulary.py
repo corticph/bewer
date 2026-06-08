@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Mapping, Optional, Union, cast
+from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Mapping, Optional, cast
 
 from bewer.core.caching import pipeline_cached_property
 from bewer.core.key_term import (
@@ -26,11 +26,10 @@ __all__ = ["Vocabulary", "VocabularyExtractor"]
 logger = logging.getLogger(__name__)
 
 
-# A vocabulary extractor derives key terms from a dataset on demand. Returning an iterable
-# of strings yields *global* terms (matched in every example, no example association).
-# Returning a mapping of example index -> terms yields *local* terms, each associated with
-# the given example. An empty result is treated as a global no-op.
-VocabularyExtractor = Callable[["Dataset"], Union[Iterable[str], "Mapping[int, Iterable[str]]"]]
+# A vocabulary extractor derives key terms from a dataset on demand. It returns a mapping of
+# example index -> terms; each term is associated with the given example. An empty mapping is
+# a no-op.
+VocabularyExtractor = Callable[["Dataset"], "Mapping[int, Iterable[str]]"]
 
 
 class Vocabulary:
@@ -51,6 +50,10 @@ class Vocabulary:
 
     Vocabularies are constructed detached from any dataset; the back-reference is wired when
     the vocabulary is registered via :meth:`Dataset.add_vocabulary`.
+
+    Two same-name vocabularies are *combinable*: :meth:`combine` (and the ``+`` operator)
+    unions their sources into a new detached vocabulary. Registering a vocabulary whose name
+    is already present folds its sources into the existing instance rather than replacing it.
     """
 
     def __init__(
@@ -65,13 +68,15 @@ class Vocabulary:
             name: The vocabulary name.
             terms: Explicit (global) key term strings. May be combined with ``extractor`` and
                 with per-example annotations.
-            extractor: A function ``(dataset) -> terms`` run lazily to extract additional
+            extractor: A function ``(dataset) -> mapping`` run lazily to extract additional
                 terms. May be combined with ``terms``; the final key term set is their union.
         """
         self.name = name
         self._dataset: Optional[Dataset] = None
         self._explicit_terms: set[str] = set(terms) if terms is not None else set()
-        self._extractor: Optional[VocabularyExtractor] = extractor
+        # Lazily-run extractors; a vocabulary may accumulate several when same-name
+        # vocabularies are combined (see :meth:`combine`). All are run and their terms unioned.
+        self._extractors: list[VocabularyExtractor] = [extractor] if extractor is not None else []
         # Canonical KeyTerm instances, keyed by raw string (rebuilt on each resolution).
         self._terms_by_raw: dict[str, KeyTerm] = {}
         # Caches keyed by pipeline state. The trie is keyed by pipeline only; matches are
@@ -124,6 +129,32 @@ class Vocabulary:
             raise TypeError("fn must be callable")
         return cls(name, extractor=fn)
 
+    def combine(self, other: Vocabulary) -> Vocabulary:
+        """Combine with another same-name vocabulary into a new detached vocabulary.
+
+        The result unions both vocabularies' explicit terms and extractors. Per-example
+        annotations live on the examples (keyed by name) and so are shared automatically. The
+        result is detached regardless of the operands' binding; it is bound when registered
+        via :meth:`Dataset.add_vocabulary`.
+
+        Raises:
+            ValueError: If the two vocabularies have different names.
+        """
+        if other.name != self.name:
+            raise ValueError(f"Cannot combine vocabularies with different names: '{self.name}' and '{other.name}'.")
+        combined = Vocabulary(self.name)
+        combined._merge_sources(self)
+        combined._merge_sources(other)
+        return combined
+
+    def __add__(self, other: Vocabulary) -> Vocabulary:
+        return self.combine(other)
+
+    def _merge_sources(self, other: Vocabulary) -> None:
+        """Fold another vocabulary's explicit terms and extractors into this one, in place."""
+        self._explicit_terms |= other._explicit_terms
+        self._extractors += other._extractors
+
     @pipeline_cached_property(NORMALIZER_NAME)
     def key_terms(self, _normalizer) -> set[KeyTerm]:
         """The vocabulary's key terms, resolved (and cached) per active pipeline.
@@ -142,12 +173,9 @@ class Vocabulary:
         associations: dict[str, set[Example]] = defaultdict(set)
         for raw in self._explicit_terms:
             associations.setdefault(raw, set())
-        if self._extractor is not None:
-            for raw, example in self._extracted_associations():
-                if example is None:
-                    associations.setdefault(raw, set())
-                else:
-                    associations[raw].add(example)
+        for position, extractor in enumerate(self._extractors, start=1):
+            for raw, example in self._extracted_associations(extractor, position):
+                associations[raw].add(example)
         for example in self._dataset:
             for raw in example._key_term_strings.get(self.name, ()):
                 associations[raw].add(example)
@@ -161,31 +189,25 @@ class Vocabulary:
             key_terms.add(key_term)
         return key_terms
 
-    def _extracted_associations(self) -> Iterator[tuple[str, Optional[Example]]]:
-        """Yield (raw, example) pairs from the extractor; example is None for global terms."""
-        assert self._extractor is not None and self._dataset is not None
+    def _extracted_associations(self, extractor: VocabularyExtractor, position: int) -> Iterator[tuple[str, Example]]:
+        """Yield (raw, example) pairs from a single extractor's per-example mapping.
+
+        ``position`` is the extractor's 1-based position within :attr:`_extractors`, used only
+        to attribute errors to a specific extractor when a vocabulary combines several.
+        """
+        assert self._dataset is not None
         try:
-            extracted = self._extractor(self._dataset)
+            extracted = extractor(self._dataset)
         except Exception as e:
-            raise RuntimeError(f"Error running extractor for vocabulary '{self.name}': {e}") from e
-        if isinstance(extracted, Mapping):
-            for index, terms in cast(Mapping[int, Iterable[str]], extracted).items():
-                example = self._dataset[index]
-                for term in terms:
-                    yield term, example
-            return
-        if isinstance(extracted, str) or not isinstance(extracted, Iterable):
+            raise RuntimeError(f"Error running extractor {position} for vocabulary '{self.name}': {e}") from e
+        if not isinstance(extracted, Mapping):
             raise TypeError(
-                f"Extractor for vocabulary '{self.name}' must return an iterable of strings or a "
-                f"mapping of example index to terms."
+                f"Extractor {position} for vocabulary '{self.name}' must return a mapping of example index to terms."
             )
-        for term in extracted:
-            if not isinstance(term, str):
-                raise TypeError(
-                    f"Extractor for vocabulary '{self.name}' must return an iterable of strings or a "
-                    f"mapping of example index to terms, but got element of type {type(term)}."
-                )
-            yield term, None
+        for index, terms in cast(Mapping[int, Iterable[str]], extracted).items():
+            example = self._dataset[index]
+            for term in terms:
+                yield term, example
 
     def find_in(
         self,

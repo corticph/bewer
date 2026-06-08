@@ -149,17 +149,21 @@ class Dataset(object):
     def add_vocabulary(self, vocabulary: Vocabulary) -> Vocabulary:
         """Register a pre-built vocabulary with the dataset.
 
+        If a vocabulary with the same name is already registered, the new one's sources
+        (explicit terms and extractors) are folded into the existing instance rather than
+        replacing it, and that existing instance is returned.
+
         Args:
             vocabulary: The vocabulary to register.
 
         Returns:
-            The registered vocabulary.
-
-        Raises:
-            ValueError: If a vocabulary with the same name is already registered.
+            The registered vocabulary (the existing instance when names collide).
         """
-        if vocabulary.name in self._vocabularies:
-            raise ValueError(f"Vocabulary '{vocabulary.name}' is already registered.")
+        existing = self._vocabularies.get(vocabulary.name)
+        if existing is not None:
+            existing._merge_sources(vocabulary)
+            self._invalidate_caches()
+            return existing
         vocabulary._bind(self)
         self._vocabularies[vocabulary.name] = vocabulary
         self._invalidate_caches()

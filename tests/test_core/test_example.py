@@ -1,8 +1,4 @@
-"""Tests for bewer.core.example module."""
-
 import logging
-
-import pytest
 
 from bewer.core.text import Text, TextType
 
@@ -175,15 +171,15 @@ class TestExampleHash:
 class TestTextGetKeyTermMatches:
     """Tests for Text.get_key_term_matches() using global and local key terms."""
 
-    def test_local_name_cannot_be_reused_as_global(self, sample_dataset):
-        """A name used as a per-example (local) vocab cannot be reused as a global vocab."""
+    def test_local_name_reused_as_global_combines(self, sample_dataset):
+        """A name used as a per-example (local) vocab combines with a later global registration."""
         sample_dataset.add(
             "the quick brown fox",
             "the quick brown dog",
             key_terms={"animals": ["fox"]},
         )
-        with pytest.raises(ValueError, match="already registered"):
-            sample_dataset.add_vocabulary_from_list("animals", ["brown"])
+        sample_dataset.add_vocabulary_from_list("animals", ["brown"])
+        assert {kt.raw for kt in sample_dataset.get_vocabulary("animals").key_terms} == {"fox", "brown"}
 
     def test_global_only_key_terms_no_warning(self, sample_dataset, caplog):
         """Global key terms (no local) produce matches without a not-found warning."""

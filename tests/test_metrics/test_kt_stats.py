@@ -1,5 +1,3 @@
-"""Tests for bewer.metrics._kt_stats module."""
-
 import pytest
 
 from bewer import Dataset
