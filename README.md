@@ -66,3 +66,17 @@ dataset.metrics.list_metrics()
 ```python
 print(f"WER: {dataset.metrics.wer().value:.2%}")
 ```
+
+**Freezing**
+
+Requesting a metric *freezes* the dataset: its contents can no longer change, so further
+`add()`/`load_*()` calls raise `DatasetFrozenError`. Use `clone()` for a fresh, modifiable
+copy to keep building.
+
+```python
+dataset.metrics.wer()       # freezes the dataset
+dataset.add(ref, hyp)       # raises DatasetFrozenError
+
+extended = dataset.clone()  # modifiable copy with the same data
+extended.add(ref, hyp)      # works
+```
