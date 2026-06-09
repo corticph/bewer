@@ -69,27 +69,14 @@ print(f"WER: {dataset.metrics.wer().value:.2%}")
 
 **Freezing**
 
-A dataset has two phases. While *building*, you add data and key term vocabularies freely.
-The first time you request a metric, the dataset is **frozen** so that its contents — and
-the metric results computed from them — can no longer change underneath you. Any further
-attempt to add data raises `DatasetFrozenError`:
+Requesting a metric *freezes* the dataset: its contents can no longer change, so further
+`add()`/`load_*()` calls raise `DatasetFrozenError`. Use `clone()` for a fresh, modifiable
+copy to keep building.
 
 ```python
-from bewer import DatasetFrozenError
-
 dataset.metrics.wer()       # freezes the dataset
-dataset.is_frozen              # True
+dataset.add(ref, hyp)       # raises DatasetFrozenError
 
-try:
-    dataset.add(ref, hyp)   # raises DatasetFrozenError
-except DatasetFrozenError:
-    ...
-```
-
-To keep modifying the data, use `clone()` to get a fresh, modifiable copy with clean caches:
-
-```python
-extended = dataset.clone()  # unfrozen copy, same examples and vocabularies
+extended = dataset.clone()  # modifiable copy with the same data
 extended.add(ref, hyp)      # works
-print(f"WER: {extended.metrics.wer().value:.2%}")
 ```
