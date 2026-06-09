@@ -81,7 +81,7 @@ class Dataset(object):
         return self._pipelines
 
     @property
-    def frozen(self) -> bool:
+    def is_frozen(self) -> bool:
         """Whether the dataset is frozen (immutable). Frozen datasets reject new data."""
         return self._frozen
 

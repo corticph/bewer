@@ -78,7 +78,7 @@ attempt to add data raises `DatasetFrozenError`:
 from bewer import DatasetFrozenError
 
 dataset.metrics.wer()       # freezes the dataset
-dataset.frozen              # True
+dataset.is_frozen              # True
 
 try:
     dataset.add(ref, hyp)   # raises DatasetFrozenError

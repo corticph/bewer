@@ -409,35 +409,35 @@ class TestDatasetFreeze:
 
     def test_new_dataset_not_frozen(self, empty_dataset):
         """A freshly created dataset is not frozen."""
-        assert empty_dataset.frozen is False
+        assert empty_dataset.is_frozen is False
 
     def test_requesting_metric_freezes(self, sample_dataset):
         """Requesting a metric freezes the dataset."""
-        assert sample_dataset.frozen is False
+        assert sample_dataset.is_frozen is False
         sample_dataset.metrics.wer()
-        assert sample_dataset.frozen is True
+        assert sample_dataset.is_frozen is True
 
     def test_accessing_metric_factory_does_not_freeze(self, sample_dataset):
         """Referencing the metric factory without calling it does not freeze."""
         _ = sample_dataset.metrics.wer  # bound factory, not called
-        assert sample_dataset.frozen is False
+        assert sample_dataset.is_frozen is False
 
     def test_list_metrics_does_not_freeze(self, sample_dataset):
         """Listing metrics does not freeze the dataset."""
         sample_dataset.metrics.list_metrics()
-        assert sample_dataset.frozen is False
+        assert sample_dataset.is_frozen is False
 
     def test_example_metric_request_freezes(self, sample_dataset):
         """Requesting an example-level metric also freezes the dataset."""
         sample_dataset[0].metrics.wer()
-        assert sample_dataset.frozen is True
+        assert sample_dataset.is_frozen is True
 
     def test_manual_freeze(self, empty_dataset):
         """freeze() sets the frozen flag and is idempotent."""
         empty_dataset.freeze()
-        assert empty_dataset.frozen is True
+        assert empty_dataset.is_frozen is True
         empty_dataset.freeze()  # idempotent, no error
-        assert empty_dataset.frozen is True
+        assert empty_dataset.is_frozen is True
 
     def test_building_before_freeze_works(self, empty_dataset):
         """Data can be added freely before the dataset is frozen."""
@@ -499,17 +499,17 @@ class TestDatasetFreeze:
         empty_dataset.add("the quick brown fox", "the quick brown dog")
         with pytest.raises(ValueError):
             empty_dataset.metrics.ktr(vocab="missing")  # vocab not in dataset
-        assert empty_dataset.frozen is False
+        assert empty_dataset.is_frozen is False
         # Recovery works: add the vocab and successfully request the metric.
         empty_dataset.add_key_term_list("animals", ["fox"])
         assert empty_dataset.metrics.ktr(vocab="animals").value is not None
-        assert empty_dataset.frozen is True
+        assert empty_dataset.is_frozen is True
 
     def test_unknown_param_request_does_not_freeze(self, sample_dataset):
         """An unknown parameter raises and leaves the dataset unfrozen."""
         with pytest.raises(ValueError):
             sample_dataset.metrics.wer(bogus=True)
-        assert sample_dataset.frozen is False
+        assert sample_dataset.is_frozen is False
 
 
 class TestDatasetClone:
@@ -523,7 +523,7 @@ class TestDatasetClone:
     def test_clone_is_unfrozen(self, sample_dataset):
         sample_dataset.freeze()
         clone = sample_dataset.clone()
-        assert clone.frozen is False
+        assert clone.is_frozen is False
         clone.add("foo", "bar")  # modifiable
         assert len(clone) == len(sample_dataset) + 1
 
