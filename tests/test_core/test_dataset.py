@@ -494,6 +494,23 @@ class TestDatasetFreeze:
         with pytest.raises(DatasetFrozenError):
             sample_dataset.add("foo", "bar")
 
+    def test_failed_metric_request_does_not_freeze(self, empty_dataset):
+        """A metric request that raises (bad params) must leave the dataset modifiable."""
+        empty_dataset.add("the quick brown fox", "the quick brown dog")
+        with pytest.raises(ValueError):
+            empty_dataset.metrics.ktr(vocab="missing")  # vocab not in dataset
+        assert empty_dataset.frozen is False
+        # Recovery works: add the vocab and successfully request the metric.
+        empty_dataset.add_key_term_list("animals", ["fox"])
+        assert empty_dataset.metrics.ktr(vocab="animals").value is not None
+        assert empty_dataset.frozen is True
+
+    def test_unknown_param_request_does_not_freeze(self, sample_dataset):
+        """An unknown parameter raises and leaves the dataset unfrozen."""
+        with pytest.raises(ValueError):
+            sample_dataset.metrics.wer(bogus=True)
+        assert sample_dataset.frozen is False
+
 
 class TestDatasetClone:
     """Tests for Dataset.clone()."""

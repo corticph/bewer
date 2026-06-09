@@ -502,14 +502,13 @@ class MetricCollection(object):
 
         # Return factory function
         def metric_factory(**kwargs):
-            # Requesting a metric begins computation: freeze the dataset so its contents
-            # (and therefore the cached metric results) can no longer change underneath us.
-            self._src.freeze()
             # Resolve kwargs against all defaults for a canonical cache key
             resolved = METRIC_REGISTRY.resolve_params(name, **kwargs)
             try:
                 cache_key = (name, self._make_cache_key(**resolved))
                 if cache_key in self._metric_cache:
+                    # A cached metric only exists because a prior successful request already
+                    # froze the dataset, so the "cached implies frozen" invariant holds here.
                     return self._metric_cache[cache_key]
             except TypeError as e:
                 # Find non-hashable parameters for better error message
@@ -524,8 +523,13 @@ class MetricCollection(object):
                     f"Use hashable alternatives: tuple instead of list, frozenset instead of set, etc."
                 ) from e
 
-            # Create new metric instance
+            # Create new metric instance. This may raise on invalid/missing params; in that
+            # case no metric was obtained, so the dataset must be left modifiable.
             metric_instance = METRIC_REGISTRY.create_metric(name, src=self._src, **kwargs)
+
+            # A metric was successfully requested: freeze the dataset so its contents (and the
+            # cached metric results derived from them) can no longer change underneath us.
+            self._src.freeze()
 
             # Cache and return
             self._metric_cache[cache_key] = metric_instance
