@@ -6,7 +6,7 @@ import tempfile
 import pandas as pd
 import pytest
 
-from bewer.core.dataset import Dataset, TextList, TextTokenList
+from bewer.core.dataset import Dataset, DatasetFrozenError, TextList, TextTokenList
 from bewer.core.example import Example
 
 
@@ -402,3 +402,148 @@ class TestTextTokenList:
         from bewer.core.text import TokenList
 
         assert isinstance(flat, TokenList)
+
+
+class TestDatasetFreeze:
+    """Tests for the freeze lifecycle (frozen property, auto-freeze, mutation guards)."""
+
+    def test_new_dataset_not_frozen(self, empty_dataset):
+        """A freshly created dataset is not frozen."""
+        assert empty_dataset.frozen is False
+
+    def test_requesting_metric_freezes(self, sample_dataset):
+        """Requesting a metric freezes the dataset."""
+        assert sample_dataset.frozen is False
+        sample_dataset.metrics.wer()
+        assert sample_dataset.frozen is True
+
+    def test_accessing_metric_factory_does_not_freeze(self, sample_dataset):
+        """Referencing the metric factory without calling it does not freeze."""
+        _ = sample_dataset.metrics.wer  # bound factory, not called
+        assert sample_dataset.frozen is False
+
+    def test_list_metrics_does_not_freeze(self, sample_dataset):
+        """Listing metrics does not freeze the dataset."""
+        sample_dataset.metrics.list_metrics()
+        assert sample_dataset.frozen is False
+
+    def test_example_metric_request_freezes(self, sample_dataset):
+        """Requesting an example-level metric also freezes the dataset."""
+        sample_dataset[0].metrics.wer()
+        assert sample_dataset.frozen is True
+
+    def test_manual_freeze(self, empty_dataset):
+        """freeze() sets the frozen flag and is idempotent."""
+        empty_dataset.freeze()
+        assert empty_dataset.frozen is True
+        empty_dataset.freeze()  # idempotent, no error
+        assert empty_dataset.frozen is True
+
+    def test_building_before_freeze_works(self, empty_dataset):
+        """Data can be added freely before the dataset is frozen."""
+        empty_dataset.add("hello", "hi")
+        empty_dataset.add_key_term_list("v", ["hello"])
+        assert len(empty_dataset) == 1
+
+    def test_add_after_freeze_raises(self, sample_dataset):
+        """add() raises once the dataset is frozen."""
+        sample_dataset.freeze()
+        with pytest.raises(DatasetFrozenError, match="frozen Dataset"):
+            sample_dataset.add("foo", "bar")
+
+    def test_add_key_term_list_after_freeze_raises(self, sample_dataset):
+        sample_dataset.freeze()
+        with pytest.raises(DatasetFrozenError):
+            sample_dataset.add_key_term_list("v", ["foo"])
+
+    def test_load_pandas_after_freeze_raises(self, sample_dataset):
+        sample_dataset.freeze()
+        df = pd.DataFrame({"ref": ["a"], "hyp": ["b"]})
+        with pytest.raises(DatasetFrozenError):
+            sample_dataset.load_pandas(df)
+
+    def test_load_csv_after_freeze_raises(self, sample_dataset, tmp_path):
+        sample_dataset.freeze()
+        csv_path = tmp_path / "data.csv"
+        csv_path.write_text("ref,hyp\nhello,hi\n")
+        with pytest.raises(DatasetFrozenError):
+            sample_dataset.load_csv(str(csv_path))
+
+    def test_load_jsonl_after_freeze_raises(self, sample_dataset, tmp_path):
+        sample_dataset.freeze()
+        jsonl_path = tmp_path / "data.jsonl"
+        jsonl_path.write_text('{"ref": "hello", "hyp": "hi"}\n')
+        with pytest.raises(DatasetFrozenError):
+            sample_dataset.load_jsonl(str(jsonl_path))
+
+    def test_load_dataset_after_freeze_raises(self, sample_dataset):
+        sample_dataset.freeze()
+        with pytest.raises(DatasetFrozenError):
+            sample_dataset.load_dataset(None)
+
+    def test_add_key_term_file_after_freeze_raises(self, sample_dataset, tmp_path):
+        sample_dataset.freeze()
+        kt_path = tmp_path / "kt.txt"
+        kt_path.write_text("fox\n")
+        with pytest.raises(DatasetFrozenError):
+            sample_dataset.add_key_term_file("v", str(kt_path))
+
+    def test_add_after_metric_computation_raises(self, sample_dataset):
+        """End-to-end: computing a metric value then adding data raises."""
+        sample_dataset.metrics.wer().value
+        with pytest.raises(DatasetFrozenError):
+            sample_dataset.add("foo", "bar")
+
+
+class TestDatasetClone:
+    """Tests for Dataset.clone()."""
+
+    def test_clone_copies_examples(self, sample_dataset):
+        clone = sample_dataset.clone()
+        assert clone.refs.raw == sample_dataset.refs.raw
+        assert clone.hyps.raw == sample_dataset.hyps.raw
+
+    def test_clone_is_unfrozen(self, sample_dataset):
+        sample_dataset.freeze()
+        clone = sample_dataset.clone()
+        assert clone.frozen is False
+        clone.add("foo", "bar")  # modifiable
+        assert len(clone) == len(sample_dataset) + 1
+
+    def test_clone_is_independent(self, empty_dataset):
+        empty_dataset.add("hello", "hi")
+        clone = empty_dataset.clone()
+        clone.add("foo", "bar")
+        assert len(empty_dataset) == 1
+        assert len(clone) == 2
+
+    def test_clone_copies_global_vocab(self, empty_dataset):
+        empty_dataset.add("the quick brown fox", "the quick brown dog")
+        empty_dataset.add_key_term_list("animals", ["fox"])
+        clone = empty_dataset.clone()
+        assert "animals" in clone._global_key_term_vocabs
+        assert {kt.raw for kt in clone._global_key_term_vocabs["animals"]} == {"fox"}
+
+    def test_clone_copies_local_key_terms(self, empty_dataset):
+        empty_dataset.add("the quick brown fox", "the quick brown dog", key_terms={"animals": ["fox"]})
+        clone = empty_dataset.clone()
+        assert "animals" in clone[0].key_terms
+        assert {kt.raw for kt in clone[0].key_terms["animals"]} == {"fox"}
+
+    def test_clone_metric_values_match(self, dataset_with_errors):
+        original_value = dataset_with_errors.metrics.wer().value
+        clone = dataset_with_errors.clone()
+        assert clone.metrics.wer().value == original_value
+
+    def test_clone_then_extend_and_recompute(self, dataset_with_errors):
+        dataset_with_errors.metrics.wer()  # freeze original
+        clone = dataset_with_errors.clone()
+        clone.add("perfect", "perfect")
+        # New example reflected in the recomputed metric.
+        assert len(clone) == len(dataset_with_errors) + 1
+        assert clone.metrics.wer().value is not None
+
+    def test_clone_has_clean_metric_cache(self, sample_dataset):
+        sample_dataset.metrics.wer()
+        clone = sample_dataset.clone()
+        assert clone.metrics._metric_cache == {}

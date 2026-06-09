@@ -14,11 +14,15 @@ from bewer.core.key_term import KeyTerm, get_key_term_trie
 from bewer.core.text import TokenList
 from bewer.metrics.base import MetricCollection
 
-__all__ = ["Dataset", "TextList", "TextTokenList"]
+__all__ = ["Dataset", "DatasetFrozenError", "TextList", "TextTokenList"]
 
 if TYPE_CHECKING:
     from bewer.core.key_term import KeyTermTrie
     from bewer.core.text import Text
+
+
+class DatasetFrozenError(RuntimeError):
+    """Raised when attempting to modify a Dataset after it has been frozen."""
 
 
 def _is_list_literal(s):
@@ -57,15 +61,68 @@ class Dataset(object):
             lang_cfg = OmegaConf.load(self._get_language_config_path(language))
             self.config = OmegaConf.merge(self.config, lang_cfg)
         self._pipelines = resolve_pipelines(self.config)
+        self._init_blank_state()
+
+    def _init_blank_state(self) -> None:
+        """Initialize the mutable, modifiable state of the dataset.
+
+        Shared by __init__ and clone(). Assumes config_path, config and _pipelines
+        are already set. Leaves the dataset unfrozen with empty data and clean caches.
+        """
         self.examples = []
         self._global_key_term_vocabs = {}
         self._local_key_term_vocabs = {}
         self._cache_key_term_tries = {}
         self.metrics = MetricCollection(self)
+        self._frozen = False
 
     @property
     def pipelines(self):
         return self._pipelines
+
+    @property
+    def frozen(self) -> bool:
+        """Whether the dataset is frozen (immutable). Frozen datasets reject new data."""
+        return self._frozen
+
+    def freeze(self) -> None:
+        """Freeze the dataset, preventing any further modification.
+
+        Called automatically the first time a metric is requested. Idempotent. To keep
+        modifying the data after freezing, use clone() to get a fresh, modifiable copy.
+        """
+        self._frozen = True
+
+    def _check_not_frozen(self) -> None:
+        """Raise if the dataset is frozen. Guards all data-mutating methods."""
+        if self._frozen:
+            raise DatasetFrozenError(
+                "Cannot modify a frozen Dataset: metric computation has begun. "
+                "Use Dataset.clone() to get a fresh, modifiable copy."
+            )
+
+    def clone(self) -> "Dataset":
+        """Return a fresh, unfrozen copy of the dataset with clean caches.
+
+        The copy shares the resolved configuration and preprocessing pipelines (both
+        read-only at runtime) but rebuilds all examples, vocabularies and caches from
+        scratch, so it carries none of the original's cached metric results. Works
+        regardless of whether the original is frozen.
+
+        Returns:
+            Dataset: A modifiable copy containing the same examples and key term vocabularies.
+        """
+        new = object.__new__(Dataset)
+        new.config_path = self.config_path
+        new.config = self.config.copy()
+        new._pipelines = self._pipelines
+        new._init_blank_state()
+        for example in self.examples:
+            local = {name: [kt.raw for kt in terms] for name, terms in example.key_terms.items()}
+            new.add(example.ref.raw, example.hyp.raw, key_terms=local or None)
+        for name, terms in self._global_key_term_vocabs.items():
+            new.add_key_term_list(name, [kt.raw for kt in terms])
+        return new
 
     @cached_property
     def refs(self) -> "TextList":
@@ -87,6 +144,7 @@ class Dataset(object):
 
     def add(self, ref: str, hyp: str, key_terms: dict[str, list[str]] | None = None) -> None:
         """Add an example to the dataset."""
+        self._check_not_frozen()
         if key_terms is not None:
             key_terms = {name: set(kt_list) for name, kt_list in key_terms.items()}
             for name, kt_set in key_terms.items():
@@ -94,13 +152,18 @@ class Dataset(object):
                 self._update_local_key_term_vocab(name, kt_set)
         example = Example(ref, hyp, key_terms=key_terms, src=self, index=len(self))
         self.examples.append(example)
+        # Invalidate cached refs/hyps so they stay fresh while the dataset is still being built.
+        self.__dict__.pop("refs", None)
+        self.__dict__.pop("hyps", None)
 
     def load_dataset(self, dataset, ref_col="ref", hyp_col="hyp", key_term_cols: list | None = None) -> None:
         """Load a Hugging Face dataset."""
+        self._check_not_frozen()
         raise NotImplementedError("load_dataset() method not implemented.")
 
     def load_pandas(self, df: pd.DataFrame, ref_col="ref", hyp_col="hyp", key_term_cols: list | None = None) -> None:
         """Add a pandas DataFrame to the dataset."""
+        self._check_not_frozen()
         if not isinstance(df, pd.DataFrame):
             raise TypeError("df must be a pandas DataFrame")
         if key_term_cols is None:
@@ -125,6 +188,7 @@ class Dataset(object):
         self, csv_file: str, ref_col="ref", hyp_col="hyp", key_term_cols: list | None = None, **kwargs
     ) -> None:
         """Add a CSV file to the dataset."""
+        self._check_not_frozen()
         df = pd.read_csv(csv_file, **kwargs)
         self.load_pandas(df, ref_col, hyp_col, key_term_cols)
 
@@ -132,6 +196,7 @@ class Dataset(object):
         self, jsonl_file: str, ref_col="ref", hyp_col="hyp", key_term_cols: list | None = None, **kwargs
     ) -> None:
         """Add a JSONL file to the dataset."""
+        self._check_not_frozen()
         df = pd.read_json(jsonl_file, lines=True, **kwargs)
         self.load_pandas(df, ref_col, hyp_col, key_term_cols)
 
@@ -144,6 +209,7 @@ class Dataset(object):
             name (str): The name of the key term vocabulary.
             key_terms (Iterable[str]): The key terms to add.
         """
+        self._check_not_frozen()
         if not isinstance(key_terms, Iterable) or isinstance(key_terms, str):
             raise TypeError("key_terms must be an iterable of strings")
 
@@ -166,6 +232,7 @@ class Dataset(object):
             name (str): The name of the key term vocabulary.
             key_term_file (str): Path to the key term file.
         """
+        self._check_not_frozen()
         if not Path(key_term_file).is_file():
             raise FileNotFoundError(f"Key term file {key_term_file} not found")
 

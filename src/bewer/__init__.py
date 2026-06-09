@@ -4,7 +4,7 @@ from bewer import core as core
 from bewer import metrics as metrics
 from bewer import preprocessing as preprocessing
 from bewer import reporting as reporting
-from bewer.core.dataset import Dataset
+from bewer.core.dataset import Dataset, DatasetFrozenError
 from bewer.core.key_term import KeyTermNotFoundWarning
 
 try:
@@ -14,6 +14,7 @@ except PackageNotFoundError:
 
 __all__ = [
     "Dataset",
+    "DatasetFrozenError",
     "KeyTermNotFoundWarning",
     "core",
     "metrics",

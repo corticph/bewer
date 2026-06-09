@@ -502,6 +502,9 @@ class MetricCollection(object):
 
         # Return factory function
         def metric_factory(**kwargs):
+            # Requesting a metric begins computation: freeze the dataset so its contents
+            # (and therefore the cached metric results) can no longer change underneath us.
+            self._src.freeze()
             # Resolve kwargs against all defaults for a canonical cache key
             resolved = METRIC_REGISTRY.resolve_params(name, **kwargs)
             try:
