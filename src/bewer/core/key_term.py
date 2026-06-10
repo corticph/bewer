@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 import ahocorasick
 
@@ -9,8 +9,7 @@ from bewer.core.text import Text, TextType, TokenList
 from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
-    from bewer.core.dataset import Dataset
-    from bewer.core.example import Example
+    from bewer.configs.resolve import Pipelines
 
 __all__ = ["KeyTerm", "KeyTermNotFoundWarning"]
 
@@ -33,9 +32,9 @@ class KeyTerm(Text):
         self,
         raw: str,
         *,
-        src: Union["Example", "Dataset"],
+        pipelines: "Pipelines",
     ):
-        super().__init__(raw=raw, src=src, text_type=TextType.KEY_TERM)
+        super().__init__(raw=raw, pipelines=pipelines, src=None, text_type=TextType.KEY_TERM)
 
     def __repr__(self):
         text = self.raw if len(self.raw) <= 46 else self.raw[:46] + "..."

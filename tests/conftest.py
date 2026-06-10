@@ -8,14 +8,13 @@ from bewer.core.dataset import Dataset
 class StubParent:
     """Lightweight stand-in for a parent in the src hierarchy.
 
-    Now that ``src`` is required at construction time, unit tests that build a
-    ``Token``/``Text``/``TokenList`` in isolation (without a real ``Dataset``)
-    use this stub as the parent. It exposes only the attributes children read:
-    ``pipelines`` (consumed by the pipeline caching descriptor) and ``raw``.
+    ``pipelines`` is now passed explicitly to core objects, so a parent is only
+    needed where ``src`` is genuinely read. This stub stands in for that parent in
+    unit tests that build a ``Token``/``Text`` in isolation; it exposes only ``raw``,
+    which ``Token.inctx`` reads from its ``src``.
     """
 
-    def __init__(self, *, pipelines=None, raw=""):
-        self.pipelines = pipelines
+    def __init__(self, *, raw=""):
         self.raw = raw
 
 
@@ -23,6 +22,12 @@ class StubParent:
 def stub_parent():
     """A minimal parent object for constructing core objects in isolation."""
     return StubParent()
+
+
+@pytest.fixture
+def pipelines():
+    """The resolved default pipeline registry, for constructing core objects standalone."""
+    return Dataset().pipelines
 
 
 @pytest.fixture

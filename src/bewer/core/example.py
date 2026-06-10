@@ -5,6 +5,7 @@ from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
 
 if TYPE_CHECKING:
+    from bewer.configs.resolve import Pipelines
     from bewer.core.dataset import Dataset
 
 __all__ = ["Example"]
@@ -27,7 +28,8 @@ class Example:
         hyp: str,
         key_terms: dict[str, list[str]] | None = None,
         *,
-        src: "Dataset",
+        pipelines: "Pipelines",
+        src: Optional["Dataset"] = None,
         index: Optional[int] = None,
     ):
         """
@@ -38,17 +40,18 @@ class Example:
             hyp: Hypothesis text.
             key_terms: Key terms associated with the example. Missing terms are retained; warnings are emitted
                 during key term trie matching if a term cannot be matched in the reference tokens.
-            src: Parent Dataset object (required).
+            pipelines: The resolved pipeline registry, forwarded to the Text/KeyTerm objects (required).
+            src: Optional parent Dataset object. Read by the metrics layer and key term vocabulary lookup.
             index: The index of the example in the dataset.
         """
         self._index = index
 
         self._src = src
-        self._pipelines = src.pipelines
+        self._pipelines = pipelines
 
         self.metrics = ExampleMetricCollection(self)
-        self.ref = Text(ref, src=self, text_type=TextType.REF)
-        self.hyp = Text(hyp, src=self, text_type=TextType.HYP)
+        self.ref = Text(ref, pipelines=self._pipelines, src=self, text_type=TextType.REF)
+        self.hyp = Text(hyp, pipelines=self._pipelines, src=self, text_type=TextType.HYP)
         self.key_terms = self._prepare_key_terms(key_terms)
 
     @property
@@ -57,8 +60,8 @@ class Example:
         return self._index
 
     @property
-    def src(self) -> "Dataset":
-        """Get the parent Dataset object."""
+    def src(self) -> Optional["Dataset"]:
+        """Get the parent Dataset object, if any."""
         return self._src
 
     @property
@@ -69,7 +72,8 @@ class Example:
     def vocabs(self) -> set[str]:
         """Get the set of all key term vocabularies associated with this example."""
         vocabs = set(self.key_terms.keys())
-        vocabs.update(self._src._global_key_term_vocabs.keys())
+        if self._src is not None:
+            vocabs.update(self._src._global_key_term_vocabs.keys())
         return vocabs
 
     def _prepare_key_terms(self, key_terms: dict[str, set[str]] | None) -> dict[str, set[KeyTerm]]:
@@ -81,7 +85,9 @@ class Example:
         for vocab_name, vocab_key_terms in key_terms.items():
             if len(vocab_key_terms) == 0:
                 continue
-            prepared_key_terms[vocab_name] = set(KeyTerm(key_term, src=self) for key_term in vocab_key_terms)
+            prepared_key_terms[vocab_name] = set(
+                KeyTerm(key_term, pipelines=self._pipelines) for key_term in vocab_key_terms
+            )
 
         return prepared_key_terms
 

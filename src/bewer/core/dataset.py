@@ -150,7 +150,7 @@ class Dataset(object):
             for name, kt_set in key_terms.items():
                 self._update_global_key_term_vocab(name, kt_set)
                 self._update_local_key_term_vocab(name, kt_set)
-        example = Example(ref, hyp, key_terms=key_terms, src=self, index=len(self))
+        example = Example(ref, hyp, key_terms=key_terms, pipelines=self._pipelines, src=self, index=len(self))
         self.examples.append(example)
         # Invalidate cached refs/hyps so they stay fresh while the dataset is still being built.
         self.__dict__.pop("refs", None)
@@ -286,7 +286,7 @@ class Dataset(object):
 
     def _update_global_key_term_vocab(self, name: str, key_terms: set[str]) -> None:
         """Update the global key term vocabulary with new key terms."""
-        key_terms = set(KeyTerm(key_term, src=self) for key_term in key_terms)
+        key_terms = set(KeyTerm(key_term, pipelines=self._pipelines) for key_term in key_terms)
         if name in self._global_key_term_vocabs:
             self._global_key_term_vocabs[name].update(key_terms)
         else:
@@ -294,7 +294,7 @@ class Dataset(object):
 
     def _update_local_key_term_vocab(self, name: str, key_terms: set[str]) -> None:
         """Update the local key term vocabulary index with new key terms."""
-        key_terms = set(KeyTerm(key_term, src=self) for key_term in key_terms)
+        key_terms = set(KeyTerm(key_term, pipelines=self._pipelines) for key_term in key_terms)
         if name in self._local_key_term_vocabs:
             self._local_key_term_vocabs[name].update(key_terms)
         else:

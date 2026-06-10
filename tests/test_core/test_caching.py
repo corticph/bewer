@@ -99,11 +99,11 @@ class TestPipelineCachedPropertyIntegration:
         _ = text_b.standardized
         assert text_a._cache_standardized is not text_b._cache_standardized
 
-    def test_raises_when_pipelines_is_none(self, stub_parent):
+    def test_raises_when_pipelines_is_none(self):
         """Raises ValueError when _pipelines is None."""
         from bewer.core.text import Text
 
-        text = Text(raw="hello", src=stub_parent)
+        text = Text(raw="hello", pipelines=None)
         with pytest.raises(ValueError, match="No standardizers found"):
             _ = text.standardized
 
