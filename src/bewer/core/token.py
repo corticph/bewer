@@ -7,6 +7,7 @@ from bewer.preprocessing.context import NORMALIZER_NAME
 from bewer.reporting.python.utils import highlight_span
 
 if TYPE_CHECKING:
+    from bewer.configs.resolve import Pipelines
     from bewer.core.text import Text
 
 __all__ = ["Token"]
@@ -31,7 +32,8 @@ class Token:
         end: int,
         index: Optional[int] = None,
         *,
-        src: "Text",
+        pipelines: "Pipelines",
+        src: Optional["Text"] = None,
     ):
         """Initialize Token.
 
@@ -40,7 +42,8 @@ class Token:
             start: Starting character index in the source text.
             end: Ending character index in the source text.
             index: Token index in the token list.
-            src: Parent Text object (required).
+            pipelines: The resolved pipeline registry used for lazy normalization (required).
+            src: Optional parent Text object. Used only by ``inctx`` to show surrounding context.
         """
         self._raw = raw
         self.start = start
@@ -51,7 +54,7 @@ class Token:
         self._cache_normalized = {}
 
         self._src = src
-        self._pipelines = src.pipelines
+        self._pipelines = pipelines
 
     @property
     def src(self) -> "Text":
@@ -79,6 +82,8 @@ class Token:
         Returns:
             str: The context string.
         """
+        if self._src is None:
+            return self.raw
         start = max(0, self.start - width)
         end = min(len(self._src.raw), self.end + width)
         ctx_span = self._src.raw[start:end]
@@ -95,7 +100,9 @@ class Token:
         cls,
         match: re.Match,
         index: int,
-        src: "Text",
+        *,
+        pipelines: "Pipelines",
+        src: Optional["Text"] = None,
     ) -> "Token":
         """
         Create a Token object from a regex match object.
@@ -103,7 +110,8 @@ class Token:
         Args:
             match (re.Match): The regex match object.
             index (int): Token index in the token list.
-            src (Text): Parent Text object (required).
+            pipelines: The resolved pipeline registry used for lazy normalization (required).
+            src (Text): Optional parent Text object.
 
         Returns:
             Token: The created Token object.
@@ -113,6 +121,7 @@ class Token:
             start=match.start(),
             end=match.end(),
             index=index,
+            pipelines=pipelines,
             src=src,
         )
 

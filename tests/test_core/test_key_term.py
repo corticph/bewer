@@ -230,21 +230,6 @@ class TestKeyTermTrieAddCapitalized:
         assert len(matches) == 0
 
 
-class TestTokenListSrc:
-    """Tests for TokenList.src property."""
-
-    def test_src_from_text_tokens(self, sample_dataset):
-        """Text.tokens produces a TokenList whose src points to the Text."""
-        text = sample_dataset[0].ref
-        tokens = text.tokens
-        assert tokens.src is text
-
-    def test_src_is_stored(self, stub_parent):
-        """A TokenList stores the src it was constructed with."""
-        tokens = TokenList((), src=stub_parent)
-        assert tokens.src is stub_parent
-
-
 class TestKeyTermNotFoundWarningImport:
     """Tests for KeyTermNotFoundWarning import paths."""
 

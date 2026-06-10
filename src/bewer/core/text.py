@@ -10,6 +10,7 @@ from bewer.core.token import Token
 from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
+    from bewer.configs.resolve import Pipelines
     from bewer.core.example import Example
 
 __all__ = ["Text", "TextType", "TokenList"]
@@ -56,14 +57,16 @@ class Text:
         self,
         raw: str | None,
         *,
-        src: "Example",
+        pipelines: "Pipelines",
+        src: Optional["Example"] = None,
         text_type: Optional[TextType] = None,
     ):
         """Initialize the Text object.
 
         Args:
             raw: The original text string (reference, hypothesis, or key term).
-            src: Parent Example object (required).
+            pipelines: The resolved pipeline registry used for lazy standardization/tokenization (required).
+            src: Optional parent Example object. Used by ``get_key_term_matches`` for vocabulary lookup.
             text_type: The type of the text (REF, HYP, or KEY_TERM).
         """
         self._raw = raw
@@ -74,7 +77,7 @@ class Text:
         self._cache_key_term_matches = {}
 
         self._src = src
-        self._pipelines = src.pipelines
+        self._pipelines = pipelines
 
     @property
     def raw(self) -> str:
@@ -83,8 +86,8 @@ class Text:
         return self._raw
 
     @property
-    def src(self) -> "Example":
-        """Get the parent Example object."""
+    def src(self) -> Optional["Example"]:
+        """Get the parent Example object, if any."""
         return self._src
 
     @property
@@ -103,7 +106,7 @@ class Text:
     @pipeline_cached_property(TOKENIZER_NAME)
     def tokens(self, tokenizer) -> "TokenList":
         """The list of Token objects produced by the active tokenizer."""
-        return TokenList.from_matches(tokenizer(self.standardized), src=self)
+        return TokenList.from_matches(tokenizer(self.standardized), pipelines=self._pipelines, src=self)
 
     def joined(self, normalized: bool = True) -> str:
         """Get the joined text from tokens.
@@ -139,6 +142,8 @@ class Text:
             List of slices representing matched token spans.
         """
         example = self._src
+        if example is None:
+            return []
         dataset = example.src
 
         has_local = vocab in example.key_terms
@@ -214,42 +219,32 @@ class Text:
 class TokenList(tuple["Token", ...]):
     """An immutable sequence of Token objects."""
 
-    def __new__(cls, iterable=(), src=None):
+    def __new__(cls, iterable=()):
         return super().__new__(cls, iterable)
 
-    def __init__(self, iterable=(), src: Optional["Text"] = None):
+    def __init__(self, iterable=()):
         self._normalized_index_cache: dict[str, dict[str, set[int]]] = {}
         self._normalized_cache: dict[str, list[str]] = {}
-        self._src = src
-
-    @property
-    def src(self) -> Optional["Text"]:
-        """Get the source Text object, if any.
-
-        Unlike the rest of the hierarchy, a ``TokenList`` is not required to have a
-        ``src``: it is pure metadata that nothing reads, and there is no single owning
-        ``Text`` for the aggregate produced by ``TextTokenList.flat`` or for a
-        cross-source concatenation. Individual ``Token`` objects always carry their own
-        (required) ``Text`` src, which is what drives normalization/pipeline resolution.
-        """
-        return self._src
 
     @classmethod
     def from_matches(
         cls,
         matches: "Iterable[re.Match]",
+        *,
+        pipelines: "Pipelines",
         src: Optional["Text"] = None,
     ) -> "TokenList":
         """Create a TokenList from an iterable of regex match objects.
 
         Args:
             matches: An iterable of regex Match objects.
-            src: The source Text object, if available.
+            pipelines: The resolved pipeline registry, threaded to each Token (required).
+            src: The source Text object, threaded to each Token for ``inctx`` context, if available.
 
         Returns:
             TokenList: A list of Token objects created from the matches.
         """
-        return cls((Token.from_match(match, index=i, src=src) for i, match in enumerate(matches)), src=src)
+        return cls(Token.from_match(match, index=i, pipelines=pipelines, src=src) for i, match in enumerate(matches))
 
     @property
     def raw(self) -> list[str]:
