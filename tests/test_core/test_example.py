@@ -2,8 +2,37 @@
 
 import warnings
 
+import pytest
+
+from bewer.core.example import Example
 from bewer.core.key_term import KeyTermNotFoundWarning
 from bewer.core.text import Text, TextType
+
+
+class TestExampleStandalone:
+    """Tests for an Example constructed without a parent Dataset (src=None)."""
+
+    def test_constructs_without_dataset(self, pipelines):
+        """A standalone Example can be built given only a Pipelines registry."""
+        example = Example("a b c", "a x c", pipelines=pipelines)
+        assert example.src is None
+        assert example.ref.tokens.raw == ["a", "b", "c"]
+
+    def test_get_key_term_matches_returns_empty(self, pipelines):
+        """Key term matching needs the dataset trie; without a Dataset it yields no matches."""
+        example = Example("a b c", "a x c", key_terms={"v": ["b"]}, pipelines=pipelines)
+        assert example.ref.get_key_term_matches("v") == []
+
+    def test_vocabs_returns_local_only(self, pipelines):
+        """vocabs falls back to the example-local vocabularies when there is no Dataset."""
+        example = Example("a b c", "a x c", key_terms={"v": ["b"]}, pipelines=pipelines)
+        assert example.vocabs == {"v"}
+
+    def test_metrics_raise_clear_error(self, pipelines):
+        """Dataset-backed metrics are unavailable for a parentless Example."""
+        example = Example("a b c", "a x c", pipelines=pipelines)
+        with pytest.raises(ValueError, match="without a parent Dataset"):
+            example.metrics.wer()
 
 
 class TestExampleInit:

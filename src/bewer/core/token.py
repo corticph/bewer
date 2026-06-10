@@ -57,8 +57,8 @@ class Token:
         self._pipelines = pipelines
 
     @property
-    def src(self) -> "Text":
-        """Get the parent Text object."""
+    def src(self) -> Optional["Text"]:
+        """Get the parent Text object, if any."""
         return self._src
 
     @property

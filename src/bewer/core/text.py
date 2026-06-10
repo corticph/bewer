@@ -145,6 +145,8 @@ class Text:
         if example is None:
             return []
         dataset = example.src
+        if dataset is None:
+            return []
 
         has_local = vocab in example.key_terms
         has_global = vocab in dataset._global_key_term_vocabs

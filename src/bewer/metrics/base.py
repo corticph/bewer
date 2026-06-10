@@ -561,7 +561,13 @@ class ExampleMetricCollection(object):
         Resolved lazily so an Example built standalone (``src=None``) can still be
         constructed; only fails if a parent-dependent example metric is actually requested.
         """
-        return self._src_example.src.metrics
+        dataset = self._src_example.src
+        if dataset is None:
+            raise ValueError(
+                "Dataset-backed metrics are unavailable for an Example constructed without a "
+                "parent Dataset (src=None). Add the Example to a Dataset to compute metrics."
+            )
+        return dataset.metrics
 
     def get(self, name: str):
         """Get a metric factory function by name.
