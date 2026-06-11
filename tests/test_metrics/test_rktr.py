@@ -15,8 +15,8 @@ class TestRKTRExampleMetric:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetes",
-            key_terms={"key_terms": ["diabetes"]},
         )
+        dataset.add_key_term_list("key_terms", ["diabetes"])
         return dataset
 
     @pytest.fixture
@@ -26,8 +26,8 @@ class TestRKTRExampleMetric:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
-            key_terms={"key_terms": ["diabetes"]},
         )
+        dataset.add_key_term_list("key_terms", ["diabetes"])
         return dataset
 
     def test_perfect_match_is_tp(self, dataset_perfect_match):
@@ -71,8 +71,8 @@ class TestRKTRExampleMetric:
         dataset.add(
             ref="patient has diabetes and hypertension",
             hyp="patient has diabetis and hypotension",
-            key_terms={"key_terms": ["diabetes", "hypertension"]},
         )
+        dataset.add_key_term_list("key_terms", ["diabetes", "hypertension"])
         example = dataset[0]
         # strict: both errors rejected
         rktr_strict = example.metrics.rktr(vocab="key_terms", threshold=0.0)
@@ -100,13 +100,12 @@ class TestRKTRDatasetMetric:
         dataset.add(
             ref="patient has diabetes",
             hyp="patient has diabetes",
-            key_terms={"key_terms": ["diabetes"]},
         )
         dataset.add(
             ref="patient has asthma",
             hyp="patient has astma",
-            key_terms={"key_terms": ["asthma"]},
         )
+        dataset.add_key_term_list("key_terms", ["diabetes", "asthma"])
         return dataset
 
     def test_num_ref_terms_aggregates(self, mixed_dataset):
@@ -137,20 +136,23 @@ class TestRKTRDatasetMetric:
 
     def test_threshold_above_one_raises(self):
         dataset = Dataset()
-        dataset.add(ref="has diabetes", hyp="has diabetes", key_terms={"k": ["diabetes"]})
+        dataset.add(ref="has diabetes", hyp="has diabetes")
+        dataset.add_key_term_list("k", ["diabetes"])
         with pytest.raises(ValueError, match="threshold must be between 0.0 and 1.0"):
             dataset.metrics.rktr(vocab="k", threshold=1.1).value
 
     def test_threshold_below_zero_raises(self):
         dataset = Dataset()
-        dataset.add(ref="has diabetes", hyp="has diabetes", key_terms={"k": ["diabetes"]})
+        dataset.add(ref="has diabetes", hyp="has diabetes")
+        dataset.add_key_term_list("k", ["diabetes"])
         with pytest.raises(ValueError, match="threshold must be between 0.0 and 1.0"):
             dataset.metrics.rktr(vocab="k", threshold=-0.1).value
 
     def test_all_correct(self):
         dataset = Dataset()
-        dataset.add(ref="diabetes mellitus", hyp="diabetes mellitus", key_terms={"k": ["diabetes"]})
-        dataset.add(ref="acute asthma", hyp="acute asthma", key_terms={"k": ["asthma"]})
+        dataset.add(ref="diabetes mellitus", hyp="diabetes mellitus")
+        dataset.add(ref="acute asthma", hyp="acute asthma")
+        dataset.add_key_term_list("k", ["diabetes", "asthma"])
         assert dataset.metrics.rktr(vocab="k").value == 1.0
 
 
@@ -164,8 +166,8 @@ class TestRKTRPartialPenalty:
         dataset.add(
             ref="patient has blood pressure",
             hyp="patient has bloodpressure",
-            key_terms={"k": ["blood"]},
         )
+        dataset.add_key_term_list("k", ["blood"])
         example = dataset[0]
         ts = dataset.metrics._rkt_stats(vocab="k")[example.index].term_stats
         assert ts[0].char_edits == 1
@@ -182,8 +184,8 @@ class TestRKTRPartialPenalty:
         dataset.add(
             ref="patient has blood pressure",
             hyp="patient has bloodpressure",
-            key_terms={"k": ["pressure"]},
         )
+        dataset.add_key_term_list("k", ["pressure"])
         example = dataset[0]
         ts = dataset.metrics._rkt_stats(vocab="k")[example.index].term_stats
         assert ts[0].char_edits == 1
@@ -201,8 +203,8 @@ class TestRKTRPartialPenalty:
         dataset.add(
             ref="patient has blood pressure",
             hyp="patient has bloodpressure",
-            key_terms={"k": ["blood pressure"]},
         )
+        dataset.add_key_term_list("k", ["blood pressure"])
         example = dataset[0]
         ts = dataset.metrics._rkt_stats(vocab="k")[example.index].term_stats
         assert ts[0].char_edits == 1

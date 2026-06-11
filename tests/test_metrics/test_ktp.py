@@ -16,8 +16,8 @@ class TestKTPExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            key_terms={"animals": ["fox"]},
         )
+        dataset.add_key_term_list("animals", ["fox"])
         return dataset
 
     @pytest.fixture
@@ -27,8 +27,8 @@ class TestKTPExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the dog jumps",
-            key_terms={"animals": ["fox"]},
         )
+        dataset.add_key_term_list("animals", ["fox"])
         return dataset
 
     @pytest.fixture
@@ -38,8 +38,8 @@ class TestKTPExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox fox jumps",
-            key_terms={"animals": ["fox"]},
         )
+        dataset.add_key_term_list("animals", ["fox"])
         return dataset
 
     def test_value_perfect_match(self, dataset_keyword_match):
@@ -90,8 +90,8 @@ class TestKTPExampleMetric:
         dataset.add(
             ref="patient has diabetes",
             hyp="patient has diabetes",
-            key_terms={"medical": ["diabetes"]},
         )
+        dataset.add_key_term_list("medical", ["diabetes"])
         ktp = dataset[0].metrics.ktp(vocab="medical")
         assert ktp.value == 1.0
         assert ktp.num_matches == 1
@@ -107,13 +107,12 @@ class TestKTPDatasetMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            key_terms={"animals": ["fox"]},
         )
         dataset.add(
             ref="the rabbit runs",
             hyp="the rabbit rabbit runs",
-            key_terms={"animals": ["rabbit"]},
         )
+        dataset.add_key_term_list("animals", ["fox", "rabbit"])
         return dataset
 
     def test_num_fp_aggregates(self, ktp_dataset):
@@ -139,8 +138,9 @@ class TestKTPDatasetMetric:
     def test_all_correct(self):
         """Test KTP = 1.0 when all transcriptions are correct."""
         dataset = Dataset()
-        dataset.add(ref="the fox", hyp="the fox", key_terms={"animals": ["fox"]})
-        dataset.add(ref="the rabbit", hyp="the rabbit", key_terms={"animals": ["rabbit"]})
+        dataset.add(ref="the fox", hyp="the fox")
+        dataset.add(ref="the rabbit", hyp="the rabbit")
+        dataset.add_key_term_list("animals", ["fox", "rabbit"])
         ktp = dataset.metrics.ktp(vocab="animals")
         assert ktp.value == 1.0
 

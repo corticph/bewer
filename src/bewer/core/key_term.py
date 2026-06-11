@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING, Optional
 
 import ahocorasick
@@ -11,14 +10,7 @@ from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKE
 if TYPE_CHECKING:
     from bewer.configs.resolve import Pipelines
 
-__all__ = ["KeyTerm", "KeyTermNotFoundWarning"]
-
-
-class KeyTermNotFoundWarning(UserWarning):
-    pass
-
-
-warnings.filterwarnings("always", category=KeyTermNotFoundWarning)
+__all__ = ["KeyTerm"]
 
 
 class KeyTerm(Text):

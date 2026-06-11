@@ -318,7 +318,8 @@ class TestKeyTermIndicators:
         from bewer.core.dataset import Dataset
 
         dataset = Dataset()
-        dataset.add("the quick brown fox", "the quick brown dog", key_terms={"animals": ["fox"]})
+        dataset.add("the quick brown fox", "the quick brown dog")
+        dataset.add_key_term_list("animals", ["fox"])
         return dataset
 
     def test_key_term_classes_rendered_in_html(self, dataset_with_key_terms):
@@ -343,8 +344,8 @@ class TestKeyTermIndicators:
         dataset.add(
             "the quick brown fox jumps",
             "the quick brown dog jumps",
-            key_terms={"overlapping": ["brown fox", "brown"]},
         )
+        dataset.add_key_term_list("overlapping", ["brown fox", "brown"])
         example = dataset[0]
         alignment = example.metrics.levenshtein().alignment
         start_indices, stop_indices, _ = _get_key_term_indicators(alignment, allow_subset_matches=True)

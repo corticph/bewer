@@ -31,11 +31,12 @@ def dataset_with_key_terms():
     examples so KT-family metrics produce non-trivial bootstrap distributions.
     """
     dataset = Dataset()
-    dataset.add(ref="the fox jumps", hyp="the fox jumps", key_terms={"animals": ["fox"]})
-    dataset.add(ref="the fox runs", hyp="the dog runs", key_terms={"animals": ["fox"]})
-    dataset.add(ref="a rabbit hops", hyp="a rabbit hops", key_terms={"animals": ["rabbit"]})
-    dataset.add(ref="the rabbit eats", hyp="the cat eats", key_terms={"animals": ["rabbit"]})
-    dataset.add(ref="fox and rabbit", hyp="fox and hamster", key_terms={"animals": ["fox", "rabbit"]})
+    dataset.add(ref="the fox jumps", hyp="the fox jumps")
+    dataset.add(ref="the fox runs", hyp="the dog runs")
+    dataset.add(ref="a rabbit hops", hyp="a rabbit hops")
+    dataset.add(ref="the rabbit eats", hyp="the cat eats")
+    dataset.add(ref="fox and rabbit", hyp="fox and hamster")
+    dataset.add_key_term_list("animals", ["fox", "rabbit"])
     return dataset
 
 

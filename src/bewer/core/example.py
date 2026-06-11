@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING, Optional
 
-from bewer.core.key_term import KeyTerm
 from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
 
@@ -18,7 +17,6 @@ class Example:
     Attributes:
         ref (Text): Reference text object.
         hyp (Text): Hypothesis text object.
-        key_terms (dict[str, set[KeyTerm]]): Key terms grouped by vocabulary name.
         metrics (ExampleMetricCollection): Metrics collection for this example.
     """
 
@@ -26,7 +24,6 @@ class Example:
         self,
         ref: str,
         hyp: str,
-        key_terms: dict[str, list[str]] | None = None,
         *,
         pipelines: "Pipelines",
         src: Optional["Dataset"] = None,
@@ -38,9 +35,7 @@ class Example:
         Args:
             ref: Reference text.
             hyp: Hypothesis text.
-            key_terms: Key terms associated with the example. Missing terms are retained; warnings are emitted
-                during key term trie matching if a term cannot be matched in the reference tokens.
-            pipelines: The resolved pipeline registry, forwarded to the Text/KeyTerm objects (required).
+            pipelines: The resolved pipeline registry, forwarded to the Text objects (required).
             src: Optional parent Dataset object. Read by the metrics layer and key term vocabulary lookup.
             index: The index of the example in the dataset.
         """
@@ -52,7 +47,6 @@ class Example:
         self.metrics = ExampleMetricCollection(self)
         self.ref = Text(ref, pipelines=self._pipelines, src=self, text_type=TextType.REF)
         self.hyp = Text(hyp, pipelines=self._pipelines, src=self, text_type=TextType.HYP)
-        self.key_terms = self._prepare_key_terms(key_terms)
 
     @property
     def index(self) -> Optional[int]:
@@ -71,25 +65,9 @@ class Example:
     @property
     def vocabs(self) -> set[str]:
         """Get the set of all key term vocabularies associated with this example."""
-        vocabs = set(self.key_terms.keys())
-        if self._src is not None:
-            vocabs.update(self._src._global_key_term_vocabs.keys())
-        return vocabs
-
-    def _prepare_key_terms(self, key_terms: dict[str, set[str]] | None) -> dict[str, set[KeyTerm]]:
-        """Prepare key terms dictionary by converting key terms to KeyTerm objects."""
-        if key_terms is None:
-            return {}
-
-        prepared_key_terms = {}
-        for vocab_name, vocab_key_terms in key_terms.items():
-            if len(vocab_key_terms) == 0:
-                continue
-            prepared_key_terms[vocab_name] = set(
-                KeyTerm(key_term, pipelines=self._pipelines) for key_term in vocab_key_terms
-            )
-
-        return prepared_key_terms
+        if self._src is None:
+            return set()
+        return set(self._src._global_key_term_vocabs.keys())
 
     def __hash__(self):
         return hash((self.ref, self.hyp, self._index))

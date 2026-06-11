@@ -16,8 +16,8 @@ class TestKTRExampleMetric:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetes",
-            key_terms={"key_terms": ["diabetes"]},
         )
+        dataset.add_key_term_list("key_terms", ["diabetes"])
         return dataset
 
     @pytest.fixture
@@ -27,8 +27,8 @@ class TestKTRExampleMetric:
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
-            key_terms={"key_terms": ["diabetes"]},
         )
+        dataset.add_key_term_list("key_terms", ["diabetes"])
         return dataset
 
     def test_value_perfect_match(self, dataset_keyword_match):
@@ -74,8 +74,8 @@ class TestKTRExampleMetric:
         dataset.add(
             ref="patient has diabetes and hypertension",
             hyp="patient has diabetes and hypotension",
-            key_terms={"key_terms": ["diabetes", "hypertension"]},
         )
+        dataset.add_key_term_list("key_terms", ["diabetes", "hypertension"])
         example = dataset[0]
         ktr = example.metrics.ktr(vocab="key_terms")
         assert ktr.num_ref_terms == 2
@@ -88,8 +88,8 @@ class TestKTRExampleMetric:
         dataset.add(
             ref="the quick brown fox",
             hyp="the quick brown fox",
-            key_terms={"animals": ["fox"]},
         )
+        dataset.add_key_term_list("animals", ["fox"])
         example = dataset[0]
         ktr = example.metrics.ktr(vocab="animals")
         assert ktr.value == 1.0
@@ -106,13 +106,12 @@ class TestKTRDatasetMetric:
         dataset.add(
             ref="patient has diabetes",
             hyp="patient has diabetes",
-            key_terms={"key_terms": ["diabetes"]},
         )
         dataset.add(
             ref="patient has asthma",
             hyp="patient has astma",
-            key_terms={"key_terms": ["asthma"]},
         )
+        dataset.add_key_term_list("key_terms", ["diabetes", "asthma"])
         return dataset
 
     def test_num_ref_terms_aggregates(self, key_terms_dataset):
@@ -150,8 +149,9 @@ class TestKTRDatasetMetric:
     def test_all_correct(self):
         """Test KTR is 1.0 when all key terms are correct."""
         dataset = Dataset()
-        dataset.add(ref="diabetes mellitus", hyp="diabetes mellitus", key_terms={"key_terms": ["diabetes"]})
-        dataset.add(ref="acute asthma", hyp="acute asthma", key_terms={"key_terms": ["asthma"]})
+        dataset.add(ref="diabetes mellitus", hyp="diabetes mellitus")
+        dataset.add(ref="acute asthma", hyp="acute asthma")
+        dataset.add_key_term_list("key_terms", ["diabetes", "asthma"])
         ktr = dataset.metrics.ktr(vocab="key_terms")
         assert ktr.value == 1.0
 
