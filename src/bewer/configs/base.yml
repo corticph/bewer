@@ -16,18 +16,9 @@ tokenizers:
   key_term:
     bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
       split_on_escaped: "-/'"
-  legacy:
-    bewer.preprocessing.tokenization.whitespace_pattern:
 
 normalizers:
   default:
     bewer.preprocessing.normalization.lowercase:
     bewer.preprocessing.normalization.transliterate_latin_letters:
     bewer.preprocessing.normalization.transliterate_symbols:
-  legacy:
-    bewer.preprocessing.normalization.nfc:
-  legacy_uncased:
-    bewer.preprocessing.normalization.lowercase:
-  legacy_uncased_no_punct:
-    bewer.preprocessing.normalization.lowercase:
-    bewer.preprocessing.normalization.remove_symbols:

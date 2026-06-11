@@ -234,12 +234,13 @@ class TestCustomAlignmentLabels:
 class TestCustomReportMetrics:
     """Tests for custom report metrics configuration."""
 
-    def test_default_metrics_match_previous_behavior(self, sample_dataset):
-        """Test that default metrics produce the same output as the old hard-coded values."""
+    def test_default_metrics_are_core_only(self, sample_dataset):
+        """Test that default metrics are the core, non-domain-specific WER and CER."""
         result = render_report_html(sample_dataset)
         assert "Word Error Rate" in result
         assert "Character Error Rate" in result
-        assert "Medical Term Recall" in result
+        # Domain-specific key-term metrics are opt-in, not default.
+        assert "Key Term Recall" not in result
 
     def test_custom_metrics_list(self, sample_dataset):
         """Test that a custom metrics list controls which metrics appear."""
@@ -248,9 +249,8 @@ class TestCustomReportMetrics:
         ]
         result = render_report_html(sample_dataset, report_metrics=custom_metrics)
         assert "WER Score" in result
-        # CER and Medical Term Recall should not appear
+        # CER should not appear when only WER is requested.
         assert "Character Error Rate" not in result
-        assert "Medical Term Recall" not in result
 
     def test_metric_label_defaults_to_long_name(self, sample_dataset):
         """Test that metric label defaults to the metric's long_name when not specified."""

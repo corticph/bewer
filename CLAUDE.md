@@ -83,7 +83,7 @@ poetry run twine check dist/*  # Validate built packages
 - CER (Character Error Rate): `cer.py`
 - Levenshtein distance: `levenshtein.py`
 - Error alignment metrics: `error_align.py` (uses external error-align package)
-- Legacy Corti metrics: `corti_legacy_metrics.py`
+- Key term metrics (recall, precision, F-score, CER, etc.): `ktr.py`, `ktp.py`, `ktf.py`, `ktcer.py`, `rktr.py`, `kter.py`
 
 ### Alignment System (`src/bewer/alignment/`)
 
