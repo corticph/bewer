@@ -65,9 +65,11 @@ class TestDatasetAdd:
         assert empty_dataset[1].index == 1
 
     def test_add_with_key_terms(self, empty_dataset):
-        """Test adding example with key terms."""
-        empty_dataset.add("the quick brown fox", "the quick brown dog", key_terms={"animals": ["fox"]})
-        assert "animals" in empty_dataset[0].key_terms
+        """Test registering a global key term vocabulary on the dataset."""
+        empty_dataset.add("the quick brown fox", "the quick brown dog")
+        empty_dataset.add_key_term_list("animals", ["fox"])
+        assert "animals" in empty_dataset[0].vocabs
+        assert {kt.raw for kt in empty_dataset._global_key_term_vocabs["animals"]} == {"fox"}
 
 
 class TestDatasetLoadPandas:
@@ -154,19 +156,6 @@ class TestDatasetLoadJsonl:
             assert len(empty_dataset) == 1
             assert empty_dataset[0].ref.raw == "hello"
             assert empty_dataset[0].hyp.raw == "hi"
-        finally:
-            os.unlink(jsonl_path)
-
-    def test_load_jsonl_with_key_term_cols(self, empty_dataset):
-        """Test loading JSONL with key term columns."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
-            f.write('{"ref": "the quick brown fox", "hyp": "the quick brown dog", "animals": ["fox"]}\n')
-            jsonl_path = f.name
-
-        try:
-            empty_dataset.load_jsonl(jsonl_path, key_term_cols=["animals"])
-            assert len(empty_dataset) == 1
-            assert "animals" in empty_dataset[0].key_terms
         finally:
             os.unlink(jsonl_path)
 
@@ -540,12 +529,6 @@ class TestDatasetClone:
         clone = empty_dataset.clone()
         assert "animals" in clone._global_key_term_vocabs
         assert {kt.raw for kt in clone._global_key_term_vocabs["animals"]} == {"fox"}
-
-    def test_clone_copies_local_key_terms(self, empty_dataset):
-        empty_dataset.add("the quick brown fox", "the quick brown dog", key_terms={"animals": ["fox"]})
-        clone = empty_dataset.clone()
-        assert "animals" in clone[0].key_terms
-        assert {kt.raw for kt in clone[0].key_terms["animals"]} == {"fox"}
 
     def test_clone_metric_values_match(self, dataset_with_errors):
         original_value = dataset_with_errors.metrics.wer().value

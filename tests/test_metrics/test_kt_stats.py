@@ -17,8 +17,8 @@ class TestKTStatsExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            key_terms={"animals": ["fox"]},
         )
+        dataset.add_key_term_list("animals", ["fox"])
         return dataset
 
     @pytest.fixture
@@ -28,8 +28,8 @@ class TestKTStatsExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the dog jumps",
-            key_terms={"animals": ["fox"]},
         )
+        dataset.add_key_term_list("animals", ["fox"])
         return dataset
 
     @pytest.fixture
@@ -39,8 +39,8 @@ class TestKTStatsExampleMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox fox jumps",
-            key_terms={"animals": ["fox"]},
         )
+        dataset.add_key_term_list("animals", ["fox"])
         return dataset
 
     def test_num_ref_terms(self, dataset_correct):
@@ -106,19 +106,22 @@ class TestKTStatsAlignmentAttributes:
     @pytest.fixture
     def dataset_correct(self):
         dataset = Dataset()
-        dataset.add(ref="the fox jumps", hyp="the fox jumps", key_terms={"animals": ["fox"]})
+        dataset.add(ref="the fox jumps", hyp="the fox jumps")
+        dataset.add_key_term_list("animals", ["fox"])
         return dataset
 
     @pytest.fixture
     def dataset_error(self):
         dataset = Dataset()
-        dataset.add(ref="the fox jumps", hyp="the dog jumps", key_terms={"animals": ["fox"]})
+        dataset.add(ref="the fox jumps", hyp="the dog jumps")
+        dataset.add_key_term_list("animals", ["fox"])
         return dataset
 
     @pytest.fixture
     def dataset_fp(self):
         dataset = Dataset()
-        dataset.add(ref="the fox jumps", hyp="the fox fox jumps", key_terms={"animals": ["fox"]})
+        dataset.add(ref="the fox jumps", hyp="the fox fox jumps")
+        dataset.add_key_term_list("animals", ["fox"])
         return dataset
 
     def test_tp_alignments_correct(self, dataset_correct):
@@ -167,8 +170,8 @@ class TestKTStatsAlignmentAttributes:
         dataset.add(
             ref="hello world",
             hyp="hollow world",
-            key_terms={"vocab": ["hello world", "world"]},
         )
+        dataset.add_key_term_list("vocab", ["hello world", "world"])
         stats = dataset[0].metrics._kt_stats(vocab="vocab", allow_subset_matches=False)
         assert stats.fp_alignments == []
         assert stats.num_fp == 0
@@ -180,8 +183,8 @@ class TestKTStatsAlignmentAttributes:
         dataset.add(
             ref="world",
             hyp="wall",
-            key_terms={"vocab": ["world", "wall"]},
         )
+        dataset.add_key_term_list("vocab", ["world", "wall"])
         stats = dataset[0].metrics._kt_stats(vocab="vocab")
         assert len(stats.fn_alignments) == 1
         assert len(stats.fp_alignments) == 1
@@ -198,13 +201,12 @@ class TestKTStatsDatasetMetric:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            key_terms={"animals": ["fox"]},
         )
         dataset.add(
             ref="the rabbit runs",
             hyp="the dog runs",
-            key_terms={"animals": ["rabbit"]},
         )
+        dataset.add_key_term_list("animals", ["fox", "rabbit"])
         return dataset
 
     def test_num_ref_terms_aggregates(self, mixed_dataset):
@@ -266,8 +268,8 @@ class TestKTStatsSharing:
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
-            key_terms={"animals": ["fox"]},
         )
+        dataset.add_key_term_list("animals", ["fox"])
         return dataset
 
     def test_ktr_and_kter_share_instance(self, dataset):

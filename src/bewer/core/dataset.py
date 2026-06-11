@@ -1,4 +1,3 @@
-import ast
 from functools import cached_property
 from importlib import resources
 from itertools import chain
@@ -23,13 +22,6 @@ if TYPE_CHECKING:
 
 class DatasetFrozenError(RuntimeError):
     """Raised when attempting to modify a Dataset after it has been frozen."""
-
-
-def _is_list_literal(s):
-    try:
-        return isinstance(ast.literal_eval(s), list)
-    except (ValueError, SyntaxError):
-        return False
 
 
 class Dataset(object):
@@ -71,7 +63,6 @@ class Dataset(object):
         """
         self.examples = []
         self._global_key_term_vocabs = {}
-        self._local_key_term_vocabs = {}
         self._cache_key_term_tries = {}
         self.metrics = MetricCollection(self)
         self._frozen = False
@@ -118,8 +109,7 @@ class Dataset(object):
         new._pipelines = self._pipelines
         new._init_blank_state()
         for example in self.examples:
-            local = {name: [kt.raw for kt in terms] for name, terms in example.key_terms.items()}
-            new.add(example.ref.raw, example.hyp.raw, key_terms=local or None)
+            new.add(example.ref.raw, example.hyp.raw)
         for name, terms in self._global_key_term_vocabs.items():
             new.add_key_term_list(name, [kt.raw for kt in terms])
         return new
@@ -142,63 +132,43 @@ class Dataset(object):
         """
         return TextList([example.hyp for example in self.examples])
 
-    def add(self, ref: str, hyp: str, key_terms: dict[str, list[str]] | None = None) -> None:
+    def add(self, ref: str, hyp: str) -> None:
         """Add an example to the dataset."""
         self._check_not_frozen()
-        if key_terms is not None:
-            key_terms = {name: set(kt_list) for name, kt_list in key_terms.items()}
-            for name, kt_set in key_terms.items():
-                self._update_global_key_term_vocab(name, kt_set)
-                self._update_local_key_term_vocab(name, kt_set)
-        example = Example(ref, hyp, key_terms=key_terms, pipelines=self._pipelines, src=self, index=len(self))
+        example = Example(ref, hyp, pipelines=self._pipelines, src=self, index=len(self))
         self.examples.append(example)
         # Invalidate cached refs/hyps so they stay fresh while the dataset is still being built.
         self.__dict__.pop("refs", None)
         self.__dict__.pop("hyps", None)
 
-    def load_dataset(self, dataset, ref_col="ref", hyp_col="hyp", key_term_cols: list | None = None) -> None:
+    def load_dataset(self, dataset, ref_col="ref", hyp_col="hyp") -> None:
         """Load a Hugging Face dataset."""
         self._check_not_frozen()
         raise NotImplementedError("load_dataset() method not implemented.")
 
-    def load_pandas(self, df: pd.DataFrame, ref_col="ref", hyp_col="hyp", key_term_cols: list | None = None) -> None:
+    def load_pandas(self, df: pd.DataFrame, ref_col="ref", hyp_col="hyp") -> None:
         """Add a pandas DataFrame to the dataset."""
         self._check_not_frozen()
         if not isinstance(df, pd.DataFrame):
             raise TypeError("df must be a pandas DataFrame")
-        if key_term_cols is None:
-            key_term_cols = []
-
-        for col in key_term_cols:
-            df[col] = self._infer_key_term_column(df[col])
 
         # Add examples to the dataset
         for row in df.itertuples(index=False):
             hyp = getattr(row, hyp_col)
             ref = getattr(row, ref_col)
-            if len(key_term_cols) > 0:
-                key_terms = {}
-                for col in key_term_cols:
-                    key_terms[col] = getattr(row, col)
-            else:
-                key_terms = None
-            self.add(ref, hyp, key_terms=key_terms)
+            self.add(ref, hyp)
 
-    def load_csv(
-        self, csv_file: str, ref_col="ref", hyp_col="hyp", key_term_cols: list | None = None, **kwargs
-    ) -> None:
+    def load_csv(self, csv_file: str, ref_col="ref", hyp_col="hyp", **kwargs) -> None:
         """Add a CSV file to the dataset."""
         self._check_not_frozen()
         df = pd.read_csv(csv_file, **kwargs)
-        self.load_pandas(df, ref_col, hyp_col, key_term_cols)
+        self.load_pandas(df, ref_col, hyp_col)
 
-    def load_jsonl(
-        self, jsonl_file: str, ref_col="ref", hyp_col="hyp", key_term_cols: list | None = None, **kwargs
-    ) -> None:
+    def load_jsonl(self, jsonl_file: str, ref_col="ref", hyp_col="hyp", **kwargs) -> None:
         """Add a JSONL file to the dataset."""
         self._check_not_frozen()
         df = pd.read_json(jsonl_file, lines=True, **kwargs)
-        self.load_pandas(df, ref_col, hyp_col, key_term_cols)
+        self.load_pandas(df, ref_col, hyp_col)
 
     def add_key_term_list(self, name: str, key_terms: Iterable[str]) -> None:
         """Add a named key term vocabulary to the dataset.
@@ -271,19 +241,6 @@ class Dataset(object):
             return resources.files("bewer.configs").joinpath(f"{config_path}.yml")
         return Path(config_path).resolve()
 
-    def _infer_key_term_column(self, series: pd.Series) -> pd.Series:
-        """Infer the key terms from a pandas Series."""
-        if series.map(_is_list_literal).all():
-            series = series.apply(ast.literal_eval)
-            return series
-        elif series.map(lambda x: isinstance(x, str)).all():
-            series = series.apply(lambda x: [x])
-            return series
-        elif series.map(lambda x: isinstance(x, list)).all():
-            return series
-        else:
-            raise ValueError(f"Column {series.name} is not a list (or literal) or string")
-
     def _update_global_key_term_vocab(self, name: str, key_terms: set[str]) -> None:
         """Update the global key term vocabulary with new key terms."""
         key_terms = set(KeyTerm(key_term, pipelines=self._pipelines) for key_term in key_terms)
@@ -291,14 +248,6 @@ class Dataset(object):
             self._global_key_term_vocabs[name].update(key_terms)
         else:
             self._global_key_term_vocabs[name] = set(key_terms)
-
-    def _update_local_key_term_vocab(self, name: str, key_terms: set[str]) -> None:
-        """Update the local key term vocabulary index with new key terms."""
-        key_terms = set(KeyTerm(key_term, pipelines=self._pipelines) for key_term in key_terms)
-        if name in self._local_key_term_vocabs:
-            self._local_key_term_vocabs[name].update(key_terms)
-        else:
-            self._local_key_term_vocabs[name] = set(key_terms)
 
     def __len__(self) -> int:
         """Get the number of examples in the dataset."""

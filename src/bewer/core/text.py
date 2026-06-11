@@ -1,4 +1,3 @@
-import warnings
 from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, Iterable, Optional, Union
@@ -122,21 +121,16 @@ class Text:
         normalized: bool = True,
         add_capitalized: bool = False,
         allow_subset_matches: bool = False,
-        only_local_matches: bool = False,
     ) -> list[slice]:
         """Find key term matches in this text's tokens.
 
-        By default, matches against the dataset-wide global vocabulary. With
-        ``only_local_matches=True``, only the per-example local key terms are used.
-        When matching on the reference side, each local key term is also verified:
-        a ``KeyTermNotFoundWarning`` is emitted for each local term absent from the reference tokens.
+        Matches against the dataset-wide global vocabulary.
 
         Args:
             vocab: Vocabulary name to match against.
             normalized: Use normalized tokens for matching.
             add_capitalized: Add capitalized first-token variants (raw mode only).
             allow_subset_matches: If False, discard matches that are subsets of longer matches.
-            only_local_matches: Use only per-example local key terms instead of the global vocab.
 
         Returns:
             List of slices representing matched token spans.
@@ -148,10 +142,7 @@ class Text:
         if dataset is None:
             return []
 
-        has_local = vocab in example.key_terms
-        has_global = vocab in dataset._global_key_term_vocabs
-
-        if not has_local and not has_global:
+        if vocab not in dataset._global_key_term_vocabs:
             return []
 
         cache_key = (
@@ -161,13 +152,11 @@ class Text:
             add_capitalized,
             allow_subset_matches,
             vocab,
-            only_local_matches,
         )
         if cache_key in self._cache_key_term_matches:
             return self._cache_key_term_matches[cache_key]
 
         from bewer.core.key_term import (  # lazy import to avoid circular dependency
-            KeyTermNotFoundWarning,
             _remove_duplicate_matches,
             _remove_subset_matches,
         )
@@ -175,31 +164,11 @@ class Text:
         tokens = self.tokens
         matches: list[slice] = []
 
-        global_trie = (
-            dataset._get_key_term_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
-            if has_global
-            else None
-        )
+        global_trie = dataset._get_key_term_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
 
         if global_trie is not None:
-            raw_matches, raw_patterns = global_trie.find_in_tokens(tokens)
-
-            if only_local_matches and has_local:
-                local_int_patterns: set[tuple[int, ...]] = set()
-                for kt in example.key_terms[vocab]:
-                    local_int_patterns.update(global_trie.encode_variants(kt.tokens))
-                matches = [m for m, p in zip(raw_matches, raw_patterns) if p in local_int_patterns]
-            else:
-                matches = raw_matches
-
-            if self._text_type == TextType.REF and has_local:
-                matched_patterns = set(raw_patterns)
-                for kt in example.key_terms[vocab]:
-                    if not matched_patterns.intersection(global_trie.encode_variants(kt.tokens)):
-                        warnings.warn(
-                            f"Key term '{kt.raw}' not found in reference tokens: Example {example.index}.",
-                            KeyTermNotFoundWarning,
-                        )
+            raw_matches, _ = global_trie.find_in_tokens(tokens)
+            matches = raw_matches
 
         if matches:
             if allow_subset_matches:

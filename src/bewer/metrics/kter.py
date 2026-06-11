@@ -48,19 +48,15 @@ class KTER(Metric):
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches. If False, overlapping key term matches
                 are deduplicated, keeping only the longest match.
-            only_local_matches: If True, restrict matching to per-example local key terms only.
         """
 
         vocab: str
         normalized: bool = True
         allow_subset_matches: bool = False
-        only_local_matches: bool = False
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""
-            is_global_vocab = self.vocab in self.metric.dataset._global_key_term_vocabs
-            is_local_vocab = self.vocab in self.metric.dataset._local_key_term_vocabs
-            if not is_global_vocab and not is_local_vocab:
+            if self.vocab not in self.metric.dataset._global_key_term_vocabs:
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @dependency
@@ -70,7 +66,6 @@ class KTER(Metric):
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
-            only_local_matches=self.params.only_local_matches,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

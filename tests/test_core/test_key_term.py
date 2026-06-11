@@ -13,14 +13,16 @@ class TestKeyTermInit:
 
     def test_text_type_is_key_term(self, sample_dataset):
         """Test that KeyTerm always has TextType.KEY_TERM."""
-        sample_dataset.add("hello world", "hello world", key_terms={"greetings": ["hello"]})
-        kt = next(iter(sample_dataset[-1].key_terms["greetings"]))
+        sample_dataset.add("hello world", "hello world")
+        sample_dataset.add_key_term_list("greetings", ["hello"])
+        kt = next(iter(sample_dataset._global_key_term_vocabs["greetings"]))
         assert kt.text_type == TextType.KEY_TERM
 
     def test_isinstance_text(self, sample_dataset):
         """Test that KeyTerm instances are also Text instances."""
-        sample_dataset.add("hello world", "hello world", key_terms={"greetings": ["hello"]})
-        kt = next(iter(sample_dataset[-1].key_terms["greetings"]))
+        sample_dataset.add("hello world", "hello world")
+        sample_dataset.add_key_term_list("greetings", ["hello"])
+        kt = next(iter(sample_dataset._global_key_term_vocabs["greetings"]))
         assert isinstance(kt, Text)
         assert isinstance(kt, KeyTerm)
 
@@ -30,14 +32,16 @@ class TestKeyTermProperties:
 
     def test_standardized(self, sample_dataset):
         """Test that standardized property works on KeyTerm."""
-        sample_dataset.add("hello world", "hello world", key_terms={"greetings": ["hello"]})
-        kt = next(iter(sample_dataset[-1].key_terms["greetings"]))
+        sample_dataset.add("hello world", "hello world")
+        sample_dataset.add_key_term_list("greetings", ["hello"])
+        kt = next(iter(sample_dataset._global_key_term_vocabs["greetings"]))
         assert isinstance(kt.standardized, str)
 
     def test_tokens(self, sample_dataset):
         """Test that tokens property works on KeyTerm."""
-        sample_dataset.add("hello world", "hello world", key_terms={"greetings": ["hello"]})
-        kt = next(iter(sample_dataset[-1].key_terms["greetings"]))
+        sample_dataset.add("hello world", "hello world")
+        sample_dataset.add_key_term_list("greetings", ["hello"])
+        kt = next(iter(sample_dataset._global_key_term_vocabs["greetings"]))
         assert isinstance(kt.tokens, TokenList)
         assert len(kt.tokens) == 1
 
@@ -47,9 +51,10 @@ class TestKeyTermTrieFindInTokens:
 
     def test_single_token_found(self, sample_dataset):
         """Test finding a single-token key term in a token list."""
-        sample_dataset.add("the quick brown fox", "the quick brown dog", key_terms={"animals": ["fox"]})
+        sample_dataset.add("the quick brown fox", "the quick brown dog")
+        sample_dataset.add_key_term_list("animals", ["fox"])
         example = sample_dataset[-1]
-        trie = KeyTermTrie(example.key_terms["animals"])
+        trie = KeyTermTrie(sample_dataset._global_key_term_vocabs["animals"])
         ref_tokens = example.ref.tokens
         matches, _ = trie.find_in_tokens(ref_tokens)
         assert len(matches) == 1
@@ -57,17 +62,19 @@ class TestKeyTermTrieFindInTokens:
 
     def test_single_token_multiple_occurrences(self, sample_dataset):
         """Test finding a token that appears multiple times."""
-        sample_dataset.add("the fox and the fox", "the fox", key_terms={"animals": ["fox"]})
+        sample_dataset.add("the fox and the fox", "the fox")
+        sample_dataset.add_key_term_list("animals", ["fox"])
         example = sample_dataset[-1]
-        trie = KeyTermTrie(example.key_terms["animals"])
+        trie = KeyTermTrie(sample_dataset._global_key_term_vocabs["animals"])
         matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert len(matches) == 2
 
     def test_multi_token_key_term(self, sample_dataset):
         """Test finding a multi-token key term contiguously."""
-        sample_dataset.add("the quick brown fox", "the quick dog", key_terms={"phrases": ["quick brown"]})
+        sample_dataset.add("the quick brown fox", "the quick dog")
+        sample_dataset.add_key_term_list("phrases", ["quick brown"])
         example = sample_dataset[-1]
-        trie = KeyTermTrie(example.key_terms["phrases"])
+        trie = KeyTermTrie(sample_dataset._global_key_term_vocabs["phrases"])
         ref_tokens = example.ref.tokens
         matches, _ = trie.find_in_tokens(ref_tokens)
         assert len(matches) == 1
@@ -77,9 +84,9 @@ class TestKeyTermTrieFindInTokens:
 
     def test_no_match(self, sample_dataset):
         """Test that non-matching key term returns empty list."""
-        sample_dataset.add("hello world", "hello world", key_terms={"greetings": ["hello"]})
-        example = sample_dataset[-1]
-        trie = KeyTermTrie(example.key_terms["greetings"])
+        sample_dataset.add("hello world", "hello world")
+        sample_dataset.add_key_term_list("greetings", ["hello"])
+        trie = KeyTermTrie(sample_dataset._global_key_term_vocabs["greetings"])
         # Search in a different example's tokens where "hello" doesn't appear
         other_tokens = sample_dataset[1].ref.tokens  # "the quick brown fox"
         matches, _ = trie.find_in_tokens(other_tokens)
@@ -87,28 +94,31 @@ class TestKeyTermTrieFindInTokens:
 
     def test_returns_slices(self, sample_dataset):
         """Test that matches are slice instances."""
-        sample_dataset.add("the quick brown fox", "the quick", key_terms={"colors": ["brown"]})
+        sample_dataset.add("the quick brown fox", "the quick")
+        sample_dataset.add_key_term_list("colors", ["brown"])
         example = sample_dataset[-1]
-        trie = KeyTermTrie(example.key_terms["colors"])
+        trie = KeyTermTrie(sample_dataset._global_key_term_vocabs["colors"])
         matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert all(isinstance(m, slice) for m in matches)
 
     def test_encode_matched_pattern_in_results(self, sample_dataset):
         """encode() on a matching key term produces a pattern present in find_in_tokens."""
-        sample_dataset.add("hello world", "hello world", key_terms={"greetings": ["hello"]})
+        sample_dataset.add("hello world", "hello world")
+        sample_dataset.add_key_term_list("greetings", ["hello"])
         example = sample_dataset[-1]
-        trie = KeyTermTrie(example.key_terms["greetings"])
+        trie = KeyTermTrie(sample_dataset._global_key_term_vocabs["greetings"])
         _, patterns = trie.find_in_tokens(example.ref.tokens)
-        kt = next(iter(example.key_terms["greetings"]))
+        kt = next(iter(sample_dataset._global_key_term_vocabs["greetings"]))
         assert trie.encode(kt.tokens) in patterns
 
     def test_encode_unmatched_pattern_not_in_results(self, sample_dataset):
         """encode() on a non-matching key term produces a pattern absent from find_in_tokens."""
-        sample_dataset.add("hello world", "hello world", key_terms={"missing": ["nonexistent"]})
+        sample_dataset.add("hello world", "hello world")
+        sample_dataset.add_key_term_list("missing", ["nonexistent"])
         example = sample_dataset[-1]
-        trie = KeyTermTrie(example.key_terms["missing"])
+        trie = KeyTermTrie(sample_dataset._global_key_term_vocabs["missing"])
         _, patterns = trie.find_in_tokens(example.ref.tokens)
-        kt = next(iter(example.key_terms["missing"]))
+        kt = next(iter(sample_dataset._global_key_term_vocabs["missing"]))
         assert trie.encode(kt.tokens) not in patterns
 
 
@@ -117,8 +127,9 @@ class TestKeyTermRepr:
 
     def test_repr(self, sample_dataset):
         """Test that repr shows KeyTerm prefix."""
-        sample_dataset.add("hello world", "hello world", key_terms={"greetings": ["hello"]})
-        kt = next(iter(sample_dataset[-1].key_terms["greetings"]))
+        sample_dataset.add("hello world", "hello world")
+        sample_dataset.add_key_term_list("greetings", ["hello"])
+        kt = next(iter(sample_dataset._global_key_term_vocabs["greetings"]))
         assert "KeyTerm" in repr(kt)
         assert "hello" in repr(kt)
 
@@ -190,8 +201,8 @@ class TestTextGetKeyTermMatchesAllowSubsets:
         sample_dataset.add(
             "the quick brown fox",
             "the quick brown fox",
-            key_terms={"phrases": ["quick", "quick brown"]},
         )
+        sample_dataset.add_key_term_list("phrases", ["quick", "quick brown"])
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=True)
         assert len(matches) == 2
@@ -201,8 +212,8 @@ class TestTextGetKeyTermMatchesAllowSubsets:
         sample_dataset.add(
             "the quick brown fox",
             "the quick brown fox",
-            key_terms={"phrases": ["quick", "quick brown"]},
         )
+        sample_dataset.add_key_term_list("phrases", ["quick", "quick brown"])
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
         assert len(matches) == 1
@@ -215,36 +226,18 @@ class TestKeyTermTrieAddCapitalized:
 
     def test_add_capitalized_matches_sentence_start(self, sample_dataset):
         """With normalized=False and add_capitalized=True, matches capitalized variant."""
-        sample_dataset.add("Hello world", "Hello world", key_terms={"greetings": ["hello"]})
+        sample_dataset.add("Hello world", "Hello world")
+        sample_dataset.add_key_term_list("greetings", ["hello"])
         example = sample_dataset[-1]
-        trie = KeyTermTrie(example.key_terms["greetings"], normalized=False, add_capitalized=True)
+        trie = KeyTermTrie(sample_dataset._global_key_term_vocabs["greetings"], normalized=False, add_capitalized=True)
         matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert len(matches) == 1
 
     def test_no_capitalized_misses_sentence_start(self, sample_dataset):
         """With normalized=False and add_capitalized=False, does not match capitalized text."""
-        sample_dataset.add("Hello world", "Hello world", key_terms={"greetings": ["hello"]})
+        sample_dataset.add("Hello world", "Hello world")
+        sample_dataset.add_key_term_list("greetings", ["hello"])
         example = sample_dataset[-1]
-        trie = KeyTermTrie(example.key_terms["greetings"], normalized=False, add_capitalized=False)
+        trie = KeyTermTrie(sample_dataset._global_key_term_vocabs["greetings"], normalized=False, add_capitalized=False)
         matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert len(matches) == 0
-
-
-class TestKeyTermNotFoundWarningImport:
-    """Tests for KeyTermNotFoundWarning import paths."""
-
-    def test_importable_from_key_term_module(self):
-        from bewer.core.key_term import KeyTermNotFoundWarning as W1
-
-        assert issubclass(W1, UserWarning)
-
-    def test_importable_from_top_level(self):
-        from bewer import KeyTermNotFoundWarning as W2
-
-        assert issubclass(W2, UserWarning)
-
-    def test_same_class(self):
-        from bewer import KeyTermNotFoundWarning as W1
-        from bewer.core.key_term import KeyTermNotFoundWarning as W2
-
-        assert W1 is W2
