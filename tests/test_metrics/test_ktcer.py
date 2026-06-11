@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer import Dataset
+from bewer import Dataset, Vocabulary
 from bewer.metrics.ktcer import KTCER, KTCER_
 
 
@@ -12,7 +12,7 @@ class TestKTCERExampleMetric:
     def test_perfect_match(self):
         dataset = Dataset()
         dataset.add(ref="the patient has diabetes", hyp="the patient has diabetes")
-        dataset.add_key_term_list("k", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="k").add_terms(["diabetes"]))
         example = dataset[0]
         assert example.metrics.ktcer(vocab="k").value == 0.0
 
@@ -20,7 +20,7 @@ class TestKTCERExampleMetric:
         # "diabetis" vs "diabetes": 1 edit, 8 ref chars → CER = 1/8
         dataset = Dataset()
         dataset.add(ref="the patient has diabetes", hyp="the patient has diabetis")
-        dataset.add_key_term_list("k", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="k").add_terms(["diabetes"]))
         example = dataset[0]
         ktcer = example.metrics.ktcer(vocab="k")
         assert ktcer.num_char_edits == 1
@@ -33,7 +33,7 @@ class TestKTCERExampleMetric:
             ref="patient has diabetes and asthma",
             hyp="patient has diabetis and astma",
         )
-        dataset.add_key_term_list("k", ["diabetes", "asthma"])
+        dataset.add_vocabulary(Vocabulary(name="k").add_terms(["diabetes", "asthma"]))
         example = dataset[0]
         ktcer = example.metrics.ktcer(vocab="k")
         assert ktcer.num_char_edits == 2
@@ -44,7 +44,7 @@ class TestKTCERExampleMetric:
         # key term fully absent from hypothesis
         dataset = Dataset()
         dataset.add(ref="patient has diabetes", hyp="patient has")
-        dataset.add_key_term_list("k", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="k").add_terms(["diabetes"]))
         example = dataset[0]
         ktcer = example.metrics.ktcer(vocab="k")
         assert ktcer.num_char_edits == 8  # all 8 chars deleted
@@ -55,7 +55,7 @@ class TestKTCERExampleMetric:
         # With normalized=False, casing is preserved; a case mismatch counts as an edit.
         dataset = Dataset()
         dataset.add(ref="patient has Diabetes", hyp="patient has diabetes")
-        dataset.add_key_term_list("k", ["Diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="k").add_terms(["Diabetes"]))
         example = dataset[0]
         ktcer_normalized = example.metrics.ktcer(vocab="k", normalized=True)
         ktcer_raw = example.metrics.ktcer(vocab="k", normalized=False)
@@ -69,7 +69,7 @@ class TestKTCERExampleMetric:
             ref="patient has blood pressure",
             hyp="patient has bloodpressure",
         )
-        dataset.add_key_term_list("k", ["blood"])
+        dataset.add_vocabulary(Vocabulary(name="k").add_terms(["blood"]))
         example = dataset[0]
         ktcer = example.metrics.ktcer(vocab="k")
         assert ktcer.num_char_edits == 1
@@ -90,7 +90,7 @@ class TestKTCERDatasetMetric:
             ref="patient has asthma",
             hyp="patient has astma",
         )
-        dataset.add_key_term_list("k", ["diabetes", "asthma"])
+        dataset.add_vocabulary(Vocabulary(name="k").add_terms(["diabetes", "asthma"]))
         return dataset
 
     def test_num_char_edits_aggregates(self, mixed_dataset):
@@ -112,7 +112,7 @@ class TestKTCERDatasetMetric:
         dataset = Dataset()
         dataset.add(ref="has diabetes", hyp="has diabetes")
         dataset.add(ref="has asthma", hyp="has asthma")
-        dataset.add_key_term_list("k", ["diabetes", "asthma"])
+        dataset.add_vocabulary(Vocabulary(name="k").add_terms(["diabetes", "asthma"]))
         assert dataset.metrics.ktcer(vocab="k").value == 0.0
 
     def test_empty_vocab_raises(self):

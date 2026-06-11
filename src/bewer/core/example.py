@@ -67,7 +67,7 @@ class Example:
         """Get the set of all key term vocabularies associated with this example."""
         if self._src is None:
             return set()
-        return set(self._src._global_key_term_vocabs.keys())
+        return set(self._src._vocabularies.keys())
 
     def __hash__(self):
         return hash((self.ref, self.hyp, self._index))

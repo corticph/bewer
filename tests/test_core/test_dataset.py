@@ -6,6 +6,7 @@ import tempfile
 import pandas as pd
 import pytest
 
+from bewer import Vocabulary
 from bewer.core.dataset import Dataset, DatasetFrozenError, TextList, TextTokenList
 from bewer.core.example import Example
 
@@ -67,9 +68,10 @@ class TestDatasetAdd:
     def test_add_with_key_terms(self, empty_dataset):
         """Test registering a global key term vocabulary on the dataset."""
         empty_dataset.add("the quick brown fox", "the quick brown dog")
-        empty_dataset.add_key_term_list("animals", ["fox"])
+        empty_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         assert "animals" in empty_dataset[0].vocabs
-        assert {kt.raw for kt in empty_dataset._global_key_term_vocabs["animals"]} == {"fox"}
+        assert "animals" in empty_dataset._vocabularies
+        assert isinstance(empty_dataset._vocabularies["animals"], Vocabulary)
 
 
 class TestDatasetLoadPandas:
@@ -160,8 +162,8 @@ class TestDatasetLoadJsonl:
             os.unlink(jsonl_path)
 
 
-class TestDatasetAddKeyTermFile:
-    """Tests for Dataset.add_key_term_file() method."""
+class TestDatasetAddVocabularyFromFile:
+    """Tests for attaching a Vocabulary built from a file via add_file()."""
 
     def test_add_key_term_file(self, empty_dataset):
         """Test loading key terms from a file."""
@@ -170,18 +172,16 @@ class TestDatasetAddKeyTermFile:
             key_term_path = f.name
 
         try:
-            empty_dataset.add_key_term_file("animals", key_term_path)
-            assert "animals" in empty_dataset._global_key_term_vocabs
-            kt_raws = {kt.raw for kt in empty_dataset._global_key_term_vocabs["animals"]}
-            assert "fox" in kt_raws
-            assert "brown" in kt_raws
+            empty_dataset.add_vocabulary(Vocabulary(name="animals").add_file(key_term_path))
+            assert "animals" in empty_dataset._vocabularies
+            assert isinstance(empty_dataset._vocabularies["animals"], Vocabulary)
         finally:
             os.unlink(key_term_path)
 
     def test_add_key_term_file_not_found(self, empty_dataset):
         """Test that nonexistent file raises FileNotFoundError."""
         with pytest.raises(FileNotFoundError, match="not found"):
-            empty_dataset.add_key_term_file("animals", "/nonexistent/path/key_terms.txt")
+            Vocabulary(name="animals").add_file("/nonexistent/path/key_terms.txt")
 
     def test_add_key_term_file_matches_existing_examples(self, empty_dataset):
         """Test that key terms from file are matched against existing examples."""
@@ -192,26 +192,26 @@ class TestDatasetAddKeyTermFile:
             key_term_path = f.name
 
         try:
-            empty_dataset.add_key_term_file("animals", key_term_path)
-            assert "animals" in empty_dataset._global_key_term_vocabs
+            empty_dataset.add_vocabulary(Vocabulary(name="animals").add_file(key_term_path))
+            assert "animals" in empty_dataset._vocabularies
             matches = empty_dataset[0].ref.get_key_term_matches(vocab="animals")
             assert len(matches) == 1
         finally:
             os.unlink(key_term_path)
 
 
-class TestDatasetAddKeyTermListValidation:
-    """Tests for input validation in Dataset.add_key_term_list()."""
+class TestVocabularyAddTermsValidation:
+    """Tests for input validation in Vocabulary.add_terms()."""
 
-    def test_add_key_term_list_string_raises(self, empty_dataset):
+    def test_add_terms_string_raises(self, empty_dataset):
         """Test that passing a string raises TypeError."""
         with pytest.raises(TypeError, match="must be an iterable"):
-            empty_dataset.add_key_term_list("test", "not_a_list")
+            Vocabulary(name="test").add_terms("not_a_list")
 
-    def test_add_key_term_list_non_iterable_raises(self, empty_dataset):
+    def test_add_terms_non_iterable_raises(self, empty_dataset):
         """Test that passing a non-iterable raises TypeError."""
         with pytest.raises(TypeError, match="must be an iterable"):
-            empty_dataset.add_key_term_list("test", 42)
+            Vocabulary(name="test").add_terms(42)
 
 
 class TestDatasetRefsHyps:
@@ -431,7 +431,7 @@ class TestDatasetFreeze:
     def test_building_before_freeze_works(self, empty_dataset):
         """Data can be added freely before the dataset is frozen."""
         empty_dataset.add("hello", "hi")
-        empty_dataset.add_key_term_list("v", ["hello"])
+        empty_dataset.add_vocabulary(Vocabulary(name="v").add_terms(["hello"]))
         assert len(empty_dataset) == 1
 
     def test_add_after_freeze_raises(self, sample_dataset):
@@ -440,10 +440,10 @@ class TestDatasetFreeze:
         with pytest.raises(DatasetFrozenError, match="frozen Dataset"):
             sample_dataset.add("foo", "bar")
 
-    def test_add_key_term_list_after_freeze_raises(self, sample_dataset):
+    def test_add_vocabulary_after_freeze_raises(self, sample_dataset):
         sample_dataset.freeze()
         with pytest.raises(DatasetFrozenError):
-            sample_dataset.add_key_term_list("v", ["foo"])
+            sample_dataset.add_vocabulary(Vocabulary(name="v").add_terms(["hello"]))
 
     def test_load_pandas_after_freeze_raises(self, sample_dataset):
         sample_dataset.freeze()
@@ -470,12 +470,13 @@ class TestDatasetFreeze:
         with pytest.raises(DatasetFrozenError):
             sample_dataset.load_dataset(None)
 
-    def test_add_key_term_file_after_freeze_raises(self, sample_dataset, tmp_path):
+    def test_add_vocabulary_from_file_after_freeze_raises(self, sample_dataset, tmp_path):
         sample_dataset.freeze()
         kt_path = tmp_path / "kt.txt"
         kt_path.write_text("fox\n")
+        vocab = Vocabulary(name="v").add_file(str(kt_path))
         with pytest.raises(DatasetFrozenError):
-            sample_dataset.add_key_term_file("v", str(kt_path))
+            sample_dataset.add_vocabulary(vocab)
 
     def test_add_after_metric_computation_raises(self, sample_dataset):
         """End-to-end: computing a metric value then adding data raises."""
@@ -490,7 +491,7 @@ class TestDatasetFreeze:
             empty_dataset.metrics.ktr(vocab="missing")  # vocab not in dataset
         assert empty_dataset.is_frozen is False
         # Recovery works: add the vocab and successfully request the metric.
-        empty_dataset.add_key_term_list("animals", ["fox"])
+        empty_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         assert empty_dataset.metrics.ktr(vocab="animals").value is not None
         assert empty_dataset.is_frozen is True
 
@@ -525,10 +526,12 @@ class TestDatasetClone:
 
     def test_clone_copies_global_vocab(self, empty_dataset):
         empty_dataset.add("the quick brown fox", "the quick brown dog")
-        empty_dataset.add_key_term_list("animals", ["fox"])
+        empty_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         clone = empty_dataset.clone()
-        assert "animals" in clone._global_key_term_vocabs
-        assert {kt.raw for kt in clone._global_key_term_vocabs["animals"]} == {"fox"}
+        assert "animals" in clone._vocabularies
+        assert isinstance(clone._vocabularies["animals"], Vocabulary)
+        # Matching still works against the cloned vocab.
+        assert len(clone[0].ref.get_key_term_matches(vocab="animals")) == 1
 
     def test_clone_metric_values_match(self, dataset_with_errors):
         original_value = dataset_with_errors.metrics.wer().value

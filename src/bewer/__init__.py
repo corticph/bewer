@@ -5,6 +5,7 @@ from bewer import metrics as metrics
 from bewer import preprocessing as preprocessing
 from bewer import reporting as reporting
 from bewer.core.dataset import Dataset, DatasetFrozenError
+from bewer.core.vocabulary import Vocabulary, VocabularyExtractorError
 
 try:
     __version__ = version("bewer")
@@ -14,6 +15,8 @@ except PackageNotFoundError:
 __all__ = [
     "Dataset",
     "DatasetFrozenError",
+    "Vocabulary",
+    "VocabularyExtractorError",
     "core",
     "metrics",
     "preprocessing",

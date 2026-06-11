@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer import Dataset
+from bewer import Dataset, Vocabulary
 from bewer.metrics.ktp import KTP, KTP_
 
 
@@ -17,7 +17,7 @@ class TestKTPExampleMetric:
             ref="the fox jumps",
             hyp="the fox jumps",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
@@ -28,7 +28,7 @@ class TestKTPExampleMetric:
             ref="the fox jumps",
             hyp="the dog jumps",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
@@ -39,7 +39,7 @@ class TestKTPExampleMetric:
             ref="the fox jumps",
             hyp="the fox fox jumps",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     def test_value_perfect_match(self, dataset_keyword_match):
@@ -91,7 +91,7 @@ class TestKTPExampleMetric:
             ref="patient has diabetes",
             hyp="patient has diabetes",
         )
-        dataset.add_key_term_list("medical", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="medical").add_terms(["diabetes"]))
         ktp = dataset[0].metrics.ktp(vocab="medical")
         assert ktp.value == 1.0
         assert ktp.num_matches == 1
@@ -112,7 +112,7 @@ class TestKTPDatasetMetric:
             ref="the rabbit runs",
             hyp="the rabbit rabbit runs",
         )
-        dataset.add_key_term_list("animals", ["fox", "rabbit"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         return dataset
 
     def test_num_fp_aggregates(self, ktp_dataset):
@@ -140,7 +140,7 @@ class TestKTPDatasetMetric:
         dataset = Dataset()
         dataset.add(ref="the fox", hyp="the fox")
         dataset.add(ref="the rabbit", hyp="the rabbit")
-        dataset.add_key_term_list("animals", ["fox", "rabbit"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         ktp = dataset.metrics.ktp(vocab="animals")
         assert ktp.value == 1.0
 

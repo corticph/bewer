@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import ahocorasick
 
 from bewer.core.text import Text, TextType, TokenList
-from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
     from bewer.configs.resolve import Pipelines
@@ -89,16 +88,6 @@ class KeyTermTrie:
         token_strings = tokens.normalized if self.normalized else tokens.raw
         return tuple(self._vocab.get(w, self._unknown) for w in token_strings)
 
-    def encode_variants(self, tokens: TokenList) -> set[tuple[int, ...]]:
-        """Return all encoded patterns for a token list, including capitalized variant if enabled."""
-        variants = {self.encode(tokens)}
-        if self.add_capitalized and not self.normalized and tokens:
-            raw = tokens.raw
-            cap_first = raw[0].capitalize()
-            if cap_first != raw[0]:
-                variants.add(tuple(self._vocab.get(w, self._unknown) for w in [cap_first] + raw[1:]))
-        return variants
-
     def find_in_tokens(self, tokens: TokenList) -> tuple[list[slice], list[tuple[int, ...]]]:
         """Find all key term matches, returning spans and their encoded patterns."""
         int_text = self.encode(tokens)
@@ -137,35 +126,3 @@ def _remove_subset_matches(matches: list[slice]) -> list[slice]:
             continue
         result.append(m)
     return result
-
-
-def get_key_term_trie(
-    vocabs: dict[str, set[KeyTerm]],
-    cache: dict[tuple, Optional[KeyTermTrie]],
-    vocab: str,
-    normalized: bool = True,
-    add_capitalized: bool = False,
-) -> Optional[KeyTermTrie]:
-    """Get or build a trie for the key terms in the specified vocabulary."""
-    trie_key = (
-        STANDARDIZER_NAME.get(),
-        TOKENIZER_NAME.get(),
-        NORMALIZER_NAME.get() if normalized else None,
-        add_capitalized,
-        vocab,
-    )
-    if trie_key in cache:
-        return cache[trie_key]
-
-    key_terms = vocabs.get(vocab, None)
-    if not key_terms:
-        cache[trie_key] = None
-        return None
-
-    trie = KeyTermTrie(
-        key_terms,
-        normalized=normalized,
-        add_capitalized=add_capitalized,
-    )
-    cache[trie_key] = trie
-    return trie

@@ -53,7 +53,7 @@ class KTCER(Metric):
         allow_subset_matches: bool = False
 
         def validate(self) -> None:
-            if self.vocab not in self.metric.dataset._global_key_term_vocabs:
+            if self.vocab not in self.metric.dataset._vocabularies:
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @dependency
