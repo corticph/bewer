@@ -10,13 +10,13 @@ from omegaconf import OmegaConf
 from bewer.configs.resolve import resolve_pipelines
 from bewer.core.example import Example
 from bewer.core.text import TokenList
+from bewer.core.vocabulary import Vocabulary
 from bewer.metrics.base import MetricCollection
 
 __all__ = ["Dataset", "DatasetFrozenError", "TextList", "TextTokenList"]
 
 if TYPE_CHECKING:
     from bewer.core.text import Text
-    from bewer.core.vocabulary import Vocabulary
 
 
 class DatasetFrozenError(RuntimeError):
@@ -177,17 +177,25 @@ class Dataset(object):
         term metrics via ``metrics.ktr(vocab=name)``. The same Vocabulary object may be
         attached to multiple datasets; it resolves its terms against each one independently.
 
+        Attaching freezes the vocabulary's definition: it can no longer be modified via
+        ``add_terms``/``add_file``/``add_extractor``, so its resolved terms stay fixed for
+        every dataset it is attached to.
+
         Args:
             vocab (Vocabulary): The vocabulary to attach.
 
         Raises:
+            TypeError: If ``vocab`` is not a Vocabulary.
             ValueError: If a different vocabulary is already registered under the same name.
         """
         self._check_not_frozen()
+        if not isinstance(vocab, Vocabulary):
+            raise TypeError(f"add_vocabulary() expects a Vocabulary, got {type(vocab)}.")
         existing = self._vocabularies.get(vocab.name)
         if existing is not None and existing is not vocab:
             raise ValueError(f"A different vocabulary named '{vocab.name}' is already attached to this dataset.")
         self._vocabularies[vocab.name] = vocab
+        vocab._freeze()
 
     @staticmethod
     def _get_language_config_path(language: str):

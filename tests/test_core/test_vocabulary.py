@@ -4,7 +4,13 @@ import gc
 
 import pytest
 
-from bewer import Dataset, DatasetFrozenError, Vocabulary, VocabularyExtractorError
+from bewer import (
+    Dataset,
+    DatasetFrozenError,
+    Vocabulary,
+    VocabularyExtractorError,
+    VocabularyFrozenError,
+)
 
 
 class TestVocabularyBuilder:
@@ -136,6 +142,54 @@ class TestVocabularySharing:
         dataset.add_vocabulary(vocab)
         dataset.add_vocabulary(vocab)  # no error
         assert dataset._vocabularies["m"] is vocab
+
+    def test_add_vocabulary_rejects_non_vocabulary(self):
+        dataset = Dataset()
+        dataset.add("a b", "a b")
+        with pytest.raises(TypeError):
+            dataset.add_vocabulary("not a vocabulary")
+
+
+class TestVocabularyFreezeOnRegistration:
+    """Attaching a vocabulary freezes its definition (loud, not silent)."""
+
+    def test_add_terms_after_registration_raises(self):
+        dataset = Dataset()
+        dataset.add("a b", "a b")
+        vocab = Vocabulary(name="m").add_terms(["a"])
+        dataset.add_vocabulary(vocab)
+        with pytest.raises(VocabularyFrozenError):
+            vocab.add_terms(["b"])
+
+    def test_add_extractor_after_registration_raises(self):
+        dataset = Dataset()
+        dataset.add("a b", "a b")
+        vocab = Vocabulary(name="m").add_terms(["a"])
+        dataset.add_vocabulary(vocab)
+        with pytest.raises(VocabularyFrozenError):
+            vocab.add_extractor(lambda ds: ["b"])
+
+    def test_add_file_after_registration_raises(self, tmp_path):
+        path = tmp_path / "terms.txt"
+        path.write_text("b\n")
+        dataset = Dataset()
+        dataset.add("a b", "a b")
+        vocab = Vocabulary(name="m").add_terms(["a"])
+        dataset.add_vocabulary(vocab)
+        with pytest.raises(VocabularyFrozenError):
+            vocab.add_file(str(path))
+
+    def test_can_be_attached_to_multiple_datasets_after_freeze(self):
+        """Freezing blocks definition edits, not re-attachment: sharing still works."""
+        vocab = Vocabulary(name="m").add_terms(["fox"])
+        d1 = Dataset()
+        d1.add("the quick brown fox", "the quick brown fox")
+        d1.add_vocabulary(vocab)  # freezes
+        d2 = Dataset()
+        d2.add("a fox", "a fox")
+        d2.add_vocabulary(vocab)  # already frozen, still allowed
+        assert d1.metrics.ktr(vocab="m").value == 1.0
+        assert d2.metrics.ktr(vocab="m").value == 1.0
 
 
 class TestVocabularyClone:

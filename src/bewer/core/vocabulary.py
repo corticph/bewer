@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
     from bewer.core.text import Text
 
-__all__ = ["Vocabulary", "VocabularyExtractorError", "ExtractorFn"]
+__all__ = ["Vocabulary", "VocabularyExtractorError", "VocabularyFrozenError", "ExtractorFn"]
 
 # An extractor takes a Dataset and returns key term strings pulled from its examples
 # (reference or hypothesis text). Extracted terms are treated exactly like static terms.
@@ -26,6 +26,10 @@ ExtractorFn = Callable[["Dataset"], Iterable[str]]
 
 class VocabularyExtractorError(RuntimeError):
     """Raised when a vocabulary extractor function fails during resolution."""
+
+
+class VocabularyFrozenError(RuntimeError):
+    """Raised when attempting to modify a Vocabulary after it has been attached to a dataset."""
 
 
 class _Resolved:
@@ -61,10 +65,25 @@ class Vocabulary:
         self._name = name
         self._static_terms: set[str] = set()
         self._extractors: list[ExtractorFn] = []
+        # Frozen once attached to a dataset (see Dataset.add_vocabulary). A frozen
+        # vocabulary's definition cannot change, so its resolved terms / trie can never
+        # go stale for any dataset it is registered to.
+        self._frozen = False
         # Per-dataset resolution cache. Weak keys so an attached-but-discarded dataset's
         # resolution (and trie) is collected with it — a shared vocabulary never leaks.
         self._cache: "weakref.WeakKeyDictionary[Dataset, dict[tuple, _Resolved]]" = weakref.WeakKeyDictionary()
         self._lock = threading.Lock()
+
+    def _freeze(self) -> None:
+        """Mark the vocabulary's definition as immutable. Idempotent. Called by Dataset.add_vocabulary."""
+        self._frozen = True
+
+    def _check_not_frozen(self) -> None:
+        if self._frozen:
+            raise VocabularyFrozenError(
+                f"Cannot modify vocabulary '{self._name}' after it has been attached to a dataset. "
+                "Build it fully before calling Dataset.add_vocabulary(), or create a new Vocabulary."
+            )
 
     @property
     def name(self) -> str:
@@ -80,6 +99,7 @@ class Vocabulary:
 
     def add_terms(self, terms: Iterable[str]) -> "Vocabulary":
         """Add a static list of key terms. Returns self for chaining."""
+        self._check_not_frozen()
         if not isinstance(terms, Iterable) or isinstance(terms, str):
             raise TypeError("terms must be an iterable of strings")
         terms = set(terms)
@@ -91,6 +111,7 @@ class Vocabulary:
 
     def add_file(self, path: str | Path) -> "Vocabulary":
         """Add key terms from a plain-text file (one term per line). Returns self for chaining."""
+        self._check_not_frozen()
         if not Path(path).is_file():
             raise FileNotFoundError(f"Key term file {path} not found")
         terms = Path(path).read_text().strip().splitlines()
@@ -100,6 +121,7 @@ class Vocabulary:
         """Add an extractor function ``Callable[[Dataset], Iterable[str]]`` whose output
         key terms are resolved against each dataset the vocabulary is used with.
         Returns self for chaining."""
+        self._check_not_frozen()
         if not callable(fn):
             raise TypeError("extractor must be callable")
         self._extractors.append(fn)
