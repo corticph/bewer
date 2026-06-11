@@ -36,9 +36,6 @@ dependencies = [
     "hydra-core>=1.3.0",
     "omegaconf>=2.3.0",
     "error-align>=0.1.0b8",
-    # Temporarily required until Corti-specific metrics are replaced
-    "fuzzywuzzy>=0.18.0",
-    "levenshtein>=0.20.0",
     "jinja2>=3.1.6,<4.0.0",
     "typeguard>=4.0.0",
     "pyahocorasick (>=2.3.0,<3.0.0)",

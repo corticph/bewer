@@ -34,41 +34,41 @@ class TestParameterizedMetrics:
 
     def test_factory_returns_new_instance(self, sample_dataset):
         """Test that factory calls with different params return different instances."""
-        kwa_base = sample_dataset.metrics._legacy_kwa()
-        kwa_params = sample_dataset.metrics._legacy_kwa(cer_threshold=0.5)
-        assert kwa_base is not kwa_params
-        assert kwa_params.params.cer_threshold == 0.5
+        rktr_base = sample_dataset.metrics.rktr(vocab="medical_terms")
+        rktr_params = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
+        assert rktr_base is not rktr_params
+        assert rktr_params.params.threshold == 0.5
 
     def test_factory_caching(self, sample_dataset):
         """Test that factory caches instances with same parameters."""
-        kwa1 = sample_dataset.metrics._legacy_kwa(cer_threshold=0.5)
-        kwa2 = sample_dataset.metrics._legacy_kwa(cer_threshold=0.5)
-        assert kwa1 is kwa2
+        rktr1 = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
+        rktr2 = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
+        assert rktr1 is rktr2
 
     def test_factory_different_params_different_instances(self, sample_dataset):
         """Test that different parameters create different instances."""
-        kwa1 = sample_dataset.metrics._legacy_kwa(cer_threshold=0.5)
-        kwa2 = sample_dataset.metrics._legacy_kwa(cer_threshold=0.6)
-        assert kwa1 is not kwa2
+        rktr1 = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
+        rktr2 = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.6)
+        assert rktr1 is not rktr2
 
     def test_factory_non_hashable_params(self, sample_dataset):
         """Test that non-hashable parameters raise TypeError with helpful message."""
         with pytest.raises(TypeError) as exc_info:
-            sample_dataset.metrics._legacy_kwa(config={"a": [1, 2, 3], "b": {"x": 1}})
+            sample_dataset.metrics.rktr(vocab="medical_terms", config={"a": [1, 2, 3], "b": {"x": 1}})
         error_msg = str(exc_info.value)
         assert "must be hashable" in error_msg or "unhashable type" in error_msg
         assert "config" in error_msg
 
     def test_factory_uses_defaults(self, sample_dataset):
         """Test that factory uses default parameters."""
-        # KeywordAggregator has default cer_threshold=0.2
-        kwa1 = sample_dataset.metrics._legacy_kwa()
-        assert kwa1.params.cer_threshold == 0.2
+        # RKTR has default threshold=0.0
+        rktr1 = sample_dataset.metrics.rktr(vocab="medical_terms")
+        assert rktr1.params.threshold == 0.0
 
     def test_factory_overrides_defaults(self, sample_dataset):
         """Test that factory can override default parameters."""
-        kwa = sample_dataset.metrics._legacy_kwa(cer_threshold=0.5)
-        assert kwa.params.cer_threshold == 0.5
+        rktr = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
+        assert rktr.params.threshold == 0.5
 
 
 class TestDynamicNaming:
@@ -78,7 +78,7 @@ class TestDynamicNaming:
     def sample_dataset(self):
         """Create a sample dataset for testing."""
         dataset = Dataset()
-        dataset.add(ref="hello world", hyp="hello world")
+        dataset.add(ref="hello world", hyp="hello world", key_terms={"medical_terms": ["hello"]})
         return dataset
 
     def test_base_metric_short_name_no_params(self, sample_dataset):
@@ -93,27 +93,26 @@ class TestDynamicNaming:
 
     def test_parameterized_metric_short_name_includes_params(self, sample_dataset):
         """Test that parameterized metric includes params in short name."""
-        kwa = sample_dataset.metrics._legacy_kwa(cer_threshold=0.5)
-        assert "cer_threshold=0.5" in kwa.short_name
-        assert kwa.short_name.startswith("kwa (")
+        rktr = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
+        assert "threshold=0.5" in rktr.short_name
+        assert rktr.short_name.startswith("RKTR (")
 
     def test_parameterized_metric_long_name_includes_params(self, sample_dataset):
         """Test that parameterized metric includes params in long name."""
-        kwa = sample_dataset.metrics._legacy_kwa(cer_threshold=0.5)
-        assert "cer_threshold=0.5" in kwa.long_name
-        assert kwa.long_name.startswith("Keyword Aggregator (")
+        rktr = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
+        assert "threshold=0.5" in rktr.long_name
+        assert rktr.long_name.startswith("Relaxed Key Term Recall (")
 
     def test_multiple_params_in_name(self, sample_dataset):
         """Test that multiple parameters are shown in name."""
-        # Use HallucinationAggregator which has threshold param
-        # Note: We're just testing the naming mechanism, the actual computation
-        # might not work properly without proper data
-        hlcn = sample_dataset.metrics._legacy_hlcn(threshold=5)
-        assert "threshold=5" in hlcn.short_name
+        # RKTR exposes several params; check that more than one is rendered in the name.
+        rktr = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
+        assert "threshold=0.5" in rktr.short_name
+        assert "vocab=medical_terms" in rktr.short_name
 
 
-class TestKeywordAggregatorRefactoring:
-    """Test suite for KeywordAggregator refactoring."""
+class TestRKTRParameterization:
+    """Test suite for parameterization on a real parameterized metric (RKTR)."""
 
     @pytest.fixture
     def keyword_dataset(self):
@@ -126,27 +125,27 @@ class TestKeywordAggregatorRefactoring:
         )
         return dataset
 
-    def test_default_cer_threshold(self, keyword_dataset):
-        """Test that default cer_threshold is set correctly."""
-        kwa = keyword_dataset.metrics._legacy_kwa()
-        assert kwa.params.cer_threshold == 0.2
+    def test_default_threshold(self, keyword_dataset):
+        """Test that default threshold is set correctly."""
+        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms")
+        assert rktr.params.threshold == 0.0
 
-    def test_custom_cer_threshold(self, keyword_dataset):
-        """Test that custom cer_threshold can be set."""
-        kwa = keyword_dataset.metrics._legacy_kwa(cer_threshold=0.1)
-        assert kwa.params.cer_threshold == 0.1
+    def test_custom_threshold(self, keyword_dataset):
+        """Test that custom threshold can be set."""
+        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms", threshold=0.1)
+        assert rktr.params.threshold == 0.1
 
-    def test_kwa_short_name_includes_threshold(self, keyword_dataset):
-        """Test that KWA short name includes threshold parameter."""
-        kwa = keyword_dataset.metrics._legacy_kwa()
-        assert "cer_threshold=0.2" in kwa.short_name
+    def test_short_name_includes_threshold(self, keyword_dataset):
+        """Test that RKTR short name includes threshold parameter."""
+        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms")
+        assert "threshold=0.0" in rktr.short_name
 
-    def test_kwa_computes_with_threshold(self, keyword_dataset):
-        """Test that KWA correctly uses threshold in computation."""
+    def test_computes_with_threshold(self, keyword_dataset):
+        """Test that RKTR correctly uses threshold in computation."""
         # This is a basic integration test to ensure it doesn't crash
-        kwa = keyword_dataset.metrics._legacy_kwa()
-        _ = kwa.match_count
-        _ = kwa.relaxed_match_count
+        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms")
+        _ = rktr.num_relaxed_matches
+        _ = rktr.num_ref_terms
 
 
 class TestExampleMetricParamsAccess:
@@ -166,26 +165,26 @@ class TestExampleMetricParamsAccess:
     def test_example_metric_has_params_property(self, keyword_dataset):
         """Test that ExampleMetric has params property."""
         example = keyword_dataset.examples[0]
-        kwa_example = example.metrics._legacy_kwa()
-        assert hasattr(kwa_example, "params")
+        rktr_example = example.metrics.rktr(vocab="medical_terms")
+        assert hasattr(rktr_example, "params")
 
     def test_example_metric_params_matches_parent(self, keyword_dataset):
         """Test that ExampleMetric params matches parent metric params."""
-        kwa = keyword_dataset.metrics._legacy_kwa()
+        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms")
         example = keyword_dataset.examples[0]
-        kwa_example = example.metrics._legacy_kwa()
-        assert kwa_example.params == kwa.params
+        rktr_example = example.metrics.rktr(vocab="medical_terms")
+        assert rktr_example.params == rktr.params
 
     def test_example_metric_params_with_custom_threshold(self, keyword_dataset):
         """Test that ExampleMetric gets custom params from parent."""
-        kwa = keyword_dataset.metrics._legacy_kwa(cer_threshold=0.1)
+        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms", threshold=0.1)
         # Force creation of example metric
-        _ = kwa.match_count
+        _ = rktr.num_relaxed_matches
         example = keyword_dataset.examples[0]
         # Access the example metric for the parameterized parent
         # This requires getting it through the parameterized parent's cache
-        kwa_example = kwa[example.index]
-        assert kwa_example.params.cer_threshold == 0.1
+        rktr_example = rktr[example.index]
+        assert rktr_example.params.threshold == 0.1
 
 
 class TestCacheKeyGeneration:
@@ -269,9 +268,9 @@ class TestDeclarativeHyperparams:
             key_terms={"medical_terms": ["diabetes"]},
         )
 
-        # KeywordAggregator has cer_threshold with default 0.2
-        kwa = dataset.metrics._legacy_kwa()
-        assert kwa.params.cer_threshold == 0.2
+        # RKTR has threshold with default 0.0
+        rktr = dataset.metrics.rktr(vocab="medical_terms")
+        assert rktr.params.threshold == 0.0
 
     def test_metric_with_optional_hyperparam_can_override(self):
         """Test that optional hyperparams can be overridden."""
@@ -284,9 +283,9 @@ class TestDeclarativeHyperparams:
             key_terms={"medical_terms": ["diabetes"]},
         )
 
-        # Override cer_threshold
-        kwa = dataset.metrics._legacy_kwa(cer_threshold=0.5)
-        assert kwa.params.cer_threshold == 0.5
+        # Override threshold
+        rktr = dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
+        assert rktr.params.threshold == 0.5
 
     def test_metric_rejects_unknown_hyperparam(self):
         """Test that unknown hyperparams are rejected with helpful message."""
@@ -301,11 +300,11 @@ class TestDeclarativeHyperparams:
 
         # Try to set unknown param
         with pytest.raises(ValueError) as exc_info:
-            dataset.metrics._legacy_kwa(unknown_param=123)
+            dataset.metrics.rktr(vocab="medical_terms", unknown_param=123)
         assert "Unknown parameter" in str(exc_info.value)
         assert "unknown_param" in str(exc_info.value)
         assert "Valid parameters:" in str(exc_info.value)
-        assert "cer_threshold" in str(exc_info.value)
+        assert "threshold" in str(exc_info.value)
 
     def test_metric_validates_hyperparam_type(self):
         """Test that hyperparam types are validated."""
@@ -320,7 +319,7 @@ class TestDeclarativeHyperparams:
 
         # Try to set wrong type
         with pytest.raises(TypeError) as exc_info:
-            dataset.metrics._legacy_kwa(cer_threshold="not a float")
+            dataset.metrics.rktr(vocab="medical_terms", threshold="not a float")
         assert "must be float" in str(exc_info.value)
 
 
