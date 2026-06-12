@@ -202,7 +202,7 @@ class Vocabulary:
         if not spans:
             return []
         matches = [
-            KeyTermMatch(start=span.start, stop=span.stop, text=text, key_term=key_term)
+            KeyTermMatch(start=span.start, stop=span.stop, src=text, key_term=key_term)
             for span, key_term in zip(spans, key_terms)
         ]
         return _remove_duplicate_matches(matches) if allow_subset_matches else _remove_subset_matches(matches)

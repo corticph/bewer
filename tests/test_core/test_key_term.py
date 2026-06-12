@@ -249,12 +249,12 @@ class TestKeyTermMatch:
         assert example.ref.tokens[match.token_slice].raw == ["quick", "brown"]
 
     def test_references_and_derived_fields(self, sample_dataset):
-        """text/key_term references and the derived tokens are correct."""
+        """src/key_term references and the derived tokens are correct."""
         sample_dataset.add("the quick brown fox", "the quick brown fox")
         sample_dataset.add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
         example = sample_dataset[-1]
         (match,) = example.ref.get_key_term_matches(vocab="phrases")
-        assert match.text is example.ref
+        assert match.src is example.ref
         assert isinstance(match.key_term, KeyTerm)
         assert match.key_term.raw == "quick brown"
         assert match.tokens.raw == ["quick", "brown"]

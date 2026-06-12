@@ -39,31 +39,31 @@ class KeyTermMatch:
 
     Carries the matched token span (``start``/``stop`` token indices, mirroring the raw
     ``slice`` previously returned so existing consumers that read ``.start``/``.stop`` keep
-    working) together with the parent ``text`` it was found in and the ``key_term`` it was
-    identified as. Richer details — the side it was found on and the matched tokens — are
-    derived from those two references.
+    working) together with the source ``Text`` it was found in (``src``, mirroring
+    ``Token.src``) and the ``key_term`` it was identified as. Richer details — the side it
+    was found on and the matched tokens — are derived from those two references.
     """
 
     start: int
     stop: int
-    text: "Text"
+    src: "Text"
     key_term: "KeyTerm"
 
     @property
     def token_slice(self) -> slice:
-        """The matched span as a ``slice`` for indexing the parent text's ``TokenList``."""
+        """The matched span as a ``slice`` for indexing the source text's ``TokenList``."""
         return slice(self.start, self.stop)
 
     @property
     def side(self) -> Optional[TextType]:
         """Which side the match was found on (``REF`` / ``HYP`` / ``KEY_TERM``), or ``None``
-        if the parent text has no type set."""
-        return self.text.text_type
+        if the source text has no type set."""
+        return self.src.text_type
 
     @property
     def tokens(self) -> TokenList:
-        """The matched ``Token`` objects from the parent text."""
-        return self.text.tokens[self.token_slice]
+        """The matched ``Token`` objects from the source text."""
+        return self.src.tokens[self.token_slice]
 
     def __repr__(self):
         return f"KeyTermMatch(term={self.key_term.raw!r}, span=({self.start}, {self.stop}))"
