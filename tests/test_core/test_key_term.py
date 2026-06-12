@@ -286,3 +286,12 @@ class TestKeyTermMatch:
         (match,) = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
         assert isinstance(match, KeyTermMatch)
         assert match.tokens.raw == ["quick", "brown"]
+
+    def test_colliding_key_terms_resolve_deterministically(self, sample_dataset):
+        """When distinct raw terms collapse to the same token pattern, the reported key term
+        is deterministic: the lexicographically smallest raw wins (here "Diabetes" < "diabetes")."""
+        sample_dataset.add("the patient has diabetes", "the patient has diabetes")
+        sample_dataset.add_vocabulary(Vocabulary(name="med").add_terms(["diabetes", "Diabetes"]))
+        example = sample_dataset[-1]
+        (match,) = example.ref.get_key_term_matches(vocab="med")
+        assert match.key_term.raw == "Diabetes"

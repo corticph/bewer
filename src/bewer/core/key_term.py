@@ -56,7 +56,8 @@ class KeyTermMatch:
 
     @property
     def side(self) -> Optional[TextType]:
-        """Which side the match was found on (``REF`` / ``HYP`` / ``KEY_TERM``)."""
+        """Which side the match was found on (``REF`` / ``HYP`` / ``KEY_TERM``), or ``None``
+        if the parent text has no type set."""
         return self.text.text_type
 
     @property
@@ -89,9 +90,11 @@ class KeyTermTrie:
         self.add_capitalized = add_capitalized
 
         # (key_term, token_pattern) pairs, keeping each pattern tied to its originating
-        # key term so matches can report which KeyTerm they were identified as.
+        # key term so matches can report which KeyTerm they were identified as. Iterate in
+        # a stable order (by raw text) so that when distinct key terms collapse to the same
+        # token pattern, the first-wins de-duplication below picks the same one every run.
         pattern_entries: list[tuple[KeyTerm, tuple[str, ...]]] = []
-        for key_term in key_terms:
+        for key_term in sorted(key_terms, key=lambda kt: kt.raw):
             tokens = key_term.tokens.normalized if normalized else key_term.tokens.raw
             token_pattern = tuple(tokens)
             if not token_pattern:
