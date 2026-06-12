@@ -201,7 +201,7 @@ class TestTextGetKeyTermMatchesAllowSubsets:
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
         assert len(matches) == 1
-        assert matches[0].surface == "quick brown"
+        assert matches[0].tokens.raw == ["quick", "brown"]
 
 
 class TestKeyTermTrieAddCapitalized:
@@ -249,15 +249,14 @@ class TestKeyTermMatch:
         assert example.ref.tokens[match.token_slice].raw == ["quick", "brown"]
 
     def test_references_and_derived_fields(self, sample_dataset):
-        """text/key_term references and the derived term/surface/tokens fields are correct."""
+        """text/key_term references and the derived tokens are correct."""
         sample_dataset.add("the quick brown fox", "the quick brown fox")
         sample_dataset.add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
         example = sample_dataset[-1]
         (match,) = example.ref.get_key_term_matches(vocab="phrases")
         assert match.text is example.ref
         assert isinstance(match.key_term, KeyTerm)
-        assert match.term == "quick brown"
-        assert match.surface == "quick brown"
+        assert match.key_term.raw == "quick brown"
         assert match.tokens.raw == ["quick", "brown"]
 
     def test_side_reflects_ref_vs_hyp(self, sample_dataset):
@@ -270,14 +269,14 @@ class TestKeyTermMatch:
         assert ref_match.side == TextType.REF
         assert hyp_match.side == TextType.HYP
 
-    def test_surface_preserves_original_casing(self, sample_dataset):
-        """surface is the raw matched text even when matching is case-insensitive."""
+    def test_matched_tokens_preserve_original_casing(self, sample_dataset):
+        """The matched tokens are the raw text even when matching is case-insensitive."""
         sample_dataset.add("Hello World", "hello world")
         sample_dataset.add_vocabulary(Vocabulary(name="greetings").add_terms(["hello"]))
         example = sample_dataset[-1]
         (match,) = example.ref.get_key_term_matches(vocab="greetings")
-        assert match.surface == "Hello"
-        assert match.term == "hello"
+        assert match.tokens.raw == ["Hello"]
+        assert match.key_term.raw == "hello"
 
     def test_subset_removal_keeps_richer_object(self, sample_dataset):
         """With allow_subset_matches=False the surviving longer match is a KeyTermMatch."""
@@ -286,4 +285,4 @@ class TestKeyTermMatch:
         example = sample_dataset[-1]
         (match,) = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
         assert isinstance(match, KeyTermMatch)
-        assert match.surface == "quick brown"
+        assert match.tokens.raw == ["quick", "brown"]

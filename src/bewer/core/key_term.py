@@ -40,8 +40,8 @@ class KeyTermMatch:
     Carries the matched token span (``start``/``stop`` token indices, mirroring the raw
     ``slice`` previously returned so existing consumers that read ``.start``/``.stop`` keep
     working) together with the parent ``text`` it was found in and the ``key_term`` it was
-    identified as. Richer details — the side it was found on, the matched tokens, and the
-    surface text — are derived from those two references.
+    identified as. Richer details — the side it was found on and the matched tokens — are
+    derived from those two references.
     """
 
     start: int
@@ -64,18 +64,8 @@ class KeyTermMatch:
         """The matched ``Token`` objects from the parent text."""
         return self.text.tokens[self.token_slice]
 
-    @property
-    def surface(self) -> str:
-        """The raw surface text actually matched in the parent text."""
-        return " ".join(self.tokens.raw)
-
-    @property
-    def term(self) -> str:
-        """The raw string of the key term that matched."""
-        return self.key_term.raw
-
     def __repr__(self):
-        return f"KeyTermMatch(term={self.term!r}, span=({self.start}, {self.stop}), surface={self.surface!r})"
+        return f"KeyTermMatch(term={self.key_term.raw!r}, span=({self.start}, {self.stop}))"
 
 
 class KeyTermTrie:
