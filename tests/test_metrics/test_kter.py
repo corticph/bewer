@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer import Dataset
+from bewer import Dataset, Vocabulary
 from bewer.metrics.kter import KTER, KTER_
 
 
@@ -17,7 +17,7 @@ class TestKTERExampleMetric:
             ref="the quick brown fox",
             hyp="the quick brown fox",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
@@ -28,7 +28,7 @@ class TestKTERExampleMetric:
             ref="the quick brown fox",
             hyp="the quick brown dog",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
@@ -39,7 +39,7 @@ class TestKTERExampleMetric:
             ref="the quick brown fox",
             hyp="the quick brown fox",
         )
-        dataset.add_key_term_list("phrases", ["quick brown"])
+        dataset.add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
         return dataset
 
     @pytest.fixture
@@ -50,7 +50,7 @@ class TestKTERExampleMetric:
             ref="the quick brown fox",
             hyp="the slow brown fox",
         )
-        dataset.add_key_term_list("phrases", ["quick brown"])
+        dataset.add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
         return dataset
 
     def test_num_errors_perfect_match(self, dataset_single_keyword_match):
@@ -106,7 +106,7 @@ class TestKTERExampleMetric:
             ref="the fox met another fox",
             hyp="the fox met another dog",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         example = dataset[0]
         kter = example.metrics.kter(vocab="animals")
         assert kter.num_key_terms == 2
@@ -119,7 +119,7 @@ class TestKTERExampleMetric:
             ref="the quick brown fox",
             hyp="the slow brown dog",
         )
-        dataset.add_key_term_list("terms", ["quick", "fox"])
+        dataset.add_vocabulary(Vocabulary(name="terms").add_terms(["quick", "fox"]))
         example = dataset[0]
         kter = example.metrics.kter(vocab="terms")
         assert kter.num_key_terms == 2
@@ -133,7 +133,7 @@ class TestKTERExampleMetric:
             ref="hello world",
             hyp="hello world",
         )
-        dataset.add_key_term_list("terms", ["missing"])
+        dataset.add_vocabulary(Vocabulary(name="terms").add_terms(["missing"]))
         example = dataset[0]
         kter = example.metrics.kter(vocab="terms")
         assert kter.num_key_terms == 0
@@ -146,7 +146,7 @@ class TestKTERExampleMetric:
             ref="hello world",
             hyp="hello world",
         )
-        dataset.add_key_term_list("terms", ["missing"])
+        dataset.add_vocabulary(Vocabulary(name="terms").add_terms(["missing"]))
         example = dataset[0]
         kter = example.metrics.kter(vocab="terms")
         assert kter.value == 0.0
@@ -162,7 +162,7 @@ class TestKTERNormalization:
             ref="the Fox jumps",
             hyp="the fox jumps",
         )
-        dataset.add_key_term_list("animals", ["Fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["Fox"]))
         kter = dataset[0].metrics.kter(vocab="animals", normalized=False)
         assert kter.num_errors == 1
 
@@ -173,7 +173,7 @@ class TestKTERNormalization:
             ref="the FOX jumps",
             hyp="the FOX jumps",
         )
-        dataset.add_key_term_list("animals", ["FOX"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["FOX"]))
         kter = dataset[0].metrics.kter(vocab="animals", normalized=False)
         assert kter.num_errors == 0
 
@@ -193,7 +193,7 @@ class TestKTERDatasetMetric:
             ref="the lazy brown dog",
             hyp="the lazy brown cat",
         )
-        dataset.add_key_term_list("animals", ["fox", "dog"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "dog"]))
         return dataset
 
     def test_num_errors_aggregates(self, keyword_dataset):
@@ -221,7 +221,7 @@ class TestKTERDatasetMetric:
         dataset = Dataset()
         dataset.add(ref="hello world", hyp="hello world")
         dataset.add(ref="foo bar", hyp="foo bar")
-        dataset.add_key_term_list("terms", ["hello", "foo"])
+        dataset.add_vocabulary(Vocabulary(name="terms").add_terms(["hello", "foo"]))
         kter = dataset.metrics.kter(vocab="terms")
         assert kter.value == 0.0
 
@@ -239,7 +239,7 @@ class TestKTERParameterValidation:
         """Test that omitting the required vocab parameter raises ValueError."""
         dataset = Dataset()
         dataset.add(ref="hello world", hyp="hello world")
-        dataset.add_key_term_list("terms", ["hello"])
+        dataset.add_vocabulary(Vocabulary(name="terms").add_terms(["hello"]))
         with pytest.raises(ValueError, match="Missing required parameters"):
             dataset.metrics.kter()
 
@@ -247,7 +247,7 @@ class TestKTERParameterValidation:
         """Test that using a non-existent vocabulary raises ValueError."""
         dataset = Dataset()
         dataset.add(ref="hello world", hyp="hello world")
-        dataset.add_key_term_list("terms", ["hello"])
+        dataset.add_vocabulary(Vocabulary(name="terms").add_terms(["hello"]))
         with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
             dataset.metrics.kter(vocab="nonexistent").value
 
@@ -255,7 +255,7 @@ class TestKTERParameterValidation:
         """Test that vocab parameter must be a string."""
         dataset = Dataset()
         dataset.add(ref="hello world", hyp="hello world")
-        dataset.add_key_term_list("terms", ["hello"])
+        dataset.add_vocabulary(Vocabulary(name="terms").add_terms(["hello"]))
         with pytest.raises(TypeError, match="must be str"):
             dataset.metrics.kter(vocab=123)
 
@@ -288,7 +288,7 @@ class TestKTERMetricAttributes:
         """Test that short_name includes the vocab parameter."""
         dataset = Dataset()
         dataset.add(ref="hello", hyp="hello")
-        dataset.add_key_term_list("terms", ["hello"])
+        dataset.add_vocabulary(Vocabulary(name="terms").add_terms(["hello"]))
         kter = dataset.metrics.kter(vocab="terms")
         assert "vocab=terms" in kter.short_name
 
@@ -296,7 +296,7 @@ class TestKTERMetricAttributes:
         """Test that same parameters return cached instance."""
         dataset = Dataset()
         dataset.add(ref="hello", hyp="hello")
-        dataset.add_key_term_list("terms", ["hello"])
+        dataset.add_vocabulary(Vocabulary(name="terms").add_terms(["hello"]))
         kter1 = dataset.metrics.kter(vocab="terms")
         kter2 = dataset.metrics.kter(vocab="terms")
         assert kter1 is kter2
@@ -309,7 +309,7 @@ class TestKTERSharesKTStats:
         """Test that KTER and KTR with identical params use the same cached _KTStats instance."""
         dataset = Dataset()
         dataset.add(ref="the fox jumps", hyp="the fox jumps")
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         kter = dataset.metrics.kter(vocab="animals")
         ktr = dataset.metrics.ktr(vocab="animals")
         assert kter._kt_stats is ktr._kt_stats

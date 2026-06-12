@@ -54,7 +54,7 @@ class KTF(Metric):
             """Validate that the metric can be computed with the given parameters and source data."""
             if self.beta <= 0:
                 raise ValueError(f"beta must be positive, got {self.beta}.")
-            if self.vocab not in self.metric.dataset._global_key_term_vocabs:
+            if self.vocab not in self.metric.dataset._vocabularies:
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @dependency

@@ -315,11 +315,12 @@ class TestKeyTermIndicators:
     @pytest.fixture
     def dataset_with_key_terms(self):
         """Create a dataset with key terms for testing HTML rendering."""
+        from bewer import Vocabulary
         from bewer.core.dataset import Dataset
 
         dataset = Dataset()
         dataset.add("the quick brown fox", "the quick brown dog")
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     def test_key_term_classes_rendered_in_html(self, dataset_with_key_terms):
@@ -336,6 +337,7 @@ class TestKeyTermIndicators:
 
     def test_overlapping_key_terms_merge_into_run(self):
         """Test that overlapping key terms merge into a single contiguous run when allow_subset_matches=True."""
+        from bewer import Vocabulary
         from bewer.core.dataset import Dataset
         from bewer.reporting.html.alignment import _get_key_term_indicators
 
@@ -345,7 +347,7 @@ class TestKeyTermIndicators:
             "the quick brown fox jumps",
             "the quick brown dog jumps",
         )
-        dataset.add_key_term_list("overlapping", ["brown fox", "brown"])
+        dataset.add_vocabulary(Vocabulary(name="overlapping").add_terms(["brown fox", "brown"]))
         example = dataset[0]
         alignment = example.metrics.levenshtein().alignment
         start_indices, stop_indices, _ = _get_key_term_indicators(alignment, allow_subset_matches=True)

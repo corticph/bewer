@@ -2,6 +2,7 @@
 
 import pytest
 
+from bewer import Vocabulary
 from bewer.core.example import Example
 from bewer.core.text import Text, TextType
 
@@ -70,7 +71,7 @@ class TestExamplePrepareAndValidateKeyTerms:
     def test_key_term_not_in_ref_no_matches(self, sample_dataset):
         """Test that key term not in reference produces no matches."""
         sample_dataset.add("hello world", "hello world")
-        sample_dataset.add_key_term_list("missing", ["nonexistent"])
+        sample_dataset.add_vocabulary(Vocabulary(name="missing").add_terms(["nonexistent"]))
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="missing")
         assert len(matches) == 0
@@ -78,7 +79,7 @@ class TestExamplePrepareAndValidateKeyTerms:
     def test_case_insensitive_key_term_matching(self, sample_dataset):
         """Test that key term matching is case insensitive."""
         sample_dataset.add("Hello World", "hello world")
-        sample_dataset.add_key_term_list("greetings", ["hello"])
+        sample_dataset.add_vocabulary(Vocabulary(name="greetings").add_terms(["hello"]))
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="greetings")
         assert len(matches) == 1
@@ -87,7 +88,7 @@ class TestExamplePrepareAndValidateKeyTerms:
     def test_empty_key_term_list_resolves_without_error(self, sample_dataset):
         """Test that an empty key term list does not cause key term match resolution to fail."""
         sample_dataset.add("hello world", "hello world")
-        sample_dataset.add_key_term_list("greetings", [])
+        sample_dataset.add_vocabulary(Vocabulary(name="greetings").add_terms([]))
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="greetings")
         assert matches == []
@@ -103,7 +104,7 @@ class TestExampleVocabs:
 
     def test_vocabs_includes_global_dataset_vocabs(self, sample_dataset):
         """Test that vocabs includes global key term vocabularies from the parent dataset."""
-        sample_dataset.add_key_term_list("global_terms", ["hello"])
+        sample_dataset.add_vocabulary(Vocabulary(name="global_terms").add_terms(["hello"]))
         example = sample_dataset[0]
         assert "global_terms" in example.vocabs
 
@@ -148,9 +149,9 @@ class TestTextGetKeyTermMatches:
     """Tests for Text.get_key_term_matches() using global and local key terms."""
 
     def test_global_key_terms_both_matched(self, sample_dataset):
-        """Global vocab (from add_key_term_list) produces all matches by default."""
+        """Global vocab (from add_vocabulary) produces all matches by default."""
         sample_dataset.add("the quick brown fox", "the quick brown dog")
-        sample_dataset.add_key_term_list("animals", ["fox", "brown"])
+        sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "brown"]))
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="animals")
         matched_raws = sorted(example.ref.tokens[m].raw for m in matches)
@@ -160,7 +161,7 @@ class TestTextGetKeyTermMatches:
     def test_global_key_terms_match_count(self, sample_dataset):
         """Global key terms produce the expected number of matches."""
         sample_dataset.add("the quick brown fox", "the quick brown dog")
-        sample_dataset.add_key_term_list("animals", ["fox"])
+        sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="animals")
         assert len(matches) == 1
@@ -168,7 +169,7 @@ class TestTextGetKeyTermMatches:
     def test_allow_subset_matches_true_deduplicates_exact(self, sample_dataset):
         """With allow_subset_matches=True, exact duplicate matches from global vocab are deduplicated."""
         sample_dataset.add("the quick brown fox", "the quick brown dog")
-        sample_dataset.add_key_term_list("animals", ["fox"])
+        sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="animals", allow_subset_matches=True)
         assert len(matches) == 1
@@ -176,7 +177,7 @@ class TestTextGetKeyTermMatches:
     def test_allow_subset_matches_false_deduplicates(self, sample_dataset):
         """With allow_subset_matches=False, subset matches from global vocab are deduplicated."""
         sample_dataset.add("the quick brown fox", "the quick brown dog")
-        sample_dataset.add_key_term_list("animals", ["fox"])
+        sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="animals", allow_subset_matches=False)
         assert len(matches) == 1

@@ -4,7 +4,7 @@ import random
 
 import pytest
 
-from bewer import Dataset
+from bewer import Dataset, Vocabulary
 from bewer.metrics.confidence import (
     ConfidenceInterval,
     _percentile,
@@ -36,7 +36,7 @@ def dataset_with_key_terms():
     dataset.add(ref="a rabbit hops", hyp="a rabbit hops")
     dataset.add(ref="the rabbit eats", hyp="the cat eats")
     dataset.add(ref="fox and rabbit", hyp="fox and hamster")
-    dataset.add_key_term_list("animals", ["fox", "rabbit"])
+    dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
     return dataset
 
 

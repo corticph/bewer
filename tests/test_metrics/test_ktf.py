@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer import Dataset
+from bewer import Dataset, Vocabulary
 from bewer.metrics.ktf import KTF, KTF_
 
 
@@ -17,7 +17,7 @@ class TestKTFExampleMetric:
             ref="the fox jumps",
             hyp="the fox jumps",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
@@ -28,7 +28,7 @@ class TestKTFExampleMetric:
             ref="the fox jumps",
             hyp="the dog jumps",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
@@ -39,7 +39,7 @@ class TestKTFExampleMetric:
             ref="fox and rabbit",
             hyp="fox and hamster",
         )
-        dataset.add_key_term_list("animals", ["fox", "rabbit"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         return dataset
 
     @pytest.fixture
@@ -50,7 +50,7 @@ class TestKTFExampleMetric:
             ref="the fox jumps",
             hyp="the fox fox jumps",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     def test_value_perfect(self, dataset_perfect):
@@ -72,7 +72,7 @@ class TestKTFExampleMetric:
             ref="hello world",
             hyp="hello world",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         example = dataset[0]
         ktf = example.metrics.ktf(vocab="animals")
         assert ktf.value == 0.0
@@ -132,7 +132,7 @@ class TestKTFDatasetMetric:
             ref="the rabbit runs",
             hyp="the dog runs",
         )
-        dataset.add_key_term_list("animals", ["fox", "rabbit"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         return dataset
 
     def test_value_all_correct(self):
@@ -140,7 +140,7 @@ class TestKTFDatasetMetric:
         dataset = Dataset()
         dataset.add(ref="the fox", hyp="the fox")
         dataset.add(ref="the rabbit", hyp="the rabbit")
-        dataset.add_key_term_list("animals", ["fox", "rabbit"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         ktf = dataset.metrics.ktf(vocab="animals")
         assert ktf.value == 1.0
 
@@ -189,6 +189,6 @@ class TestKTFMetricAttributes:
         """Test that beta parameter appears in the metric short name."""
         dataset = Dataset()
         dataset.add(ref="the fox", hyp="the fox")
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         ktf = dataset.metrics.ktf(vocab="animals", beta=2.0)
         assert "beta=2.0" in ktf.short_name

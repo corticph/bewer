@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer import Dataset
+from bewer import Dataset, Vocabulary
 from bewer.metrics.ktr import KTR, KTR_
 
 
@@ -17,7 +17,7 @@ class TestKTRExampleMetric:
             ref="the patient has diabetes",
             hyp="the patient has diabetes",
         )
-        dataset.add_key_term_list("key_terms", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
         return dataset
 
     @pytest.fixture
@@ -28,7 +28,7 @@ class TestKTRExampleMetric:
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_key_term_list("key_terms", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
         return dataset
 
     def test_value_perfect_match(self, dataset_keyword_match):
@@ -75,7 +75,7 @@ class TestKTRExampleMetric:
             ref="patient has diabetes and hypertension",
             hyp="patient has diabetes and hypotension",
         )
-        dataset.add_key_term_list("key_terms", ["diabetes", "hypertension"])
+        dataset.add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "hypertension"]))
         example = dataset[0]
         ktr = example.metrics.ktr(vocab="key_terms")
         assert ktr.num_ref_terms == 2
@@ -89,7 +89,7 @@ class TestKTRExampleMetric:
             ref="the quick brown fox",
             hyp="the quick brown fox",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         example = dataset[0]
         ktr = example.metrics.ktr(vocab="animals")
         assert ktr.value == 1.0
@@ -111,7 +111,7 @@ class TestKTRDatasetMetric:
             ref="patient has asthma",
             hyp="patient has astma",
         )
-        dataset.add_key_term_list("key_terms", ["diabetes", "asthma"])
+        dataset.add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "asthma"]))
         return dataset
 
     def test_num_ref_terms_aggregates(self, key_terms_dataset):
@@ -151,7 +151,7 @@ class TestKTRDatasetMetric:
         dataset = Dataset()
         dataset.add(ref="diabetes mellitus", hyp="diabetes mellitus")
         dataset.add(ref="acute asthma", hyp="acute asthma")
-        dataset.add_key_term_list("key_terms", ["diabetes", "asthma"])
+        dataset.add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "asthma"]))
         ktr = dataset.metrics.ktr(vocab="key_terms")
         assert ktr.value == 1.0
 

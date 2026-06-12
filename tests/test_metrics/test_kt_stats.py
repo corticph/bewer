@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer import Dataset
+from bewer import Dataset, Vocabulary
 from bewer.alignment import Alignment, OpType
 from bewer.metrics.base import METRIC_REGISTRY
 
@@ -18,7 +18,7 @@ class TestKTStatsExampleMetric:
             ref="the fox jumps",
             hyp="the fox jumps",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
@@ -29,7 +29,7 @@ class TestKTStatsExampleMetric:
             ref="the fox jumps",
             hyp="the dog jumps",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
@@ -40,7 +40,7 @@ class TestKTStatsExampleMetric:
             ref="the fox jumps",
             hyp="the fox fox jumps",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     def test_num_ref_terms(self, dataset_correct):
@@ -107,21 +107,21 @@ class TestKTStatsAlignmentAttributes:
     def dataset_correct(self):
         dataset = Dataset()
         dataset.add(ref="the fox jumps", hyp="the fox jumps")
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
     def dataset_error(self):
         dataset = Dataset()
         dataset.add(ref="the fox jumps", hyp="the dog jumps")
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
     def dataset_fp(self):
         dataset = Dataset()
         dataset.add(ref="the fox jumps", hyp="the fox fox jumps")
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     def test_tp_alignments_correct(self, dataset_correct):
@@ -171,7 +171,7 @@ class TestKTStatsAlignmentAttributes:
             ref="hello world",
             hyp="hollow world",
         )
-        dataset.add_key_term_list("vocab", ["hello world", "world"])
+        dataset.add_vocabulary(Vocabulary(name="vocab").add_terms(["hello world", "world"]))
         stats = dataset[0].metrics._kt_stats(vocab="vocab", allow_subset_matches=False)
         assert stats.fp_alignments == []
         assert stats.num_fp == 0
@@ -184,7 +184,7 @@ class TestKTStatsAlignmentAttributes:
             ref="world",
             hyp="wall",
         )
-        dataset.add_key_term_list("vocab", ["world", "wall"])
+        dataset.add_vocabulary(Vocabulary(name="vocab").add_terms(["world", "wall"]))
         stats = dataset[0].metrics._kt_stats(vocab="vocab")
         assert len(stats.fn_alignments) == 1
         assert len(stats.fp_alignments) == 1
@@ -206,7 +206,7 @@ class TestKTStatsDatasetMetric:
             ref="the rabbit runs",
             hyp="the dog runs",
         )
-        dataset.add_key_term_list("animals", ["fox", "rabbit"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         return dataset
 
     def test_num_ref_terms_aggregates(self, mixed_dataset):
@@ -269,7 +269,7 @@ class TestKTStatsSharing:
             ref="the fox jumps",
             hyp="the fox jumps",
         )
-        dataset.add_key_term_list("animals", ["fox"])
+        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     def test_ktr_and_kter_share_instance(self, dataset):
@@ -300,7 +300,7 @@ class TestKTStatsSharing:
 
     def test_different_vocabs_different_instances(self, dataset):
         """Different vocab params produce different _KTStats instances."""
-        dataset.add_key_term_list("verbs", ["jumps"])
+        dataset.add_vocabulary(Vocabulary(name="verbs").add_terms(["jumps"]))
         ktr_animals = dataset.metrics.ktr(vocab="animals")
         ktr_verbs = dataset.metrics.ktr(vocab="verbs")
         assert ktr_animals._kt_stats is not ktr_verbs._kt_stats

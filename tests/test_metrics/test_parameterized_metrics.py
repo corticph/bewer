@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from bewer import Dataset
+from bewer import Dataset, Vocabulary
 from bewer.metrics.base import MetricParams
 
 
@@ -23,7 +23,7 @@ class TestParameterizedMetrics:
             ref="foo bar",
             hyp="foo baz",
         )
-        dataset.add_key_term_list("medical_terms", ["hello", "foo"])
+        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["hello", "foo"]))
         return dataset
 
     def test_basic_metric_has_no_params(self, sample_dataset):
@@ -78,7 +78,7 @@ class TestDynamicNaming:
         """Create a sample dataset for testing."""
         dataset = Dataset()
         dataset.add(ref="hello world", hyp="hello world")
-        dataset.add_key_term_list("medical_terms", ["hello"])
+        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["hello"]))
         return dataset
 
     def test_base_metric_short_name_no_params(self, sample_dataset):
@@ -122,7 +122,7 @@ class TestRKTRParameterization:
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_key_term_list("medical_terms", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
         return dataset
 
     def test_default_threshold(self, keyword_dataset):
@@ -159,7 +159,7 @@ class TestExampleMetricParamsAccess:
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_key_term_list("medical_terms", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
         return dataset
 
     def test_example_metric_has_params_property(self, keyword_dataset):
@@ -266,7 +266,7 @@ class TestDeclarativeHyperparams:
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_key_term_list("medical_terms", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
 
         # RKTR has threshold with default 0.0
         rktr = dataset.metrics.rktr(vocab="medical_terms")
@@ -281,7 +281,7 @@ class TestDeclarativeHyperparams:
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_key_term_list("medical_terms", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
 
         # Override threshold
         rktr = dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
@@ -296,7 +296,7 @@ class TestDeclarativeHyperparams:
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_key_term_list("medical_terms", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
 
         # Try to set unknown param
         with pytest.raises(ValueError) as exc_info:
@@ -315,7 +315,7 @@ class TestDeclarativeHyperparams:
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_key_term_list("medical_terms", ["diabetes"])
+        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
 
         # Try to set wrong type
         with pytest.raises(TypeError) as exc_info:

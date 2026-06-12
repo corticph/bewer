@@ -2,21 +2,20 @@ from functools import cached_property
 from importlib import resources
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 import pandas as pd
 from omegaconf import OmegaConf
 
 from bewer.configs.resolve import resolve_pipelines
 from bewer.core.example import Example
-from bewer.core.key_term import KeyTerm, get_key_term_trie
 from bewer.core.text import TokenList
+from bewer.core.vocabulary import Vocabulary
 from bewer.metrics.base import MetricCollection
 
 __all__ = ["Dataset", "DatasetFrozenError", "TextList", "TextTokenList"]
 
 if TYPE_CHECKING:
-    from bewer.core.key_term import KeyTermTrie
     from bewer.core.text import Text
 
 
@@ -62,8 +61,7 @@ class Dataset(object):
         are already set. Leaves the dataset unfrozen with empty data and clean caches.
         """
         self.examples = []
-        self._global_key_term_vocabs = {}
-        self._cache_key_term_tries = {}
+        self._vocabularies: dict[str, "Vocabulary"] = {}
         self.metrics = MetricCollection(self)
         self._frozen = False
 
@@ -110,8 +108,10 @@ class Dataset(object):
         new._init_blank_state()
         for example in self.examples:
             new.add(example.ref.raw, example.hyp.raw)
-        for name, terms in self._global_key_term_vocabs.items():
-            new.add_key_term_list(name, [kt.raw for kt in terms])
+        # Share the same Vocabulary objects; the clone re-resolves them against itself
+        # (so extractor-defined vocabularies reflect the clone's own examples).
+        for vocab in self._vocabularies.values():
+            new.add_vocabulary(vocab)
         return new
 
     @cached_property
@@ -170,58 +170,32 @@ class Dataset(object):
         df = pd.read_json(jsonl_file, lines=True, **kwargs)
         self.load_pandas(df, ref_col, hyp_col)
 
-    def add_key_term_list(self, name: str, key_terms: Iterable[str]) -> None:
-        """Add a named key term vocabulary to the dataset.
+    def add_vocabulary(self, vocab: "Vocabulary") -> None:
+        """Attach a key term vocabulary to the dataset.
 
-        Key terms are matched against the reference text of each example (including already added examples).
+        The vocabulary is registered under its own ``name`` and can be referenced by key
+        term metrics via ``metrics.ktr(vocab=name)``. The same Vocabulary object may be
+        attached to multiple datasets; it resolves its terms against each one independently.
 
-        Args:
-            name (str): The name of the key term vocabulary.
-            key_terms (Iterable[str]): The key terms to add.
-        """
-        self._check_not_frozen()
-        if not isinstance(key_terms, Iterable) or isinstance(key_terms, str):
-            raise TypeError("key_terms must be an iterable of strings")
-
-        key_terms = set(key_terms)
-
-        for key_term in key_terms:
-            if not isinstance(key_term, str):
-                raise TypeError(f"key_terms must be an iterable of strings, but got element of type {type(key_term)}")
-
-        self._update_global_key_term_vocab(name, key_terms)
-
-    def add_key_term_file(self, name: str, key_term_file: str) -> None:
-        """Add a named key term vocabulary to the dataset from a file.
-
-        The file should be plain text and contain one key term per line.
-
-        Key terms are matched against the reference text of each example (including already added examples).
+        Attaching freezes the vocabulary's definition: it can no longer be modified via
+        ``add_terms``/``add_file``/``add_extractor``, so its resolved terms stay fixed for
+        every dataset it is attached to.
 
         Args:
-            name (str): The name of the key term vocabulary.
-            key_term_file (str): Path to the key term file.
+            vocab (Vocabulary): The vocabulary to attach.
+
+        Raises:
+            TypeError: If ``vocab`` is not a Vocabulary.
+            ValueError: If a different vocabulary is already registered under the same name.
         """
         self._check_not_frozen()
-        if not Path(key_term_file).is_file():
-            raise FileNotFoundError(f"Key term file {key_term_file} not found")
-
-        with open(key_term_file, "r") as f:
-            key_terms = f.read().strip().splitlines()
-
-        self.add_key_term_list(name, key_terms)
-
-    def _get_key_term_trie(
-        self, vocab: str, normalized: bool = True, add_capitalized: bool = False
-    ) -> Optional["KeyTermTrie"]:
-        """Get a trie for the specified key term vocabulary."""
-        return get_key_term_trie(
-            self._global_key_term_vocabs,
-            self._cache_key_term_tries,
-            vocab,
-            normalized=normalized,
-            add_capitalized=add_capitalized,
-        )
+        if not isinstance(vocab, Vocabulary):
+            raise TypeError(f"add_vocabulary() expects a Vocabulary, got {type(vocab)}.")
+        existing = self._vocabularies.get(vocab.name)
+        if existing is not None and existing is not vocab:
+            raise ValueError(f"A different vocabulary named '{vocab.name}' is already attached to this dataset.")
+        self._vocabularies[vocab.name] = vocab
+        vocab._freeze()
 
     @staticmethod
     def _get_language_config_path(language: str):
@@ -240,14 +214,6 @@ class Dataset(object):
             config_path = "base" if config_path is None else config_path
             return resources.files("bewer.configs").joinpath(f"{config_path}.yml")
         return Path(config_path).resolve()
-
-    def _update_global_key_term_vocab(self, name: str, key_terms: set[str]) -> None:
-        """Update the global key term vocabulary with new key terms."""
-        key_terms = set(KeyTerm(key_term, pipelines=self._pipelines) for key_term in key_terms)
-        if name in self._global_key_term_vocabs:
-            self._global_key_term_vocabs[name].update(key_terms)
-        else:
-            self._global_key_term_vocabs[name] = set(key_terms)
 
     def __len__(self) -> int:
         """Get the number of examples in the dataset."""

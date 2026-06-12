@@ -55,7 +55,7 @@ class KTR(Metric):
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""
-            if self.vocab not in self.metric.dataset._global_key_term_vocabs:
+            if self.vocab not in self.metric.dataset._vocabularies:
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @dependency

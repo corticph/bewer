@@ -142,7 +142,8 @@ class Text:
         if dataset is None:
             return []
 
-        if vocab not in dataset._global_key_term_vocabs:
+        vocabulary = dataset._vocabularies.get(vocab)
+        if vocabulary is None:
             return []
 
         cache_key = (
@@ -156,25 +157,12 @@ class Text:
         if cache_key in self._cache_key_term_matches:
             return self._cache_key_term_matches[cache_key]
 
-        from bewer.core.key_term import (  # lazy import to avoid circular dependency
-            _remove_duplicate_matches,
-            _remove_subset_matches,
+        matches = vocabulary.find_matches(
+            self,
+            normalized=normalized,
+            add_capitalized=add_capitalized,
+            allow_subset_matches=allow_subset_matches,
         )
-
-        tokens = self.tokens
-        matches: list[slice] = []
-
-        global_trie = dataset._get_key_term_trie(vocab, normalized=normalized, add_capitalized=add_capitalized)
-
-        if global_trie is not None:
-            raw_matches, _ = global_trie.find_in_tokens(tokens)
-            matches = raw_matches
-
-        if matches:
-            if allow_subset_matches:
-                matches = _remove_duplicate_matches(matches)
-            else:
-                matches = _remove_subset_matches(matches)
 
         self._cache_key_term_matches[cache_key] = matches
         return matches
