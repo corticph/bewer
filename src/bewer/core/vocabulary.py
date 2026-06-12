@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Callable, Iterable, Optional
 
 from bewer.core.key_term import (
     KeyTerm,
+    KeyTermMatch,
     KeyTermTrie,
     _remove_duplicate_matches,
     _remove_subset_matches,
@@ -183,11 +184,12 @@ class Vocabulary:
         normalized: bool = True,
         add_capitalized: bool = False,
         allow_subset_matches: bool = False,
-    ) -> list[slice]:
+    ) -> list[KeyTermMatch]:
         """Find key term matches for this vocabulary in ``text``'s tokens.
 
-        Returns a list of slices representing matched token spans. Returns ``[]`` if the
-        text has no parent dataset or the vocabulary resolves to no terms.
+        Returns a list of :class:`KeyTermMatch` objects, each carrying the matched token
+        span together with the parent ``text`` and the ``KeyTerm`` it was identified as.
+        Returns ``[]`` if the text has no parent dataset or the vocabulary resolves to no terms.
         """
         example = text.src
         dataset = example.src if example is not None else None
@@ -196,9 +198,13 @@ class Vocabulary:
         trie = self._get_trie(dataset, normalized, add_capitalized)
         if trie is None:
             return []
-        matches, _ = trie.find_in_tokens(text.tokens)
-        if not matches:
+        spans, key_terms = trie.find_in_tokens(text.tokens)
+        if not spans:
             return []
+        matches = [
+            KeyTermMatch(start=span.start, stop=span.stop, text=text, key_term=key_term)
+            for span, key_term in zip(spans, key_terms)
+        ]
         return _remove_duplicate_matches(matches) if allow_subset_matches else _remove_subset_matches(matches)
 
     def __repr__(self):

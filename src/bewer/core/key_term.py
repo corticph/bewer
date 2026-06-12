@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Optional
 
 import ahocorasick
 
@@ -9,7 +10,7 @@ from bewer.core.text import Text, TextType, TokenList
 if TYPE_CHECKING:
     from bewer.configs.resolve import Pipelines
 
-__all__ = ["KeyTerm"]
+__all__ = ["KeyTerm", "KeyTermMatch"]
 
 
 class KeyTerm(Text):
@@ -32,6 +33,51 @@ class KeyTerm(Text):
         return f'KeyTerm("{text}")'
 
 
+@dataclass(frozen=True)
+class KeyTermMatch:
+    """A structured key term match: a token span in a ``Text`` identified as a ``KeyTerm``.
+
+    Carries the matched token span (``start``/``stop`` token indices, mirroring the raw
+    ``slice`` previously returned so existing consumers that read ``.start``/``.stop`` keep
+    working) together with the parent ``text`` it was found in and the ``key_term`` it was
+    identified as. Richer details — the side it was found on, the matched tokens, and the
+    surface text — are derived from those two references.
+    """
+
+    start: int
+    stop: int
+    text: "Text"
+    key_term: "KeyTerm"
+
+    @property
+    def token_slice(self) -> slice:
+        """The matched span as a ``slice`` for indexing the parent text's ``TokenList``."""
+        return slice(self.start, self.stop)
+
+    @property
+    def side(self) -> Optional[TextType]:
+        """Which side the match was found on (``REF`` / ``HYP`` / ``KEY_TERM``)."""
+        return self.text.text_type
+
+    @property
+    def tokens(self) -> TokenList:
+        """The matched ``Token`` objects from the parent text."""
+        return self.text.tokens[self.token_slice]
+
+    @property
+    def surface(self) -> str:
+        """The raw surface text actually matched in the parent text."""
+        return " ".join(self.tokens.raw)
+
+    @property
+    def term(self) -> str:
+        """The raw string of the key term that matched."""
+        return self.key_term.raw
+
+    def __repr__(self):
+        return f"KeyTermMatch(term={self.term!r}, span=({self.start}, {self.stop}), surface={self.surface!r})"
+
+
 class KeyTermTrie:
     """Aho-Corasick automaton for efficient multi-key-term matching in token sequences."""
 
@@ -52,34 +98,34 @@ class KeyTermTrie:
         self.normalized = normalized
         self.add_capitalized = add_capitalized
 
-        patterns = []
-        key_term_patterns = []
+        # (key_term, token_pattern) pairs, keeping each pattern tied to its originating
+        # key term so matches can report which KeyTerm they were identified as.
+        pattern_entries: list[tuple[KeyTerm, tuple[str, ...]]] = []
         for key_term in key_terms:
             tokens = key_term.tokens.normalized if normalized else key_term.tokens.raw
             token_pattern = tuple(tokens)
             if not token_pattern:
                 continue
-            key_term_patterns.append((key_term.raw, token_pattern))
-            patterns.append(token_pattern)
+            pattern_entries.append((key_term, token_pattern))
 
-        # Handle capitalization variants
+        # Handle capitalization variants, mapped back to their originating key term.
         if add_capitalized and not normalized:
-            for _, p in key_term_patterns:
+            for key_term, p in list(pattern_entries):
                 first_cap = p[0].capitalize()
                 if first_cap != p[0]:
-                    patterns.append((first_cap,) + p[1:])
+                    pattern_entries.append((key_term, (first_cap,) + p[1:]))
 
         # Build vocab: token string -> int for KEY_SEQUENCE mode
-        self._vocab = {w: i for i, w in enumerate({w for p in patterns for w in p})}
+        self._vocab = {w: i for i, w in enumerate({w for _, p in pattern_entries for w in p})}
         self._unknown = len(self._vocab)
 
-        # Build Aho-Corasick automaton
+        # Build Aho-Corasick automaton; payload carries (pattern_len, key_term).
         self._automaton = ahocorasick.Automaton(ahocorasick.STORE_ANY, ahocorasick.KEY_SEQUENCE)
         seen = set()
-        for pattern in patterns:
+        for key_term, pattern in pattern_entries:
             int_pattern = tuple(self._vocab[w] for w in pattern)
             if int_pattern not in seen:
-                self._automaton.add_word(int_pattern, len(pattern))
+                self._automaton.add_word(int_pattern, (len(pattern), key_term))
                 seen.add(int_pattern)
         self._automaton.make_automaton()
 
@@ -88,19 +134,19 @@ class KeyTermTrie:
         token_strings = tokens.normalized if self.normalized else tokens.raw
         return tuple(self._vocab.get(w, self._unknown) for w in token_strings)
 
-    def find_in_tokens(self, tokens: TokenList) -> tuple[list[slice], list[tuple[int, ...]]]:
-        """Find all key term matches, returning spans and their encoded patterns."""
+    def find_in_tokens(self, tokens: TokenList) -> tuple[list[slice], list[KeyTerm]]:
+        """Find all key term matches, returning token spans and the matched key terms."""
         int_text = self.encode(tokens)
         matches: list[slice] = []
-        patterns: list[tuple[int, ...]] = []
-        for end_idx, pattern_len in self._automaton.iter(int_text):
+        key_terms: list[KeyTerm] = []
+        for end_idx, (pattern_len, key_term) in self._automaton.iter(int_text):
             start = end_idx - pattern_len + 1
             matches.append(slice(start, end_idx + 1))
-            patterns.append(int_text[start : end_idx + 1])
-        return matches, patterns
+            key_terms.append(key_term)
+        return matches, key_terms
 
 
-def _remove_duplicate_matches(matches: list[slice]) -> list[slice]:
+def _remove_duplicate_matches(matches: list[KeyTermMatch]) -> list[KeyTermMatch]:
     """Remove exact duplicate matches, preserving order."""
     seen: set[tuple[int, int]] = set()
     result = []
@@ -112,7 +158,7 @@ def _remove_duplicate_matches(matches: list[slice]) -> list[slice]:
     return result
 
 
-def _remove_subset_matches(matches: list[slice]) -> list[slice]:
+def _remove_subset_matches(matches: list[KeyTermMatch]) -> list[KeyTermMatch]:
     """Remove matches that are subsets of other matches, preferring longer matches."""
     if not matches:
         return matches

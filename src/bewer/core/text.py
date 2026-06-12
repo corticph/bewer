@@ -11,6 +11,7 @@ from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKE
 if TYPE_CHECKING:
     from bewer.configs.resolve import Pipelines
     from bewer.core.example import Example
+    from bewer.core.key_term import KeyTermMatch
 
 __all__ = ["Text", "TextType", "TokenList"]
 
@@ -121,7 +122,7 @@ class Text:
         normalized: bool = True,
         add_capitalized: bool = False,
         allow_subset_matches: bool = False,
-    ) -> list[slice]:
+    ) -> "list[KeyTermMatch]":
         """Find key term matches in this text's tokens.
 
         Matches against the dataset-wide global vocabulary.
@@ -133,7 +134,7 @@ class Text:
             allow_subset_matches: If False, discard matches that are subsets of longer matches.
 
         Returns:
-            List of slices representing matched token spans.
+            List of :class:`~bewer.core.key_term.KeyTermMatch` objects for the matched token spans.
         """
         example = self._src
         if example is None:

@@ -83,7 +83,7 @@ class TestExamplePrepareAndValidateKeyTerms:
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="greetings")
         assert len(matches) == 1
-        assert example.ref.tokens[matches[0]].raw == ["Hello"]
+        assert matches[0].surface == "Hello"
 
     def test_empty_key_term_list_resolves_without_error(self, sample_dataset):
         """Test that an empty key term list does not cause key term match resolution to fail."""
@@ -154,9 +154,9 @@ class TestTextGetKeyTermMatches:
         sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "brown"]))
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="animals")
-        matched_raws = sorted(example.ref.tokens[m].raw for m in matches)
-        assert ["brown"] in matched_raws
-        assert ["fox"] in matched_raws
+        surfaces = sorted(m.surface for m in matches)
+        assert "brown" in surfaces
+        assert "fox" in surfaces
 
     def test_global_key_terms_match_count(self, sample_dataset):
         """Global key terms produce the expected number of matches."""
