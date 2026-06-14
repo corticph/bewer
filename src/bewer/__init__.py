@@ -1,6 +1,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from bewer import core as core
+from bewer import extractors as extractors
 from bewer import metrics as metrics
 from bewer import preprocessing as preprocessing
 from bewer import reporting as reporting
@@ -20,6 +21,7 @@ __all__ = [
     "VocabularyFrozenError",
     "ExtractorFn",
     "core",
+    "extractors",
     "metrics",
     "preprocessing",
     "reporting",
