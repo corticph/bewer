@@ -10,6 +10,7 @@ from bewer.metrics.base import (
     metric_value,
 )
 from bewer.metrics.cer import CER
+from bewer.metrics.complex_term import CTF, CTP, CTR
 from bewer.metrics.confidence import ConfidenceInterval
 from bewer.metrics.error_align import ErrorAlign
 from bewer.metrics.ktcer import KTCER
@@ -41,6 +42,9 @@ __all__ = [
     "KTR",
     "KTCER",
     "RKTR",
+    "CTR",
+    "CTP",
+    "CTF",
     "Levenshtein",
     "ErrorAlign",
     "DatasetSummary",
