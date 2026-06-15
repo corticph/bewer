@@ -7,12 +7,15 @@ key-term metric). :class:`RegexExtractor` is the generic, reusable base for deri
 by full-matching tokens against a regular expression.
 """
 
-from bewer.extractors.complex_term import COMPLEX_TERM_DEFAULT_PATTERN, ComplexTermExtractor
+from bewer.extractors.orthographically_complex_term import (
+    ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN,
+    OrthographicallyComplexTermExtractor,
+)
 from bewer.extractors.regex import RegexExtractor, match_token_regex
 
 __all__ = [
     "RegexExtractor",
     "match_token_regex",
-    "ComplexTermExtractor",
-    "COMPLEX_TERM_DEFAULT_PATTERN",
+    "OrthographicallyComplexTermExtractor",
+    "ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN",
 ]

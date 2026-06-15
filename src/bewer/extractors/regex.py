@@ -4,7 +4,7 @@ A :class:`RegexExtractor` is a reusable :data:`~bewer.core.vocabulary.ExtractorF
 callable ``(dataset) -> Iterable[str]`` that scans each example's *reference* and returns
 every token whose surface form fully matches a configured regular expression. It is the
 generic building block behind metric-specific extractors such as
-:class:`~bewer.extractors.complex_term.ComplexTermExtractor`.
+:data:`~bewer.extractors.orthographically_complex_term.ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`.
 
 To define a new family of regex-extracted terms, either instantiate ``RegexExtractor``
 with a ``pattern`` directly, or subclass it and override :attr:`default_pattern`::
