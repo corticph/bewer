@@ -1,3 +1,4 @@
+from bewer.metrics import orthographically_complex_term as _orthographically_complex_term  # noqa: F401
 from bewer.metrics._kt_stats import _KTStats  # noqa: F401 (registers "_kt_stats")
 from bewer.metrics._rkt_stats import _RKTStats  # noqa: F401 (registers "_rkt_stats")
 from bewer.metrics.base import (

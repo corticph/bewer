@@ -16,9 +16,15 @@ tokenizers:
   key_term:
     bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
       split_on_escaped: "-/'"
+  orthographically_complex_term:
+    bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
+      split_on_escaped: "/'"
 
 normalizers:
   default:
     bewer.preprocessing.normalization.lowercase:
+    bewer.preprocessing.normalization.transliterate_latin_letters:
+    bewer.preprocessing.normalization.transliterate_symbols:
+  cased:
     bewer.preprocessing.normalization.transliterate_latin_letters:
     bewer.preprocessing.normalization.transliterate_symbols:

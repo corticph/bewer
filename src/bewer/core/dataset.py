@@ -197,6 +197,37 @@ class Dataset(object):
         self._vocabularies[vocab.name] = vocab
         vocab._freeze()
 
+    def _register_derived_vocabulary(self, vocab: "Vocabulary") -> "Vocabulary":
+        """Register a metric-derived vocabulary, returning the one now bound to its name.
+
+        Metric-derived vocabularies (e.g. the auto-extracted ``orthographically_complex_terms``
+        backing the orthographically-complex-term metrics) are attached lazily the first time such a
+        metric is requested,
+        which may happen after the dataset has frozen on an earlier metric. Because the
+        vocabulary introduces a brand-new name, it cannot change a term set any prior metric
+        already resolved, so registering it on a frozen dataset cannot stale a cached result.
+        This therefore bypasses the frozen guard that :meth:`add_vocabulary` enforces.
+
+        If a vocabulary is already registered under the name it is returned unchanged.
+
+        Args:
+            vocab (Vocabulary): The derived vocabulary to register.
+
+        Returns:
+            Vocabulary: The vocabulary now registered under ``vocab.name``.
+
+        Raises:
+            TypeError: If ``vocab`` is not a Vocabulary.
+        """
+        if not isinstance(vocab, Vocabulary):
+            raise TypeError(f"_register_derived_vocabulary() expects a Vocabulary, got {type(vocab)}.")
+        existing = self._vocabularies.get(vocab.name)
+        if existing is not None:
+            return existing
+        self._vocabularies[vocab.name] = vocab
+        vocab._freeze()
+        return vocab
+
     @staticmethod
     def _get_language_config_path(language: str):
         """Resolve the overlay config path for the given language code."""

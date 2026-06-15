@@ -84,6 +84,15 @@ poetry run twine check dist/*  # Validate built packages
 - Levenshtein distance: `levenshtein.py`
 - Error alignment metrics: `error_align.py` (uses external error-align package)
 - Key term metrics (recall, precision, F-score, CER, etc.): `ktr.py`, `ktp.py`, `ktf.py`, `ktcer.py`, `rktr.py`, `kter.py`
+- Orthographically-complex term metrics: `orthographically_complex_term.py` — subclass the key-term metrics over an `orthographically_complex_terms` vocabulary auto-extracted from the references (terms selected by orthography: acronyms, alphanumerics, hyphen compounds, Greek-bearing tokens; e.g. `MRI`, `HbA1c`, `CT-scan`). Auto-registered on first use, so `dataset.metrics.orthographically_complex_term_recall().value` works out of the box. Run under the `orthographically_complex_term` tokenizer (no hyphen split) and `cased` normalizer (no lowercasing), so a term's surface form is scored strictly. The name marks the orthographic dimension of "term complexity".
+
+### Vocabulary Extractors (`src/bewer/extractors/`)
+
+Library of pre-defined `ExtractorFn` callables — `(dataset) -> Iterable[str]` functions that derive key terms from a dataset's references and are registered via `Vocabulary(name).add_extractor(fn)`.
+
+- **`RegexExtractor`** (`extractors/regex.py`): generic base that full-matches each reference token against a compiled pattern and returns the matching surface forms. Subclass it (override `default_pattern`) or instantiate it with a `pattern` to define a new regex-based term family. Its matching primitive `match_token_regex` returns unit token slices.
+- **`OrthographicallyComplexTermExtractor`** (`extractors/orthographically_complex_term.py`): a `RegexExtractor` with `ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`, backing the orthographically-complex term metrics. Expects the `orthographically_complex_term` tokenizer (no hyphen split) so `CT-scan` is a single token.
+- Exposed at the package top level as `bewer.extractors`.
 
 ### Alignment System (`src/bewer/alignment/`)
 
