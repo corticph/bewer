@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 from typing import TYPE_CHECKING, Optional
 
 import ahocorasick
@@ -49,7 +50,7 @@ class KeyTermMatch:
     src: "Text"
     key_term: "KeyTerm"
 
-    @property
+    @cached_property
     def token_slice(self) -> slice:
         """The matched span as a ``slice`` for indexing the source text's ``TokenList``."""
         return slice(self.start, self.stop)
@@ -60,7 +61,7 @@ class KeyTermMatch:
         if the source text has no type set."""
         return self.src.text_type
 
-    @property
+    @cached_property
     def tokens(self) -> TokenList:
         """The matched ``Token`` objects from the source text."""
         return self.src.tokens[self.token_slice]
