@@ -1,6 +1,6 @@
 from bewer.core.dataset import Dataset, TextList, TextTokenList
 from bewer.core.example import Example
-from bewer.core.key_term import KeyTerm
+from bewer.core.key_term import KeyTerm, KeyTermMatch
 from bewer.core.text import Text, TextType, TokenList
 from bewer.core.token import Token
 from bewer.core.vocabulary import ExtractorFn, Vocabulary, VocabularyExtractorError, VocabularyFrozenError
@@ -15,6 +15,7 @@ __all__ = [
     "TokenList",
     "Token",
     "KeyTerm",
+    "KeyTermMatch",
     "Vocabulary",
     "VocabularyExtractorError",
     "VocabularyFrozenError",

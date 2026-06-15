@@ -1,7 +1,7 @@
 """Tests for bewer.core.key_term module."""
 
 from bewer import Vocabulary
-from bewer.core.key_term import KeyTerm, KeyTermTrie, _remove_subset_matches
+from bewer.core.key_term import KeyTerm, KeyTermMatch, KeyTermTrie, _remove_subset_matches
 from bewer.core.text import Text, TextType, TokenList
 
 
@@ -89,23 +89,23 @@ class TestKeyTermTrieFindInTokens:
         matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert all(isinstance(m, slice) for m in matches)
 
-    def test_encode_matched_pattern_in_results(self, sample_dataset):
-        """encode() on a matching key term produces a pattern present in find_in_tokens."""
+    def test_matched_key_term_returned(self, sample_dataset):
+        """find_in_tokens returns the KeyTerm object that produced each match."""
         sample_dataset.add("hello world", "hello world")
         example = sample_dataset[-1]
         kt = KeyTerm("hello", pipelines=sample_dataset.pipelines)
         trie = KeyTermTrie({kt})
-        _, patterns = trie.find_in_tokens(example.ref.tokens)
-        assert trie.encode(kt.tokens) in patterns
+        _, key_terms = trie.find_in_tokens(example.ref.tokens)
+        assert key_terms == [kt]
 
-    def test_encode_unmatched_pattern_not_in_results(self, sample_dataset):
-        """encode() on a non-matching key term produces a pattern absent from find_in_tokens."""
+    def test_no_key_terms_when_unmatched(self, sample_dataset):
+        """find_in_tokens returns no key terms when nothing matches."""
         sample_dataset.add("hello world", "hello world")
         example = sample_dataset[-1]
         kt = KeyTerm("nonexistent", pipelines=sample_dataset.pipelines)
         trie = KeyTermTrie({kt})
-        _, patterns = trie.find_in_tokens(example.ref.tokens)
-        assert trie.encode(kt.tokens) not in patterns
+        _, key_terms = trie.find_in_tokens(example.ref.tokens)
+        assert key_terms == []
 
 
 class TestKeyTermRepr:
@@ -201,8 +201,7 @@ class TestTextGetKeyTermMatchesAllowSubsets:
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
         assert len(matches) == 1
-        matched = example.ref.tokens[matches[0]]
-        assert matched.raw == ["quick", "brown"]
+        assert matches[0].tokens.raw == ["quick", "brown"]
 
 
 class TestKeyTermTrieAddCapitalized:
@@ -225,3 +224,74 @@ class TestKeyTermTrieAddCapitalized:
         trie = KeyTermTrie({kt}, normalized=False, add_capitalized=False)
         matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert len(matches) == 0
+
+
+class TestKeyTermMatch:
+    """Tests for the structured KeyTermMatch returned by get_key_term_matches()."""
+
+    def test_returns_key_term_match_instances(self, sample_dataset):
+        """get_key_term_matches returns KeyTermMatch objects, not raw slices."""
+        sample_dataset.add("the patient has diabetes", "the patient has diabetes")
+        sample_dataset.add_vocabulary(Vocabulary(name="med").add_terms(["diabetes"]))
+        example = sample_dataset[-1]
+        matches = example.ref.get_key_term_matches(vocab="med")
+        assert len(matches) == 1
+        assert all(isinstance(m, KeyTermMatch) for m in matches)
+
+    def test_span_and_token_slice(self, sample_dataset):
+        """start/stop are token indices and token_slice indexes the parent TokenList."""
+        sample_dataset.add("the quick brown fox", "the quick brown fox")
+        sample_dataset.add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
+        example = sample_dataset[-1]
+        (match,) = example.ref.get_key_term_matches(vocab="phrases")
+        assert (match.start, match.stop) == (1, 3)
+        assert match.token_slice == slice(1, 3)
+        assert example.ref.tokens[match.token_slice].raw == ["quick", "brown"]
+
+    def test_references_and_derived_fields(self, sample_dataset):
+        """src/key_term references and the derived tokens are correct."""
+        sample_dataset.add("the quick brown fox", "the quick brown fox")
+        sample_dataset.add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
+        example = sample_dataset[-1]
+        (match,) = example.ref.get_key_term_matches(vocab="phrases")
+        assert match.src is example.ref
+        assert isinstance(match.key_term, KeyTerm)
+        assert match.key_term.raw == "quick brown"
+        assert match.tokens.raw == ["quick", "brown"]
+
+    def test_side_reflects_ref_vs_hyp(self, sample_dataset):
+        """side mirrors the parent text's TextType for both ref and hyp matches."""
+        sample_dataset.add("the brown fox", "the brown dog")
+        sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["brown"]))
+        example = sample_dataset[-1]
+        (ref_match,) = example.ref.get_key_term_matches(vocab="animals")
+        (hyp_match,) = example.hyp.get_key_term_matches(vocab="animals")
+        assert ref_match.side == TextType.REF
+        assert hyp_match.side == TextType.HYP
+
+    def test_matched_tokens_preserve_original_casing(self, sample_dataset):
+        """The matched tokens are the raw text even when matching is case-insensitive."""
+        sample_dataset.add("Hello World", "hello world")
+        sample_dataset.add_vocabulary(Vocabulary(name="greetings").add_terms(["hello"]))
+        example = sample_dataset[-1]
+        (match,) = example.ref.get_key_term_matches(vocab="greetings")
+        assert match.tokens.raw == ["Hello"]
+        assert match.key_term.raw == "hello"
+
+    def test_subset_removal_keeps_richer_object(self, sample_dataset):
+        """With allow_subset_matches=False the surviving longer match is a KeyTermMatch."""
+        sample_dataset.add("the quick brown fox", "the quick brown fox")
+        sample_dataset.add_vocabulary(Vocabulary(name="phrases").add_terms(["quick", "quick brown"]))
+        example = sample_dataset[-1]
+        (match,) = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
+        assert isinstance(match, KeyTermMatch)
+        assert match.tokens.raw == ["quick", "brown"]
+
+    def test_colliding_key_terms_resolve_deterministically(self, sample_dataset):
+        """When distinct raw terms collapse to the same token pattern, the reported key term
+        is deterministic: the lexicographically smallest raw wins (here "Diabetes" < "diabetes")."""
+        sample_dataset.add("the patient has diabetes", "the patient has diabetes")
+        sample_dataset.add_vocabulary(Vocabulary(name="med").add_terms(["diabetes", "Diabetes"]))
+        example = sample_dataset[-1]
+        (match,) = example.ref.get_key_term_matches(vocab="med")
+        assert match.key_term.raw == "Diabetes"

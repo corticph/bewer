@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 from rapidfuzz.distance import Levenshtein
 
 from bewer.alignment import Alignment
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
+
+if TYPE_CHECKING:
+    from bewer.core.key_term import KeyTermMatch
 
 __all__: list[str] = []
 
@@ -67,7 +70,7 @@ class _RKTStats_(ExampleMetric):
             normalizer=self.normalizer,
         ).alignment
 
-    def _get_ref_matches(self) -> list[slice]:
+    def _get_ref_matches(self) -> list[KeyTermMatch]:
         return self.example.ref.get_key_term_matches(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
