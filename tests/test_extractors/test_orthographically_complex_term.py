@@ -1,10 +1,15 @@
-"""Tests for bewer.extractors.complex_term and the generic regex extractor."""
+"""Tests for bewer.extractors.orthographically_complex_term and the generic regex extractor."""
 
 import pytest
 import regex
 
 from bewer import Dataset, Vocabulary
-from bewer.extractors import COMPLEX_TERM_DEFAULT_PATTERN, ComplexTermExtractor, RegexExtractor, match_token_regex
+from bewer.extractors import (
+    ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN,
+    OrthographicallyComplexTermExtractor,
+    RegexExtractor,
+    match_token_regex,
+)
 from bewer.preprocessing.context import set_pipeline
 
 
@@ -25,7 +30,7 @@ class TestComplexTermDefaultPattern:
 
     @pytest.fixture(scope="class")
     def pattern(self):
-        return regex.compile(COMPLEX_TERM_DEFAULT_PATTERN)
+        return regex.compile(ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN)
 
     @pytest.mark.parametrize(
         "term",
@@ -76,7 +81,7 @@ class TestMatchTokenRegex:
         dataset = Dataset()
         dataset.add("the MRI showed CO2", "x")
         tokens = _ref_tokens(dataset)
-        pattern = regex.compile(COMPLEX_TERM_DEFAULT_PATTERN)
+        pattern = regex.compile(ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN)
         spans = match_token_regex(tokens, pattern)
         matched = [tokens[s.start].raw for s in spans]
         assert all(s.stop - s.start == 1 for s in spans)
@@ -86,14 +91,14 @@ class TestMatchTokenRegex:
         dataset = Dataset()
         dataset.add("the patient is here", "x")
         tokens = _ref_tokens(dataset)
-        assert match_token_regex(tokens, regex.compile(COMPLEX_TERM_DEFAULT_PATTERN)) == []
+        assert match_token_regex(tokens, regex.compile(ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN)) == []
 
     def test_is_full_match_not_substring(self, complex_term_context):
         dataset = Dataset()
         dataset.add("preMRItext", "x")  # contains MRI but token as a whole is matched
         tokens = _ref_tokens(dataset)
         # "preMRItext" has lowercase-then-uppercase evidence, so it matches as a whole token.
-        spans = match_token_regex(tokens, regex.compile(COMPLEX_TERM_DEFAULT_PATTERN))
+        spans = match_token_regex(tokens, regex.compile(ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN))
         assert [tokens[s.start].raw for s in spans] == ["preMRItext"]
 
     def test_custom_pattern(self, complex_term_context):
@@ -134,48 +139,51 @@ class TestRegexExtractorBase:
         assert repr(RegexExtractor("[ab]+")) == "RegexExtractor('[ab]+')"
 
 
-class TestComplexTermExtractor:
-    """ComplexTermExtractor harvests complex terms from references as a global term set."""
+class TestOrthographicallyComplexTermExtractor:
+    """OrthographicallyComplexTermExtractor harvests complex terms from references as a global term set."""
 
     def test_extracts_complex_terms(self, complex_term_context):
         dataset = Dataset()
         dataset.add("the patient had an MRI and a CO2 test", "x")
-        assert ComplexTermExtractor()(dataset) == {"MRI", "CO2"}
+        assert OrthographicallyComplexTermExtractor()(dataset) == {"MRI", "CO2"}
 
     def test_preserves_case(self, complex_term_context):
         dataset = Dataset()
         dataset.add("measured HbA1c and mmHg", "x")
-        assert ComplexTermExtractor()(dataset) == {"HbA1c", "mmHg"}
+        assert OrthographicallyComplexTermExtractor()(dataset) == {"HbA1c", "mmHg"}
 
     def test_keeps_hyphen_compounds_whole(self, complex_term_context):
         dataset = Dataset()
         dataset.add("ordered a CT-scan and an X-ray", "x")
-        assert ComplexTermExtractor()(dataset) == {"CT-scan", "X-ray"}
+        assert OrthographicallyComplexTermExtractor()(dataset) == {"CT-scan", "X-ray"}
 
     def test_unions_terms_across_examples(self, complex_term_context):
         dataset = Dataset()
         dataset.add("an MRI scan", "x")
         dataset.add("a CO2 reading", "x")
-        assert ComplexTermExtractor()(dataset) == {"MRI", "CO2"}
+        assert OrthographicallyComplexTermExtractor()(dataset) == {"MRI", "CO2"}
 
     def test_empty_when_no_complex_terms(self, complex_term_context):
         dataset = Dataset()
         dataset.add("the patient is doing well", "x")
-        assert ComplexTermExtractor()(dataset) == set()
+        assert OrthographicallyComplexTermExtractor()(dataset) == set()
 
     def test_custom_pattern(self, complex_term_context):
         dataset = Dataset()
         dataset.add("MRI and CO2", "x")
-        extractor = ComplexTermExtractor(pattern=r"\p{Lu}+")  # acronyms only, no alphanumerics
+        extractor = OrthographicallyComplexTermExtractor(pattern=r"\p{Lu}+")  # acronyms only, no alphanumerics
         assert extractor(dataset) == {"MRI"}
 
     def test_registers_as_function_vocabulary(self):
         dataset = Dataset()
         dataset.add("the MRI and CT-scan", "the MRI and CT-scan")
-        dataset.add_vocabulary(Vocabulary("cts").add_extractor(ComplexTermExtractor()))
+        dataset.add_vocabulary(Vocabulary("cts").add_extractor(OrthographicallyComplexTermExtractor()))
         matches = dataset[0].ref.get_key_term_matches(vocab="cts", normalized=True)
         # Resolved under the default key-term-ish context; just assert the vocab resolves.
         assert isinstance(matches, list)
 
     def test_repr(self):
-        assert repr(ComplexTermExtractor()) == f"ComplexTermExtractor({COMPLEX_TERM_DEFAULT_PATTERN!r})"
+        assert (
+            repr(OrthographicallyComplexTermExtractor())
+            == f"OrthographicallyComplexTermExtractor({ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN!r})"
+        )

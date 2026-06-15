@@ -1,13 +1,16 @@
-r"""Complex-term extraction.
+r"""Orthographically-complex term extraction.
 
-A *complex term* is a token whose surface form carries case-distinctive or alphanumeric
-evidence that it is an abbreviation, acronym, alphanumeric code or hyphen compound rather
-than an ordinary word — e.g. ``MRI``, ``mmHg``, ``HbA1c``, ``CO2``, ``CT-scan`` or
-``α-helix``. :class:`ComplexTermExtractor` is a :class:`~bewer.extractors.regex.RegexExtractor`
-that harvests such terms from a dataset's references; it backs the complex-term metrics
-(CTR / CTP / CTF).
+An *orthographically-complex term* is a token whose written surface form carries
+case-distinctive or alphanumeric evidence that it is an abbreviation, acronym, alphanumeric
+code or hyphen compound rather than an ordinary word — e.g. ``MRI``, ``mmHg``, ``HbA1c``,
+``CO2``, ``CT-scan`` or ``α-helix``. :class:`OrthographicallyComplexTermExtractor` is a
+:class:`~bewer.extractors.regex.RegexExtractor` that harvests such terms from a dataset's
+references; :data:`ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN` backs the predefined
+``orthographically_complex_term_recall`` / ``_precision`` / ``_fscore`` metrics.
 
-The default pattern (:data:`COMPLEX_TERM_DEFAULT_PATTERN`) accepts a token when its body —
+It selects a term by its *orthography* (capitalization, digit/letter mixing, symbols, Greek),
+not its meaning — so it is one dimension of "term complexity" (cf. a future
+``phonetically_complex_term`` etc.). The default pattern accepts a token when its body —
 alphanumeric segments joined by single hyphens — also satisfies at least one piece of
 evidence:
 
@@ -25,7 +28,7 @@ from __future__ import annotations
 
 from bewer.extractors.regex import RegexExtractor
 
-__all__ = ["COMPLEX_TERM_DEFAULT_PATTERN", "ComplexTermExtractor"]
+__all__ = ["ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN", "OrthographicallyComplexTermExtractor"]
 
 # An alphanumeric character (any Unicode letter or number).
 _ALNUM = r"[\p{L}\p{N}]"
@@ -42,18 +45,18 @@ _SOLO_UPPER_SEGMENT = r"(?=.*(?:(?:^|-)\p{Lu}-|-\p{Lu}(?:-|$)))"
 # the whole token.
 _ALNUM_MIX = r"(?:(?=.*\p{L}.*\p{Nd})|(?=.*\p{Nd}.*\p{Lu}))"
 
-COMPLEX_TERM_DEFAULT_PATTERN = (
+ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN = (
     rf"(?:{_HAS_GREEK}|{_TWO_UPPER}|{_LOWER_UPPER}|{_SOLO_UPPER_SEGMENT}|{_ALNUM_MIX}){_BODY}"
 )
 
 
-class ComplexTermExtractor(RegexExtractor):
-    """Extract complex terms — abbreviations, acronyms, alphanumerics and hyphen compounds —
-    from a dataset's reference texts.
+class OrthographicallyComplexTermExtractor(RegexExtractor):
+    """Extract orthographically-complex terms — abbreviations, acronyms, alphanumerics and
+    hyphen compounds — from a dataset's reference texts.
 
-    Defaults to :data:`COMPLEX_TERM_DEFAULT_PATTERN`. Expects the ``complex_term`` tokenizer
-    (which does not split on hyphens), so a compound like ``CT-scan`` arrives as a single
-    token and is matched whole.
+    Defaults to :data:`ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`. Expects the
+    ``complex_term`` tokenizer (which does not split on hyphens), so a compound like ``CT-scan``
+    arrives as a single token and is matched whole.
     """
 
-    default_pattern = COMPLEX_TERM_DEFAULT_PATTERN
+    default_pattern = ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN
