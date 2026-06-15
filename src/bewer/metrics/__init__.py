@@ -1,4 +1,9 @@
+# Predefined regex metrics — imported for their registration side effects. They are flat
+# siblings (orthographically_complex_term, number, percentage, degree, currency, measurement),
+# each registered
+# via register_regex_metric; none is special.
 from bewer.metrics import orthographically_complex_term as _orthographically_complex_term  # noqa: F401
+from bewer.metrics import quantity as _quantity  # noqa: F401
 from bewer.metrics._kt_stats import _KTStats  # noqa: F401 (registers "_kt_stats")
 from bewer.metrics._rkt_stats import _RKTStats  # noqa: F401 (registers "_rkt_stats")
 from bewer.metrics.base import (
@@ -19,6 +24,7 @@ from bewer.metrics.ktf import KTF
 from bewer.metrics.ktp import KTP
 from bewer.metrics.ktr import KTR
 from bewer.metrics.levenshtein import Levenshtein
+from bewer.metrics.regex_metrics import register_regex_metric
 from bewer.metrics.rktr import RKTR
 from bewer.metrics.summary import DatasetSummary
 
@@ -42,6 +48,7 @@ __all__ = [
     "KTR",
     "KTCER",
     "RKTR",
+    "register_regex_metric",
     "Levenshtein",
     "ErrorAlign",
     "DatasetSummary",

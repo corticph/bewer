@@ -84,14 +84,21 @@ poetry run twine check dist/*  # Validate built packages
 - Levenshtein distance: `levenshtein.py`
 - Error alignment metrics: `error_align.py` (uses external error-align package)
 - Key term metrics (recall, precision, F-score, CER, etc.): `ktr.py`, `ktp.py`, `ktf.py`, `ktcer.py`, `rktr.py`, `kter.py`
-- Orthographically-complex term metrics: `orthographically_complex_term.py` — subclass the key-term metrics over an `orthographically_complex_terms` vocabulary auto-extracted from the references (terms selected by orthography: acronyms, alphanumerics, hyphen compounds, Greek-bearing tokens; e.g. `MRI`, `HbA1c`, `CT-scan`). Auto-registered on first use, so `dataset.metrics.orthographically_complex_term_recall().value` works out of the box. Run under the `orthographically_complex_term` tokenizer (no hyphen split) and `cased` normalizer (no lowercasing), so a term's surface form is scored strictly. The name marks the orthographic dimension of "term complexity".
+
+**Regex metrics** (`src/bewer/metrics/regex_metrics.py`) — `register_regex_metric(base, pattern, span=...)` is a factory that registers a recall/precision/F-score trio (`<base>_recall` / `_precision` / `_fscore`, subclasses of KTR/KTP/KTF) over a `<base>_terms` vocabulary auto-extracted from the references by a regex (auto-registered on first use, so it works out of the box). It generalises the key-term metrics (terms come from a pattern instead of an enumerated list) and is the supported way for users to add their own term metrics without writing classes.
+
+The predefined metrics are a **flat set** of regex metrics — none special relative to another — each registered via this factory and run under the `orthographically_complex_term` tokenizer (keeps units/symbols and hyphen compounds whole) + `cased` normalizer (case-sensitive):
+
+- `orthographically_complex_term` (`orthographically_complex_term.py`): acronyms, alphanumerics, hyphen compounds, Greek-bearing tokens (e.g. `MRI`, `HbA1c`, `CT-scan`) — terms selected by their *orthography*. `dataset.metrics.orthographically_complex_term_recall().value`. (The name marks the orthographic dimension of "term complexity"; a `phonetically_complex_term` sibling could follow.)
+- `number`, `percentage`, `degree`, `currency`, `measurement` (`quantity.py`): numbers and number+unit/symbol spans (e.g. `dataset.metrics.measurement_recall().value`). Language-agnostic across Latin-script languages (keys only on digits + international symbols/SI units, never words). Categories may overlap (`number` matches every number, including those inside a measurement/percentage/currency). There is intentionally no combined "all quantities" metric.
 
 ### Vocabulary Extractors (`src/bewer/extractors/`)
 
-Library of pre-defined `ExtractorFn` callables — `(dataset) -> Iterable[str]` functions that derive key terms from a dataset's references and are registered via `Vocabulary(name).add_extractor(fn)`.
+`ExtractorFn` callables — `(dataset) -> Iterable[str]` functions that derive key terms from a dataset's references and are registered via `Vocabulary(name).add_extractor(fn)`.
 
-- **`RegexExtractor`** (`extractors/regex.py`): generic base that full-matches each reference token against a compiled pattern and returns the matching surface forms. Subclass it (override `default_pattern`) or instantiate it with a `pattern` to define a new regex-based term family. Its matching primitive `match_token_regex` returns unit token slices.
-- **`OrthographicallyComplexTermExtractor`** (`extractors/orthographically_complex_term.py`): a `RegexExtractor` with `ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`, backing the orthographically-complex term metrics. Expects the `orthographically_complex_term` tokenizer (no hyphen split) so `CT-scan` is a single token.
+- **`RegexExtractor`** (`extractors/regex.py`): the single regex extractor. With `span=False` (default) it full-matches each reference token against the pattern (`match_token_regex`); with `span=True` it searches the pattern over the whole standardized text and maps each match back to the token span it covers (`match_span_regex`), for terms that straddle token boundaries (e.g. `5 mg`, `95 %`). Instantiate with a `pattern` (and `span`) or subclass it.
+- **`OrthographicallyComplexTermExtractor`** / `ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN` (`extractors/orthographically_complex_term.py`): backs the `orthographically_complex_term` regex metric.
+- **Quantity patterns** (`extractors/quantity.py`): named components (`NUMBER`, `PERCENT`, `DEGREE`, `CURRENCY`, `UNIT`) and per-category patterns (`NUMBER_PATTERN`, `PERCENTAGE_PATTERN`, …) collected in `QUANTITY_CATEGORIES`; back the quantity regex metrics.
 - Exposed at the package top level as `bewer.extractors`.
 
 ### Alignment System (`src/bewer/alignment/`)

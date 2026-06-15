@@ -201,8 +201,8 @@ class Dataset(object):
         """Register a metric-derived vocabulary, returning the one now bound to its name.
 
         Metric-derived vocabularies (e.g. the auto-extracted ``orthographically_complex_terms``
-        backing the orthographically-complex-term metrics) are attached lazily the first time such a
-        metric is requested,
+        backing the orthographically-complex-term metrics) are attached lazily the first time such
+        a metric is requested,
         which may happen after the dataset has frozen on an earlier metric. Because the
         vocabulary introduces a brand-new name, it cannot change a term set any prior metric
         already resolved, so registering it on a frozen dataset cannot stale a cached result.
