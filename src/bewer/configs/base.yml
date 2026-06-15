@@ -16,7 +16,7 @@ tokenizers:
   key_term:
     bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
       split_on_escaped: "-/'"
-  complex_term:
+  orthographically_complex_term:
     bewer.preprocessing.tokenization.strip_punctuation_keep_symbols_pattern:
       split_on_escaped: "/'"
 

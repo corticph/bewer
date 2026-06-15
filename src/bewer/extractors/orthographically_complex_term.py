@@ -55,7 +55,7 @@ class OrthographicallyComplexTermExtractor(RegexExtractor):
     hyphen compounds — from a dataset's reference texts.
 
     Defaults to :data:`ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`. Expects the
-    ``complex_term`` tokenizer (which does not split on hyphens), so a compound like ``CT-scan``
+    ``orthographically_complex_term`` tokenizer (which does not split on hyphens), so a compound like ``CT-scan``
     arrives as a single token and is matched whole.
     """
 

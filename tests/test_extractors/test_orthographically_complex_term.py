@@ -16,7 +16,7 @@ from bewer.preprocessing.context import set_pipeline
 @pytest.fixture
 def complex_term_context():
     """Activate the pipeline the complex-term metrics run under (no hyphen split, case kept)."""
-    with set_pipeline(tokenizer="complex_term", normalizer="cased"):
+    with set_pipeline(tokenizer="orthographically_complex_term", normalizer="cased"):
         yield
 
 

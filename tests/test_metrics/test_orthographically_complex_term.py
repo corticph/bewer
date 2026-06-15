@@ -141,5 +141,5 @@ class TestMetricAttributes:
         dataset = Dataset()
         dataset.add("an MRI scan", "an MRI scan")
         recall = dataset.metrics.orthographically_complex_term_recall()
-        assert recall.tokenizer == "complex_term"
+        assert recall.tokenizer == "orthographically_complex_term"
         assert recall.normalizer == "cased"

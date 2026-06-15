@@ -52,7 +52,7 @@ class RegexExtractor:
     register via ``Vocabulary(name).add_extractor(extractor)``.
 
     Each example's reference is read under the active tokenizer, so the surface form of a term
-    depends on the pipeline the owning metric runs with (e.g. the ``complex_term`` tokenizer
+    depends on the pipeline the owning metric runs with (e.g. the ``orthographically_complex_term`` tokenizer
     keeps ``CT-scan`` a single token, while ``key_term`` splits it on the hyphen).
     """
 

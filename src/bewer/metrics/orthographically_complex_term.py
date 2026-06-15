@@ -14,7 +14,7 @@ dataset on first use if not already present, so the metrics work out of the box:
 
     >>> dataset.metrics.orthographically_complex_term_recall().value
 
-They run under the ``complex_term`` tokenizer (which does not split on hyphens, so ``CT-scan``
+They run under the ``orthographically_complex_term`` tokenizer (which does not split on hyphens, so ``CT-scan``
 is one token) and the ``cased`` normalizer (which does not lowercase), so a term's surface form
 is scored strictly: neither ``CT scan`` nor ``ct-scan`` matches a ``CT-scan`` term.
 """
@@ -93,7 +93,9 @@ class OrthographicallyComplexTermFScoreParams(KTF.param_schema):
         super().validate()
 
 
-@METRIC_REGISTRY.register("orthographically_complex_term_recall", tokenizer="complex_term", normalizer="cased")
+@METRIC_REGISTRY.register(
+    "orthographically_complex_term_recall", tokenizer="orthographically_complex_term", normalizer="cased"
+)
 class OrthographicallyComplexTermRecall(KTR):
     short_name_base = "orthographically_complex_term_recall"
     long_name_base = "Orthographically Complex Term Recall"
@@ -106,7 +108,9 @@ class OrthographicallyComplexTermRecall(KTR):
     param_schema = OrthographicallyComplexTermMetricParams
 
 
-@METRIC_REGISTRY.register("orthographically_complex_term_precision", tokenizer="complex_term", normalizer="cased")
+@METRIC_REGISTRY.register(
+    "orthographically_complex_term_precision", tokenizer="orthographically_complex_term", normalizer="cased"
+)
 class OrthographicallyComplexTermPrecision(KTP):
     short_name_base = "orthographically_complex_term_precision"
     long_name_base = "Orthographically Complex Term Precision"
@@ -118,7 +122,9 @@ class OrthographicallyComplexTermPrecision(KTP):
     param_schema = OrthographicallyComplexTermMetricParams
 
 
-@METRIC_REGISTRY.register("orthographically_complex_term_fscore", tokenizer="complex_term", normalizer="cased")
+@METRIC_REGISTRY.register(
+    "orthographically_complex_term_fscore", tokenizer="orthographically_complex_term", normalizer="cased"
+)
 class OrthographicallyComplexTermFscore(KTF):
     short_name_base = "orthographically_complex_term_fscore"
     long_name_base = "Orthographically Complex Term F-Score"
