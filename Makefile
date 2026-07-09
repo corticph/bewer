@@ -30,6 +30,18 @@ pre-commit-pipeline:  ## Run the pre-commit hooks for the pipeline.
 		poetry run pre-commit run $$hook --all-files --verbose; \
 	done
 
+.PHONY: regression
+regression:  ## Check metrics against the committed regression baselines.
+	poetry run python regression/runner.py
+
+.PHONY: update-baselines
+update-baselines:  ## Regenerate metric baselines after a sanctioned change (explain why in the commit).
+	# bewer.__version__ (recorded in baselines) is 0.0.0 under a plain `poetry install`
+	# because poetry uses its placeholder version instead of hatch-vcs. Reinstall via the
+	# PEP 517 backend first so the baseline records the real PEP 440 version.
+	poetry run pip install -e . --no-deps --force-reinstall
+	poetry run python regression/runner.py --update
+
 .PHONY: clean
 clean:  ## Clean up the project directory removing __pycache__, .coverage, test results, etc.
 	find . -type d -name "__pycache__" | xargs rm -rf {};

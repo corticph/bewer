@@ -1,0 +1,24 @@
+[tool.poetry]
+# Self-contained environment for regenerating the Common Voice German regression
+# dataset (../data.jsonl). Deliberately independent of every other generator env
+# (bewer's project, the Earnings21 NeMo env, and the French CV env) — no overlap.
+# The committed poetry.lock IS the provenance record: it pins the exact resolved
+# versions (with hashes) that produced ../data.jsonl. Not a published package.
+name = "common-voice-de-generate"
+version = "0.0.0"
+description = "Reproducible generator for the Common Voice German bewer regression dataset."
+authors = ["Corti ML"]
+package-mode = false
+
+[tool.poetry.dependencies]
+# Matches the interpreter + stack that generated the committed data.
+python = ">=3.12,<3.13"
+transformers = "4.46.3"
+torch = "2.10.0"
+librosa = "0.11.0"
+huggingface-hub = "0.36.2"
+numpy = "2.2.6"
+
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"

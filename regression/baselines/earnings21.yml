@@ -1,0 +1,110 @@
+bewer_version: 0.1.0a18.dev9
+metrics:
+  cer:
+    compute_seconds: 9.68
+    params:
+      normalized: true
+      normalizer: default
+      standardizer: default
+      tokenizer: default
+    values:
+      num_edits: 227282
+      ref_length: 2009754
+      value: 0.11308946269045864
+  ktcer:
+    compute_seconds: 25.131
+    params:
+      allow_subset_matches: false
+      normalized: true
+      normalizer: default
+      standardizer: default
+      tokenizer: key_term
+      vocab: oracle
+    values:
+      num_char_edits: 4392
+      ref_chars: 38508
+      value: 0.11405422249922094
+  kter:
+    compute_seconds: 9.878
+    params:
+      allow_subset_matches: false
+      normalized: true
+      normalizer: default
+      standardizer: default
+      tokenizer: key_term
+      vocab: oracle
+    values:
+      value: 0.36033382425135
+  ktf:
+    compute_seconds: 9.874
+    params:
+      allow_subset_matches: false
+      beta: 1.0
+      normalized: true
+      normalizer: default
+      standardizer: default
+      tokenizer: key_term
+      vocab: oracle
+    values:
+      value: 0.7606538237011091
+  ktp:
+    compute_seconds: 9.391
+    params:
+      allow_subset_matches: false
+      normalized: true
+      normalizer: default
+      standardizer: default
+      tokenizer: key_term
+      vocab: oracle
+    values:
+      value: 0.9380849532037437
+  ktr:
+    compute_seconds: 9.024
+    params:
+      allow_subset_matches: false
+      normalized: true
+      normalizer: default
+      standardizer: default
+      tokenizer: key_term
+      vocab: oracle
+    values:
+      num_matches: 2606
+      num_ref_terms: 4074
+      value: 0.6396661757486499
+  levenshtein:
+    compute_seconds: 8.197
+    params:
+      normalized: true
+      normalizer: default
+      standardizer: default
+      tokenizer: default
+    values:
+      num_deletions: 22793
+      num_insertions: 11887
+      num_matches: 316326
+      num_substitutions: 26253
+  rktr:
+    compute_seconds: 24.8
+    params:
+      allow_subset_matches: false
+      normalized: true
+      normalizer: default
+      standardizer: default
+      threshold: 0.5
+      tokenizer: key_term
+      vocab: oracle
+    values:
+      num_ref_terms: 4074
+      num_relaxed_matches: 3728
+      value: 0.9150711831124202
+  wer:
+    compute_seconds: 5.385
+    params:
+      normalized: true
+      normalizer: default
+      standardizer: default
+      tokenizer: default
+    values:
+      num_edits: 60933
+      ref_length: 365372
+      value: 0.16676975794532695
