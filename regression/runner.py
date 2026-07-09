@@ -524,8 +524,8 @@ def main(argv: list[str] | None = None) -> int:
         _render_diffs(all_diffs)
         console.print(
             f"[red]Metric regression FAILED: {len(all_diffs)} difference(s) from baseline.[/red] "
-            "If this change is intended, run the Metric Regression workflow in update mode "
-            "(or `make update-baselines`) to register the new values."
+            "If this change is intended, run `make update-baselines` and commit the updated "
+            "baselines in the same PR."
         )
 
     if missing_baselines or all_diffs:

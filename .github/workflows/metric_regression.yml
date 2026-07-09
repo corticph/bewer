@@ -6,19 +6,9 @@ on:
   push:
     tags:
       - "v*"                   # every version tag (incl. alphas), matching publish.yml
-  workflow_dispatch:
-    inputs:
-      update_baselines:
-        description: "Regenerate baselines and open a PR (use only for a sanctioned metric change)."
-        type: boolean
-        default: false
-      reason:
-        description: "Why the baselines are being updated (used in the PR description for review)."
-        type: string
-        default: ""
+  workflow_dispatch:           # manual re-check
 
-# Least privilege by default: the check job stays read-only; only the update job
-# escalates to the write permissions needed to open a PR.
+# The check only reads committed data + baselines, so no write access is needed.
 permissions:
   contents: read
 
@@ -28,16 +18,10 @@ env:
 
 jobs:
   check:
-    # Runs on pull requests, version tags, and non-updating manual dispatch. Read-only.
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.update_baselines == false }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0       # hatch-vcs needs tags to resolve the version
       - name: Install system deps
         run: |
           sudo apt-get remove -y man-db
@@ -53,59 +37,5 @@ jobs:
           pipx install poetry==${{ env.poetry_version }} --python python${{ env.python_version }}
       - name: Install project
         run: make install
-      - name: Pin canonical bewer version
-        # `poetry install` installs bewer with its "0.0.0" placeholder and never runs
-        # hatch-vcs, so bewer.__version__ would be 0.0.0. Reinstall via the PEP 517
-        # backend (hatchling + hatch-vcs) so importlib.metadata reports the real,
-        # PEP 440 version recorded in the baselines (needs fetch-depth: 0 above for tags).
-        run: poetry run pip install -e . --no-deps --force-reinstall
       - name: Check metrics against baselines
         run: poetry run python regression/runner.py
-
-  update:
-    # Manual dispatch only, when explicitly regenerating baselines. Needs write access
-    # to push the branch and open the PR.
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_baselines == true }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install system deps
-        run: |
-          sudo apt-get remove -y man-db
-          sudo apt-get update
-          sudo apt-get install -y pipx make
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.python_version }}
-      - name: Install Poetry
-        run: |
-          pipx ensurepath
-          pipx install poetry==${{ env.poetry_version }} --python python${{ env.python_version }}
-      - name: Install project
-        run: make install
-      - name: Pin canonical bewer version
-        run: poetry run pip install -e . --no-deps --force-reinstall
-      - name: Regenerate baselines
-        run: poetry run python regression/runner.py --update
-      - name: Open baseline-update PR
-        uses: peter-evans/create-pull-request@v6
-        with:
-          commit-message: "chore: update metric regression baselines"
-          title: "chore: update metric regression baselines"
-          body: |
-            Automated update of metric regression baselines.
-
-            **Reason:** ${{ inputs.reason }}
-
-            Triggered by @${{ github.actor }} via the Metric Regression workflow.
-            Review the changed values carefully — merging accepts them as the new targets.
-          branch: metric-baselines/update
-          add-paths: regression/baselines/**
-          delete-branch: true

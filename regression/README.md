@@ -30,8 +30,8 @@ Compares current metrics to the baselines and exits non-zero on drift. Add
 make update-baselines  # or: poetry run python regression/runner.py --update
 ```
 
-Regenerates the baseline files; commit them and explain why in the commit/PR. In CI
-the same is available via the workflow's manual "update" dispatch, which opens a PR.
+Regenerates the baseline files. Commit them **in the same PR** as the metric change
+(explain why in the commit/PR) so the check passes and the reviewer sees both together.
 
 ## Regenerate the `data.jsonl`
 
