@@ -1,6 +1,8 @@
 name: Metric Regression
 
 on:
+  pull_request:
+    branches: ["main"]         # gate: the check must pass before a PR can merge
   push:
     tags:
       - "v*"                   # every version tag (incl. alphas), matching publish.yml
@@ -26,8 +28,8 @@ env:
 
 jobs:
   check:
-    # Runs on every version tag and on a non-updating manual dispatch. Read-only.
-    if: ${{ github.event_name == 'push' || inputs.update_baselines == false }}
+    # Runs on pull requests, version tags, and non-updating manual dispatch. Read-only.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.update_baselines == false }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
