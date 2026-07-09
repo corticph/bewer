@@ -1,9 +1,4 @@
 [tool.poetry]
-# Self-contained environment for regenerating the Common Voice French regression
-# dataset (../data.jsonl). Deliberately independent of every other generator env
-# (bewer's project, the Earnings21 NeMo env, and the German CV env) — no overlap.
-# The committed poetry.lock IS the provenance record: it pins the exact resolved
-# versions (with hashes) that produced ../data.jsonl. Not a published package.
 name = "common-voice-fr-generate"
 version = "0.0.0"
 description = "Reproducible generator for the Common Voice French bewer regression dataset."
@@ -18,6 +13,7 @@ torch = "2.10.0"
 librosa = "0.11.0"
 huggingface-hub = "0.36.2"
 numpy = "2.2.6"
+tqdm = "4.68.3"
 
 [build-system]
 requires = ["poetry-core>=2.0.0"]

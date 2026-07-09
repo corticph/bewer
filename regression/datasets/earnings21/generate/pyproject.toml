@@ -1,9 +1,4 @@
 [tool.poetry]
-# Self-contained environment for regenerating the Earnings21 regression dataset.
-# It is deliberately separate from bewer's own project so the heavy ASR stack
-# (NeMo/torch) never enters bewer's dependency graph. The committed poetry.lock
-# IS the provenance record: it pins the exact resolved versions (with hashes)
-# that produced ../data.jsonl. Not a published package.
 name = "earnings21-generate"
 version = "0.0.0"
 description = "Reproducible generator for the Earnings21 bewer regression dataset (Parakeet-CTC hypotheses)."

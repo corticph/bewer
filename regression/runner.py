@@ -170,19 +170,25 @@ def _metric_keys(metric_specs: list[dict]) -> list[str]:
 
     Keying by the manifest name (not the resolved short_name) keeps the key stable when
     a default changes, so the change surfaces as a clear param diff rather than as a
-    new/missing key. Duplicate names in one dataset get their explicit params appended.
+    new/missing key. When a name repeats in one dataset it is disambiguated by its explicit
+    params, and an occurrence suffix (``#2``) is appended if that is still not unique, so
+    the returned keys are always distinct.
     """
     counts: dict[str, int] = {}
     for spec in metric_specs:
         counts[spec["name"]] = counts.get(spec["name"], 0) + 1
-    keys = []
+    keys: list[str] = []
+    seen: dict[str, int] = {}
     for spec in metric_specs:
         name = spec["name"]
+        key = name
         if counts[name] > 1 and spec.get("params"):
             suffix = ",".join(f"{k}={v}" for k, v in sorted(spec["params"].items()))
-            keys.append(f"{name}[{suffix}]")
-        else:
-            keys.append(name)
+            key = f"{name}[{suffix}]"
+        # Guarantee uniqueness even if the (possibly param-less) key still collides.
+        n = seen.get(key, 0)
+        seen[key] = n + 1
+        keys.append(key if n == 0 else f"{key}#{n + 1}")
     return keys
 
 
@@ -471,6 +477,8 @@ def main(argv: list[str] | None = None) -> int:
 
     manifest = load_manifest(args.manifest)
     tolerance = float(manifest.get("tolerance", 1e-9))
+    # Live progress bar only on an interactive terminal; keeps CI logs quiet.
+    progress = sys.stdout.isatty()
     datasets = manifest["datasets"]
     if args.dataset:
         datasets = [d for d in datasets if d["name"] == args.dataset]
@@ -480,7 +488,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.update:
         for spec in datasets:
-            computed, timing = compute(spec, progress=True)
+            computed, timing = compute(spec, progress=progress)
             write_baseline(spec["name"], computed, timing)
             console.print(f"[green]Updated baseline:[/green] {baseline_path(spec['name']).relative_to(REPO_ROOT)}")
             _render_summary(spec["name"], computed, timing, None, tolerance)
@@ -498,7 +506,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         with open(bpath) as f:
             baseline = yaml.safe_load(f)
-        computed, timing = compute(spec, progress=True)
+        computed, timing = compute(spec, progress=progress)
         all_diffs.extend(compare(name, computed, baseline, tolerance))
         _render_summary(name, computed, timing, baseline, tolerance)
         rendered_any = True
