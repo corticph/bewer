@@ -1,0 +1,36 @@
+bewer_version: 0.1.0a18.dev9
+metrics:
+  cer:
+    compute_seconds: 6.999
+    params:
+      normalized: true
+      normalizer: default
+      standardizer: default
+      tokenizer: default
+    values:
+      num_edits: 299053
+      ref_length: 961185
+      value: 0.3111294912009655
+  levenshtein:
+    compute_seconds: 8.495
+    params:
+      normalized: true
+      normalizer: default
+      standardizer: default
+      tokenizer: default
+    values:
+      num_deletions: 4844
+      num_insertions: 37788
+      num_matches: 101255
+      num_substitutions: 62948
+  wer:
+    compute_seconds: 7.297
+    params:
+      normalized: true
+      normalizer: default
+      standardizer: default
+      tokenizer: default
+    values:
+      num_edits: 105580
+      ref_length: 169047
+      value: 0.624560033600123
