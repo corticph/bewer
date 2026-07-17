@@ -37,15 +37,24 @@ class _KTStats_(ExampleMetric):
         )
 
     @metric_value
-    def _ref_match_classification(self) -> dict[str, list[Alignment]]:
-        """Partition ref key term matches into tp and fn alignment segments."""
-        key_term_matches = self._get_ref_matches()
-        if not key_term_matches:
-            return {"tp": [], "fn": []}
+    def _exact_match_alignments(self) -> dict[str, list[Alignment]]:
+        """Exact-match TP/FN/FP as full-span alignment segments.
+
+        TP/FN: one segment per ref key term occurrence (TP if all ops are MATCH, FN otherwise).
+        FP: one segment per hyp key term occurrence that contains at least one non-MATCH op.
+        All-MATCH hyp occurrences are excluded from FP regardless of whether they correspond
+        to a ref key term.
+        """
+        ref_matches = self._get_ref_matches()
+        hyp_matches = self._get_hyp_matches()
+
+        if not ref_matches and not hyp_matches:
+            return {"tp": [], "fn": [], "fp": []}
+
         alignment = self._get_alignment()
         tp: list[Alignment] = []
         fn: list[Alignment] = []
-        for kt_match in key_term_matches:
+        for kt_match in ref_matches:
             op_start = alignment.ref_index_mapping.get(kt_match.start)
             op_stop = alignment.ref_index_mapping.get(kt_match.stop - 1) + 1
             segment: Alignment = alignment[op_start:op_stop]
@@ -53,7 +62,16 @@ class _KTStats_(ExampleMetric):
                 tp.append(segment)
             else:
                 fn.append(segment)
-        return {"tp": tp, "fn": fn}
+
+        fp: list[Alignment] = []
+        for hyp_match in hyp_matches:
+            op_start = alignment.hyp_index_mapping[hyp_match.start]
+            op_stop = alignment.hyp_index_mapping[hyp_match.stop - 1] + 1
+            segment = alignment[op_start:op_stop]
+            if segment.num_edits > 0:
+                fp.append(segment)
+
+        return {"tp": tp, "fn": fn, "fp": fp}
 
     @metric_value
     def num_ref_terms(self) -> int:
@@ -64,27 +82,6 @@ class _KTStats_(ExampleMetric):
     def num_hyp_terms(self) -> int:
         """Get the number of key terms in the hypothesis text."""
         return len(self._get_hyp_matches())
-
-    @metric_value
-    def _exact_match_fp_alignments(self) -> list[Alignment]:
-        """Exact-match FP: one full-span alignment segment per spurious hyp occurrence.
-
-        A hyp key term match is a FP if not all of its alignment ops are MATCH.
-        All-MATCH hyp matches were correctly transcribed and are excluded, whether
-        or not they correspond to a ref key term (mirroring _ref_match_classification).
-        """
-        hyp_matches = self._get_hyp_matches()
-        if not hyp_matches:
-            return []
-        alignment = self._get_alignment()
-        result: list[Alignment] = []
-        for hyp_match in hyp_matches:
-            op_start = alignment.hyp_index_mapping[hyp_match.start]
-            op_stop = alignment.hyp_index_mapping[hyp_match.stop - 1] + 1
-            segment: Alignment = alignment[op_start:op_stop]
-            if segment.num_edits > 0:
-                result.append(segment)
-        return result
 
     @metric_value
     def _partial_credit_alignments(self) -> dict[str, list[Alignment]]:
@@ -134,9 +131,8 @@ class _KTStats_(ExampleMetric):
         Partial-credit mode: one single-op slice per correctly transcribed token position
         inside a key term span.
         """
-        if self.params.partial_credit:
-            return self._partial_credit_alignments["tp"]
-        return self._ref_match_classification["tp"]
+        source = self._partial_credit_alignments if self.params.partial_credit else self._exact_match_alignments
+        return source["tp"]
 
     @metric_value
     def fn_alignments(self) -> list[Alignment]:
@@ -146,9 +142,8 @@ class _KTStats_(ExampleMetric):
         Partial-credit mode: one single-op slice per incorrectly transcribed token position
         inside a reference key term span.
         """
-        if self.params.partial_credit:
-            return self._partial_credit_alignments["fn"]
-        return self._ref_match_classification["fn"]
+        source = self._partial_credit_alignments if self.params.partial_credit else self._exact_match_alignments
+        return source["fn"]
 
     @metric_value
     def fp_alignments(self) -> list[Alignment]:
@@ -159,9 +154,8 @@ class _KTStats_(ExampleMetric):
         Partial-credit mode: one single-op slice per incorrectly transcribed token position
         inside a hypothesis key term span.
         """
-        if self.params.partial_credit:
-            return self._partial_credit_alignments["fp"]
-        return self._exact_match_fp_alignments
+        source = self._partial_credit_alignments if self.params.partial_credit else self._exact_match_alignments
+        return source["fp"]
 
     @metric_value
     def num_tp(self) -> int:
