@@ -53,7 +53,7 @@ class KTFPR(Metric):
             vocab: The vocabulary name to use for key term identification.
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
-            partial_credit: Must be True. KTFPR is only defined for the K^[+] partial-credit view.
+            partial_credit: Must be True. KTFPR is only defined for the partial-credit view.
         """
 
         vocab: str

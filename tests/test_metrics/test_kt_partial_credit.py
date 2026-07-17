@@ -1,4 +1,4 @@
-"""Tests for K^[+] partial-credit counts in _KTStats and the public KT metrics."""
+"""Tests for partial-credit counts in _KTStats and the public KT metrics."""
 
 import pytest
 
@@ -13,7 +13,7 @@ def _dataset(ref: str, hyp: str, terms: list[str], name: str = "vocab") -> Datas
 
 
 class TestPartialCreditStatsExactMatchEquivalence:
-    """Single-token terms: K^[+] and K^[=] must give identical counts."""
+    """Single-token terms: partial-credit and exact-match must give identical counts."""
 
     def test_tp_single_token_correct(self):
         ds = _dataset("the fox jumps", "the fox jumps", ["fox"])
@@ -42,10 +42,10 @@ class TestPartialCreditStatsExactMatchEquivalence:
 
 
 class TestPartialCreditMultiToken:
-    """Multi-token terms: K^[+] counts token positions, K^[=] counts occurrences."""
+    """Multi-token terms: partial-credit counts token positions, exact-match counts occurrences."""
 
     def test_correct_multitoken_tp(self):
-        # K^[=]: 1 TP occurrence; K^[+]: 2 TP positions (both tokens matched)
+        # exact-match: 1 TP occurrence; partial-credit: 2 TP positions (both tokens matched)
         ds = _dataset("blood sugar levels", "blood sugar levels", ["blood sugar"])
         exact = ds[0].metrics._kt_stats(vocab="vocab")
         partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
@@ -56,8 +56,8 @@ class TestPartialCreditMultiToken:
 
     def test_one_token_wrong(self):
         # ref="blood sugar", hyp="blood sweet" — second token substituted
-        # K^[=]: 0 TP, 1 FN (whole term fails)
-        # K^[+]: 1 TP (blood), 1 FN (sugar→sweet)
+        # exact-match: 0 TP, 1 FN (whole term fails)
+        # partial-credit: 1 TP (blood), 1 FN (sugar→sweet)
         ds = _dataset("blood sugar", "blood sweet", ["blood sugar"])
         exact = ds[0].metrics._kt_stats(vocab="vocab")
         partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
@@ -69,8 +69,8 @@ class TestPartialCreditMultiToken:
 
     def test_internal_insertion(self):
         # ref="blood sugar", hyp="blood sweet sugar" — insertion between the two correct tokens
-        # K^[=]: 0 TP, 1 FN (whole term span contains an insertion)
-        # K^[+]: 2 TP (both constituent tokens matched), insertion not penalised per-token
+        # exact-match: 0 TP, 1 FN (whole term span contains an insertion)
+        # partial-credit: 2 TP (both constituent tokens matched), insertion not penalised per-token
         ds = _dataset("blood sugar", "blood sweet sugar", ["blood sugar"])
         exact = ds[0].metrics._kt_stats(vocab="vocab")
         partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
@@ -82,7 +82,7 @@ class TestPartialCreditMultiToken:
 
     def test_fp_multitoken_insertion(self):
         # ref has no "blood sugar"; hyp inserts it
-        # K^[=]: 1 FP occurrence; K^[+]: 2 FP positions (both inserted tokens inside I_H)
+        # exact-match: 1 FP occurrence; partial-credit: 2 FP positions (both inserted tokens inside I_H)
         ds = _dataset("the levels", "the blood sugar levels", ["blood sugar"])
         exact = ds[0].metrics._kt_stats(vocab="vocab")
         partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
@@ -93,14 +93,14 @@ class TestPartialCreditMultiToken:
 
 
 class TestPartialCreditPositionDeduplication:
-    """Positions covered by multiple overlapping terms are counted only once in K^[+]."""
+    """Positions covered by multiple overlapping terms are counted only once in partial-credit mode."""
 
     def test_overlapping_terms_count_once(self):
         # vocab: ["blood", "blood sugar"]
         # ref="blood sugar", hyp="blood sweet"
         # I_R = {0, 1} (pos 0 from "blood" AND "blood sugar"; pos 1 from "blood sugar")
         # Alignment: MATCH(blood), SUBSTITUTE(sugar→sweet)
-        # K^[+]: TP=1 (pos 0 matched), FN=1 (pos 1 not matched), FP=0 (hyp "blood" matched so not FP)
+        # partial-credit: TP=1 (pos 0 matched), FN=1 (pos 1 not matched), FP=0 (hyp "blood" matched so not FP)
         ds = _dataset("blood sugar", "blood sweet", ["blood", "blood sugar"])
         partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
         assert partial.num_tp == 1
@@ -114,7 +114,7 @@ class TestPartialCreditPublicMetrics:
     @pytest.fixture
     def ds_one_wrong(self):
         # ref="blood sugar", hyp="blood sweet"
-        # K^[+]: TP=1, FN=1, FP=0
+        # partial-credit: TP=1, FN=1, FP=0
         ds = Dataset()
         ds.add(ref="blood sugar", hyp="blood sweet")
         ds.add_vocabulary(Vocabulary(name="terms").add_terms(["blood sugar"]))
@@ -151,10 +151,10 @@ class TestPartialCreditPublicMetrics:
 
 
 class TestPartialCreditKterDenominator:
-    """KTER denominator uses TP+FN in both modes — backward-compatible with K^[=]."""
+    """KTER denominator uses TP+FN in both modes — backward-compatible with exact-match."""
 
     def test_kter_denominator_unchanged_for_exact_match(self):
-        # K^[=]: TP+FN == num_ref_terms always, so the formula change is invisible
+        # exact-match: TP+FN == num_ref_terms always, so the formula change is invisible
         ds = Dataset()
         ds.add(ref="the fox jumps", hyp="the dog jumps")
         ds.add_vocabulary(Vocabulary(name="v").add_terms(["fox"]))
@@ -175,8 +175,8 @@ class TestPartialCreditDatasetLevel:
 
     def test_dataset_aggregation(self):
         ds = Dataset()
-        ds.add(ref="blood sugar levels", hyp="blood sugar levels")  # K^[+]: TP=2
-        ds.add(ref="blood sugar levels", hyp="blood sweet levels")  # K^[+]: TP=1, FN=1
+        ds.add(ref="blood sugar levels", hyp="blood sugar levels")  # partial-credit: TP=2
+        ds.add(ref="blood sugar levels", hyp="blood sweet levels")  # partial-credit: TP=1, FN=1
         ds.add_vocabulary(Vocabulary(name="terms").add_terms(["blood sugar"]))
 
         stats = ds.metrics._kt_stats(vocab="terms", partial_credit=True)

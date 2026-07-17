@@ -60,7 +60,7 @@ class TestKTFPRWithFalsePositives:
 
     def test_multitoken_insertion(self):
         # ref="the levels" (2 tokens), hyp="the blood sugar levels" — 2-token term inserted
-        # K^[+] FP=2, N_R=2 → FPR=1.0
+        # partial-credit FP=2, N_R=2 → FPR=1.0
         ds = _dataset("the levels", "the blood sugar levels", ["blood sugar"])
         fpr = ds.metrics.ktfpr(vocab="vocab")
         assert fpr.num_fp == 2

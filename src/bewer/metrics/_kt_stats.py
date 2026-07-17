@@ -99,7 +99,7 @@ class _KTStats_(ExampleMetric):
 
     @metric_value
     def _partial_credit_stats(self) -> dict[str, int]:
-        """Compute K^[+] (partial-credit) TP/FN/FP counts at token-position level.
+        """Compute partial-credit TP/FN/FP counts at token-position level.
 
         Builds I_R (ref positions covered by any ref key term occurrence) and I_H (hyp
         positions covered by any hyp occurrence), then classifies each alignment op:
@@ -181,8 +181,8 @@ class _KTStats(Metric):
             vocab: The vocabulary name to use for key term identification.
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
-            partial_credit: Whether to use the K^[+] partial-credit view (position-level counts)
-                instead of the K^[=] exact-match view (occurrence-level counts).
+            partial_credit: Whether to use the partial-credit view (position-level counts)
+                instead of the exact-match view (occurrence-level counts).
         """
 
         vocab: str
