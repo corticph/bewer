@@ -22,9 +22,10 @@ class KTER_(ExampleMetric):
     def value(self) -> float:
         """Get the example-level key term error rate."""
         stats = self.parent_metric._kt_stats[self.example.index]
-        if stats.num_ref_terms == 0:
-            return float(stats.num_fn)
-        return stats.num_fn / stats.num_ref_terms
+        denom = stats.num_tp + stats.num_fn
+        if denom == 0:
+            return 0.0
+        return stats.num_fn / denom
 
 
 @METRIC_REGISTRY.register("kter", tokenizer="key_term")
@@ -53,6 +54,7 @@ class KTER(Metric):
         vocab: str
         normalized: bool = True
         allow_subset_matches: bool = False
+        partial_credit: bool = False
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""
@@ -66,6 +68,7 @@ class KTER(Metric):
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
+            partial_credit=self.params.partial_credit,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,
@@ -84,6 +87,7 @@ class KTER(Metric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the key term error rate."""
-        if self._kt_stats.num_ref_terms == 0:
-            return float(self._kt_stats.num_fn)
-        return self._kt_stats.num_fn / self._kt_stats.num_ref_terms
+        denom = self._kt_stats.num_tp + self._kt_stats.num_fn
+        if denom == 0:
+            return 0.0
+        return self._kt_stats.num_fn / denom

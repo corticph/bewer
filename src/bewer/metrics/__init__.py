@@ -16,6 +16,7 @@ from bewer.metrics.error_align import ErrorAlign
 from bewer.metrics.ktcer import KTCER
 from bewer.metrics.kter import KTER
 from bewer.metrics.ktf import KTF
+from bewer.metrics.ktfpr import KTFPR
 from bewer.metrics.ktp import KTP
 from bewer.metrics.ktr import KTR
 from bewer.metrics.levenshtein import Levenshtein
@@ -38,6 +39,7 @@ __all__ = [
     "CER",
     "KTF",
     "KTER",
+    "KTFPR",
     "KTP",
     "KTR",
     "KTCER",

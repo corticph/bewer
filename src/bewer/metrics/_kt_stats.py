@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from bewer.alignment import Alignment
+from bewer.alignment import Alignment, OpType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
 
 if TYPE_CHECKING:
@@ -98,18 +98,62 @@ class _KTStats_(ExampleMetric):
         return result
 
     @metric_value
+    def _partial_credit_stats(self) -> dict[str, int]:
+        """Compute K^[+] (partial-credit) TP/FN/FP counts at token-position level.
+
+        Builds I_R (ref positions covered by any ref key term occurrence) and I_H (hyp
+        positions covered by any hyp occurrence), then classifies each alignment op:
+          - ref position in I_R + MATCH  → TP
+          - ref position in I_R + non-MATCH → FN
+          - hyp position in I_H + non-MATCH → FP
+        Positions shared by overlapping or nested terms are counted only once.
+        """
+        ref_matches = self._get_ref_matches()
+        hyp_matches = self._get_hyp_matches()
+
+        I_R: set[int] = set()
+        for m in ref_matches:
+            I_R.update(range(m.start, m.stop))
+
+        I_H: set[int] = set()
+        for m in hyp_matches:
+            I_H.update(range(m.start, m.stop))
+
+        if not I_R and not I_H:
+            return {"tp": 0, "fn": 0, "fp": 0}
+
+        alignment = self._get_alignment()
+        tp = fn = fp = 0
+        for op in alignment:
+            is_match = op.type == OpType.MATCH
+            if op.ref_token_idx is not None and op.ref_token_idx in I_R:
+                if is_match:
+                    tp += 1
+                else:
+                    fn += 1
+            if op.hyp_token_idx is not None and op.hyp_token_idx in I_H and not is_match:
+                fp += 1
+        return {"tp": tp, "fn": fn, "fp": fp}
+
+    @metric_value
     def num_tp(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis text."""
+        if self.params.partial_credit:
+            return self._partial_credit_stats["tp"]
         return len(self.tp_alignments)
 
     @metric_value
     def num_fn(self) -> int:
         """Get the number of key terms missed in the hypothesis text."""
+        if self.params.partial_credit:
+            return self._partial_credit_stats["fn"]
         return len(self.fn_alignments)
 
     @metric_value
     def num_fp(self) -> int:
         """Get the number of key terms in the hypothesis text that are not in the reference text."""
+        if self.params.partial_credit:
+            return self._partial_credit_stats["fp"]
         return len(self.fp_alignments)
 
 
@@ -137,11 +181,14 @@ class _KTStats(Metric):
             vocab: The vocabulary name to use for key term identification.
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
+            partial_credit: Whether to use the K^[+] partial-credit view (position-level counts)
+                instead of the K^[=] exact-match view (occurrence-level counts).
         """
 
         vocab: str
         normalized: bool = True
         allow_subset_matches: bool = False
+        partial_credit: bool = False
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""

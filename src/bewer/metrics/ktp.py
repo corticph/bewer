@@ -51,6 +51,7 @@ class KTP(Metric):
         vocab: str
         normalized: bool = True
         allow_subset_matches: bool = False
+        partial_credit: bool = False
 
         def validate(self) -> None:
             """Validate that the metric can be computed with the given parameters and source data."""
@@ -64,6 +65,7 @@ class KTP(Metric):
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
+            partial_credit=self.params.partial_credit,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,
