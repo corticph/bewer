@@ -41,6 +41,9 @@ class KTF(Metric):
             vocab: The vocabulary name to use for key term identification.
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
+            partial_credit: When False (default, exact-match view), each key term occurrence is a single
+                TP, FN, or FP unit. When True (partial-credit view), TP, FN, and FP are counted at the
+                token-position level within key term spans.
             beta: F-score beta parameter. beta=1 gives F1 (equal weight to precision and recall).
                 beta>1 weights recall more heavily; beta<1 weights precision more heavily.
         """

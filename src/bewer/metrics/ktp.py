@@ -32,9 +32,11 @@ class KTP(Metric):
     short_name_base = "KTP"
     long_name_base = "Key Term Precision"
     description = (
-        "Key term precision (KTP) is computed as TP / (TP + FP), where TP is the number of key terms correctly "
-        "transcribed and FP is the number of spurious key term occurrences in the hypothesis. A key term may "
-        "consist of one or more tokens, but is treated as a single unit for the purpose of KTP calculation."
+        "Key term precision (KTP) is computed as TP / (TP + FP). "
+        "When partial_credit=False (default, exact-match view), each key term occurrence is treated as a single unit: "
+        "TP if every constituent token is correctly transcribed, FP if any token in a hypothesis occurrence is wrong. "
+        "When partial_credit=True (partial-credit view), TP and FP are counted at the token-position level within "
+        "key term spans, giving proportional credit for partially correct multi-token terms."
     )
     example_cls = KTP_
 
@@ -46,6 +48,9 @@ class KTP(Metric):
             vocab: The vocabulary name to use for key term identification.
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
+            partial_credit: When False (default, exact-match view), each key term occurrence is a single
+                TP or FP unit. When True (partial-credit view), TP and FP are counted at the
+                token-position level within key term spans.
         """
 
         vocab: str

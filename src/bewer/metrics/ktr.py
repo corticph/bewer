@@ -32,10 +32,12 @@ class KTR(Metric):
     short_name_base = "KTR"
     long_name_base = "Key Term Recall"
     description = (
-        "Key term recall (KTR) is computed as TP / (TP + FN), where TP is the number of key terms correctly "
-        "transcribed and FN is the number of key terms missed. A key term may consist of one or more tokens, but is "
-        "treated as a single unit. KTR is the complement of KTER (Key Term Error Rate): when TP + FN > 0, "
-        "KTR = 1 - KTER."
+        "Key term recall (KTR) is computed as TP / (TP + FN). "
+        "When partial_credit=False (default, exact-match view), each key term occurrence is treated as a single unit: "
+        "TP if every constituent token is correctly transcribed, FN otherwise. "
+        "When partial_credit=True (partial-credit view), TP and FN are counted at the token-position level within "
+        "key term spans, giving proportional credit for partially correct multi-token terms. "
+        "KTR is the complement of KTER (Key Term Error Rate): KTR = 1 - KTER."
     )
     example_cls = KTR_
 
@@ -47,6 +49,9 @@ class KTR(Metric):
             vocab: The vocabulary name to use for key term identification.
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
+            partial_credit: When False (default, exact-match view), each key term occurrence is a single
+                TP or FN unit. When True (partial-credit view), TP and FN are counted at the
+                token-position level within key term spans.
         """
 
         vocab: str
@@ -74,7 +79,7 @@ class KTR(Metric):
 
     @metric_value
     def num_matches(self) -> int:
-        """Get the number of key terms correctly transcribed in the hypothesis texts."""
+        """Get the number of correctly transcribed key term units (occurrences or token positions)."""
         return self._kt_stats.num_tp
 
     @metric_value
