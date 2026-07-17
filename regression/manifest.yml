@@ -1,0 +1,49 @@
+# Metric regression manifest.
+#
+# Declares the fixed datasets and the exact metric values to guard against
+# drift between releases. The runner (regression/runner.py) computes these and
+# compares them to the committed baselines under regression/baselines/.
+#
+# Paths are relative to the repository root.
+#
+# Each dataset is an independent entry with its own baseline. More Common Voice
+# languages (da/fr) can be added the same way as common_voice_de below.
+
+# Float comparison tolerance. Integer values are compared exactly; floats must
+# match within this absolute tolerance (only absorbs cross-platform repr noise,
+# since the metrics themselves are deterministic).
+tolerance: 1.0e-9
+
+datasets:
+  # Earnings21: English long-form earnings calls (entity-dense).
+  # Refs from HF Revai/earnings21; hyps from nvidia/parakeet-ctc-1.1b; key terms
+  # from the Earnings21 oracle biasing list. See datasets/earnings21/README.md.
+  - name: earnings21
+    path: regression/datasets/earnings21/data.jsonl
+    language: en
+    vocab:
+      name: oracle
+      file: regression/datasets/earnings21/key_terms.txt
+    metrics:
+      - {name: wer,         values: [value, num_edits, ref_length]}
+      - {name: cer,         values: [value, num_edits, ref_length]}
+      - {name: levenshtein, values: [num_substitutions, num_insertions, num_deletions, num_matches]}
+      - {name: ktr,   params: {vocab: oracle}, values: [value, num_matches, num_ref_terms]}
+      - {name: ktp,   params: {vocab: oracle}, values: [value]}
+      - {name: ktf,   params: {vocab: oracle}, values: [value]}
+      - {name: kter,  params: {vocab: oracle}, values: [value]}
+      - {name: ktcer, params: {vocab: oracle}, values: [value, num_char_edits, ref_chars]}
+      - {name: rktr,  params: {vocab: oracle, threshold: 0.5}, values: [value, num_relaxed_matches, num_ref_terms]}
+
+  - name: common_voice_de
+    path: regression/datasets/common_voice_de/data.jsonl
+    language: de
+    metrics: &cv_metrics
+      - {name: wer,         values: [value, num_edits, ref_length]}
+      - {name: cer,         values: [value, num_edits, ref_length]}
+      - {name: levenshtein, values: [num_substitutions, num_insertions, num_deletions, num_matches]}
+
+  - name: common_voice_fr
+    path: regression/datasets/common_voice_fr/data.jsonl
+    language: fr
+    metrics: *cv_metrics

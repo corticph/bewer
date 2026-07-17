@@ -1,0 +1,41 @@
+name: Metric Regression
+
+on:
+  pull_request:
+    branches: ["main"]         # gate: the check must pass before a PR can merge
+  push:
+    tags:
+      - "v*"                   # every version tag (incl. alphas), matching publish.yml
+  workflow_dispatch:           # manual re-check
+
+# The check only reads committed data + baselines, so no write access is needed.
+permissions:
+  contents: read
+
+env:
+  poetry_version: "2.1.2"
+  python_version: "3.13"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install system deps
+        run: |
+          sudo apt-get remove -y man-db
+          sudo apt-get update
+          sudo apt-get install -y pipx make
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.python_version }}
+      - name: Install Poetry
+        run: |
+          pipx ensurepath
+          pipx install poetry==${{ env.poetry_version }} --python python${{ env.python_version }}
+      - name: Install project
+        run: make install
+      - name: Check metrics against baselines
+        run: poetry run python regression/runner.py
