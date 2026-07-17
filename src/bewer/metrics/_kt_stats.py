@@ -66,18 +66,8 @@ class _KTStats_(ExampleMetric):
         return len(self._get_hyp_matches())
 
     @metric_value
-    def tp_alignments(self) -> list[Alignment]:
-        """Get alignment segments for each correctly transcribed key term (TP)."""
-        return self._ref_match_classification["tp"]
-
-    @metric_value
-    def fn_alignments(self) -> list[Alignment]:
-        """Get alignment segments for each missed key term (FN)."""
-        return self._ref_match_classification["fn"]
-
-    @metric_value
-    def fp_alignments(self) -> list[Alignment]:
-        """Get alignment segments for each spurious key term in the hypothesis (FP).
+    def _exact_match_fp_alignments(self) -> list[Alignment]:
+        """Exact-match FP: one full-span alignment segment per spurious hyp occurrence.
 
         A hyp key term match is a FP if not all of its alignment ops are MATCH.
         All-MATCH hyp matches were correctly transcribed and are excluded, whether
@@ -92,20 +82,19 @@ class _KTStats_(ExampleMetric):
             op_start = alignment.hyp_index_mapping[hyp_match.start]
             op_stop = alignment.hyp_index_mapping[hyp_match.stop - 1] + 1
             segment: Alignment = alignment[op_start:op_stop]
-            # TODO: Should we allow spurious edits in the matched range, as long as the target tokens are correct?
             if segment.num_edits > 0:
                 result.append(segment)
         return result
 
     @metric_value
-    def _partial_credit_stats(self) -> dict[str, int]:
-        """Compute partial-credit TP/FN/FP counts at token-position level.
+    def _partial_credit_alignments(self) -> dict[str, list[Alignment]]:
+        """Partial-credit TP/FN/FP as single-op alignment slices.
 
         Builds I_R (ref positions covered by any ref key term occurrence) and I_H (hyp
         positions covered by any hyp occurrence), then classifies each alignment op:
-          - ref position in I_R + MATCH  → TP
-          - ref position in I_R + non-MATCH → FN
-          - hyp position in I_H + non-MATCH → FP
+          - ref position in I_R + MATCH     → TP (one single-op slice)
+          - ref position in I_R + non-MATCH → FN (one single-op slice)
+          - hyp position in I_H + non-MATCH → FP (one single-op slice)
         Positions shared by overlapping or nested terms are counted only once.
         """
         ref_matches = self._get_ref_matches()
@@ -120,40 +109,73 @@ class _KTStats_(ExampleMetric):
             I_H.update(range(m.start, m.stop))
 
         if not I_R and not I_H:
-            return {"tp": 0, "fn": 0, "fp": 0}
+            return {"tp": [], "fn": [], "fp": []}
 
         alignment = self._get_alignment()
-        tp = fn = fp = 0
-        for op in alignment:
+        tp: list[Alignment] = []
+        fn: list[Alignment] = []
+        fp: list[Alignment] = []
+        for i, op in enumerate(alignment):
             is_match = op.type == OpType.MATCH
             if op.ref_token_idx is not None and op.ref_token_idx in I_R:
                 if is_match:
-                    tp += 1
+                    tp.append(alignment[i : i + 1])
                 else:
-                    fn += 1
+                    fn.append(alignment[i : i + 1])
             if op.hyp_token_idx is not None and op.hyp_token_idx in I_H and not is_match:
-                fp += 1
+                fp.append(alignment[i : i + 1])
         return {"tp": tp, "fn": fn, "fp": fp}
 
     @metric_value
-    def num_tp(self) -> int:
-        """Get the number of key terms correctly transcribed in the hypothesis text."""
+    def tp_alignments(self) -> list[Alignment]:
+        """Alignment segments for each TP unit.
+
+        Exact-match mode: one full-span segment per correctly transcribed key term occurrence.
+        Partial-credit mode: one single-op slice per correctly transcribed token position
+        inside a key term span.
+        """
         if self.params.partial_credit:
-            return self._partial_credit_stats["tp"]
+            return self._partial_credit_alignments["tp"]
+        return self._ref_match_classification["tp"]
+
+    @metric_value
+    def fn_alignments(self) -> list[Alignment]:
+        """Alignment segments for each FN unit.
+
+        Exact-match mode: one full-span segment per missed key term occurrence.
+        Partial-credit mode: one single-op slice per incorrectly transcribed token position
+        inside a reference key term span.
+        """
+        if self.params.partial_credit:
+            return self._partial_credit_alignments["fn"]
+        return self._ref_match_classification["fn"]
+
+    @metric_value
+    def fp_alignments(self) -> list[Alignment]:
+        """Alignment segments for each FP unit.
+
+        Exact-match mode: one full-span segment per spurious hypothesis key term occurrence
+        that contains at least one error.
+        Partial-credit mode: one single-op slice per incorrectly transcribed token position
+        inside a hypothesis key term span.
+        """
+        if self.params.partial_credit:
+            return self._partial_credit_alignments["fp"]
+        return self._exact_match_fp_alignments
+
+    @metric_value
+    def num_tp(self) -> int:
+        """Get the number of TP units (occurrences in exact-match mode, token positions in partial-credit mode)."""
         return len(self.tp_alignments)
 
     @metric_value
     def num_fn(self) -> int:
-        """Get the number of key terms missed in the hypothesis text."""
-        if self.params.partial_credit:
-            return self._partial_credit_stats["fn"]
+        """Get the number of FN units (occurrences in exact-match mode, token positions in partial-credit mode)."""
         return len(self.fn_alignments)
 
     @metric_value
     def num_fp(self) -> int:
-        """Get the number of key terms in the hypothesis text that are not in the reference text."""
-        if self.params.partial_credit:
-            return self._partial_credit_stats["fp"]
+        """Get the number of FP units (occurrences in exact-match mode, token positions in partial-credit mode)."""
         return len(self.fp_alignments)
 
 

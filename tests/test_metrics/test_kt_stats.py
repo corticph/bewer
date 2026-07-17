@@ -154,15 +154,36 @@ class TestKTStatsAlignmentAttributes:
 
     def test_count_invariants(self, dataset_correct, dataset_error, dataset_fp):
         for dataset in (dataset_correct, dataset_error, dataset_fp):
-            stats = dataset[0].metrics._kt_stats(vocab="animals")
-            assert len(stats.tp_alignments) == stats.num_tp
-            assert len(stats.fn_alignments) == stats.num_fn
-            assert len(stats.fp_alignments) == stats.num_fp
+            for partial_credit in (False, True):
+                stats = dataset[0].metrics._kt_stats(vocab="animals", partial_credit=partial_credit)
+                assert len(stats.tp_alignments) == stats.num_tp
+                assert len(stats.fn_alignments) == stats.num_fn
+                assert len(stats.fp_alignments) == stats.num_fp
 
     def test_return_types(self, dataset_fp):
         stats = dataset_fp[0].metrics._kt_stats(vocab="animals")
         for seg in stats.tp_alignments + stats.fn_alignments + stats.fp_alignments:
             assert isinstance(seg, Alignment)
+
+    def test_partial_credit_alignments_are_single_ops(self, dataset_error, dataset_fp):
+        """Partial-credit alignment entries are single-op slices."""
+        for dataset in (dataset_error, dataset_fp):
+            stats = dataset[0].metrics._kt_stats(vocab="animals", partial_credit=True)
+            for seg in stats.tp_alignments + stats.fn_alignments + stats.fp_alignments:
+                assert isinstance(seg, Alignment)
+                assert len(seg) == 1
+
+    def test_partial_credit_tp_alignments_are_matches(self, dataset_correct):
+        """Every TP slice in partial-credit mode contains a MATCH op."""
+        stats = dataset_correct[0].metrics._kt_stats(vocab="animals", partial_credit=True)
+        assert len(stats.tp_alignments) == 1
+        assert stats.tp_alignments[0][0].type == OpType.MATCH
+
+    def test_partial_credit_fn_alignments_are_non_matches(self, dataset_error):
+        """Every FN slice in partial-credit mode contains a non-MATCH op."""
+        stats = dataset_error[0].metrics._kt_stats(vocab="animals", partial_credit=True)
+        assert len(stats.fn_alignments) == 1
+        assert stats.fn_alignments[0][0].type != OpType.MATCH
 
     def test_fp_subset_match_excluded(self):
         """Correctly transcribed subset hyp match is neither TP nor FP when allow_subset_matches=False."""
