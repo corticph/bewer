@@ -1,7 +1,7 @@
-bewer_version: 0.1.0a18.dev9
+bewer_version: 0.1.0a18.dev16
 metrics:
   cer:
-    compute_seconds: 9.68
+    compute_seconds: 10.583
     params:
       normalized: true
       normalizer: default
@@ -12,7 +12,7 @@ metrics:
       ref_length: 2009754
       value: 0.11308946269045864
   ktcer:
-    compute_seconds: 25.131
+    compute_seconds: 24.987
     params:
       allow_subset_matches: false
       normalized: true
@@ -25,45 +25,49 @@ metrics:
       ref_chars: 38508
       value: 0.11405422249922094
   kter:
-    compute_seconds: 9.878
+    compute_seconds: 10.172
     params:
       allow_subset_matches: false
       normalized: true
       normalizer: default
+      partial_credit: false
       standardizer: default
       tokenizer: key_term
       vocab: oracle
     values:
       value: 0.36033382425135
   ktf:
-    compute_seconds: 9.874
+    compute_seconds: 9.788
     params:
       allow_subset_matches: false
       beta: 1.0
       normalized: true
       normalizer: default
+      partial_credit: false
       standardizer: default
       tokenizer: key_term
       vocab: oracle
     values:
       value: 0.7606538237011091
   ktp:
-    compute_seconds: 9.391
+    compute_seconds: 9.493
     params:
       allow_subset_matches: false
       normalized: true
       normalizer: default
+      partial_credit: false
       standardizer: default
       tokenizer: key_term
       vocab: oracle
     values:
       value: 0.9380849532037437
   ktr:
-    compute_seconds: 9.024
+    compute_seconds: 9.501
     params:
       allow_subset_matches: false
       normalized: true
       normalizer: default
+      partial_credit: false
       standardizer: default
       tokenizer: key_term
       vocab: oracle
@@ -72,7 +76,7 @@ metrics:
       num_ref_terms: 4074
       value: 0.6396661757486499
   levenshtein:
-    compute_seconds: 8.197
+    compute_seconds: 8.427
     params:
       normalized: true
       normalizer: default
@@ -84,7 +88,7 @@ metrics:
       num_matches: 316326
       num_substitutions: 26253
   rktr:
-    compute_seconds: 24.8
+    compute_seconds: 25.531
     params:
       allow_subset_matches: false
       normalized: true
@@ -98,7 +102,7 @@ metrics:
       num_relaxed_matches: 3728
       value: 0.9150711831124202
   wer:
-    compute_seconds: 5.385
+    compute_seconds: 5.838
     params:
       normalized: true
       normalizer: default

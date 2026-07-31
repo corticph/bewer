@@ -1,7 +1,7 @@
-bewer_version: 0.1.0a18.dev9
+bewer_version: 0.1.0a18.dev16
 metrics:
   cer:
-    compute_seconds: 6.999
+    compute_seconds: 6.998
     params:
       normalized: true
       normalizer: default
@@ -12,7 +12,7 @@ metrics:
       ref_length: 961185
       value: 0.3111294912009655
   levenshtein:
-    compute_seconds: 8.495
+    compute_seconds: 8.505
     params:
       normalized: true
       normalizer: default
@@ -24,7 +24,7 @@ metrics:
       num_matches: 101255
       num_substitutions: 62948
   wer:
-    compute_seconds: 7.297
+    compute_seconds: 5.842
     params:
       normalized: true
       normalizer: default
