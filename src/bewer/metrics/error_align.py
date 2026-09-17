@@ -70,25 +70,33 @@ class ErrorAlign_(ExampleMetric):
         """
         Compute and convert ErrorAlign edit operations to BeWER operations.
 
+        The normalizer is always applied during alignment to ensure correct
+        token-level alignment (preventing sub-token character splits). The
+        ``normalized`` parameter only controls whether the *output* ref/hyp
+        text in the resulting ops is normalized or left in its original form.
+
         Returns:
             list[Op]: List of BeWER operations.
         """
         tokenizer = get_tokenizer(self.parent_metric.dataset)
         tokenizer = tokenizer or basic_tokenizer
-        normalizer = get_normalizer(self.parent_metric.dataset) if self.params.normalized else None
+        # Always normalize during alignment for correct token pairing.
+        align_normalizer = get_normalizer(self.parent_metric.dataset) or basic_normalizer
+        # Only normalize the output text when the user requests it.
+        output_normalizer = align_normalizer if self.params.normalized else None
         ea_ops = []
         ref_idx = 0
         for ea_op in error_align(
             self.example.ref.standardized,
             self.example.hyp.standardized,
             tokenizer=tokenizer,
-            normalizer=basic_normalizer if self.params.normalized else self._no_normalizer,
+            normalizer=align_normalizer,
         ):
             ref_empty = ea_op.ref is None
             op = Op(
                 type=self.OPS_MAP[ea_op.op_type],
-                ref=self._normalize_conditionally(ea_op.ref, normalizer),
-                hyp=self._normalize_conditionally(ea_op.hyp, normalizer),
+                ref=self._normalize_conditionally(ea_op.ref, output_normalizer),
+                hyp=self._normalize_conditionally(ea_op.hyp, output_normalizer),
                 ref_token_idx=None if ref_empty else ref_idx,
                 hyp_token_idx=None,
                 ref_span=ea_op.ref_slice,
