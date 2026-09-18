@@ -113,8 +113,8 @@ class ErrorAlign_(ExampleMetric):
         """
         tokenizer = get_tokenizer(self.parent_metric.dataset)
         tokenizer = tokenizer or basic_tokenizer
-        dataset_normalizer = get_normalizer(self.parent_metric.dataset)
         if self.params.normalized:
+            dataset_normalizer = get_normalizer(self.parent_metric.dataset)
             normalizer = self._length_preserving(dataset_normalizer) if dataset_normalizer else basic_normalizer
         else:
             normalizer = self._no_normalizer
