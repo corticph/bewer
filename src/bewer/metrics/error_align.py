@@ -87,6 +87,7 @@ class ErrorAlign_(ExampleMetric):
                 "requires length-preserving normalization, so affected tokens fall back to "
                 "basic_normalizer and their alignment may be faulty. Use a length-preserving "
                 "normalizer to avoid this warning.",
+                category=UserWarning,
             )
             return basic_normalizer(text)
 
@@ -100,6 +101,12 @@ class ErrorAlign_(ExampleMetric):
         is used for both alignment and output — so ops show the same token form that was
         used for matching.  When ``normalized=False``, no normalization is applied during
         alignment or in the output.
+
+        Note:
+            ``ref_span`` and ``hyp_span`` always index into the *standardized* (pre-normalized)
+            text.  When ``normalized=True``, the ``ref`` and ``hyp`` fields contain *normalized*
+            text, so ``text[op.ref_span] != op.ref`` for tokens where normalization changes
+            characters (e.g. ``café`` → ``cafe``).  Use the span to recover the surface form.
 
         Returns:
             list[Op]: List of BeWER operations.
