@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from typing import Optional
 
@@ -63,26 +64,60 @@ class ErrorAlign_(ExampleMetric):
 
     @staticmethod
     def _no_normalizer(text: str) -> str:
-        """Return text unchanged (used when no normalizer is provided)."""
+        """Return text unchanged (used when normalization is disabled)."""
         return text
+
+    @staticmethod
+    def _length_preserving(normalizer: callable) -> callable:
+        """Wrap a normalizer for use with error_align, which requires length-preserving normalizers.
+
+        Tokens whose normalization changes the character length (e.g. ``ß`` → ``ss``) fall back
+        to error_align's built-in ``basic_normalizer`` (lowercase-only) to avoid the ``ValueError``
+        that would be raised otherwise. This means such tokens may not match during alignment
+        even when the dataset normalizer considers them equal, but this is an edge case
+        (i.e., ligatures) and never crashes.
+        """
+
+        def safe(text: str) -> str:
+            result = normalizer(text)
+            if len(result) == len(text):
+                return result
+            warnings.warn(
+                "Dataset normalizer is not length-preserving. The error_align algorithm "
+                "requires length-preserving normalization, so affected tokens fall back to "
+                "basic_normalizer and their alignment may be faulty. Use a length-preserving "
+                "normalizer to avoid this warning.",
+            )
+            return basic_normalizer(text)
+
+        return safe
 
     def _get_ops(self) -> list[Op]:
         """
         Compute and convert ErrorAlign edit operations to BeWER operations.
+
+        When ``normalized=True``, the dataset normalizer (wrapped to be length-preserving)
+        is used for both alignment and output — so ops show the same token form that was
+        used for matching.  When ``normalized=False``, no normalization is applied during
+        alignment or in the output.
 
         Returns:
             list[Op]: List of BeWER operations.
         """
         tokenizer = get_tokenizer(self.parent_metric.dataset)
         tokenizer = tokenizer or basic_tokenizer
-        normalizer = get_normalizer(self.parent_metric.dataset) if self.params.normalized else None
+        dataset_normalizer = get_normalizer(self.parent_metric.dataset)
+        if self.params.normalized:
+            normalizer = self._length_preserving(dataset_normalizer) if dataset_normalizer else basic_normalizer
+        else:
+            normalizer = self._no_normalizer
         ea_ops = []
         ref_idx = 0
         for ea_op in error_align(
             self.example.ref.standardized,
             self.example.hyp.standardized,
             tokenizer=tokenizer,
-            normalizer=basic_normalizer if self.params.normalized else self._no_normalizer,
+            normalizer=normalizer,
         ):
             ref_empty = ea_op.ref is None
             op = Op(
