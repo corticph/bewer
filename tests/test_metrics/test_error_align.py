@@ -1,5 +1,7 @@
 """Tests for bewer.metrics.error_align module."""
 
+import pytest
+
 from bewer.alignment import OpType
 from bewer.metrics.error_align import ErrorAlign, ErrorAlign_
 
@@ -148,12 +150,79 @@ class TestErrorAlignNormalization:
         assert ea.params.normalized is False
 
     def test_normalized_does_not_change_edit_counts(self, sample_dataset):
-        """Test that normalization does not change the edit counts."""
+        """Test that normalization does not change the edit counts for ASCII-only text."""
         example = sample_dataset[1]
         ea_norm = example.metrics.error_align(normalized=True)
         ea_no_norm = example.metrics.error_align(normalized=False)
         assert ea_norm.num_edits == ea_no_norm.num_edits
         assert ea_norm.num_matches == ea_no_norm.num_matches
+
+
+class TestErrorAlignDatasetNormalizer:
+    """Tests that ErrorAlign uses the dataset normalizer for alignment."""
+
+    def test_diacritic_match_normalized(self, empty_dataset):
+        """Diacritics that the dataset normalizer removes should match, not substitute."""
+        empty_dataset.add("café", "cafe")
+        example = empty_dataset[0]
+        ea = example.metrics.error_align(normalized=True)
+        assert ea.num_matches == 1
+        assert ea.num_substitutions == 0
+        assert ea.num_edits == 0
+
+    def test_diacritic_match_agrees_with_wer(self, empty_dataset):
+        """ErrorAlign with normalized=True should agree with WER on diacritic inputs."""
+        empty_dataset.add("café", "cafe")
+        example = empty_dataset[0]
+        wer = example.metrics.wer(normalized=True)
+        ea = example.metrics.error_align(normalized=True)
+        assert ea.num_edits == 0
+        assert wer.value == 0.0
+
+    def test_case_difference_normalized_false_is_substitution(self, empty_dataset):
+        """With normalized=False, case differences are substitutions (no normalization during alignment)."""
+        empty_dataset.add("Hello World", "hello world")
+        example = empty_dataset[0]
+        ea = example.metrics.error_align(normalized=False)
+        assert ea.num_substitutions == 2
+        assert ea.num_matches == 0
+
+    def test_case_difference_normalized_true_is_match(self, empty_dataset):
+        """With normalized=True, case differences should match (lowercase normalizer)."""
+        empty_dataset.add("Hello World", "hello world")
+        example = empty_dataset[0]
+        ea = example.metrics.error_align(normalized=True)
+        assert ea.num_matches == 2
+        assert ea.num_substitutions == 0
+
+    def test_cascading_diacritic_misalignment(self, empty_dataset):
+        """Multiple diacritic words should match correctly, not cascade into substitutions."""
+        empty_dataset.add("café résumé naïve hôtel", "hotel cafe resume naive")
+        example = empty_dataset[0]
+        ea = example.metrics.error_align(normalized=True)
+        assert ea.num_matches == 3
+        assert ea.num_substitutions == 0
+        assert ea.num_edits == 2  # word reordering: insert + delete
+
+    def test_length_changing_normalizer_does_not_crash(self, empty_dataset):
+        """Tokens whose normalization changes length (ß -> ss) should not crash."""
+        empty_dataset.add("Straße", "Strasse")
+        example = empty_dataset[0]
+        with pytest.warns(UserWarning, match="not length-preserving"):
+            ea = example.metrics.error_align(normalized=True)
+            assert ea.num_edits == 1  # ß -> ss is not length-preserving, falls back to basic_normalizer
+            assert ea.num_substitutions == 1
+
+    def test_normalized_output_preserves_original_when_false(self, empty_dataset):
+        """With normalized=False, output ops should contain original (unnormalized) text."""
+        empty_dataset.add("café", "cafe")
+        example = empty_dataset[0]
+        ea = example.metrics.error_align(normalized=False)
+        for op in ea.alignment:
+            if op.ref is not None:
+                assert op.ref == "café"
+            if op.hyp is not None:
+                assert op.hyp == "cafe"
 
 
 class TestErrorAlignDatasetMetric:
