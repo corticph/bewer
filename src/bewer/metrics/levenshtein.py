@@ -77,7 +77,7 @@ class Levenshtein_(ExampleMetric):
 
         assert len(match_ref_indices) == len(match_hyp_indices), "Mismatch in match indices"
 
-        for ref_idx, hyp_idx in zip(match_ref_indices, match_hyp_indices):
+        for ref_idx, hyp_idx in zip(sorted(match_ref_indices), sorted(match_hyp_indices)):
             rapidfuzz_ops.append(("match", ref_idx, hyp_idx))
         rapidfuzz_ops = sorted(rapidfuzz_ops, key=lambda x: (x[1], x[2]))
 
