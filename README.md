@@ -28,6 +28,8 @@ __Contents__ | [Installation](#installation) | [Quickstart](#quickstart) | [Metr
 pip install bewer
 ```
 
+<a name="quickstart">
+
 ## Quickstart
 
 ```python
@@ -36,41 +38,21 @@ from bewer import Dataset
 # Create an evaluation dataset
 dataset = Dataset(language="en")
 
-# Load data.
+# Load data
 dataset.load_csv(
     "data.csv",
     ref_col="reference",
     hyp_col="hypothesis",
 )
 
-# List available metrics and compute.
+# List available metrics and compute
 dataset.metrics.list_metrics()
 print(f"WER: {dataset.metrics.wer().value:.2%}")
 ```
 
 <a name="metrics">
 
-## Metrics
-
-Metrics are computed lazily and cached, so requesting the same metric with the same parameters twice returns the cached result. Every metric exposes a **main value**, typically `.value` for numeric metrics and `.alignment` for alignments, plus optional **supportive values**, all accessible as attributes.
-
-Requesting a metric *freezes* the dataset: its contents can no longer change, so further `add()`/`load_*()` calls raise `DatasetFrozenError`. Use `clone()` for a fresh, modifiable copy to keep building.
-
-```python
-wer = dataset.metrics.wer()          # returns a metric object (cached, freezes the dataset)
-
-print(wer.metric_values())           # {'main': 'value', 'other': ['num_edits', 'ref_length']}
-
-print(wer.value)                     # main value: 0.12
-print(wer.num_edits)                 # supportive value: 15
-print(wer.ref_length)                # supportive value: 125
-
-# Per-example access via iteration or indexing:
-example_metric = wer[0]
-print(example_metric.value)
-```
-
-### Metrics catalog
+## Metrics Catalog
 
 | | Type | Accessor | |
 |--------|------|----------|---:|
@@ -89,6 +71,88 @@ print(example_metric.value)
 | Levenshtein Alignment | Alignment | `levenshtein` | [`>`](src/bewer/metrics/levenshtein.py) |
 | Error Alignment | Alignment | `error_align` | [`>`](src/bewer/metrics/error_align.py) |
 
+## Core Concepts
+
+### Hierarchy
+
+In `bewer`, evaluation is centered around the `Dataset` object, which implements a linguistic hierarchy, from a collection of reference-hypothesis pairs to individual tokens.
+
+```python
+# Create a dataset and populate it
+dataset = Dataset(language="en")
+dataset.add(ref="foo", hyp="bar")
+
+# Climb down the hierarchy: Dataset -> Example -> Text -> Token
+example = dataset[0]
+text = example.ref
+token = text.tokens[0]
+```
+
+### Preprocessing Pipeline
+
+Text preprocessing is a central part of an evaluation run and typically require specific considerations for different languages, domains, or tasks. When you set the language of the dataset, the **preprocessing pipeline** is updated accordingly. The preprocessing pipeline is divided into three steps: standardization, tokenization, and normalization.
+
+```python
+text.raw                # String: Original text
+text.standardized       # String: Standardized text
+token = text.tokens[0]
+token.raw               # String: Standardized token
+token.normalized        # String: Normalized token
+```
+
+A brief overview of the preprocessing steps:
+- **Standardization** is intended to iron out inconsistencies that may affect tokenization. This includes basic normalization of characters that separate tokens, but should also take into account abbreviations and numerical formats.
+- **Tokenization** is regex-based, which allows for tracing individual tokens back to their positions in the standardized text. While typically not essential for metric computation, it makes post-hoc analysis easier.
+- **Normalization** is applied at the token level and typically take care of lowercasing, removing diacritics, and other language-specific adjustments. For most metrics, normalization can be toggled on or off as needed.
+
+The available preprocessing steps for a given language configuration can be inspected via the `pipelines` attribute of the dataset.
+
+
+
+
+
+## Metrics
+
+**Lazy evaluation and caching.** Metrics are computed lazily and cached, so requesting the same metric with the same parameters twice returns the cached result. Requesting a metric *freezes* the dataset: its contents can no longer change, so further `add()`/`load_*()` calls raise `DatasetFrozenError`. Use `clone()` for a fresh, modifiable copy to keep building.
+
+```python
+# When a metric is initialized, it is cached and the dataset is frozen.
+wer = dataset.metrics.wer()
+assert wer is dataset.metrics.wer()
+assert wer is not dataset.clone().metrics.wer()
+```
+**Metric registry.** All `bewer` metrics are registered in the metric registry under one or more accesor names with different configurations. For instance, key-term recall is registered in a general form under the accessor name `ktr`, but also comes with pre-defined vocabulary specifications (e.g., `orthographically_complex_term_recall`).
+
+
+Each dataset and each example comes with metrics colletion, accessed via the `metrics` attribute. Metric collections are responsible for ...
+
+
+Bewer comes with a built-in metric registry that keeps track of all available metrics and their default configurations. Metrics are class-based, but may be registered under different names depending on the metric parameters and preprocessing pipeline. Each dataset has its own metric collection (`dataset.metrics`), which handles instantiation, parameterization, and caching of metrics. This means you never have to manage metric instances yourself — just request one by name, and the collection takes care of the rest.
+
+**Metric values.** Every metric exposes a main value, typically `value` for numeric metrics and `alignment` for alignments, plus the constituent values, all accessible as attributes. For numeric metrics, a bootstrap confidence interval can be computed via `metric.compute_confidence_interval()`.
+
+
+
+
+```python
+# A metric and it's constituent values are exposed as attributes
+metric_values = wer.metric_values()
+assert "value" == metric_values["main"]
+assert "num_edits" in metric_values["other"]
+assert "ref_length" in metric_values["other"]
+
+ci
+```
+
+```python
+
+# Per-example access via iteration or indexing
+ex_wer = wer[0]
+assert ex_wer.value == ex_wer.num_edits / ex_wer.ref_length
+```
+
+
+
 
 ### Key-term metrics
 
@@ -106,9 +170,9 @@ print(dataset.metrics.ktr(vocab="key_terms").value)
 
 You can also load line-separated key terms directly from a file (`add_file`) or write a custom vocabulary extractor, which is a callable `(dataset) -> Iterable[str]` that derives terms from the dataset's references (`add_extractor`).
 
-### Alignment
+### Alignments
 
-Alignment metrics produce an example-level text-to-text alignment as their primary output, rather than a dataset-level numeric score. An [`Alignment`](src/bewer/alignment/alignment.py) is a sequence of [`Op`](src/bewer/alignment/op.py) objects, each representing a match, substitution, insertion, or deletion between hypothesis and reference. Edit counts are available as supportive values:
+Alignments produce an example-level text-to-text alignment as their primary output, rather than a dataset-level numeric score. An [`Alignment`](src/bewer/alignment/alignment.py) is a sequence of [`Op`](src/bewer/alignment/op.py) objects, each representing a match, substitution, insertion, or deletion between hypothesis and reference. Edit counts are available as supportive values:
 
 ```python
 # Access alignments at the example level
@@ -119,6 +183,6 @@ alignment = example.metrics.levenshtein().alignment
 assert alignment.num_edits + alignment.num_matches == len(alignment)
 assert alignment.num_edits >= alignment.num_substitutions
 
-# Display a color-coded two-row alignment in the console
+# Print a color-coded two-row alignment in the console
 alignment.display()
 ```
