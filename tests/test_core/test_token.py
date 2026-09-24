@@ -10,39 +10,39 @@ class TestTokenInit:
 
     def test_basic_initialization(self, pipelines, stub_parent):
         """Test basic token initialization."""
-        token = Token(raw="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
-        assert token.raw == "hello"
+        token = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        assert token.standardized == "hello"
         assert token.start == 0
         assert token.end == 5
 
     def test_with_index(self, pipelines, stub_parent):
         """Test token initialization with index."""
-        token = Token(raw="world", start=6, end=11, index=1, pipelines=pipelines, src=stub_parent)
+        token = Token(standardized="world", start=6, end=11, index=1, pipelines=pipelines, src=stub_parent)
         assert token.index == 1
 
     def test_slice_property(self, pipelines, stub_parent):
         """Test that slice property is correctly set."""
-        token = Token(raw="test", start=10, end=14, pipelines=pipelines, src=stub_parent)
+        token = Token(standardized="test", start=10, end=14, pipelines=pipelines, src=stub_parent)
         assert token.slice == slice(10, 14)
 
     def test_default_index_none(self, pipelines, stub_parent):
         """Test that index defaults to None."""
-        token = Token(raw="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        token = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
         assert token.index is None
 
     def test_normalized_cache_initialized(self, pipelines, stub_parent):
         """Test that normalized cache is initialized as empty dict."""
-        token = Token(raw="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        token = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
         assert token._cache_normalized == {}
 
     def test_src_is_stored(self, pipelines, stub_parent):
         """Test that the provided src is stored."""
-        token = Token(raw="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        token = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
         assert token.src is stub_parent
 
     def test_src_defaults_to_none(self, pipelines):
         """Test that src is optional and defaults to None."""
-        token = Token(raw="hello", start=0, end=5, pipelines=pipelines)
+        token = Token(standardized="hello", start=0, end=5, pipelines=pipelines)
         assert token.src is None
 
 
@@ -54,7 +54,7 @@ class TestTokenFromMatch:
         pattern = re.compile(r"\S+")
         match = pattern.search("hello world", 0)
         token = Token.from_match(match, index=0, pipelines=pipelines, src=stub_parent)
-        assert token.raw == "hello"
+        assert token.standardized == "hello"
         assert token.start == 0
         assert token.end == 5
         assert token.index == 0
@@ -65,7 +65,7 @@ class TestTokenFromMatch:
         text = "hello world"
         matches = list(pattern.finditer(text))
         token = Token.from_match(matches[1], index=1, pipelines=pipelines, src=stub_parent)
-        assert token.raw == "world"
+        assert token.standardized == "world"
         assert token.start == 6
         assert token.end == 11
 
@@ -82,39 +82,39 @@ class TestTokenEquality:
 
     def test_equal_tokens(self, pipelines, stub_parent):
         """Test that identical tokens are equal."""
-        token1 = Token(raw="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
-        token2 = Token(raw="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        token1 = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        token2 = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
         assert token1 == token2
 
     def test_different_raw(self, pipelines, stub_parent):
         """Test tokens with different raw values are not equal."""
-        token1 = Token(raw="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
-        token2 = Token(raw="world", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        token1 = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        token2 = Token(standardized="world", start=0, end=5, pipelines=pipelines, src=stub_parent)
         assert token1 != token2
 
     def test_different_start(self, pipelines, stub_parent):
         """Test tokens with different start positions are not equal."""
-        token1 = Token(raw="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
-        token2 = Token(raw="hello", start=1, end=5, pipelines=pipelines, src=stub_parent)
+        token1 = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        token2 = Token(standardized="hello", start=1, end=5, pipelines=pipelines, src=stub_parent)
         assert token1 != token2
 
     def test_different_end(self, pipelines, stub_parent):
         """Test tokens with different end positions are not equal."""
-        token1 = Token(raw="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
-        token2 = Token(raw="hello", start=0, end=6, pipelines=pipelines, src=stub_parent)
+        token1 = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        token2 = Token(standardized="hello", start=0, end=6, pipelines=pipelines, src=stub_parent)
         assert token1 != token2
 
     def test_comparison_with_non_token(self, pipelines, stub_parent):
         """Test comparison with non-Token objects returns False."""
-        token = Token(raw="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        token = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
         assert token != "hello"
         assert token != 42
         assert token is not None
 
     def test_index_not_considered_in_equality(self, pipelines, stub_parent):
         """Test that index is not considered in equality."""
-        token1 = Token(raw="hello", start=0, end=5, index=0, pipelines=pipelines, src=stub_parent)
-        token2 = Token(raw="hello", start=0, end=5, index=1, pipelines=pipelines, src=stub_parent)
+        token1 = Token(standardized="hello", start=0, end=5, index=0, pipelines=pipelines, src=stub_parent)
+        token2 = Token(standardized="hello", start=0, end=5, index=1, pipelines=pipelines, src=stub_parent)
         assert token1 == token2
 
 
@@ -143,7 +143,7 @@ class TestTokenInctx:
 
     def test_inctx_without_src_returns_raw(self, pipelines):
         """A standalone token (no parent) falls back to its raw text."""
-        token = Token(raw="hello", start=0, end=5, pipelines=pipelines)
+        token = Token(standardized="hello", start=0, end=5, pipelines=pipelines)
         assert token.inctx() == "hello"
 
 
@@ -152,10 +152,10 @@ class TestTokenRepr:
 
     def test_repr(self, pipelines, stub_parent):
         """Test string representation."""
-        token = Token(raw="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
+        token = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
         assert repr(token) == 'Token("hello")'
 
     def test_repr_with_special_chars(self, pipelines, stub_parent):
         """Test repr with special characters in token."""
-        token = Token(raw="hello!", start=0, end=6, pipelines=pipelines, src=stub_parent)
+        token = Token(standardized="hello!", start=0, end=6, pipelines=pipelines, src=stub_parent)
         assert repr(token) == 'Token("hello!")'

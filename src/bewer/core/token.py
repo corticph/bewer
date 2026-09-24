@@ -17,7 +17,7 @@ class Token:
     """BeWER Token representation.
 
     Attributes:
-        raw (str): The raw string of the token.
+        standardized (str): The token string, sliced from the parent Text's standardized string.
         start (int): The starting index of the token in the text.
         end (int): The ending index of the token in the text.
         index (int | None): The index of the token in the token list.
@@ -27,7 +27,7 @@ class Token:
 
     def __init__(
         self,
-        raw: str,
+        standardized: str,
         start: int,
         end: int,
         index: Optional[int] = None,
@@ -38,14 +38,14 @@ class Token:
         """Initialize Token.
 
         Args:
-            raw: The raw token string.
+            standardized: The token string, as sliced from the standardized text.
             start: Starting character index in the source text.
             end: Ending character index in the source text.
             index: Token index in the token list.
             pipelines: The resolved pipeline registry used for lazy normalization (required).
             src: Optional parent Text object. Used only by ``inctx`` to show surrounding context.
         """
-        self._raw = raw
+        self._standardized = standardized
         self.start = start
         self.end = end
         self.index = index
@@ -62,14 +62,18 @@ class Token:
         return self._src
 
     @property
-    def raw(self) -> str:
-        """The raw string of the token as extracted during tokenization."""
-        return self._raw
+    def standardized(self) -> str:
+        """The token string, as extracted from the parent Text's standardized string.
+
+        Token offsets (``start``/``end``) index into that same standardized string, not
+        into ``Text.raw``.
+        """
+        return self._standardized
 
     @pipeline_cached_property(NORMALIZER_NAME)
     def normalized(self, normalizer):
         """The normalized string of the token after applying the active normalizer."""
-        return normalizer(self.raw)
+        return normalizer(self.standardized)
 
     def inctx(self, width: int = 20, highlight: bool = False, add_ellipsis: bool = True) -> str:
         """Get the context of the token in the source text.
@@ -83,7 +87,7 @@ class Token:
             str: The context string.
         """
         if self._src is None:
-            return self.raw
+            return self.standardized
         start = max(0, self.start - width)
         end = min(len(self._src.raw), self.end + width)
         ctx_span = self._src.raw[start:end]
@@ -117,7 +121,7 @@ class Token:
             Token: The created Token object.
         """
         return cls(
-            raw=match.group(),
+            standardized=match.group(),
             start=match.start(),
             end=match.end(),
             index=index,
@@ -128,7 +132,7 @@ class Token:
     def __eq__(self, other):
         if not isinstance(other, Token):
             return False
-        return self.start == other.start and self.end == other.end and self.raw == other.raw
+        return self.start == other.start and self.end == other.end and self.standardized == other.standardized
 
     def __repr__(self):
-        return f'Token("{self.raw}")'
+        return f'Token("{self.standardized}")'

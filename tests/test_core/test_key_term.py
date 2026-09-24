@@ -50,7 +50,7 @@ class TestKeyTermTrieFindInTokens:
         ref_tokens = example.ref.tokens
         matches, _ = trie.find_in_tokens(ref_tokens)
         assert len(matches) == 1
-        assert ref_tokens[matches[0]][0].raw == "fox"
+        assert ref_tokens[matches[0]][0].standardized == "fox"
 
     def test_single_token_multiple_occurrences(self, sample_dataset):
         """Test finding a token that appears multiple times."""
@@ -70,7 +70,7 @@ class TestKeyTermTrieFindInTokens:
         assert len(matches) == 1
         matched_tokens = ref_tokens[matches[0]]
         assert len(matched_tokens) == 2
-        assert matched_tokens.raw == ["quick", "brown"]
+        assert matched_tokens.standardized == ["quick", "brown"]
 
     def test_no_match(self, sample_dataset):
         """Test that non-matching key term returns empty list."""
@@ -201,7 +201,7 @@ class TestTextGetKeyTermMatchesAllowSubsets:
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
         assert len(matches) == 1
-        assert matches[0].tokens.raw == ["quick", "brown"]
+        assert matches[0].tokens.standardized == ["quick", "brown"]
 
 
 class TestKeyTermTrieAddCapitalized:
@@ -246,7 +246,7 @@ class TestKeyTermMatch:
         (match,) = example.ref.get_key_term_matches(vocab="phrases")
         assert (match.start, match.stop) == (1, 3)
         assert match.token_slice == slice(1, 3)
-        assert example.ref.tokens[match.token_slice].raw == ["quick", "brown"]
+        assert example.ref.tokens[match.token_slice].standardized == ["quick", "brown"]
 
     def test_references_and_derived_fields(self, sample_dataset):
         """src/key_term references and the derived tokens are correct."""
@@ -257,7 +257,7 @@ class TestKeyTermMatch:
         assert match.src is example.ref
         assert isinstance(match.key_term, KeyTerm)
         assert match.key_term.raw == "quick brown"
-        assert match.tokens.raw == ["quick", "brown"]
+        assert match.tokens.standardized == ["quick", "brown"]
 
     def test_side_reflects_ref_vs_hyp(self, sample_dataset):
         """side mirrors the parent text's TextType for both ref and hyp matches."""
@@ -275,7 +275,7 @@ class TestKeyTermMatch:
         sample_dataset.add_vocabulary(Vocabulary(name="greetings").add_terms(["hello"]))
         example = sample_dataset[-1]
         (match,) = example.ref.get_key_term_matches(vocab="greetings")
-        assert match.tokens.raw == ["Hello"]
+        assert match.tokens.standardized == ["Hello"]
         assert match.key_term.raw == "hello"
 
     def test_subset_removal_keeps_richer_object(self, sample_dataset):
@@ -285,7 +285,7 @@ class TestKeyTermMatch:
         example = sample_dataset[-1]
         (match,) = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
         assert isinstance(match, KeyTermMatch)
-        assert match.tokens.raw == ["quick", "brown"]
+        assert match.tokens.standardized == ["quick", "brown"]
 
     def test_colliding_key_terms_resolve_deterministically(self, sample_dataset):
         """When distinct raw terms collapse to the same token pattern, the reported key term

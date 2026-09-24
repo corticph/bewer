@@ -116,11 +116,11 @@ class TestTextHash:
 
 
 class TestTokenListRaw:
-    """Tests for TokenList.raw property."""
+    """Tests for TokenList.standardized property."""
 
     def test_raw_returns_list_of_strings(self, sample_tokens):
         """Test that raw property returns list of strings."""
-        raw = sample_tokens.raw
+        raw = sample_tokens.standardized
         assert isinstance(raw, list)
         assert all(isinstance(t, str) for t in raw)
         assert raw == ["hello", "world"]
@@ -174,7 +174,7 @@ class TestTokenListSlicing:
     def test_getitem_returns_token(self, sample_tokens):
         """Test that indexing returns a Token."""
         token = sample_tokens[0]
-        assert token.raw == "hello"
+        assert token.standardized == "hello"
 
     def test_slice_returns_tokenlist(self, sample_tokens):
         """Test that slicing returns a TokenList."""

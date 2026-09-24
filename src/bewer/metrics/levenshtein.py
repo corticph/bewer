@@ -64,8 +64,8 @@ class Levenshtein_(ExampleMetric):
             ref_tokens = self.example.ref.tokens.normalized
             hyp_tokens = self.example.hyp.tokens.normalized
         else:
-            ref_tokens = self.example.ref.tokens.raw
-            hyp_tokens = self.example.hyp.tokens.raw
+            ref_tokens = self.example.ref.tokens.standardized
+            hyp_tokens = self.example.hyp.tokens.standardized
 
         rapidfuzz_ops = RFLevenshtein.editops(ref_tokens, hyp_tokens).as_list()
 

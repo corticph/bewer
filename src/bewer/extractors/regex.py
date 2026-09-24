@@ -39,9 +39,9 @@ def match_token_regex(tokens: "TokenList", pattern: "regex.Pattern") -> list[sli
     Returns:
         A list of unit-length slices, one per matching token, so callers can reconstruct
         the matched span from the source text. Matching uses the case-preserving
-        ``Token.raw`` (not the normalized form), so patterns may key on case.
+        ``Token.standardized`` (not the normalized form), so patterns may key on case.
     """
-    return [slice(i, i + 1) for i, token in enumerate(tokens) if pattern.fullmatch(token.raw)]
+    return [slice(i, i + 1) for i, token in enumerate(tokens) if pattern.fullmatch(token.standardized)]
 
 
 class RegexExtractor:
