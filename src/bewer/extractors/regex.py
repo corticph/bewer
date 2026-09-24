@@ -30,18 +30,18 @@ __all__ = ["RegexExtractor", "match_token_regex"]
 
 
 def match_token_regex(tokens: "TokenList", pattern: "regex.Pattern") -> list[slice]:
-    """Locate tokens whose raw surface form fully matches ``pattern``.
+    """Locate tokens whose standardized surface form fully matches ``pattern``.
 
     Args:
         tokens: The tokens to scan.
-        pattern: A compiled pattern each token's ``raw`` form is full-matched against.
+        pattern: A compiled pattern each token's ``standardized`` form is full-matched against.
 
     Returns:
         A list of unit-length slices, one per matching token, so callers can reconstruct
         the matched span from the source text. Matching uses the case-preserving
-        ``Token.raw`` (not the normalized form), so patterns may key on case.
+        ``Token.standardized`` (not the normalized form), so patterns may key on case.
     """
-    return [slice(i, i + 1) for i, token in enumerate(tokens) if pattern.fullmatch(token.raw)]
+    return [slice(i, i + 1) for i, token in enumerate(tokens) if pattern.fullmatch(token.standardized)]
 
 
 class RegexExtractor:
