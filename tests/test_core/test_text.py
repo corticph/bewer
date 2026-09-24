@@ -67,7 +67,7 @@ class TestTextJoined:
         assert "hello" in joined.lower()
         assert "world" in joined.lower()
 
-    def test_joined_raw(self, sample_text):
+    def test_joined_without_normalization(self, sample_text):
         """Test joining tokens without normalization."""
         joined = sample_text.joined(normalized=False)
         assert isinstance(joined, str)
@@ -115,15 +115,15 @@ class TestTextHash:
         assert hash(text1) == hash(text2)
 
 
-class TestTokenListRaw:
+class TestTokenListStandardized:
     """Tests for TokenList.standardized property."""
 
-    def test_raw_returns_list_of_strings(self, sample_tokens):
-        """Test that raw property returns list of strings."""
-        raw = sample_tokens.standardized
-        assert isinstance(raw, list)
-        assert all(isinstance(t, str) for t in raw)
-        assert raw == ["hello", "world"]
+    def test_standardized_returns_list_of_strings(self, sample_tokens):
+        """Test that standardized property returns list of strings."""
+        standardized = sample_tokens.standardized
+        assert isinstance(standardized, list)
+        assert all(isinstance(t, str) for t in standardized)
+        assert standardized == ["hello", "world"]
 
 
 class TestTokenListNormalized:

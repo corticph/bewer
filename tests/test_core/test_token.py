@@ -87,8 +87,8 @@ class TestTokenEquality:
         token2 = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
         assert token1 == token2
 
-    def test_different_raw(self, pipelines, stub_parent):
-        """Test tokens with different raw values are not equal."""
+    def test_different_standardized(self, pipelines, stub_parent):
+        """Test tokens with different standardized values are not equal."""
         token1 = Token(standardized="hello", start=0, end=5, pipelines=pipelines, src=stub_parent)
         token2 = Token(standardized="world", start=0, end=5, pipelines=pipelines, src=stub_parent)
         assert token1 != token2
@@ -147,22 +147,41 @@ class TestTokenInctx:
         token = Token(standardized="hello", start=0, end=5, pipelines=pipelines)
         assert token.inctx() == "hello"
 
-    def test_inctx_aligned_when_standardization_changes_length(self):
-        """Context stays aligned when standardization shortens the text.
+    def test_inctx_slices_the_standardized_string(self):
+        """The context window is the exact standardized slice the offsets designate.
 
         NFC composes "e" + U+0301 into a single "é", so the standardized string is
-        shorter than the raw one. Token offsets index the standardized string, so
-        the context window must be sliced from it too.
+        shorter than the raw one and slicing ``Text.raw`` with these offsets drifts by
+        the length delta. Asserting the exact slice (rather than mere containment of
+        the token) is what pins the coordinate system: a drifted window still contains
+        its token as a substring, so containment alone would not catch the regression.
         """
-        dataset = Dataset(language="en")
-        raw = "cafe\u0301 latte and re\u0301sume\u0301 words here"
-        dataset.add(ref=raw, hyp=raw)
-        text = dataset[0].ref
-        assert len(text.standardized) < len(text.raw)
+        text = self._nfc_text()
+        standardized = text.standardized
+        assert len(standardized) < len(text.raw)
+
+        width = 8
+        for token in text.tokens:
+            start = max(0, token.start - width)
+            end = min(len(standardized), token.end + width)
+            assert token.inctx(width=width, add_ellipsis=False) == standardized[start:end]
+
+    def test_inctx_highlight_wraps_exactly_the_token(self):
+        """The highlighted region covers the token itself, not a drifted span."""
+        text = self._nfc_text()
 
         for token in text.tokens:
-            ctx = token.inctx(width=8, add_ellipsis=False)
-            assert token.standardized in ctx, f"{token.standardized!r} missing from {ctx!r}"
+            ctx = token.inctx(width=8, highlight=True, add_ellipsis=False)
+            styled = re.findall(r"\x1b\[[0-9;]*m(.+?)\x1b\[0m", ctx)
+            assert styled == [token.standardized], f"{styled!r} != [{token.standardized!r}]"
+
+    @staticmethod
+    def _nfc_text():
+        """A Text whose standardization (NFC) shortens the string by three characters."""
+        dataset = Dataset(language="en")
+        source = "cafe\u0301 latte and re\u0301sume\u0301 words here"
+        dataset.add(ref=source, hyp=source)
+        return dataset[0].ref
 
 
 class TestTokenRepr:

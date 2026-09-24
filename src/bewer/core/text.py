@@ -130,7 +130,7 @@ class Text:
         Args:
             vocab: Vocabulary name to match against.
             normalized: Use normalized tokens for matching.
-            add_capitalized: Add capitalized first-token variants (raw mode only).
+            add_capitalized: Add capitalized first-token variants (only when ``normalized`` is False).
             allow_subset_matches: If False, discard matches that are subsets of longer matches.
 
         Returns:

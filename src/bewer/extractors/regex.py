@@ -30,11 +30,11 @@ __all__ = ["RegexExtractor", "match_token_regex"]
 
 
 def match_token_regex(tokens: "TokenList", pattern: "regex.Pattern") -> list[slice]:
-    """Locate tokens whose raw surface form fully matches ``pattern``.
+    """Locate tokens whose standardized surface form fully matches ``pattern``.
 
     Args:
         tokens: The tokens to scan.
-        pattern: A compiled pattern each token's ``raw`` form is full-matched against.
+        pattern: A compiled pattern each token's ``standardized`` form is full-matched against.
 
     Returns:
         A list of unit-length slices, one per matching token, so callers can reconstruct

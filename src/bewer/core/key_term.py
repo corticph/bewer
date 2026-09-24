@@ -83,7 +83,7 @@ class KeyTermTrie:
 
         Args:
             key_terms: A set of KeyTerm objects to build the automaton from.
-            normalized: Whether to use normalized text for matching. If False, uses raw text.
+            normalized: Whether to use normalized text for matching. If False, uses standardized text.
             add_capitalized: Whether to add capitalized versions of key terms for case-insensitive matching.
                 Only applies if normalized is False and is only applied to the first word in an n-gram key term.
         """

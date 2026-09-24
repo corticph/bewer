@@ -140,8 +140,8 @@ class TestTokenListIndices:
         indices = tokens.indices("the")
         assert indices == {0, 3}
 
-    def test_raw_mode(self, sample_dataset):
-        """Test using raw text for comparison."""
+    def test_standardized_mode(self, sample_dataset):
+        """Test using standardized text for comparison."""
         tokens = sample_dataset[1].ref.tokens  # "the quick brown fox"
         indices = tokens.indices("fox", normalized=False)
         assert indices == {3}
@@ -270,7 +270,7 @@ class TestKeyTermMatch:
         assert hyp_match.side == TextType.HYP
 
     def test_matched_tokens_preserve_original_casing(self, sample_dataset):
-        """The matched tokens are the raw text even when matching is case-insensitive."""
+        """The matched tokens are the standardized text even when matching is case-insensitive."""
         sample_dataset.add("Hello World", "hello world")
         sample_dataset.add_vocabulary(Vocabulary(name="greetings").add_terms(["hello"]))
         example = sample_dataset[-1]

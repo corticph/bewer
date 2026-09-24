@@ -154,9 +154,9 @@ class TestTextGetKeyTermMatches:
         sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "brown"]))
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="animals")
-        matched_raws = sorted(m.tokens.standardized for m in matches)
-        assert ["brown"] in matched_raws
-        assert ["fox"] in matched_raws
+        matched_standardized = sorted(m.tokens.standardized for m in matches)
+        assert ["brown"] in matched_standardized
+        assert ["fox"] in matched_standardized
 
     def test_global_key_terms_match_count(self, sample_dataset):
         """Global key terms produce the expected number of matches."""
