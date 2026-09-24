@@ -83,6 +83,7 @@ poetry run twine check dist/*  # Validate built packages
 - CER (Character Error Rate): `cer.py`
 - Levenshtein distance: `levenshtein.py`
 - Error alignment metrics: `error_align.py` (uses external error-align package)
+- Insertion run rate: `insertion_run_rate.py` — counts insertions that are part of contiguous insertion runs of length >= `min_run_length` (default 1), normalized by total operations (edits + matches). When `min_run_length=1`, equivalent to the insertion rate. When `min_run_length>=2`, only burst insertion runs are counted — a hallucination signal. Depends on the Levenshtein metric for alignment.
 - Key term metrics (recall, precision, F-score, CER, etc.): `ktr.py`, `ktp.py`, `ktf.py`, `ktcer.py`, `rktr.py`, `kter.py`
 - Orthographically-complex term metrics: `orthographically_complex_term.py` — subclass the key-term metrics over an `orthographically_complex_terms` vocabulary auto-extracted from the references (terms selected by orthography: acronyms, alphanumerics, hyphen compounds, Greek-bearing tokens; e.g. `MRI`, `HbA1c`, `CT-scan`). Auto-registered on first use, so `dataset.metrics.orthographically_complex_term_recall().value` works out of the box. Run under the `orthographically_complex_term` tokenizer (no hyphen split) and `cased` normalizer (no lowercasing), so a term's surface form is scored strictly. The name marks the orthographic dimension of "term complexity".
 
