@@ -76,7 +76,7 @@ class Token:
         return normalizer(self.standardized)
 
     def inctx(self, width: int = 20, highlight: bool = False, add_ellipsis: bool = True) -> str:
-        """Get the context of the token in the source text.
+        """Get the context of the token in the parent Text's standardized string.
 
         Args:
             width (int): The number of characters of context to show on each side.
@@ -89,13 +89,14 @@ class Token:
         if self._src is None:
             return self.standardized
         start = max(0, self.start - width)
-        end = min(len(self._src.raw), self.end + width)
-        ctx_span = self._src.raw[start:end]
+        standardized = self._src.standardized
+        end = min(len(standardized), self.end + width)
+        ctx_span = standardized[start:end]
         if highlight:
             ctx_span = highlight_span(ctx_span, self.start - start, self.end - start, "bold green")
         if add_ellipsis:
             start_marker = "..." if self.start - width > 0 else ""
-            end_marker = "..." if self.end + width < len(self._src.raw) else ""
+            end_marker = "..." if self.end + width < len(standardized) else ""
             ctx_span = start_marker + ctx_span + end_marker
         return ctx_span
 

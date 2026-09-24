@@ -2,6 +2,7 @@
 
 import regex as re
 
+from bewer import Dataset
 from bewer.core.token import Token
 
 
@@ -141,10 +142,27 @@ class TestTokenInctx:
         assert not ctx.startswith("...")
         assert "hello" in ctx
 
-    def test_inctx_without_src_returns_raw(self, pipelines):
-        """A standalone token (no parent) falls back to its raw text."""
+    def test_inctx_without_src_returns_standardized(self, pipelines):
+        """A standalone token (no parent) falls back to its standardized text."""
         token = Token(standardized="hello", start=0, end=5, pipelines=pipelines)
         assert token.inctx() == "hello"
+
+    def test_inctx_aligned_when_standardization_changes_length(self):
+        """Context stays aligned when standardization shortens the text.
+
+        NFC composes "e" + U+0301 into a single "é", so the standardized string is
+        shorter than the raw one. Token offsets index the standardized string, so
+        the context window must be sliced from it too.
+        """
+        dataset = Dataset(language="en")
+        raw = "cafe\u0301 latte and re\u0301sume\u0301 words here"
+        dataset.add(ref=raw, hyp=raw)
+        text = dataset[0].ref
+        assert len(text.standardized) < len(text.raw)
+
+        for token in text.tokens:
+            ctx = token.inctx(width=8, add_ellipsis=False)
+            assert token.standardized in ctx, f"{token.standardized!r} missing from {ctx!r}"
 
 
 class TestTokenRepr:
