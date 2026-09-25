@@ -30,12 +30,9 @@ class InsertionRate_(ExampleMetric):
 
     @metric_value
     def num_insertions(self) -> int:
-        """Get the total number of insertions in the example."""
-        return self._alignment.num_insertions
-
-    @metric_value
-    def num_run_insertions(self) -> int:
-        """Get the number of insertions in contiguous runs of length >= run_length."""
+        """Get the number of insertions in runs of length >= run_length."""
+        if self.params.run_length == 1:
+            return self._alignment.num_insertions
         return sum(length for length in self._insertion_runs() if length >= self.params.run_length)
 
     @metric_value
@@ -54,7 +51,7 @@ class InsertionRate_(ExampleMetric):
         """Get the example-level insertion rate."""
         if self.num_ops == 0:
             return 0.0
-        return self.num_run_insertions / self.num_ops
+        return self.num_insertions / self.num_ops
 
 
 @METRIC_REGISTRY.register("insertion_rate")
@@ -62,14 +59,11 @@ class InsertionRate(Metric):
     short_name_base = "IR"
     long_name_base = "Insertion Rate"
     description = (
-        "Insertion rate (IR) is computed as the number of insertions that are part of "
-        "contiguous insertion runs of length at least `run_length`, divided by the total "
-        "number of operations (edits + matches). "
-        "When run_length=1 (default), all insertions are counted. "
-        "When run_length>=2, only insertions that are part of burst insertion runs are "
-        "counted, which serves as a hallucination signal: a burst of consecutive inserted "
-        "tokens is the signature of a model inventing text, as opposed to scattered "
-        "single-token insertions."
+        "Insertion rate (IR) is the number of insertions divided by the total number of "
+        "operations (edits + matches). It is useful for tracking hallucinations: a high "
+        "insertion rate indicates the model is inventing text. The `run_length` parameter "
+        "(default 1) controls the minimum contiguous insertion run length to count; setting "
+        "it above 1 isolates burst insertions, which are a stronger hallucination signal."
     )
     example_cls = InsertionRate_
 
@@ -97,11 +91,6 @@ class InsertionRate(Metric):
         return sum(em.num_insertions for em in self)
 
     @metric_value
-    def num_run_insertions(self) -> int:
-        """Get the total number of insertions in qualifying runs across all examples."""
-        return sum(em.num_run_insertions for em in self)
-
-    @metric_value
     def num_ops(self) -> int:
         """Get the total number of operations (edits + matches) across all examples."""
         return sum(em.num_ops for em in self)
@@ -111,4 +100,4 @@ class InsertionRate(Metric):
         """Get the insertion rate."""
         if self.num_ops == 0:
             return 0.0
-        return self.num_run_insertions / self.num_ops
+        return self.num_insertions / self.num_ops
