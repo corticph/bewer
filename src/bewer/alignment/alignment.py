@@ -80,36 +80,6 @@ class Alignment(tuple["Op", ...]):
         return len(self)
 
     @cached_property
-    def insertion_runs(self) -> list[int]:
-        """Get the lengths of all contiguous insertion runs in the alignment.
-
-        Returns:
-            list[int]: Lengths of contiguous INSERT runs, in order of appearance.
-                Empty list if there are no insertions.
-        """
-        runs = []
-        current = 0
-        for op in self:
-            if op.type == OpType.INSERT:
-                current += 1
-            elif current > 0:
-                runs.append(current)
-                current = 0
-        if current > 0:
-            runs.append(current)
-        return runs
-
-    @cached_property
-    def max_insertion_run_length(self) -> int:
-        """Get the length of the longest contiguous insertion run.
-
-        Returns:
-            int: Length of the longest contiguous INSERT run, or 0 if there are no insertions.
-        """
-        runs = self.insertion_runs
-        return max(runs) if runs else 0
-
-    @cached_property
     def _start_index_mapping(self) -> dict[int, int]:
         """Create a mapping from character start index to token index for quick lookup."""
         mapping = {}
