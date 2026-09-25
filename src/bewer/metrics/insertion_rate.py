@@ -42,12 +42,6 @@ class InsertionRate_(ExampleMetric):
             return len(self.example.ref.tokens.normalized)
         return len(self.example.ref.tokens.standardized)
 
-    @metric_value
-    def max_run_length(self) -> int:
-        """Get the length of the longest contiguous insertion run in the example."""
-        runs = self._insertion_runs()
-        return max(runs) if runs else 0
-
     @metric_value(main=True)
     def value(self) -> float:
         """Get the example-level insertion rate."""

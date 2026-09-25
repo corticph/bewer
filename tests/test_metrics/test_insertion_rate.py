@@ -73,27 +73,6 @@ class TestInsertionRateExampleMetric:
         em = dataset_insertions[1].metrics.insertion_rate()
         assert em.ref_length == 2
 
-    def test_max_run_length_perfect_match(self, dataset_perfect_match):
-        """Test max_run_length is 0 for perfect match."""
-        em = dataset_perfect_match[0].metrics.insertion_rate()
-        assert em.max_run_length == 0
-
-    def test_max_run_length_single(self, dataset_insertions):
-        """Test max_run_length for single insertion."""
-        em = dataset_insertions[1].metrics.insertion_rate()
-        assert em.max_run_length == 1
-
-    def test_max_run_length_contiguous(self, dataset_insertions):
-        """Test max_run_length for contiguous run."""
-        em = dataset_insertions[2].metrics.insertion_rate()
-        assert em.max_run_length == 2
-
-    def test_max_run_length_multiple_runs(self, dataset_insertions):
-        """Test max_run_length picks the longest run."""
-        em = dataset_insertions[3].metrics.insertion_rate()
-        # runs [2, 1] -> max = 2
-        assert em.max_run_length == 2
-
     def test_value_perfect_match(self, dataset_perfect_match):
         """Test value is 0.0 for perfect match."""
         em = dataset_perfect_match[0].metrics.insertion_rate()
@@ -257,7 +236,6 @@ class TestInsertionRateMetricValues:
         assert values["main"] == "value"
         assert "num_insertions" in values["other"]
         assert "ref_length" in values["other"]
-        assert "max_run_length" in values["other"]
 
 
 class TestInsertionRateValidation:
