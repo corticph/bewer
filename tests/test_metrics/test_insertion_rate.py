@@ -126,6 +126,62 @@ class TestInsertionRateExampleMetric:
         assert em.value == 2.0
 
 
+class TestInsertionRateNormalizedFalse:
+    """Tests for InsertionRate with normalized=False (standardized tokens)."""
+
+    def test_ref_length_normalized_vs_unnormalized(self, sample_dataset):
+        """Test that ref_length uses standardized tokens when normalized=False."""
+        ds = __import__("bewer").Dataset()
+        ds.add("HELLO WORLD", "hello extra world")
+        em_norm = ds[0].metrics.insertion_rate(normalized=True)
+        em_unnorm = ds[0].metrics.insertion_rate(normalized=False)
+        # ref_length is the same (normalization doesn't change token count)
+        assert em_norm.ref_length == 2
+        assert em_unnorm.ref_length == 2
+
+    def test_num_insertions_normalized(self, sample_dataset):
+        """Test num_insertions with normalized=True (case-insensitive matching)."""
+        ds = __import__("bewer").Dataset()
+        ds.add("HELLO WORLD", "hello extra world")
+        em = ds[0].metrics.insertion_rate(normalized=True)
+        # Normalized: "hello" matches "hello", "extra" is insertion, "world" matches "world"
+        assert em.num_insertions == 1
+
+    def test_num_insertions_unnormalized(self, sample_dataset):
+        """Test num_insertions with normalized=False (case-sensitive matching)."""
+        ds = __import__("bewer").Dataset()
+        ds.add("HELLO WORLD", "hello extra world")
+        em = ds[0].metrics.insertion_rate(normalized=False)
+        # Unnormalized: "HELLO"→"hello" is substitution, "extra" is insertion, "WORLD"→"world" is substitution
+        assert em.num_insertions == 1
+
+    def test_value_normalized(self, sample_dataset):
+        """Test value with normalized=True."""
+        ds = __import__("bewer").Dataset()
+        ds.add("HELLO WORLD", "hello extra world")
+        em = ds[0].metrics.insertion_rate(normalized=True)
+        # 1 insertion / 2 ref tokens = 0.5
+        assert em.value == 0.5
+
+    def test_value_unnormalized(self, sample_dataset):
+        """Test value with normalized=False."""
+        ds = __import__("bewer").Dataset()
+        ds.add("HELLO WORLD", "hello extra world")
+        em = ds[0].metrics.insertion_rate(normalized=False)
+        # 1 insertion / 2 ref tokens = 0.5
+        assert em.value == 0.5
+
+    def test_dataset_level_normalized_false(self, sample_dataset):
+        """Test dataset-level IR with normalized=False."""
+        ds = __import__("bewer").Dataset()
+        ds.add("HELLO WORLD", "hello extra world")
+        ds.add("FOO BAR", "foo extra bar")
+        ir = ds.metrics.insertion_rate(normalized=False)
+        assert ir.num_insertions == 2
+        assert ir.ref_length == 4
+        assert ir.value == 0.5
+
+
 class TestInsertionRateEmptyReference:
     """Tests for IR edge case: empty reference and hypothesis."""
 
