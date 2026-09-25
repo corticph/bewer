@@ -13,6 +13,7 @@ from bewer.metrics.base import (
 from bewer.metrics.cer import CER
 from bewer.metrics.confidence import ConfidenceInterval
 from bewer.metrics.error_align import ErrorAlign
+from bewer.metrics.insertion_rate import InsertionRate
 from bewer.metrics.ktcer import KTCER
 from bewer.metrics.kter import KTER
 from bewer.metrics.ktf import KTF
@@ -46,5 +47,6 @@ __all__ = [
     "RKTR",
     "Levenshtein",
     "ErrorAlign",
+    "InsertionRate",
     "DatasetSummary",
 ]
