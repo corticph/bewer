@@ -63,16 +63,15 @@ class TestInsertionRateExampleMetric:
         # runs [2, 1] -> only the run of 2 counts = 2
         assert em.num_insertions == 2
 
-    def test_num_ops_perfect_match(self, dataset_perfect_match):
-        """Test num_ops for perfect match (2 matches, 0 edits)."""
+    def test_ref_length_perfect_match(self, dataset_perfect_match):
+        """Test ref_length for perfect match."""
         em = dataset_perfect_match[0].metrics.insertion_rate()
-        assert em.num_ops == 2
+        assert em.ref_length == 2
 
-    def test_num_ops_with_insertions(self, dataset_insertions):
-        """Test num_ops includes matches + edits."""
+    def test_ref_length_with_insertions(self, dataset_insertions):
+        """Test ref_length is the number of reference tokens."""
         em = dataset_insertions[1].metrics.insertion_rate()
-        # MATCH("hello"), INSERT("there"), MATCH("world") = 3 ops
-        assert em.num_ops == 3
+        assert em.ref_length == 2
 
     def test_max_run_length_perfect_match(self, dataset_perfect_match):
         """Test max_run_length is 0 for perfect match."""
@@ -103,26 +102,26 @@ class TestInsertionRateExampleMetric:
     def test_value_single_insertion_default(self, dataset_insertions):
         """Test value with run_length=1 (default) counts all insertions."""
         em = dataset_insertions[1].metrics.insertion_rate()
-        # 1 insertion / 3 ops = 1/3
-        assert em.value == pytest.approx(1 / 3)
+        # 1 insertion / 2 ref tokens = 0.5
+        assert em.value == 0.5
 
     def test_value_single_insertion_run_length_2(self, dataset_insertions):
         """Test value with run_length=2 excludes single insertions."""
         em = dataset_insertions[1].metrics.insertion_rate(run_length=2)
-        # 0 qualifying insertions / 3 ops = 0.0
+        # 0 qualifying insertions / 2 ref tokens = 0.0
         assert em.value == 0.0
 
     def test_value_contiguous_run_default(self, dataset_insertions):
         """Test value with run_length=1 counts all insertions."""
         em = dataset_insertions[2].metrics.insertion_rate()
-        # 2 insertions / 4 ops = 0.5
-        assert em.value == 0.5
+        # 2 insertions / 2 ref tokens = 1.0
+        assert em.value == 1.0
 
     def test_value_contiguous_run_run_length_2(self, dataset_insertions):
         """Test value with run_length=2 includes run of 2."""
         em = dataset_insertions[2].metrics.insertion_rate(run_length=2)
-        # 2 qualifying / 4 ops = 0.5
-        assert em.value == 0.5
+        # 2 qualifying / 2 ref tokens = 1.0
+        assert em.value == 1.0
 
     def test_value_contiguous_run_run_length_3(self, dataset_insertions):
         """Test value with run_length=3 excludes run of 2."""
@@ -132,20 +131,20 @@ class TestInsertionRateExampleMetric:
     def test_value_multiple_runs_default(self, dataset_insertions):
         """Test value with run_length=1 counts all insertions."""
         em = dataset_insertions[3].metrics.insertion_rate()
-        # 3 insertions / 7 ops = 3/7
-        assert em.value == pytest.approx(3 / 7)
+        # 3 insertions / 4 ref tokens = 3/4
+        assert em.value == pytest.approx(3 / 4)
 
     def test_value_multiple_runs_run_length_2(self, dataset_insertions):
         """Test value with run_length=2 counts only run of 2."""
         em = dataset_insertions[3].metrics.insertion_rate(run_length=2)
-        # 2 qualifying / 7 ops = 2/7
-        assert em.value == pytest.approx(2 / 7)
+        # 2 qualifying / 4 ref tokens = 1/2
+        assert em.value == 0.5
 
     def test_value_all_insertions(self, dataset_all_insertions):
-        """Test value when hyp is pure insertion."""
+        """Test value when ref is empty (pure insertion)."""
         em = dataset_all_insertions[0].metrics.insertion_rate()
-        # 2 insertions / 2 ops = 1.0
-        assert em.value == 1.0
+        # 2 insertions / 0 ref tokens -> return raw count
+        assert em.value == 2.0
 
 
 class TestInsertionRateEmptyReference:
@@ -155,7 +154,7 @@ class TestInsertionRateEmptyReference:
         """Test that empty ref and hyp gives 0.0."""
         empty_dataset.add("", "")
         em = empty_dataset[0].metrics.insertion_rate()
-        assert em.num_ops == 0
+        assert em.ref_length == 0
         assert em.value == 0.0
 
 
@@ -174,16 +173,16 @@ class TestInsertionRateDatasetMetric:
         # Only runs >= 2: example 2 (run of 2) + example 3 (run of 2) = 2 + 2 = 4
         assert ir.num_insertions == 4
 
-    def test_num_ops_aggregates(self, dataset_insertions):
-        """Test that dataset num_ops aggregates example values."""
+    def test_ref_length_aggregates(self, dataset_insertions):
+        """Test that dataset ref_length aggregates example values."""
         ir = dataset_insertions.metrics.insertion_rate()
-        expected = sum(ex.metrics.insertion_rate().num_ops for ex in dataset_insertions)
-        assert ir.num_ops == expected
+        expected = sum(ex.metrics.insertion_rate().ref_length for ex in dataset_insertions)
+        assert ir.ref_length == expected
 
     def test_value_calculation(self, dataset_insertions):
         """Test dataset-level IR value calculation."""
         ir = dataset_insertions.metrics.insertion_rate()
-        assert ir.value == ir.num_insertions / ir.num_ops
+        assert ir.value == ir.num_insertions / ir.ref_length
 
     def test_value_perfect_match_dataset(self, dataset_perfect_match):
         """Test IR is 0 for dataset with all perfect matches."""
@@ -193,13 +192,13 @@ class TestInsertionRateDatasetMetric:
     def test_value_run_length_2(self, dataset_insertions):
         """Test dataset-level value with run_length=2."""
         ir = dataset_insertions.metrics.insertion_rate(run_length=2)
-        # num_insertions=4, num_ops=2+3+4+7=16
-        assert ir.value == pytest.approx(4 / 16)
+        # num_insertions=4, ref_length=2+2+2+4=10
+        assert ir.value == pytest.approx(4 / 10)
 
     def test_empty_dataset(self, empty_dataset):
         """Test IR on empty dataset."""
         ir = empty_dataset.metrics.insertion_rate()
-        assert ir.num_ops == 0
+        assert ir.ref_length == 0
         assert ir.num_insertions == 0
         assert ir.value == 0.0
 
@@ -250,14 +249,14 @@ class TestInsertionRateMetricValues:
         """Test that other metric values are present."""
         values = InsertionRate.metric_values()
         assert "num_insertions" in values["other"]
-        assert "num_ops" in values["other"]
+        assert "ref_length" in values["other"]
 
     def test_example_metric_values(self):
         """Test InsertionRate_ metric_values."""
         values = InsertionRate_.metric_values()
         assert values["main"] == "value"
         assert "num_insertions" in values["other"]
-        assert "num_ops" in values["other"]
+        assert "ref_length" in values["other"]
         assert "max_run_length" in values["other"]
 
 

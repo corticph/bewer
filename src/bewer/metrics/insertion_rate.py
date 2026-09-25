@@ -36,9 +36,11 @@ class InsertionRate_(ExampleMetric):
         return sum(length for length in self._insertion_runs() if length >= self.params.run_length)
 
     @metric_value
-    def num_ops(self) -> int:
-        """Get the total number of operations (edits + matches) in the example."""
-        return self._alignment.num_ops
+    def ref_length(self) -> int:
+        """Get the number of tokens in the reference text."""
+        if self.params.normalized:
+            return len(self.example.ref.tokens.normalized)
+        return len(self.example.ref.tokens.standardized)
 
     @metric_value
     def max_run_length(self) -> int:
@@ -49,9 +51,9 @@ class InsertionRate_(ExampleMetric):
     @metric_value(main=True)
     def value(self) -> float:
         """Get the example-level insertion rate."""
-        if self.num_ops == 0:
-            return 0.0
-        return self.num_insertions / self.num_ops
+        if self.ref_length == 0:
+            return float(self.num_insertions)
+        return self.num_insertions / self.ref_length
 
 
 @METRIC_REGISTRY.register("insertion_rate")
@@ -60,7 +62,7 @@ class InsertionRate(Metric):
     long_name_base = "Insertion Rate"
     description = (
         "Insertion rate (IR) is the number of insertions divided by the total number of "
-        "operations (edits + matches). It is useful for tracking hallucinations: a high "
+        "tokens in the reference texts. It is useful for tracking hallucinations: a high "
         "insertion rate indicates the model is inventing text. The `run_length` parameter "
         "(default 1) controls the minimum contiguous insertion run length to count; setting "
         "it above 1 isolates burst insertions, which are a stronger hallucination signal."
@@ -91,13 +93,13 @@ class InsertionRate(Metric):
         return sum(em.num_insertions for em in self)
 
     @metric_value
-    def num_ops(self) -> int:
-        """Get the total number of operations (edits + matches) across all examples."""
-        return sum(em.num_ops for em in self)
+    def ref_length(self) -> int:
+        """Get the number of tokens in the reference texts."""
+        return sum(em.ref_length for em in self)
 
     @metric_value(main=True)
     def value(self) -> float:
         """Get the insertion rate."""
-        if self.num_ops == 0:
-            return 0.0
-        return self.num_insertions / self.num_ops
+        if self.ref_length == 0:
+            return float(self.num_insertions)
+        return self.num_insertions / self.ref_length
