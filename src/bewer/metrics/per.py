@@ -26,10 +26,8 @@ characters that the tokenizer does not separate (e.g. apostrophes in
 contractions) cannot be counted even if listed here.
 
 Note: the default ``punct_chars`` includes both Unicode punctuation (e.g.
-"\u201c", "\u201d") and their ASCII normalized forms (e.g. '"') so that the
-metric works under both ``normalized=True`` and ``normalized=False``.
-Characters whose normalized form is a multi-character string of characters
-not in ``punct_chars`` (e.g. « → <<, » → >>) are only recognised when
+"\u201c", "\u201d", "«", "»") and their ASCII normalized forms (e.g. '"',
+"<", ">") so that the metric works under both ``normalized=True`` and
 ``normalized=False``.
 """
 
@@ -180,6 +178,8 @@ class PER(Metric):
             "\u201e",
             "«",
             "»",
+            "<",
+            ">",
             "¡",
             "¿",
         )

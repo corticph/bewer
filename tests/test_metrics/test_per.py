@@ -167,6 +167,22 @@ class TestPERExampleMetric:
         assert per.value == 0.0
         assert per.num_correct == 2  # " "
 
+    def test_guillemets_normalized(self, empty_dataset):
+        """Guillemets (« ») are recognized as punctuation even after normalization to << >>."""
+        empty_dataset.add("«bonjour»", "«bonjour»")
+        example = empty_dataset[0]
+        per = example.metrics.per()
+        assert per.value == 0.0
+        assert per.num_correct == 2  # « »
+
+    def test_guillemets_standardized(self, empty_dataset):
+        """Guillemets work with normalized=False (standardized tokens)."""
+        empty_dataset.add("«bonjour»", "«bonjour»")
+        example = empty_dataset[0]
+        per = example.metrics.per(normalized=False)
+        assert per.value == 0.0
+        assert per.num_correct == 2  # « »
+
     def test_punct_sentinel_no_collision(self, empty_dataset):
         """A literal token '<PUNCT>' in the text is not treated as punctuation."""
         # The sentinel uses angle brackets which the tokenizer would not emit
