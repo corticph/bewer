@@ -84,6 +84,7 @@ class PER_(ExampleMetric):
         hyp_edit_idxs = {op[2] for op in editops if op[0] != "delete"}
         match_ref_indices = sorted(set(range(len(ref_masked))) - ref_edit_idxs)
         match_hyp_indices = sorted(set(range(len(hyp_masked))) - hyp_edit_idxs)
+        assert len(match_ref_indices) == len(match_hyp_indices)
 
         c_p = 0
         s_p = 0
