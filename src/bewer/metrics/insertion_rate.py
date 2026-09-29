@@ -12,7 +12,7 @@ __all__ = ["InsertionRate"]
 class InsertionRate_(ExampleMetric):
     @property
     def _alignment(self) -> Alignment:
-        return self.parent_metric._alignment_metric[self.example.index].alignment
+        return self.parent_metric._alignment[self.example.index].alignment
 
     def _insertion_runs(self) -> list[int]:
         """Get the lengths of all contiguous insertion runs in the example alignment."""
@@ -79,7 +79,7 @@ class InsertionRate(Metric):
                 raise ValueError(f"alignment must be 'levenshtein' or 'error_align', got '{self.alignment}'.")
 
     @dependency
-    def _alignment_metric(self):
+    def _alignment(self):
         if self.params.alignment == "error_align":
             return self.dataset.metrics.error_align(
                 normalized=self.params.normalized,
