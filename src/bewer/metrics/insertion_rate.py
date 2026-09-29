@@ -12,7 +12,7 @@ __all__ = ["InsertionRate"]
 class InsertionRate_(ExampleMetric):
     @property
     def _alignment(self) -> Alignment:
-        return self.parent_metric._levenshtein[self.example.index].alignment
+        return self.parent_metric._alignment_metric[self.example.index].alignment
 
     def _insertion_runs(self) -> list[int]:
         """Get the lengths of all contiguous insertion runs in the example alignment."""
@@ -30,10 +30,10 @@ class InsertionRate_(ExampleMetric):
 
     @metric_value
     def num_insertions(self) -> int:
-        """Get the number of insertions in runs of length >= run_length."""
-        if self.params.run_length == 1:
+        """Get the number of insertions in runs of length >= min_run_length."""
+        if self.params.min_run_length == 1:
             return self._alignment.num_insertions
-        return sum(length for length in self._insertion_runs() if length >= self.params.run_length)
+        return sum(length for length in self._insertion_runs() if length >= self.params.min_run_length)
 
     @metric_value
     def ref_length(self) -> int:
@@ -57,23 +57,36 @@ class InsertionRate(Metric):
     description = (
         "Insertion rate (IR) is the number of insertions divided by the total number of "
         "tokens in the reference texts. It is useful for tracking hallucinations: a high "
-        "insertion rate indicates the model is inventing text. The `run_length` parameter "
-        "(default 1) controls the minimum contiguous insertion run length to count; setting "
-        "it above 1 isolates burst insertions, which are a stronger hallucination signal."
+        "insertion rate indicates the model is inventing text. The `min_run_length` "
+        "parameter (default 1) controls the minimum contiguous insertion run length to "
+        "count; setting it above 1 isolates burst insertions, which are a stronger "
+        "hallucination signal. The `alignment` parameter (default 'levenshtein') selects "
+        "the alignment backend: 'levenshtein' (word-level via RapidFuzz) or 'error_align' "
+        "(via the error-align package)."
     )
     example_cls = InsertionRate_
 
     @dataclass
     class param_schema(MetricParams):
-        run_length: int = 1
+        min_run_length: int = 1
         normalized: bool = True
+        alignment: str = "levenshtein"
 
         def validate(self) -> None:
-            if self.run_length < 1:
-                raise ValueError(f"run_length must be >= 1, got {self.run_length}.")
+            if self.min_run_length < 1:
+                raise ValueError(f"min_run_length must be >= 1, got {self.min_run_length}.")
+            if self.alignment not in ("levenshtein", "error_align"):
+                raise ValueError(f"alignment must be 'levenshtein' or 'error_align', got '{self.alignment}'.")
 
     @dependency
-    def _levenshtein(self):
+    def _alignment_metric(self):
+        if self.params.alignment == "error_align":
+            return self.dataset.metrics.error_align(
+                normalized=self.params.normalized,
+                standardizer=self.standardizer,
+                tokenizer=self.tokenizer,
+                normalizer=self.normalizer,
+            )
         return self.dataset.metrics.levenshtein(
             normalized=self.params.normalized,
             standardizer=self.standardizer,

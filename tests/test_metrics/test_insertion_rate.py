@@ -47,19 +47,19 @@ class TestInsertionRateExampleMetric:
         em = dataset_insertions[3].metrics.insertion_rate()
         assert em.num_insertions == 3
 
-    def test_num_insertions_run_length_2_excludes_singletons(self, dataset_insertions):
-        """Test num_insertions with run_length=2 excludes single insertions."""
-        em = dataset_insertions[1].metrics.insertion_rate(run_length=2)
+    def test_num_insertions_min_run_length_2_excludes_singletons(self, dataset_insertions):
+        """Test num_insertions with min_run_length=2 excludes single insertions."""
+        em = dataset_insertions[1].metrics.insertion_rate(min_run_length=2)
         assert em.num_insertions == 0
 
-    def test_num_insertions_run_length_2_includes_run(self, dataset_insertions):
-        """Test num_insertions with run_length=2 includes run of 2."""
-        em = dataset_insertions[2].metrics.insertion_rate(run_length=2)
+    def test_num_insertions_min_run_length_2_includes_run(self, dataset_insertions):
+        """Test num_insertions with min_run_length=2 includes run of 2."""
+        em = dataset_insertions[2].metrics.insertion_rate(min_run_length=2)
         assert em.num_insertions == 2
 
-    def test_num_insertions_run_length_2_multiple_runs(self, dataset_insertions):
-        """Test num_insertions with run_length=2 counts only runs >= 2."""
-        em = dataset_insertions[3].metrics.insertion_rate(run_length=2)
+    def test_num_insertions_min_run_length_2_multiple_runs(self, dataset_insertions):
+        """Test num_insertions with min_run_length=2 counts only runs >= 2."""
+        em = dataset_insertions[3].metrics.insertion_rate(min_run_length=2)
         # runs [2, 1] -> only the run of 2 counts = 2
         assert em.num_insertions == 2
 
@@ -79,43 +79,43 @@ class TestInsertionRateExampleMetric:
         assert em.value == 0.0
 
     def test_value_single_insertion_default(self, dataset_insertions):
-        """Test value with run_length=1 (default) counts all insertions."""
+        """Test value with min_run_length=1 (default) counts all insertions."""
         em = dataset_insertions[1].metrics.insertion_rate()
         # 1 insertion / 2 ref tokens = 0.5
         assert em.value == 0.5
 
-    def test_value_single_insertion_run_length_2(self, dataset_insertions):
-        """Test value with run_length=2 excludes single insertions."""
-        em = dataset_insertions[1].metrics.insertion_rate(run_length=2)
+    def test_value_single_insertion_min_run_length_2(self, dataset_insertions):
+        """Test value with min_run_length=2 excludes single insertions."""
+        em = dataset_insertions[1].metrics.insertion_rate(min_run_length=2)
         # 0 qualifying insertions / 2 ref tokens = 0.0
         assert em.value == 0.0
 
     def test_value_contiguous_run_default(self, dataset_insertions):
-        """Test value with run_length=1 counts all insertions."""
+        """Test value with min_run_length=1 counts all insertions."""
         em = dataset_insertions[2].metrics.insertion_rate()
         # 2 insertions / 2 ref tokens = 1.0
         assert em.value == 1.0
 
-    def test_value_contiguous_run_run_length_2(self, dataset_insertions):
-        """Test value with run_length=2 includes run of 2."""
-        em = dataset_insertions[2].metrics.insertion_rate(run_length=2)
+    def test_value_contiguous_run_min_run_length_2(self, dataset_insertions):
+        """Test value with min_run_length=2 includes run of 2."""
+        em = dataset_insertions[2].metrics.insertion_rate(min_run_length=2)
         # 2 qualifying / 2 ref tokens = 1.0
         assert em.value == 1.0
 
-    def test_value_contiguous_run_run_length_3(self, dataset_insertions):
-        """Test value with run_length=3 excludes run of 2."""
-        em = dataset_insertions[2].metrics.insertion_rate(run_length=3)
+    def test_value_contiguous_run_min_run_length_3(self, dataset_insertions):
+        """Test value with min_run_length=3 excludes run of 2."""
+        em = dataset_insertions[2].metrics.insertion_rate(min_run_length=3)
         assert em.value == 0.0
 
     def test_value_multiple_runs_default(self, dataset_insertions):
-        """Test value with run_length=1 counts all insertions."""
+        """Test value with min_run_length=1 counts all insertions."""
         em = dataset_insertions[3].metrics.insertion_rate()
         # 3 insertions / 4 ref tokens = 3/4
         assert em.value == pytest.approx(3 / 4)
 
-    def test_value_multiple_runs_run_length_2(self, dataset_insertions):
-        """Test value with run_length=2 counts only run of 2."""
-        em = dataset_insertions[3].metrics.insertion_rate(run_length=2)
+    def test_value_multiple_runs_min_run_length_2(self, dataset_insertions):
+        """Test value with min_run_length=2 counts only run of 2."""
+        em = dataset_insertions[3].metrics.insertion_rate(min_run_length=2)
         # 2 qualifying / 4 ref tokens = 1/2
         assert em.value == 0.5
 
@@ -182,6 +182,50 @@ class TestInsertionRateNormalizedFalse:
         assert ir.value == 0.5
 
 
+class TestInsertionRateErrorAlign:
+    """Tests for InsertionRate with alignment='error_align'."""
+
+    def test_value_matches_levenshtein_perfect_match(self, dataset_perfect_match):
+        """Test error_align gives same result as levenshtein for perfect match."""
+        em_ea = dataset_perfect_match[0].metrics.insertion_rate(alignment="error_align")
+        em_lev = dataset_perfect_match[0].metrics.insertion_rate(alignment="levenshtein")
+        assert em_ea.value == em_lev.value == 0.0
+
+    def test_value_matches_levenshtein_single_insertion(self, dataset_insertions):
+        """Test error_align gives same result as levenshtein for single insertion."""
+        em_ea = dataset_insertions[1].metrics.insertion_rate(alignment="error_align")
+        em_lev = dataset_insertions[1].metrics.insertion_rate(alignment="levenshtein")
+        assert em_ea.num_insertions == em_lev.num_insertions == 1
+        assert em_ea.value == em_lev.value == 0.5
+
+    def test_value_matches_levenshtein_contiguous_run(self, dataset_insertions):
+        """Test error_align gives same result as levenshtein for contiguous run."""
+        em_ea = dataset_insertions[2].metrics.insertion_rate(alignment="error_align")
+        em_lev = dataset_insertions[2].metrics.insertion_rate(alignment="levenshtein")
+        assert em_ea.num_insertions == em_lev.num_insertions == 2
+        assert em_ea.value == em_lev.value == 1.0
+
+    def test_value_matches_levenshtein_min_run_length_2(self, dataset_insertions):
+        """Test error_align with min_run_length=2 matches levenshtein."""
+        em_ea = dataset_insertions[3].metrics.insertion_rate(alignment="error_align", min_run_length=2)
+        em_lev = dataset_insertions[3].metrics.insertion_rate(alignment="levenshtein", min_run_length=2)
+        assert em_ea.num_insertions == em_lev.num_insertions
+        assert em_ea.value == em_lev.value
+
+    def test_dataset_level_error_align(self, dataset_insertions):
+        """Test dataset-level IR with error_align."""
+        ir_ea = dataset_insertions.metrics.insertion_rate(alignment="error_align")
+        ir_lev = dataset_insertions.metrics.insertion_rate(alignment="levenshtein")
+        assert ir_ea.num_insertions == ir_lev.num_insertions
+        assert ir_ea.ref_length == ir_lev.ref_length
+        assert ir_ea.value == ir_lev.value
+
+    def test_short_name_includes_alignment(self, sample_dataset):
+        """Test short_name includes alignment parameter."""
+        ir = sample_dataset.metrics.insertion_rate(alignment="error_align")
+        assert "alignment=error_align" in ir.short_name
+
+
 class TestInsertionRateEmptyReference:
     """Tests for IR edge case: empty reference and hypothesis."""
 
@@ -202,9 +246,9 @@ class TestInsertionRateDatasetMetric:
         expected = sum(ex.metrics.insertion_rate().num_insertions for ex in dataset_insertions)
         assert ir.num_insertions == expected
 
-    def test_num_insertions_run_length_2(self, dataset_insertions):
-        """Test num_insertions with run_length=2 excludes singletons."""
-        ir = dataset_insertions.metrics.insertion_rate(run_length=2)
+    def test_num_insertions_min_run_length_2(self, dataset_insertions):
+        """Test num_insertions with min_run_length=2 excludes singletons."""
+        ir = dataset_insertions.metrics.insertion_rate(min_run_length=2)
         # Only runs >= 2: example 2 (run of 2) + example 3 (run of 2) = 2 + 2 = 4
         assert ir.num_insertions == 4
 
@@ -224,9 +268,9 @@ class TestInsertionRateDatasetMetric:
         ir = dataset_perfect_match.metrics.insertion_rate()
         assert ir.value == 0.0
 
-    def test_value_run_length_2(self, dataset_insertions):
-        """Test dataset-level value with run_length=2."""
-        ir = dataset_insertions.metrics.insertion_rate(run_length=2)
+    def test_value_min_run_length_2(self, dataset_insertions):
+        """Test dataset-level value with min_run_length=2."""
+        ir = dataset_insertions.metrics.insertion_rate(min_run_length=2)
         # num_insertions=4, ref_length=2+2+2+4=10
         assert ir.value == pytest.approx(4 / 10)
 
@@ -263,13 +307,13 @@ class TestInsertionRateMetricAttributes:
 
     def test_short_name_includes_params(self, sample_dataset):
         """Test short_name includes parameters."""
-        ir = sample_dataset.metrics.insertion_rate(run_length=3)
-        assert "run_length=3" in ir.short_name
+        ir = sample_dataset.metrics.insertion_rate(min_run_length=3)
+        assert "min_run_length=3" in ir.short_name
 
     def test_long_name_includes_params(self, sample_dataset):
         """Test long_name includes parameters."""
-        ir = sample_dataset.metrics.insertion_rate(run_length=3)
-        assert "run_length=3" in ir.long_name
+        ir = sample_dataset.metrics.insertion_rate(min_run_length=3)
+        assert "min_run_length=3" in ir.long_name
 
 
 class TestInsertionRateMetricValues:
@@ -297,12 +341,17 @@ class TestInsertionRateMetricValues:
 class TestInsertionRateValidation:
     """Tests for InsertionRate parameter validation."""
 
-    def test_run_length_zero_raises(self, sample_dataset):
-        """Test that run_length=0 raises ValueError."""
-        with pytest.raises(ValueError, match="run_length must be >= 1"):
-            sample_dataset.metrics.insertion_rate(run_length=0)
+    def test_min_run_length_zero_raises(self, sample_dataset):
+        """Test that min_run_length=0 raises ValueError."""
+        with pytest.raises(ValueError, match="min_run_length must be >= 1"):
+            sample_dataset.metrics.insertion_rate(min_run_length=0)
 
-    def test_run_length_negative_raises(self, sample_dataset):
-        """Test that negative run_length raises ValueError."""
-        with pytest.raises(ValueError, match="run_length must be >= 1"):
-            sample_dataset.metrics.insertion_rate(run_length=-1)
+    def test_min_run_length_negative_raises(self, sample_dataset):
+        """Test that negative min_run_length raises ValueError."""
+        with pytest.raises(ValueError, match="min_run_length must be >= 1"):
+            sample_dataset.metrics.insertion_rate(min_run_length=-1)
+
+    def test_invalid_alignment_raises(self, sample_dataset):
+        """Test that invalid alignment value raises ValueError."""
+        with pytest.raises(ValueError, match="alignment must be 'levenshtein' or 'error_align'"):
+            sample_dataset.metrics.insertion_rate(alignment="foo")
