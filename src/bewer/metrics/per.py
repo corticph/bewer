@@ -44,14 +44,20 @@ __all__ = ["PER"]
 _PUNCT_MASK = "<PUNCT>"
 
 
-def _mask_punct(tokens: list[str], punct_set: frozenset[str]) -> list[str]:
-    """Replace every token consisting solely of *punct_set* characters with a unified mask."""
-    return [_PUNCT_MASK if all(c in punct_set for c in t) else t for t in tokens]
+def _mask_and_count(tokens: list[str], punct_set: frozenset[str]) -> tuple[list[str], int]:
+    """Mask punctuation tokens and count them in a single pass.
 
-
-def _is_punct(token: str, punct_set: frozenset[str]) -> bool:
-    """True when every character in *token* belongs to *punct_set*."""
-    return bool(token) and all(c in punct_set for c in token)
+    Returns the masked token list and the number of punctuation tokens.
+    """
+    masked: list[str] = []
+    count = 0
+    for t in tokens:
+        if t and all(c in punct_set for c in t):
+            masked.append(_PUNCT_MASK)
+            count += 1
+        else:
+            masked.append(t)
+    return masked, count
 
 
 class PER_(ExampleMetric):
@@ -76,11 +82,8 @@ class PER_(ExampleMetric):
 
         punct_set = frozenset(self.params.punct_chars)
 
-        n_punct_ref = sum(1 for t in ref_tokens if _is_punct(t, punct_set))
-        n_punct_hyp = sum(1 for t in hyp_tokens if _is_punct(t, punct_set))
-
-        ref_masked = _mask_punct(ref_tokens, punct_set)
-        hyp_masked = _mask_punct(hyp_tokens, punct_set)
+        ref_masked, n_punct_ref = _mask_and_count(ref_tokens, punct_set)
+        hyp_masked, n_punct_hyp = _mask_and_count(hyp_tokens, punct_set)
 
         editops = RFLevenshtein.editops(ref_masked, hyp_masked).as_list()
 
