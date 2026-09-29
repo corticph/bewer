@@ -57,6 +57,10 @@ def _is_punct(token: str, punct_set: frozenset[str]) -> bool:
 class PER_(ExampleMetric):
     """Example-level Punctuation Error Rate."""
 
+    # TODO(#92): Replace the custom alignment logic below with a Levenshtein
+    # dependency once #91 enables metrics to configure their preprocessing
+    # pipeline (tokenizer + masking normalizer) at computation time.
+
     @metric_value
     def _per_components(self) -> tuple[int, int, int, int, int, int]:
         """Compute and cache PER components.
