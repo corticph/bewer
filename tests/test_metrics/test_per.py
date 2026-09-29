@@ -87,11 +87,11 @@ class TestPERExampleMetric:
         # Punctuation: ref has , ! ?  (3 tokens)
         #              hyp has . ;     (2 tokens)
         # Masked alignment:
-        #   ref: hello PUNCT world PUNCT how are you PUNCT
-        #   hyp: hello PUNCT world how are you PUNCT
-        # Alignment: hello=hello, PUNCT=PUNCT(match), world=world,
-        #   PUNCT deleted, how=how, are=are, you=you, PUNCT=PUNCT(match)
-        # Matched PUNCT positions:
+        #   ref: hello <PUNCT> world <PUNCT> how are you <PUNCT>
+        #   hyp: hello <PUNCT> world how are you <PUNCT>
+        # Alignment: hello=hello, <PUNCT>=<PUNCT>(match), world=world,
+        #   <PUNCT> deleted, how=how, are=are, you=you, <PUNCT>=<PUNCT>(match)
+        # Matched <PUNCT> positions:
         #   (1,1): ref=,  hyp=.  → substitution (S_P)
         #   (6,5): ref=?  hyp=;  → substitution (S_P)  -- wait, need to trace carefully
         # Actually: ref has 7 tokens [hello, ,, world, !, how, are, you, ?] -- no, 8 tokens
@@ -100,22 +100,22 @@ class TestPERExampleMetric:
         #   = 8 tokens, 3 punct: , ! ?
         # hyp: "hello. world how are you;" → tokens: hello . world how are you ;
         #   = 7 tokens, 2 punct: . ;
-        # masked ref: hello PUNCT world PUNCT how are you PUNCT  (8)
-        # masked hyp: hello PUNCT world how are you PUNCT  (7)
-        # editops: delete ref[3] (PUNCT=! since hyp has no PUNCT between world and how)
+        # masked ref: hello <PUNCT> world <PUNCT> how are you <PUNCT>  (8)
+        # masked hyp: hello <PUNCT> world how are you <PUNCT>  (7)
+        # editops: delete ref[3] (<PUNCT>=! since hyp has no <PUNCT> between world and how)
         # Wait, let me think again.
-        # ref: [hello, PUNCT, world, PUNCT, how, are, you, PUNCT]  (indices 0-7)
-        # hyp: [hello, PUNCT, world, how, are, you, PUNCT]  (indices 0-6)
+        # ref: [hello, <PUNCT>, world, <PUNCT>, how, are, you, <PUNCT>]  (indices 0-7)
+        # hyp: [hello, <PUNCT>, world, how, are, you, <PUNCT>]  (indices 0-6)
         # editops(ref, hyp):
         #   hello=hello (match)
-        #   PUNCT=PUNCT (match)
+        #   <PUNCT>=<PUNCT> (match)
         #   world=world (match)
-        #   PUNCT(ref[3]) deleted → delete (ref_idx=3)
+        #   <PUNCT>(ref[3]) deleted → delete (ref_idx=3)
         #   how=how (match)
         #   are=are (match)
         #   you=you (match)
-        #   PUNCT=PUNCT (match, ref[7] vs hyp[6])
-        # Matched PUNCT pairs:
+        #   <PUNCT>=<PUNCT> (match, ref[7] vs hyp[6])
+        # Matched <PUNCT> pairs:
         #   (1,1): ref=, hyp=. → different → S_P
         #   (7,6): ref=? hyp=; → different → S_P
         # C_P = 0, S_P = 2
@@ -149,6 +149,34 @@ class TestPERExampleMetric:
         per = example.metrics.per(normalized=False)
         assert per.value == 0.0
         assert per.num_correct == 2
+
+    def test_extended_punctuation_chars(self, empty_dataset):
+        """Default punct_chars covers extended characters from the voice-commands list."""
+        # ¡ and ¿ are in the default punct_chars
+        empty_dataset.add("¡hola! ¿qué?", "¡hola! ¿qué?")
+        example = empty_dataset[0]
+        per = example.metrics.per()
+        assert per.value == 0.0
+        assert per.num_correct == 4  # ¡ ! ¿ ?
+
+    def test_quotation_marks(self, empty_dataset):
+        """Curly quotation marks are counted as punctuation."""
+        empty_dataset.add("\u201chello\u201d", "\u201chello\u201d")
+        example = empty_dataset[0]
+        per = example.metrics.per()
+        assert per.value == 0.0
+        assert per.num_correct == 2  # " "
+
+    def test_punct_sentinel_no_collision(self, empty_dataset):
+        """A literal token '<PUNCT>' in the text is not treated as punctuation."""
+        # The sentinel uses angle brackets which the tokenizer would not emit
+        # as a standalone token, so this is a safety check.
+        empty_dataset.add("hello world", "hello world")
+        example = empty_dataset[0]
+        per = example.metrics.per()
+        assert per.num_punct_ref == 0
+        assert per.num_punct_hyp == 0
+        assert per.value == 0.0
 
 
 class TestPERCustomPunctChars:

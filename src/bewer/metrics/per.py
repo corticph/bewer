@@ -5,7 +5,7 @@ Punctuation and Capitalization Capabilities of End-to-End ASR Models" (Meister
 et al., 2023, IEEE ASRU).
 
 PER isolates punctuation prediction errors from word-level errors by:
-1. Masking all punctuation tokens to a unified ``PUNCT`` label.
+1. Masking all punctuation tokens to a unified ``<PUNCT>`` sentinel.
 2. Aligning the masked sequences via Levenshtein editops (so all punctuation
    marks are interchangeable during alignment — a comma in the reference aligns
    with a period in the hypothesis rather than being scored as delete+insert).
@@ -20,7 +20,17 @@ and correct predictions respectively.  D_P and I_P are derived from the formulas
   I_P = N_{P_hyp} - (S_P + C_P)
 
 The metric runs under the ``with_punctuation`` tokenizer, which emits each
-punctuation character as a standalone token.
+punctuation character as a standalone token.  The ``punct_chars`` parameter
+should be a subset of the characters the tokenizer emits as standalone tokens;
+characters that the tokenizer does not separate (e.g. apostrophes in
+contractions) cannot be counted even if listed here.
+
+Note: the default ``punct_chars`` includes both Unicode punctuation (e.g.
+"\u201c", "\u201d") and their ASCII normalized forms (e.g. '"') so that the
+metric works under both ``normalized=True`` and ``normalized=False``.
+Characters whose normalized form is a multi-character string of characters
+not in ``punct_chars`` (e.g. « → <<, » → >>) are only recognised when
+``normalized=False``.
 """
 
 from __future__ import annotations
@@ -33,7 +43,7 @@ from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricPar
 
 __all__ = ["PER"]
 
-_PUNCT_MASK = "PUNCT"
+_PUNCT_MASK = "<PUNCT>"
 
 
 def _mask_punct(tokens: list[str], punct_set: frozenset[str]) -> list[str]:
@@ -153,7 +163,26 @@ class PER(Metric):
 
     @dataclass
     class param_schema(MetricParams):
-        punct_chars: tuple[str, ...] = (".", ",", "!", "?", ":", ";")
+        punct_chars: tuple[str, ...] = (
+            ".",
+            ",",
+            "!",
+            "?",
+            ";",
+            ":",
+            "/",
+            "(",
+            ")",
+            "-",
+            '"',
+            "\u201c",
+            "\u201d",
+            "\u201e",
+            "«",
+            "»",
+            "¡",
+            "¿",
+        )
         normalized: bool = True
 
     @metric_value
