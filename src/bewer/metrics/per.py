@@ -173,13 +173,13 @@ class PER(Metric):
             ")",
             "-",
             '"',
-            "\u201c",
-            "\u201d",
-            "\u201e",
+            "\u201c",  # "
+            "\u201d",  # "
+            "\u201e",  # „
             "«",
             "»",
-            "<",
-            ">",
+            "<",  # normalized form of «
+            ">",  # normalized form of »
             "¡",
             "¿",
         )
