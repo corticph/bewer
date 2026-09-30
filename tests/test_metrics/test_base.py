@@ -510,3 +510,134 @@ class TestMetricSequenceProtocol:
             _ = metric[0]
         with pytest.raises(TypeError):
             iter(metric)
+
+
+class TestFormatRegisteredParams:
+    """Tests for the parameter summary shown by list_metrics()."""
+
+    def test_defaulted_params_show_their_default(self):
+        """A parameter with a default renders as name=default."""
+        from bewer.metrics.base import _format_registered_params
+
+        assert _format_registered_params("wer") == "normalized=True"
+
+    def test_required_params_are_marked(self):
+        """A parameter without a default is marked with a star, not a value."""
+        from bewer.metrics.base import _format_registered_params
+
+        summary = _format_registered_params("ktr")
+
+        assert summary.startswith("vocab*")
+        assert "normalized=True" in summary
+
+    def test_reads_the_registry_not_an_instance(self):
+        """Metrics with required params cannot be constructed, but are still describable."""
+        from bewer.metrics.base import _format_registered_params
+
+        # ktr requires `vocab`, so no instance exists to introspect.
+        assert "vocab*" in _format_registered_params("ktr")
+
+    def test_specialization_shows_its_own_default(self):
+        """A subclass that gives a required param a default shows the value, unmarked."""
+        from bewer.metrics.base import _format_registered_params
+
+        summary = _format_registered_params("orthographically_complex_term_recall")
+
+        assert "vocab='orthographically_complex_terms'" in summary
+        assert "*" not in summary
+
+    def test_registration_default_overrides_the_schema_default(self):
+        """A default supplied at registration wins over the one on param_schema."""
+        from bewer.metrics.base import METRIC_REGISTRY, _format_registered_params
+
+        metadata = METRIC_REGISTRY.metric_metadata["wer"]
+        original = metadata["param_defaults"]
+        metadata["param_defaults"] = {"normalized": False}
+        try:
+            assert _format_registered_params("wer") == "normalized=False"
+        finally:
+            metadata["param_defaults"] = original
+
+    def test_metric_without_params_renders_a_placeholder(self):
+        """A metric with no parameters renders as '-' rather than an empty cell."""
+        from bewer.metrics.base import _format_registered_params
+
+        assert _format_registered_params("summary") == "-"
+
+
+class TestListMetricsIncludesParams:
+    """list_metrics() surfaces the parameter summary."""
+
+    def test_params_appear_in_the_table(self, capsys, sample_dataset):
+        """The rendered table contains a Params column and the summaries."""
+        sample_dataset.metrics.list_metrics()
+        out = capsys.readouterr().out
+
+        assert "Params" in out
+        assert "required parameter" in out  # the caption explaining '*'
+
+    def test_params_shown_once_per_metric(self, capsys):
+        """The summary is attached to the dataset row, not repeated on the example row.
+
+        Renders one two-level row directly with a short value, so the assertion cannot be
+        defeated by the cell wrapping at the console's width.
+        """
+        from bewer.reporting.python.tables import print_metric_table
+
+        print_metric_table([("m", "n=1", (("value", "-"), ("value", "-")))])
+        out = capsys.readouterr().out
+
+        assert out.count("n=1") == 1
+
+
+class TestParamFormattingEdgeCases:
+    """Values that the registry can hold but the shipped metrics do not exercise."""
+
+    def test_default_factory_is_resolved(self):
+        """A dataclass default_factory is called, not printed as the factory itself."""
+        from dataclasses import dataclass, field
+
+        from bewer.metrics.base import (
+            METRIC_REGISTRY,
+            ExampleMetric,
+            Metric,
+            MetricParams,
+            _format_registered_params,
+            metric_value,
+        )
+
+        class _FactoryProbe_(ExampleMetric):
+            @metric_value(main=True)
+            def value(self) -> float:
+                return 0.0
+
+        @METRIC_REGISTRY.register("_factory_probe", allow_override=True)
+        class _FactoryProbe(Metric):
+            short_name_base = "_FactoryProbe"
+            long_name_base = "Factory Probe"
+            description = "Test metric with a default_factory parameter."
+            example_cls = _FactoryProbe_
+
+            @dataclass
+            class param_schema(MetricParams):
+                tags: tuple = field(default_factory=tuple)
+
+        try:
+            assert _format_registered_params("_factory_probe") == "tags=()"
+        finally:
+            del METRIC_REGISTRY.metric_metadata["_factory_probe"]
+            del METRIC_REGISTRY.metric_classes["_factory_probe"]
+
+    def test_markup_like_defaults_render_literally(self, capsys):
+        """A default that looks like Rich markup must not be parsed as markup.
+
+        Rich treats "[" followed by a lowercase letter, "#", "/" or "@" as a tag, which
+        would silently swallow a value such as a regex default (and raise on "[/]").
+        """
+        from bewer.reporting.python.tables import print_metric_table
+
+        for default in ("pattern='[a-z]+'", "pattern='[bold]'", "pattern='[/]'"):
+            print_metric_table([("m", default, (("value", "-"), None))])
+            out = capsys.readouterr().out
+            # The bracketed fragment survives; only wrapping may break the full string.
+            assert "[" in out and "]" in out, f"markup consumed for {default!r}"
