@@ -1,11 +1,12 @@
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 
 __all__: list[str] = []  # Internal
 
 
 def print_metric_table(
-    rows: list[tuple[str, str, tuple[tuple[str, str, str], tuple[str, str, str] | None]]],
+    rows: list[tuple[str, str, tuple[tuple[str, str], tuple[str, str] | None]]],
 ) -> None:
     """
     Print a table of registered metrics, their parameters and their values.
@@ -28,7 +29,9 @@ def print_metric_table(
 
     for metric_name, params, (main_row, example_row) in rows:
         end_section = True if example_row is None else False
-        table.add_row(metric_name, "dataset", *main_row, params, end_section=end_section)
+        # Text() keeps parameter reprs literal: a default containing "[" followed by a
+        # lowercase letter, "#", "/" or "@" would otherwise be parsed as Rich markup.
+        table.add_row(metric_name, "dataset", *main_row, Text(params), end_section=end_section)
         if example_row is not None:
             table.add_row("", "example", *example_row, "", end_section=True)
 

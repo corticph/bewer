@@ -135,6 +135,9 @@ def _format_registered_params(name: str) -> str:
     (which cannot be constructed without them) are still describable. Parameters with
     a default are shown as ``name=default``; required ones are marked with ``*``.
 
+    ``param_schema`` stores a dataclass ``default_factory`` as the factory itself, so it is
+    called here to show the value a user actually receives, matching ``resolve_params()``.
+
     Args:
         name: The registered metric name.
 
@@ -152,13 +155,14 @@ def _format_registered_params(name: str) -> str:
             # A default supplied at registration overrides the one on param_schema.
             parts.append(f"{param_name}={registered_defaults[param_name]!r}")
         elif isinstance(param_spec, tuple):
-            parts.append(f"{param_name}={param_spec[1]!r}")
+            default = param_spec[1]
+            parts.append(f"{param_name}={(default() if callable(default) else default)!r}")
         else:
             parts.append(f"{param_name}*")
     return ", ".join(parts)
 
 
-def _get_metric_table_row_values(metric: "Metric") -> tuple[str, str, str]:
+def _get_metric_table_row_values(metric: "Metric") -> tuple[str, str]:
     metric_values = metric.metric_values()
     main_value = "-" if metric_values["main"] is None else metric_values["main"]
     other_values = "-" if len(metric_values["other"]) == 0 else ", ".join(metric_values["other"])
