@@ -7,6 +7,7 @@ from bewer import preprocessing as preprocessing
 from bewer import reporting as reporting
 from bewer.core.dataset import Dataset, DatasetFrozenError
 from bewer.core.vocabulary import ExtractorFn, Vocabulary, VocabularyExtractorError, VocabularyFrozenError
+from bewer.preprocessing.context import set_pipeline
 
 try:
     __version__ = version("bewer")
@@ -20,6 +21,7 @@ __all__ = [
     "VocabularyExtractorError",
     "VocabularyFrozenError",
     "ExtractorFn",
+    "set_pipeline",
     "core",
     "extractors",
     "metrics",

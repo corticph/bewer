@@ -370,12 +370,12 @@ class TestDatasetLanguage:
 class TestTextTokenList:
     """Tests for TextTokenList class."""
 
-    def test_raw_property(self, sample_dataset):
-        """Test raw property returns nested list."""
+    def test_standardized_property(self, sample_dataset):
+        """Test standardized property returns nested list."""
         tokens = sample_dataset.refs.tokens
-        raw = tokens.raw
-        assert isinstance(raw, list)
-        assert isinstance(raw[0], list)
+        standardized = tokens.standardized
+        assert isinstance(standardized, list)
+        assert isinstance(standardized[0], list)
 
     def test_normalized_property(self, sample_dataset):
         """Test normalized property returns nested list."""

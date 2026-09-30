@@ -36,9 +36,9 @@ def _join_tokens(tokens: "TokenList", normalized: bool = True) -> str:
     prev_end = 0
     for token in tokens:
         if token.start > prev_end:
-            joined += f" {token.normalized}" if normalized else f" {token.raw}"
+            joined += f" {token.normalized}" if normalized else f" {token.standardized}"
         else:
-            joined += token.normalized if normalized else token.raw
+            joined += token.normalized if normalized else token.standardized
         prev_end = token.end
     return joined.strip()
 
@@ -130,7 +130,7 @@ class Text:
         Args:
             vocab: Vocabulary name to match against.
             normalized: Use normalized tokens for matching.
-            add_capitalized: Add capitalized first-token variants (raw mode only).
+            add_capitalized: Add capitalized first-token variants (only when ``normalized`` is False).
             allow_subset_matches: If False, discard matches that are subsets of longer matches.
 
         Returns:
@@ -207,13 +207,13 @@ class TokenList(tuple["Token", ...]):
         return cls(Token.from_match(match, index=i, pipelines=pipelines, src=src) for i, match in enumerate(matches))
 
     @property
-    def raw(self) -> list[str]:
-        """Get the raw tokens as a regular Python list.
+    def standardized(self) -> list[str]:
+        """Get the standardized tokens as a regular Python list.
 
         Returns:
-            list[str]: The raw tokens.
+            list[str]: The standardized tokens.
         """
-        return [token.raw for token in self]
+        return [token.standardized for token in self]
 
     @property
     def normalized(self) -> list[str]:
@@ -246,23 +246,23 @@ class TokenList(tuple["Token", ...]):
         if n < 1:
             raise ValueError("n must be a positive integer")
         if n == 1:
-            return self.raw if not normalized else self.normalized
+            return self.standardized if not normalized else self.normalized
         ngrams = []
         for i in range(len(self) - n + 1):
             ngram = self[i : i + n]
             if join_tokens:
                 ngram = _join_tokens(ngram, normalized=normalized)
             else:
-                ngram = ngram.normalized if normalized else ngram.raw
+                ngram = ngram.normalized if normalized else ngram.standardized
             ngrams.append(ngram)
         return ngrams
 
     @cached_property
-    def _raw_index_mapping(self) -> dict[str, set[int]]:
-        """Mapping from raw token text to set of positions in this TokenList."""
+    def _standardized_index_mapping(self) -> dict[str, set[int]]:
+        """Mapping from standardized token text to set of positions in this TokenList."""
         mapping: dict[str, set[int]] = {}
         for i, token in enumerate(self):
-            mapping.setdefault(token.raw, set()).add(i)
+            mapping.setdefault(token.standardized, set()).add(i)
         return mapping
 
     @property
@@ -283,12 +283,12 @@ class TokenList(tuple["Token", ...]):
         Args:
             text: The string to search for.
             normalized: If True, compare against normalized token text.
-                        If False, compare against raw token text.
+                        If False, compare against standardized token text.
 
         Returns:
             set[int]: Set of indices where the token's text matches.
         """
-        mapping = self._normalized_index_mapping if normalized else self._raw_index_mapping
+        mapping = self._normalized_index_mapping if normalized else self._standardized_index_mapping
         return mapping.get(text, set())
 
     def _sub_repr(self):

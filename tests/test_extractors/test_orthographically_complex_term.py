@@ -83,7 +83,7 @@ class TestMatchTokenRegex:
         tokens = _ref_tokens(dataset)
         pattern = regex.compile(ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN)
         spans = match_token_regex(tokens, pattern)
-        matched = [tokens[s.start].raw for s in spans]
+        matched = [tokens[s.start].standardized for s in spans]
         assert all(s.stop - s.start == 1 for s in spans)
         assert matched == ["MRI", "CO2"]
 
@@ -99,14 +99,14 @@ class TestMatchTokenRegex:
         tokens = _ref_tokens(dataset)
         # "preMRItext" has lowercase-then-uppercase evidence, so it matches as a whole token.
         spans = match_token_regex(tokens, regex.compile(ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN))
-        assert [tokens[s.start].raw for s in spans] == ["preMRItext"]
+        assert [tokens[s.start].standardized for s in spans] == ["preMRItext"]
 
     def test_custom_pattern(self, complex_term_context):
         dataset = Dataset()
         dataset.add("alpha BETA gamma", "x")
         tokens = _ref_tokens(dataset)
         spans = match_token_regex(tokens, regex.compile(r"\p{Lu}+"))  # all-uppercase tokens
-        assert [tokens[s.start].raw for s in spans] == ["BETA"]
+        assert [tokens[s.start].standardized for s in spans] == ["BETA"]
 
 
 class TestRegexExtractorBase:

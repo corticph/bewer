@@ -87,7 +87,9 @@ class TestVocabularyMatching:
         dataset = Dataset()
         dataset.add("the cold weather today", "a cold morning")
         # "cold" is extracted from the hypothesis and also appears in the reference.
-        dataset.add_vocabulary(Vocabulary(name="h").add_extractor(lambda ds: [ex.hyp.tokens.raw[1] for ex in ds]))
+        dataset.add_vocabulary(
+            Vocabulary(name="h").add_extractor(lambda ds: [ex.hyp.tokens.standardized[1] for ex in ds])
+        )
         kt = dataset.metrics._kt_stats(vocab="h")
         assert kt.num_ref_terms == 1
 

@@ -83,7 +83,7 @@ class KeyTermTrie:
 
         Args:
             key_terms: A set of KeyTerm objects to build the automaton from.
-            normalized: Whether to use normalized text for matching. If False, uses raw text.
+            normalized: Whether to use normalized text for matching. If False, uses standardized text.
             add_capitalized: Whether to add capitalized versions of key terms for case-insensitive matching.
                 Only applies if normalized is False and is only applied to the first word in an n-gram key term.
         """
@@ -96,7 +96,7 @@ class KeyTermTrie:
         # token pattern, the first-wins de-duplication below picks the same one every run.
         pattern_entries: list[tuple[KeyTerm, tuple[str, ...]]] = []
         for key_term in sorted(key_terms, key=lambda kt: kt.raw):
-            tokens = key_term.tokens.normalized if normalized else key_term.tokens.raw
+            tokens = key_term.tokens.normalized if normalized else key_term.tokens.standardized
             token_pattern = tuple(tokens)
             if not token_pattern:
                 continue
@@ -125,7 +125,7 @@ class KeyTermTrie:
 
     def encode(self, tokens: TokenList) -> tuple[int, ...]:
         """Encode a token list into the trie's integer vocabulary."""
-        token_strings = tokens.normalized if self.normalized else tokens.raw
+        token_strings = tokens.normalized if self.normalized else tokens.standardized
         return tuple(self._vocab.get(w, self._unknown) for w in token_strings)
 
     def find_in_tokens(self, tokens: TokenList) -> tuple[list[slice], list[KeyTerm]]:

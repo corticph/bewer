@@ -14,7 +14,7 @@ class TestExampleStandalone:
         """A standalone Example can be built given only a Pipelines registry."""
         example = Example("a b c", "a x c", pipelines=pipelines)
         assert example.src is None
-        assert example.ref.tokens.raw == ["a", "b", "c"]
+        assert example.ref.tokens.standardized == ["a", "b", "c"]
 
     def test_get_key_term_matches_returns_empty(self, pipelines):
         """Key term matching needs the dataset trie; without a Dataset it yields no matches."""
@@ -83,7 +83,7 @@ class TestExamplePrepareAndValidateKeyTerms:
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="greetings")
         assert len(matches) == 1
-        assert matches[0].tokens.raw == ["Hello"]
+        assert matches[0].tokens.standardized == ["Hello"]
 
     def test_empty_key_term_list_resolves_without_error(self, sample_dataset):
         """Test that an empty key term list does not cause key term match resolution to fail."""
@@ -154,9 +154,9 @@ class TestTextGetKeyTermMatches:
         sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "brown"]))
         example = sample_dataset[-1]
         matches = example.ref.get_key_term_matches(vocab="animals")
-        matched_raws = sorted(m.tokens.raw for m in matches)
-        assert ["brown"] in matched_raws
-        assert ["fox"] in matched_raws
+        matched_standardized = sorted(m.tokens.standardized for m in matches)
+        assert ["brown"] in matched_standardized
+        assert ["fox"] in matched_standardized
 
     def test_global_key_terms_match_count(self, sample_dataset):
         """Global key terms produce the expected number of matches."""

@@ -319,13 +319,13 @@ class TextTokenList(tuple["TokenList", ...]):
         return super().__new__(cls, iterable)
 
     @property
-    def raw(self) -> list[list[str]]:
-        """Get the raw tokens as a regular Python list.
+    def standardized(self) -> list[list[str]]:
+        """Get the standardized tokens as a regular Python list.
 
         Returns:
-            list[list[str]]: The raw tokens.
+            list[list[str]]: The standardized tokens.
         """
-        return [tokens.raw for tokens in self]
+        return [tokens.standardized for tokens in self]
 
     @property
     def normalized(self) -> list[list[str]]:

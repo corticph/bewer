@@ -10,7 +10,23 @@ from bewer.preprocessing.tokenization import Tokenizer
 
 __all__: list[str] = []  # All symbols are internal
 
-Pipelines = namedtuple("Pipelines", [STANDARDIZERS, TOKENIZERS, NORMALIZERS])
+_PipelinesBase = namedtuple("Pipelines", [STANDARDIZERS, TOKENIZERS, NORMALIZERS])
+
+
+class Pipelines(_PipelinesBase):
+    """The preprocessing variants resolved from a configuration, grouped by stage.
+
+    A plain namedtuple of three ``{name: pipeline}`` dicts, with a repr that lists the
+    available variant names per stage instead of dumping every resolved object.
+    """
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        stages = ((STANDARDIZERS, self.standardizers), (TOKENIZERS, self.tokenizers), (NORMALIZERS, self.normalizers))
+        width = max(len(name) for name, _ in stages) + 1
+        rows = "\n".join(f"    {name + ':':<{width}} {', '.join(entries) or '-'}" for name, entries in stages)
+        return f"Pipelines(\n{rows}\n)"
 
 
 def _resolve_function(path: str):

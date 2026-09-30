@@ -19,8 +19,8 @@ class WER_(ExampleMetric):
                 self.example.hyp.tokens.normalized,
             )
         return Levenshtein.distance(
-            self.example.ref.tokens.raw,
-            self.example.hyp.tokens.raw,
+            self.example.ref.tokens.standardized,
+            self.example.hyp.tokens.standardized,
         )
 
     @metric_value
@@ -28,7 +28,7 @@ class WER_(ExampleMetric):
         """Get the number of tokens in the reference text."""
         if self.params.normalized:
             return len(self.example.ref.tokens.normalized)
-        return len(self.example.ref.tokens.raw)
+        return len(self.example.ref.tokens.standardized)
 
     @metric_value(main=True)
     def value(self) -> float:
