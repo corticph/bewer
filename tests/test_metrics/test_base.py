@@ -510,3 +510,76 @@ class TestMetricSequenceProtocol:
             _ = metric[0]
         with pytest.raises(TypeError):
             iter(metric)
+
+
+class TestFormatRegisteredParams:
+    """Tests for the parameter summary shown by list_metrics()."""
+
+    def test_defaulted_params_show_their_default(self):
+        """A parameter with a default renders as name=default."""
+        from bewer.metrics.base import _format_registered_params
+
+        assert _format_registered_params("wer") == "normalized=True"
+
+    def test_required_params_are_marked(self):
+        """A parameter without a default is marked with a star, not a value."""
+        from bewer.metrics.base import _format_registered_params
+
+        summary = _format_registered_params("ktr")
+
+        assert summary.startswith("vocab*")
+        assert "normalized=True" in summary
+
+    def test_reads_the_registry_not_an_instance(self):
+        """Metrics with required params cannot be constructed, but are still describable."""
+        from bewer.metrics.base import _format_registered_params
+
+        # ktr requires `vocab`, so no instance exists to introspect.
+        assert "vocab*" in _format_registered_params("ktr")
+
+    def test_specialization_shows_its_own_default(self):
+        """A subclass that gives a required param a default shows the value, unmarked."""
+        from bewer.metrics.base import _format_registered_params
+
+        summary = _format_registered_params("orthographically_complex_term_recall")
+
+        assert "vocab='orthographically_complex_terms'" in summary
+        assert "*" not in summary
+
+    def test_registration_default_overrides_the_schema_default(self):
+        """A default supplied at registration wins over the one on param_schema."""
+        from bewer.metrics.base import METRIC_REGISTRY, _format_registered_params
+
+        metadata = METRIC_REGISTRY.metric_metadata["wer"]
+        original = metadata["param_defaults"]
+        metadata["param_defaults"] = {"normalized": False}
+        try:
+            assert _format_registered_params("wer") == "normalized=False"
+        finally:
+            metadata["param_defaults"] = original
+
+    def test_metric_without_params_renders_a_placeholder(self):
+        """A metric with no parameters renders as '-' rather than an empty cell."""
+        from bewer.metrics.base import _format_registered_params
+
+        assert _format_registered_params("summary") == "-"
+
+
+class TestListMetricsIncludesParams:
+    """list_metrics() surfaces the parameter summary."""
+
+    def test_params_appear_in_the_table(self, capsys, sample_dataset):
+        """The rendered table contains a Params column and the summaries."""
+        sample_dataset.metrics.list_metrics()
+        out = capsys.readouterr().out
+
+        assert "Params" in out
+        assert "required parameter" in out  # the caption explaining '*'
+
+    def test_params_shown_once_per_metric(self, capsys, sample_dataset):
+        """The summary is attached to the dataset row, not repeated on the example row."""
+        sample_dataset.metrics.list_metrics()
+        out = capsys.readouterr().out
+
+        # 'wer' has one parameter; it must not appear twice for the two level rows.
+        assert out.count("normalized=True") < out.count("value")
