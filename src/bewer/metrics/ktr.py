@@ -30,14 +30,14 @@ class KTR_(ExampleMetric):
 @METRIC_REGISTRY.register("ktr", tokenizer="key_term")
 class KTR(Metric):
     short_name_base = "KTR"
-    long_name_base = "Key Term Recall"
+    long_name_base = "Key-Term Recall"
     description = (
         "Key term recall (KTR) is computed as TP / (TP + FN). "
         "When partial_credit=False (default, exact-match view), each key term occurrence is treated as a single unit: "
         "TP if every constituent token is correctly transcribed, FN otherwise. "
         "When partial_credit=True (partial-credit view), TP and FN are counted at the token-position level within "
         "key term spans, giving proportional credit for partially correct multi-token terms. "
-        "KTR is the complement of KTER (Key Term Error Rate): KTR = 1 - KTER."
+        "KTR is the complement of KTER (Key-Term Error Rate): KTR = 1 - KTER."
     )
     example_cls = KTR_
 

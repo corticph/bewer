@@ -49,7 +49,7 @@ class RKTR_(ExampleMetric):
 @METRIC_REGISTRY.register("rktr", tokenizer="key_term")
 class RKTR(Metric):
     short_name_base = "RKTR"
-    long_name_base = "Relaxed Key Term Recall"
+    long_name_base = "Relaxed Key-Term Recall"
     description = (
         "Relaxed key term recall (RKTR) is computed as TP / (TP + FN), where a key term is counted as TP "
         "if its character error rate (CER) against the aligned hypothesis text is at or below the given "

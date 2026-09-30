@@ -163,7 +163,7 @@ class TestKTRMetricAttributes:
         assert KTR.short_name_base == "KTR"
 
     def test_long_name_base(self):
-        assert KTR.long_name_base == "Key Term Recall"
+        assert KTR.long_name_base == "Key-Term Recall"
 
     def test_description(self):
         assert len(KTR.description) > 0

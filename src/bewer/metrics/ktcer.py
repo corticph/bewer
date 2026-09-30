@@ -29,7 +29,7 @@ class KTCER_(ExampleMetric):
 @METRIC_REGISTRY.register("ktcer", tokenizer="key_term")
 class KTCER(Metric):
     short_name_base = "KTCER"
-    long_name_base = "Key Term Character Error Rate"
+    long_name_base = "Key-Term Character Error Rate"
     description = (
         "Key term character error rate (KTCER) is computed as the total character-level edit distance "
         "across all key term occurrences in the reference, divided by the total number of reference "

@@ -35,7 +35,7 @@ class KTFPR_(ExampleMetric):
 @METRIC_REGISTRY.register("ktfpr", tokenizer="key_term")
 class KTFPR(Metric):
     short_name_base = "KTFPR"
-    long_name_base = "Key Term False-Positive Rate"
+    long_name_base = "Key-Term False-Positive Rate"
     description = (
         "Key term false-positive rate (KTFPR) measures spurious key term detections relative to the total number "
         "of reference tokens: FPR = FP^[+] / N_R, where FP^[+] is the number of mismatched token positions inside "

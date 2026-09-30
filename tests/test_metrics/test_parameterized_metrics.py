@@ -101,7 +101,7 @@ class TestDynamicNaming:
         """Test that parameterized metric includes params in long name."""
         rktr = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
         assert "threshold=0.5" in rktr.long_name
-        assert rktr.long_name.startswith("Relaxed Key Term Recall (")
+        assert rktr.long_name.startswith("Relaxed Key-Term Recall (")
 
     def test_multiple_params_in_name(self, sample_dataset):
         """Test that multiple parameters are shown in name."""
