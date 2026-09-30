@@ -31,7 +31,7 @@ class KTER_(ExampleMetric):
 @METRIC_REGISTRY.register("kter", tokenizer="key_term")
 class KTER(Metric):
     short_name_base = "KTER"
-    long_name_base = "Key Term Error Rate"
+    long_name_base = "Key-Term Error Rate"
     description = (
         "Key term error rate (KTER) is computed as FN / (TP + FN). "
         "When partial_credit=False (default, exact-match view), each key term occurrence is treated as a single unit: "

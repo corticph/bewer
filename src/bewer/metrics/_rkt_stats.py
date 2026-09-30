@@ -109,7 +109,7 @@ class _RKTStats_(ExampleMetric):
 @METRIC_REGISTRY.register("_rkt_stats", tokenizer="key_term")
 class _RKTStats(Metric):
     short_name_base = "_RKTStats"
-    long_name_base = "Relaxed Key Term Statistics"
+    long_name_base = "Relaxed Key-Term Statistics"
     description = (
         "Private metric that computes per-term character edit distance statistics for relaxed key term "
         "metrics. Stores (char_edits, ref_chars) per key term match using error_align alignment, without "

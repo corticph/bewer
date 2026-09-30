@@ -126,7 +126,7 @@ class TestKTCERMetricAttributes:
         assert KTCER.short_name_base == "KTCER"
 
     def test_long_name_base(self):
-        assert KTCER.long_name_base == "Key Term Character Error Rate"
+        assert KTCER.long_name_base == "Key-Term Character Error Rate"
 
     def test_description(self):
         assert len(KTCER.description) > 0
