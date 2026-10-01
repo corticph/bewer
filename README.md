@@ -261,8 +261,9 @@ calls raise `DatasetFrozenError`. Use `clone()` to get a fresh, modifiable copy.
 | **General purpose** | | | |
 | Word Error Rate | General | `wer` | [`>`](src/bewer/metrics/wer.py) |
 | Character Error Rate | General | `cer` | [`>`](src/bewer/metrics/cer.py) |
-| Insertion Rate | General | `insertion_rate` | [`>`](src/bewer/metrics/insertion_rate.py) |
 | Punctuation Error Rate | General | `per` | [`>`](src/bewer/metrics/per.py) |
+| **Hallucination metrics** | | | |
+| Insertion Rate | Hallucination | `insertion_rate` | [`>`](src/bewer/metrics/insertion_rate.py) |
 | **Key-term metrics** | | | |
 | Key-Term Recall | Key-term | `ktr` | [`>`](src/bewer/metrics/ktr.py) |
 | Key-Term Precision | Key-term | `ktp` | [`>`](src/bewer/metrics/ktp.py) |
@@ -280,6 +281,11 @@ calls raise `DatasetFrozenError`. Use `clone()` to get a fresh, modifiable copy.
 | Error Alignment | Alignment | `error_align` | [`>`](src/bewer/metrics/error_align.py) |
 | **Dataset statistics** | | | |
 | Dataset Summary | Summary | `summary` | [`>`](src/bewer/metrics/summary.py) |
+
+Insertion rate counts inserted tokens against the reference length, so a high value means the
+system is inventing text. Its `min_run_length` parameter (default 1) counts only contiguous
+insertion runs of at least that length, isolating bursts — a stronger hallucination signal than
+scattered single insertions.
 
 The orthographically complex term metrics are the key-term metrics over a vocabulary extracted from
 the references by orthography — acronyms, alphanumerics and hyphen compounds such as `MRI`, `HbA1c`
