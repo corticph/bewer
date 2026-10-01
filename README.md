@@ -8,9 +8,14 @@
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" style="margin-left:5px;">
 </p>
 
-**⚠️ Important:** This project is not production ready and is still in early development. Breaking changes may occur, and backwards compatibility between alpha versions is not guaranteed.
+**⚠️ Important:** This project is not production ready and is still in early development. Breaking
+changes may occur, and backwards compatibility between alpha versions is not guaranteed.
 
-**Bewer is an evaluation and analysis framework for automatic speech recognition in Python.** It defines a transparent YAML-based approach for configuring evaluation pipelines and makes it easy to inspect and analyze individual examples through a web-based interface. The built-in preprocessing pipeline and metrics collection are designed to cover all conventional use cases and then some, while still being fully extensible.
+**Bewer is an evaluation and analysis framework for automatic speech recognition in Python.** It defines a flexible
+approach for configuring and customizing speech recognition evaluation. The hierarchical structure, going from the
+dataset level down to individual tokens, makes it easy to inspect individual examples and understand evaluation
+results. The built-in preprocessing pipeline and metrics collection are designed to cover all conventional use cases
+and then some, while still being fully extensible.
 
 __Contents__ | [Installation](#installation) | [Quickstart](#quickstart) | [Core Concepts](#core-concepts) | [Metrics Catalog](#metrics-catalog) |
 
@@ -47,8 +52,8 @@ WER: 12.34%
 
 ### Hierarchy
 
-In `bewer`, evaluation is centered around the `Dataset` object, which implements a linguistic
-hierarchy, from a collection of reference-hypothesis pairs to individual tokens.
+In `bewer`, evaluation is centered around the `Dataset` object, which implements a hierarchical
+structure, from a collection of reference-hypothesis pairs to individual tokens.
 
 ```python
 dataset = Dataset(language="en")            # Create a dataset ...
@@ -88,8 +93,8 @@ The result of each stage is accessible from the corresponding objects.
 ```python
 text.raw                      # str: the original input
 text.standardized             # str: after the standardizer
-text.tokens.standardized      # List[str]: the tokens after standardization
-text.tokens.normalized        # List[str]: the tokens after normalization
+text.tokens.standardized      # list[str]: the tokens after standardization
+text.tokens.normalized        # list[str]: the tokens after normalization
 ```
 
 Pre-defined pipeline components can be found under `dataset.pipelines`.
@@ -115,7 +120,8 @@ automatically, but you can adapt and extend the pipeline as needed.
 
 Any component can be switched with the `set_pipeline` context manager. The English `key_term`
 tokenizer, for instance, splits on apostrophes as well as hyphens and slashes, so that a term
-is still matched when it appears in the possessive form.
+is still matched when it appears in the possessive form. In contrast, the `default` tokenizer
+does not.
 
 ```python
 from bewer import set_pipeline
@@ -154,8 +160,8 @@ also accept arguments specific to their computation.
 ```python
 # Key-term F-score (KTF) with ...
 ktf = dataset.metrics.ktf(
-  tokenizer="my_tokenizer",      # ... a custom tokenizer and ...
-  vocab="my_vocab",              # ... a key-term vocabulary.
+    tokenizer="my_tokenizer",    # ... a custom tokenizer and ...
+    vocab="my_vocab",            # ... a key-term vocabulary.
 )
 ```
 
@@ -187,7 +193,7 @@ print(f"{wer.value:.2%} = {wer.num_edits}/{wer.ref_length}")
 ```
 
 Most metrics are defined by aggregating over example-level values. This structure is
-reflected in `bewer` which also exposes example-level metrics, that can be accessed through
+reflected in `bewer`, which also exposes example-level metrics, that can be accessed through
 individual examples or directly from the metric object itself.
 
 ```python
@@ -213,20 +219,21 @@ dataset.add(
 )
 
 # Add key terms from a Python list
-vocab = Vocabulary(name="medical").add_terms(["diabetes", "blood sugar"])
+vocab = Vocabulary(name="medical")
+vocab.add_terms(["diabetes", "blood sugar"])
 dataset.add_vocabulary(vocab)
 
 # Compute key-term recall by referencing the vocabulary name
 ktr = dataset.metrics.ktr(vocab="medical")
 print(f"{ktr.long_name_base}: {ktr.value:.2%}")
 ```
+
 ```text
 Key-Term Recall: 50.00%
 ```
 
 You can also load line-separated key terms directly from a file (`add_file`) or write a custom
-extractor function (`add_extractor`), which is a callable `Dataset -> Iterable[str]`. It receives
-the whole dataset, so terms can be derived from the references, the hypotheses, or anything else.
+function (`Dataset -> Iterable[str]`) to extract key terms from the dataset (`add_extractor`).
 
 #### Alignments
 
@@ -247,12 +254,20 @@ assert alignment.num_edits >= alignment.num_substitutions
 # Print a color-coded two-row alignment in the console
 alignment.display()
 ```
+```python
+# TODO: Example of color-coded alignment
+```
+### Lazy Computation and Caching
 
-### Caching and Lazy Computation
+Metric values and pipeline attributes are computed lazily. The dependencies between the pipeline
+stages are tracked to make sure that the full pipeline is considered when deciding which
+computations are necessary. Once a metric is requested from the metrics collection, it is cached
+and reused for subsequent requests with matching parameters or by other metrics that depend on it.
 
-Nothing is computed until requested, and identical requests return the same object. Requesting any
-metric also *freezes* the dataset, so no cached value can go stale. Further `add()` or `load_*()`
-calls raise `DatasetFrozenError`. Use `clone()` to get a fresh, modifiable copy.
+```python
+wer = dataset.metrics.wer() # already uses the "default" normalizer
+assert wer is dataset.metrics.wer(normalizer="default")
+```
 
 ## Metrics Catalog
 
@@ -281,12 +296,3 @@ calls raise `DatasetFrozenError`. Use `clone()` to get a fresh, modifiable copy.
 | Error Alignment | Alignment | `error_align` | [`>`](src/bewer/metrics/error_align.py) |
 | **Dataset statistics** | | | |
 | Dataset Summary | Summary | `summary` | [`>`](src/bewer/metrics/summary.py) |
-
-Insertion rate counts inserted tokens against the reference length, so a high value means the
-system is inventing text. Its `min_run_length` parameter (default 1) counts only contiguous
-insertion runs of at least that length, isolating bursts — a stronger hallucination signal than
-scattered single insertions.
-
-The orthographically complex term metrics are the key-term metrics over a vocabulary extracted from
-the references by orthography — acronyms, alphanumerics and hyphen compounds such as `MRI`, `HbA1c`
-and `CT-scan` — so unlike the rest of the key-term family they need no vocabulary of your own.
