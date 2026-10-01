@@ -128,7 +128,41 @@ def _get_metric_values(cls, include_private: bool = False) -> dict[str, Union[st
     return result
 
 
-def _get_metric_table_row_values(metric: "Metric") -> tuple[str, str, str]:
+def _format_registered_params(name: str) -> str:
+    """Render a registered metric's parameters for the metrics table.
+
+    Reads the registry rather than an instance, so metrics with required parameters
+    (which cannot be constructed without them) are still describable. Parameters with
+    a default are shown as ``name=default``; required ones are marked with ``*``.
+
+    ``param_schema`` stores a dataclass ``default_factory`` as the factory itself, so it is
+    called here to show the value a user actually receives, matching ``resolve_params()``.
+
+    Args:
+        name: The registered metric name.
+
+    Returns:
+        str: Comma-separated parameters, or "-" if the metric takes none.
+    """
+    metadata = METRIC_REGISTRY.metric_metadata[name]
+    schema = metadata["param_schema"]
+    if not schema:
+        return "-"
+    registered_defaults = metadata["param_defaults"]
+    parts = []
+    for param_name, param_spec in schema.items():
+        if param_name in registered_defaults:
+            # A default supplied at registration overrides the one on param_schema.
+            parts.append(f"{param_name}={registered_defaults[param_name]!r}")
+        elif isinstance(param_spec, tuple):
+            default = param_spec[1]
+            parts.append(f"{param_name}={(default() if callable(default) else default)!r}")
+        else:
+            parts.append(f"{param_name}*")
+    return ", ".join(parts)
+
+
+def _get_metric_table_row_values(metric: "Metric") -> tuple[str, str]:
     metric_values = metric.metric_values()
     main_value = "-" if metric_values["main"] is None else metric_values["main"]
     other_values = "-" if len(metric_values["other"]) == 0 else ", ".join(metric_values["other"])
@@ -474,12 +508,12 @@ class MetricCollection(object):
         return tuple(sorted(kwargs.items()))
 
     def list_metrics(self, show_private: bool = False) -> None:
-        """Print all registered example metric and their values."""
+        """Print all registered metrics with their parameters and values."""
         metric_rows = []
         for metric_name, metric_cls in METRIC_REGISTRY.metric_classes.items():
             if not show_private and metric_name.startswith("_"):
                 continue
-            metric_rows.append((metric_name, metric_cls._get_row_values()))
+            metric_rows.append((metric_name, _format_registered_params(metric_name), metric_cls._get_row_values()))
         print_metric_table(metric_rows)
 
     def get(self, name: str):

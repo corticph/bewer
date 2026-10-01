@@ -218,7 +218,7 @@ class TestRKTRMetricAttributes:
         assert RKTR.short_name_base == "RKTR"
 
     def test_long_name_base(self):
-        assert RKTR.long_name_base == "Relaxed Key Term Recall"
+        assert RKTR.long_name_base == "Relaxed Key-Term Recall"
 
     def test_description(self):
         assert len(RKTR.description) > 0

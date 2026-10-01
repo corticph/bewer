@@ -176,7 +176,7 @@ class _KTStats_(ExampleMetric):
 @METRIC_REGISTRY.register("_kt_stats", tokenizer="key_term")
 class _KTStats(Metric):
     short_name_base = "_KTStats"
-    long_name_base = "Key Term Statistics"
+    long_name_base = "Key-Term Statistics"
     description = (
         "Private metric that computes shared key term statistics (num_ref_terms, num_hyp_terms, TP, FN, FP) "
         "used by KTR, KTER, KTP, and KTF. Not intended for direct use. "

@@ -30,7 +30,7 @@ class KTP_(ExampleMetric):
 @METRIC_REGISTRY.register("ktp", tokenizer="key_term")
 class KTP(Metric):
     short_name_base = "KTP"
-    long_name_base = "Key Term Precision"
+    long_name_base = "Key-Term Precision"
     description = (
         "Key term precision (KTP) is computed as TP / (TP + FP). "
         "When partial_credit=False (default, exact-match view), each key term occurrence is treated as a single unit: "

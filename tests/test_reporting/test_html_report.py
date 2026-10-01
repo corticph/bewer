@@ -240,7 +240,7 @@ class TestCustomReportMetrics:
         assert "Word Error Rate" in result
         assert "Character Error Rate" in result
         # Domain-specific key-term metrics are opt-in, not default.
-        assert "Key Term Recall" not in result
+        assert "Key-Term Recall" not in result
 
     def test_custom_metrics_list(self, sample_dataset):
         """Test that a custom metrics list controls which metrics appear."""

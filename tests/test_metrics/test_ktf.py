@@ -170,7 +170,7 @@ class TestKTFMetricAttributes:
         assert KTF.short_name_base == "KTF"
 
     def test_long_name_base(self):
-        assert KTF.long_name_base == "Key Term F-Score"
+        assert KTF.long_name_base == "Key-Term F-Score"
 
     def test_description(self):
         assert len(KTF.description) > 0

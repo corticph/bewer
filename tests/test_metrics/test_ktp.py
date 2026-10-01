@@ -158,7 +158,7 @@ class TestKTPMetricAttributes:
         assert KTP.short_name_base == "KTP"
 
     def test_long_name_base(self):
-        assert KTP.long_name_base == "Key Term Precision"
+        assert KTP.long_name_base == "Key-Term Precision"
 
     def test_description(self):
         assert len(KTP.description) > 0

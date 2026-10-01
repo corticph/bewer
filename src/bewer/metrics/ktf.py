@@ -22,7 +22,7 @@ class KTF_(ExampleMetric):
 @METRIC_REGISTRY.register("ktf", tokenizer="key_term")
 class KTF(Metric):
     short_name_base = "KTF"
-    long_name_base = "Key Term F-Score"
+    long_name_base = "Key-Term F-Score"
     description = (
         "Key term F-score (KTF) is the weighted harmonic mean of key term precision (KTP) and key term recall (KTR). "
         "The beta parameter controls the trade-off: beta > 1 weights recall more heavily, beta < 1 weights precision "

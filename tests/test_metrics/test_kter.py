@@ -267,7 +267,7 @@ class TestKTERMetricAttributes:
         assert KTER.short_name_base == "KTER"
 
     def test_long_name_base(self):
-        assert KTER.long_name_base == "Key Term Error Rate"
+        assert KTER.long_name_base == "Key-Term Error Rate"
 
     def test_description(self):
         assert len(KTER.description) > 0
