@@ -261,6 +261,8 @@ calls raise `DatasetFrozenError`. Use `clone()` to get a fresh, modifiable copy.
 | **General purpose** | | | |
 | Word Error Rate | General | `wer` | [`>`](src/bewer/metrics/wer.py) |
 | Character Error Rate | General | `cer` | [`>`](src/bewer/metrics/cer.py) |
+| Insertion Rate | General | `insertion_rate` | [`>`](src/bewer/metrics/insertion_rate.py) |
+| Punctuation Error Rate | General | `per` | [`>`](src/bewer/metrics/per.py) |
 | **Key-term metrics** | | | |
 | Key-Term Recall | Key-term | `ktr` | [`>`](src/bewer/metrics/ktr.py) |
 | Key-Term Precision | Key-term | `ktp` | [`>`](src/bewer/metrics/ktp.py) |
@@ -269,6 +271,16 @@ calls raise `DatasetFrozenError`. Use `clone()` to get a fresh, modifiable copy.
 | Key-Term False-Positive Rate | Key-term | `ktfpr` | [`>`](src/bewer/metrics/ktfpr.py) |
 | Key-Term Character Error Rate | Key-term | `ktcer` | [`>`](src/bewer/metrics/ktcer.py) |
 | Relaxed Key-Term Recall | Key-term | `rktr` | [`>`](src/bewer/metrics/rktr.py) |
+| **Orthographically complex terms** | | | |
+| Orthographically Complex Term Recall | Key-term | `orthographically_complex_term_recall` | [`>`](src/bewer/metrics/orthographically_complex_term.py) |
+| Orthographically Complex Term Precision | Key-term | `orthographically_complex_term_precision` | [`>`](src/bewer/metrics/orthographically_complex_term.py) |
+| Orthographically Complex Term F-Score | Key-term | `orthographically_complex_term_fscore` | [`>`](src/bewer/metrics/orthographically_complex_term.py) |
 | **Alignments** | | | |
 | Levenshtein Alignment | Alignment | `levenshtein` | [`>`](src/bewer/metrics/levenshtein.py) |
 | Error Alignment | Alignment | `error_align` | [`>`](src/bewer/metrics/error_align.py) |
+| **Dataset statistics** | | | |
+| Dataset Summary | Summary | `summary` | [`>`](src/bewer/metrics/summary.py) |
+
+The orthographically complex term metrics are the key-term metrics over a vocabulary extracted from
+the references by orthography — acronyms, alphanumerics and hyphen compounds such as `MRI`, `HbA1c`
+and `CT-scan` — so unlike the rest of the key-term family they need no vocabulary of your own.
