@@ -550,3 +550,132 @@ class TestSurfaceFormRendering:
         result = generate_alignment_html_lines(alignment, surface=True)
         ref_text = " ".join(ref for ref, _ in result)
         assert "kw" in ref_text
+
+
+class TestPreSeparatorLineBreaking:
+    """Tests that line breaks occur after inter-token separators, not before."""
+
+    def test_separator_not_at_line_start(self):
+        """Inter-token separator should not be the first thing on a new line."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("one two three four five six seven eight nine ten", "one two three four five six seven eight nine ten")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True, max_line_length=20)
+        for ref_line, hyp_line in result:
+            assert not ref_line.startswith("&nbsp;")
+            assert not hyp_line.startswith('<span style="background-color:')
+
+    def test_separator_attached_to_preceding_token(self):
+        """Separator stays attached to the token it follows, not the next token."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("one two three", "one two three")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True, max_line_length=10)
+        for ref_line, _ in result:
+            assert not ref_line.startswith("&nbsp;")
+
+    def test_no_trailing_separator(self):
+        """Lines should not end with a trailing separator (pre-separator approach)."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("hello world", "hello world")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_line = result[-1][0]
+        assert not ref_line.endswith("&nbsp;")
+
+
+class TestOneSidedOpInterTokenAlignment:
+    """Tests that one-sided ops (INSERT/DELETE) align inter-token content correctly."""
+
+    def test_delete_hyp_space_aligns_with_first_ref_gap(self):
+        """For DELETE, the hyp inter-token space should align with the first ref gap."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("the old cat sat", "the cat sat")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_html = result[0][0]
+        hyp_html = result[0][1]
+
+        # The hyp's real &nbsp; (not padding) should appear right after "the",
+        # aligned with the ref's first space (before "old").
+        assert "the</span>&nbsp;" in ref_html
+        assert "the</span>&nbsp;" in hyp_html
+
+    def test_insert_ref_space_aligns_with_first_hyp_gap(self):
+        """For INSERT, the ref inter-token space should align with the first hyp gap."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("the cat sat", "the big cat sat")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_html = result[0][0]
+        hyp_html = result[0][1]
+
+        # The ref's real &nbsp; should appear right after "the",
+        # aligned with the hyp's first space (before "big").
+        assert "the</span>&nbsp;" in ref_html
+        assert "the</span>&nbsp;" in hyp_html
+
+    def test_delete_second_ref_gap_has_padding_on_hyp(self):
+        """For DELETE, the second ref inter-token gap should have padding on the hyp side."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("the old cat sat", "the cat sat")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_html = result[0][0]
+        hyp_html = result[0][1]
+
+        # After "old" on the ref side, the separator should be a real &nbsp;.
+        # After the padding (for "old") on the hyp side, the separator should be padding.
+        # The hyp side should have: the + &nbsp; + PAD(3 for old) + PAD(1 for separator) + cat
+        # i.e., padding background appears between the first &nbsp; and "cat"
+        assert "background-color:" in hyp_html
+        assert "background-color:" not in ref_html or "dc3545" in ref_html  # ref has red for delete, not padding
+
+    def test_insert_second_hyp_gap_has_padding_on_ref(self):
+        """For INSERT, the second hyp inter-token gap should have padding on the ref side."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("the cat sat", "the big cat sat")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_html = result[0][0]
+        hyp_html = result[0][1]
+
+        # The ref side should have: the + &nbsp; + PAD(3 for big) + PAD(1 for separator) + cat
+        assert "background-color:" in ref_html
+        # The hyp side should have: the + &nbsp; + big + &nbsp; + cat (no padding for big)
+        assert "17a2b8" in hyp_html  # teal color for insert
+
+    def test_consecutive_deletes(self):
+        """Consecutive DELETE ops handle inter-token content correctly."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("a b c d e", "a e")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        # Should produce valid output without errors
+        assert len(result) >= 1
+
+    def test_consecutive_inserts(self):
+        """Consecutive INSERT ops handle inter-token content correctly."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("a e", "a b c d e")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        assert len(result) >= 1
