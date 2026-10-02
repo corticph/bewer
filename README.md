@@ -193,8 +193,8 @@ print(f"{wer.value:.2%} = {wer.num_edits}/{wer.ref_length}")
 ```
 
 Most metrics are defined by aggregating over example-level values. This structure is
-reflected in `bewer`, which also exposes example-level metrics, that can be accessed through
-individual examples or directly from the metric object itself.
+reflected in `bewer`, which also exposes example-level metrics accessible through
+the example objects or directly from the metric object itself.
 
 ```python
 wer = dataset.metrics.wer()
