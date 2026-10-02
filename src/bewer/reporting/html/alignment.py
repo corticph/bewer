@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from bewer.alignment.alignment import Alignment
     from bewer.alignment.op import Op
 
-__all__ = ["generate_alignment_html_lines"]
+__all__ = ["generate_alignment_html_lines", "generate_alignment_html_lines_dual"]
 
 
 def _eliminate_newlines(text: str) -> str:
@@ -373,4 +373,177 @@ def generate_alignment_html_lines(
             prev_hyp_end = op.hyp_span.stop
 
     lines.append((ref_line, hyp_line))
+    return lines
+
+
+def generate_alignment_html_lines_dual(
+    alignment: "Alignment",
+    max_line_length: int = 100,
+    color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+    allow_subset_matches: bool = False,
+) -> list[tuple[tuple[str, str], tuple[str, str]]]:
+    """Render the alignment as both normalized and surface HTML views with synchronized line breaks.
+
+    Line breaks are shared: a break occurs when either view would exceed ``max_line_length``.
+    This ensures the same tokens appear on the same lines in both views for easy comparison.
+
+    Args:
+        alignment: The alignment to render.
+        max_line_length: The maximum character length per line for wrapping.
+        color_scheme: The color scheme to use for display.
+        allow_subset_matches: If True, allow subset key term matches.
+
+    Returns:
+        A list of tuples ``((norm_ref, norm_hyp), (surf_ref, surf_hyp))`` per line.
+    """
+    has_surface = alignment.src is not None
+    if has_surface:
+        ref_std = alignment.src.ref.standardized
+        hyp_std = alignment.src.hyp.standardized
+    else:
+        ref_std = None
+        hyp_std = None
+
+    start_indices, stop_indices, open_indices = _get_key_term_indicators(
+        alignment, allow_subset_matches=allow_subset_matches
+    )
+
+    n_ops = len(alignment)
+    if n_ops == 0:
+        return [(("", ""), ("", ""))]
+
+    next_ref_span_after: list[int | None] = [None] * n_ops
+    next_hyp_span_after: list[int | None] = [None] * n_ops
+    last_ref: int | None = None
+    last_hyp: int | None = None
+    for i in range(n_ops - 1, -1, -1):
+        next_ref_span_after[i] = last_ref
+        next_hyp_span_after[i] = last_hyp
+        if alignment[i].ref_span is not None:
+            last_ref = i
+        if alignment[i].hyp_span is not None:
+            last_hyp = i
+
+    norm_ref_line, norm_hyp_line = "", ""
+    surf_ref_line, surf_hyp_line = "", ""
+    norm_length = 0
+    surf_length = 0
+    prev_ref_end = 0
+    prev_hyp_end = 0
+
+    lines: list[tuple[tuple[str, str], tuple[str, str]]] = []
+    for op_idx, op in enumerate(alignment):
+        # --- Pre-separator (inter-token content before this op) ---
+        if op_idx > 0:
+            prev_op = alignment[op_idx - 1]
+            prev_was_delete = prev_op.type == OpType.DELETE
+            prev_was_insert = prev_op.type == OpType.INSERT
+            prev_kt_open = (op_idx - 1) in open_indices
+
+            # Normalized separator (always &nbsp;)
+            norm_sep_length = 1
+            norm_ref_sep = format_key_term("&nbsp;") if prev_kt_open else "&nbsp;"
+            norm_hyp_sep = get_html_padding(1, color_scheme=color_scheme) if prev_op.hyp_right_partial else "&nbsp;"
+
+            # Surface separator
+            if has_surface:
+                if op.ref_span is not None and not prev_was_insert:
+                    ref_inter_raw = ref_std[prev_ref_end : op.ref_span.start]
+                elif op.type == OpType.INSERT and not prev_was_insert:
+                    next_ref_idx = next_ref_span_after[op_idx]
+                    end = alignment[next_ref_idx].ref_span.start if next_ref_idx is not None else prev_ref_end
+                    ref_inter_raw = ref_std[prev_ref_end:end]
+                else:
+                    ref_inter_raw = ""
+
+                if op.hyp_span is not None and not prev_was_delete:
+                    hyp_inter_raw = hyp_std[prev_hyp_end : op.hyp_span.start]
+                elif op.type == OpType.DELETE and not prev_was_delete:
+                    next_hyp_idx = next_hyp_span_after[op_idx]
+                    end = alignment[next_hyp_idx].hyp_span.start if next_hyp_idx is not None else prev_hyp_end
+                    hyp_inter_raw = hyp_std[prev_hyp_end:end]
+                else:
+                    hyp_inter_raw = ""
+
+                ref_inter_text = _eliminate_newlines(ref_inter_raw)
+                hyp_inter_text = _eliminate_newlines(hyp_inter_raw)
+                ref_inter_len = len(ref_inter_text)
+                hyp_inter_len = len(hyp_inter_text)
+                surf_sep_length = max(ref_inter_len, hyp_inter_len, 1)
+
+                surf_ref_sep = _escape_and_nbsp(ref_inter_text)
+                surf_hyp_sep = _escape_and_nbsp(hyp_inter_text)
+
+                if ref_inter_len < surf_sep_length:
+                    surf_ref_sep += get_html_padding(surf_sep_length - ref_inter_len, color_scheme)
+                if hyp_inter_len < surf_sep_length:
+                    surf_hyp_sep += get_html_padding(surf_sep_length - hyp_inter_len, color_scheme)
+
+                if prev_kt_open:
+                    surf_ref_sep = format_key_term(surf_ref_sep)
+
+                if prev_op.hyp_right_partial:
+                    surf_hyp_sep = get_html_padding(surf_sep_length, color_scheme)
+            else:
+                surf_sep_length = 1
+                surf_ref_sep = norm_ref_sep
+                surf_hyp_sep = norm_hyp_sep
+        else:
+            norm_sep_length = 0
+            surf_sep_length = 0
+            norm_ref_sep = norm_hyp_sep = ""
+            surf_ref_sep = surf_hyp_sep = ""
+
+        # --- Op content ---
+        norm_ref_str, norm_hyp_str, norm_op_length = format_alignment_op_html(op, color_scheme=color_scheme)
+
+        if has_surface:
+            ref_text = ref_std[op.ref_span] if op.ref_span is not None else None
+            hyp_text = hyp_std[op.hyp_span] if op.hyp_span is not None else None
+            surf_ref_str, surf_hyp_str, surf_op_length = format_alignment_op_html(
+                op, color_scheme=color_scheme, ref_text=ref_text, hyp_text=hyp_text
+            )
+        else:
+            surf_ref_str, surf_hyp_str, surf_op_length = norm_ref_str, norm_hyp_str, norm_op_length
+
+        is_kt_start = op_idx in start_indices
+        is_kt_end = op_idx in stop_indices
+        is_kt = is_kt_start or is_kt_end or op_idx in open_indices
+        if is_kt:
+            norm_ref_str = format_key_term(norm_ref_str, start=is_kt_start, end=is_kt_end)
+            surf_ref_str = format_key_term(surf_ref_str, start=is_kt_start, end=is_kt_end)
+
+        # --- Add separators to current lines ---
+        norm_ref_line += norm_ref_sep
+        norm_hyp_line += norm_hyp_sep
+        norm_length += norm_sep_length
+
+        surf_ref_line += surf_ref_sep
+        surf_hyp_line += surf_hyp_sep
+        surf_length += surf_sep_length
+
+        # --- Line wrap: break when EITHER view would exceed max ---
+        if (norm_length + norm_op_length > max_line_length or surf_length + surf_op_length > max_line_length) and (
+            norm_length > 0 or surf_length > 0
+        ):
+            lines.append(((norm_ref_line, norm_hyp_line), (surf_ref_line, surf_hyp_line)))
+            norm_ref_line, norm_hyp_line = "", ""
+            surf_ref_line, surf_hyp_line = "", ""
+            norm_length = 0
+            surf_length = 0
+
+        norm_ref_line += norm_ref_str
+        norm_hyp_line += norm_hyp_str
+        norm_length += norm_op_length
+
+        surf_ref_line += surf_ref_str
+        surf_hyp_line += surf_hyp_str
+        surf_length += surf_op_length
+
+        if op.ref_span is not None:
+            prev_ref_end = op.ref_span.stop
+        if op.hyp_span is not None:
+            prev_hyp_end = op.hyp_span.stop
+
+    lines.append(((norm_ref_line, norm_hyp_line), (surf_ref_line, surf_hyp_line)))
     return lines

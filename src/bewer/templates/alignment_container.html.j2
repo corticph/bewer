@@ -1,4 +1,5 @@
 <div class="alignment-container">
+    {%- set dual_lines = alignment._to_html_lines_dual(color_scheme=color_scheme) %}
     <table class="alignment-table alignment-normalized">
         <colgroup>
             <col style="width: 3ch;">
@@ -9,16 +10,16 @@
             <th colspan="3">Example {{ title_index | default('-', true) }}</th>
         </tr>
 
-        {%- for ref_line, hyp_line in alignment._to_html_lines(color_scheme=color_scheme, surface=false) %}
+        {%- for norm_line, surf_line in dual_lines %}
         <tr class="alignment-row">
             <td class="alignment-table-lines">{{loop.index}}</td>
             <td class="alignment-table-names">{{ labels.REF }}</td>
-            <td>{{ ref_line | safe }}</td>
+            <td>{{ norm_line[0] | safe }}</td>
         </tr>
         <tr class="alignment-row">
             <td class="alignment-table-lines"></td>
             <td class="alignment-table-names">{{ labels.HYP }}</td>
-            <td>{{ hyp_line | safe }}</td>
+            <td>{{ norm_line[1] | safe }}</td>
         </tr>
         {%- endfor %}
     </table>
@@ -32,16 +33,16 @@
             <th colspan="3">Example {{ title_index | default('-', true) }}</th>
         </tr>
 
-        {%- for ref_line, hyp_line in alignment._to_html_lines(color_scheme=color_scheme, surface=true) %}
+        {%- for norm_line, surf_line in dual_lines %}
         <tr class="alignment-row">
             <td class="alignment-table-lines">{{loop.index}}</td>
             <td class="alignment-table-names">{{ labels.REF }}</td>
-            <td>{{ ref_line | safe }}</td>
+            <td>{{ surf_line[0] | safe }}</td>
         </tr>
         <tr class="alignment-row">
             <td class="alignment-table-lines"></td>
             <td class="alignment-table-names">{{ labels.HYP }}</td>
-            <td>{{ hyp_line | safe }}</td>
+            <td>{{ surf_line[1] | safe }}</td>
         </tr>
         {%- endfor %}
     </table>

@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, Optional, Union
 
 from bewer.alignment.op_type import OpType
-from bewer.reporting.html.alignment import generate_alignment_html_lines as _generate_alignment_html_lines
+from bewer.reporting.html.alignment import (
+    generate_alignment_html_lines as _generate_alignment_html_lines,
+)
+from bewer.reporting.html.alignment import (
+    generate_alignment_html_lines_dual as _generate_alignment_html_lines_dual,
+)
 from bewer.reporting.html.color_schemes import HTMLDefaultAlignmentColors
 from bewer.reporting.python.alignment import DefaultColorScheme, display_basic_aligned
 
@@ -240,6 +245,24 @@ class Alignment(tuple["Op", ...]):
         """
         return _generate_alignment_html_lines(
             self, color_scheme=color_scheme, allow_subset_matches=allow_subset_matches, surface=surface
+        )
+
+    def _to_html_lines_dual(
+        self,
+        color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+        allow_subset_matches: bool = False,
+    ) -> list[tuple[tuple[str, str], tuple[str, str]]]:
+        """Render the alignment as both normalized and surface HTML views with synchronized line breaks.
+
+        Args:
+            color_scheme (type[HTMLAlignmentColors]): Color scheme for display.
+            allow_subset_matches: If True, allow subset key term matches when computing key term indicators.
+
+        Returns:
+            A list of tuples ``((norm_ref, norm_hyp), (surf_ref, surf_hyp))`` per line.
+        """
+        return _generate_alignment_html_lines_dual(
+            self, color_scheme=color_scheme, allow_subset_matches=allow_subset_matches
         )
 
     def __getitem__(self, index: int | slice) -> Union[Op, "Alignment"]:
