@@ -243,6 +243,12 @@ of [`Op`](src/bewer/alignment/op.py) objects, each representing a match, substit
 or deletion between hypothesis and reference. Edit counts are available as supportive values.
 
 ```python
+dataset = Dataset(language="en")
+dataset.add(
+    ref="an example with different type of errors",
+    hyp="an odd example with diff type errors",
+)
+
 # Access alignments at the example level
 example = dataset[0]
 alignment = example.metrics.levenshtein().alignment
@@ -254,9 +260,9 @@ assert alignment.num_edits >= alignment.num_substitutions
 # Print a color-coded two-row alignment in the console
 alignment.display()
 ```
-```python
-# TODO: Example of color-coded alignment
-```
+
+<img src="https://raw.githubusercontent.com/corticph/bewer/main/.github/assets/alignment-display.png" alt="A color-coded two-row alignment, showing an insertion, a substitution and a deletion" width="100%"/>
+
 ### Lazy Computation and Caching
 
 Metric values and pipeline attributes are computed lazily. The dependencies between the pipeline
