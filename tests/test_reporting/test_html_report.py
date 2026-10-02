@@ -359,3 +359,47 @@ class TestKeyTermIndicators:
         result1 = render_report_html(dataset_with_key_terms)
         result2 = render_report_html(dataset_with_key_terms)
         assert result1 == result2
+
+
+class TestSurfaceToggle:
+    """Tests for the surface form toggle in HTML reports."""
+
+    def test_report_contains_both_views(self, sample_dataset):
+        """Report HTML contains both normalized and surface alignment tables."""
+        result = render_report_html(sample_dataset)
+        assert "alignment-normalized" in result
+        assert "alignment-surface" in result
+
+    def test_report_contains_toggle_checkbox(self, sample_dataset):
+        """Report HTML contains the surface toggle checkbox."""
+        result = render_report_html(sample_dataset)
+        assert 'id="surface-toggle"' in result
+        assert "Surface form" in result
+
+    def test_report_contains_toggle_css(self, sample_dataset):
+        """Report HTML contains CSS for surface view toggling."""
+        result = render_report_html(sample_dataset)
+        assert ".alignment-surface" in result
+        assert "body.surface-view" in result
+
+    def test_report_contains_toggle_js(self, sample_dataset):
+        """Report HTML contains JS for surface view toggling."""
+        result = render_report_html(sample_dataset)
+        assert "surface-toggle" in result
+        assert "addEventListener" in result
+        assert "surface-view" in result
+
+    def test_surface_shows_cased_text(self, sample_dataset):
+        """Surface view in report contains cased (standardized) text."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("Hello World", "hello world")
+        result = render_report_html(ds)
+        assert "Hello" in result
+
+    def test_surface_view_hidden_by_default(self, sample_dataset):
+        """Surface view is hidden by default via CSS display:none."""
+        result = render_report_html(sample_dataset)
+        assert ".alignment-surface" in result
+        assert "display: none" in result

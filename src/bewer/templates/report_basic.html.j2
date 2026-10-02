@@ -178,7 +178,25 @@
         .icon svg path {
             fill: #00000013;
         }
-    </style>
+        .alignment-surface {
+            display: none;
+        }
+        body.surface-view .alignment-normalized {
+            display: none;
+        }
+        body.surface-view .alignment-surface {
+            display: table;
+        }
+        .surface-toggle {
+            display: inline-block;
+            margin: 0px 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .surface-toggle input {
+            margin-right: 4px;
+        }
+     </style>
 </head>
 <body>
 
@@ -221,5 +239,10 @@
 {{- alignment_gallery | indent_tabs(2) | safe }}
 
 
+    <script>
+        document.getElementById("surface-toggle")?.addEventListener("change", function() {
+            document.body.classList.toggle("surface-view", this.checked);
+        });
+    </script>
 </body>
 </html>

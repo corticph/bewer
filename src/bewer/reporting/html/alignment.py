@@ -20,6 +20,27 @@ if TYPE_CHECKING:
 __all__ = ["generate_alignment_html_lines"]
 
 
+def _eliminate_newlines(text: str) -> str:
+    """Remove newline characters, replacing with a space when no adjacent non-newline whitespace."""
+    result = []
+    for i, c in enumerate(text):
+        if c == "\n":
+            prev_char = text[i - 1] if i > 0 else ""
+            next_char = text[i + 1] if i < len(text) - 1 else ""
+            has_adjacent_ws = (prev_char.isspace() and prev_char != "\n") or (next_char.isspace() and next_char != "\n")
+            if has_adjacent_ws:
+                continue
+            result.append(" ")
+        else:
+            result.append(c)
+    return "".join(result)
+
+
+def _escape_and_nbsp(text: str) -> str:
+    """HTML-escape text and convert spaces to &nbsp; entities."""
+    return escape(text).replace(" ", "&nbsp;")
+
+
 def get_html_padding(length: int, color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors) -> str:
     """Get an HTML span representing padding spaces.
 
@@ -35,15 +56,20 @@ def get_html_padding(length: int, color_scheme: type[HTMLAlignmentColors] = HTML
 
 
 def format_match_op_html(
-    op: "Op", color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors
+    op: "Op",
+    color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+    ref_text: str | None = None,
+    hyp_text: str | None = None,
 ) -> tuple[str, str, int]:
     """Format a match operation for HTML display."""
-    len_ref = len(op.ref)
-    len_hyp = len(op.hyp)
+    ref = ref_text if ref_text is not None else op.ref
+    hyp = hyp_text if hyp_text is not None else op.hyp
+    len_ref = len(ref)
+    len_hyp = len(hyp)
     length = max(len_ref, len_hyp)
 
-    ref_str = f'<span style="color: {color_scheme.MATCH};">{escape(op.ref)}</span>'
-    hyp_str = f'<span style="color: {color_scheme.MATCH};">{escape(op.hyp)}</span>'
+    ref_str = f'<span style="color: {color_scheme.MATCH};">{escape(ref)}</span>'
+    hyp_str = f'<span style="color: {color_scheme.MATCH};">{escape(hyp)}</span>'
 
     if len_ref < length:
         ref_str += get_html_padding(length - len_ref, color_scheme=color_scheme)
@@ -54,15 +80,20 @@ def format_match_op_html(
 
 
 def format_substitute_op_html(
-    op: "Op", color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors
+    op: "Op",
+    color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+    ref_text: str | None = None,
+    hyp_text: str | None = None,
 ) -> tuple[str, str, int]:
     """Format a substitute operation for HTML display."""
-    len_ref = len(op.ref)
-    len_hyp = len(op.hyp)
+    ref = ref_text if ref_text is not None else op.ref
+    hyp = hyp_text if hyp_text is not None else op.hyp
+    len_ref = len(ref)
+    len_hyp = len(hyp)
     length = max(len_ref, len_hyp)
 
-    ref_str = f'<span style="color: {color_scheme.SUB};">{escape(op.ref)}</span>'
-    hyp_str = f'<span style="color: {color_scheme.SUB};">{escape(op.hyp)}</span>'
+    ref_str = f'<span style="color: {color_scheme.SUB};">{escape(ref)}</span>'
+    hyp_str = f'<span style="color: {color_scheme.SUB};">{escape(hyp)}</span>'
 
     if len_ref < length:
         ref_str += get_html_padding(length - len_ref, color_scheme=color_scheme)
@@ -73,45 +104,56 @@ def format_substitute_op_html(
 
 
 def format_insert_op_html(
-    op: "Op", color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors
+    op: "Op",
+    color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+    hyp_text: str | None = None,
 ) -> tuple[str, str, int]:
     """Format an insert operation for HTML display."""
-    len_hyp = len(op.hyp)
-    hyp_str = f'<span style="color: {color_scheme.INS};">{escape(op.hyp)}</span>'
+    hyp = hyp_text if hyp_text is not None else op.hyp
+    len_hyp = len(hyp)
+    hyp_str = f'<span style="color: {color_scheme.INS};">{escape(hyp)}</span>'
     ref_str = get_html_padding(len_hyp, color_scheme=color_scheme)
     return ref_str, hyp_str, len_hyp
 
 
 def format_delete_op_html(
-    op: "Op", color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors
+    op: "Op",
+    color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+    ref_text: str | None = None,
 ) -> tuple[str, str, int]:
     """Format a delete operation for HTML display."""
-    len_ref = len(op.ref)
-    ref_str = f'<span style="color: {color_scheme.DEL};">{escape(op.ref)}</span>'
+    ref = ref_text if ref_text is not None else op.ref
+    len_ref = len(ref)
+    ref_str = f'<span style="color: {color_scheme.DEL};">{escape(ref)}</span>'
     hyp_str = get_html_padding(len_ref, color_scheme=color_scheme)
     return ref_str, hyp_str, len_ref
 
 
 def format_alignment_op_html(
-    op: "Op", color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors
+    op: "Op",
+    color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+    ref_text: str | None = None,
+    hyp_text: str | None = None,
 ) -> tuple[str, str, int]:
     """Format an alignment operation for HTML display.
 
     Args:
         op: The alignment operation.
         color_scheme: The color scheme to use.
+        ref_text: Optional surface-form text to display instead of ``op.ref``.
+        hyp_text: Optional surface-form text to display instead of ``op.hyp``.
 
     Returns:
         A tuple containing the formatted ref and hyp HTML strings and the unformatted length.
     """
     if op.type == OpType.MATCH:
-        return format_match_op_html(op, color_scheme=color_scheme)
+        return format_match_op_html(op, color_scheme=color_scheme, ref_text=ref_text, hyp_text=hyp_text)
     if op.type == OpType.SUBSTITUTE:
-        return format_substitute_op_html(op, color_scheme=color_scheme)
+        return format_substitute_op_html(op, color_scheme=color_scheme, ref_text=ref_text, hyp_text=hyp_text)
     if op.type == OpType.INSERT:
-        return format_insert_op_html(op, color_scheme=color_scheme)
+        return format_insert_op_html(op, color_scheme=color_scheme, hyp_text=hyp_text)
     if op.type == OpType.DELETE:
-        return format_delete_op_html(op, color_scheme=color_scheme)
+        return format_delete_op_html(op, color_scheme=color_scheme, ref_text=ref_text)
     raise ValueError(f"Unknown operation type: {op.type}")
 
 
@@ -181,6 +223,7 @@ def generate_alignment_html_lines(
     max_line_length: int = 100,
     color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
     allow_subset_matches: bool = False,
+    surface: bool = False,
 ) -> list[tuple[str, str]]:
     """Render the alignment as an HTML table.
 
@@ -192,20 +235,44 @@ def generate_alignment_html_lines(
         alignment: The alignment to render.
         max_line_length: The maximum character length per line for wrapping.
         color_scheme: The color scheme to use for display.
+        surface: If True, render the surface (standardized) form of tokens and include
+            inter-token content (punctuation, whitespace) between ops. Requires
+            ``alignment.src`` to be set. Falls back to normalized form if unavailable.
 
     Returns:
         A list of tuples, each containing the reference and hypothesis HTML strings for each line.
     """
+    if surface and alignment.src is not None:
+        ref_std = alignment.src.ref.standardized
+        hyp_std = alignment.src.hyp.standardized
+    else:
+        surface = False
+        ref_std = None
+        hyp_std = None
+
     ref_line, hyp_line = "", ""
     current_length = 0
+    prev_ref_end = 0
+    prev_hyp_end = 0
 
     start_indices, stop_indices, open_indices = _get_key_term_indicators(
         alignment, allow_subset_matches=allow_subset_matches
     )
 
     lines = []
+    n_ops = len(alignment)
     for op_idx, op in enumerate(alignment):
-        ref_str, hyp_str, op_length = format_alignment_op_html(op, color_scheme=color_scheme)
+        # --- Op content ---
+        if surface:
+            ref_text = ref_std[op.ref_span] if op.ref_span is not None else None
+            hyp_text = hyp_std[op.hyp_span] if op.hyp_span is not None else None
+        else:
+            ref_text = None
+            hyp_text = None
+
+        ref_str, hyp_str, op_length = format_alignment_op_html(
+            op, color_scheme=color_scheme, ref_text=ref_text, hyp_text=hyp_text
+        )
 
         is_kt_start = op_idx in start_indices
         is_kt_end = op_idx in stop_indices
@@ -219,9 +286,61 @@ def generate_alignment_html_lines(
             ref_line, hyp_line = "", ""
             current_length = 0
 
-        ref_line += ref_str + (format_key_term("&nbsp;") if is_kt_open else "&nbsp;")
-        hyp_line += hyp_str + (get_html_padding(1, color_scheme=color_scheme) if op.hyp_right_partial else "&nbsp;")
-        current_length += op_length + 1
+        ref_line += ref_str
+        hyp_line += hyp_str
+        current_length += op_length
+
+        # --- Update prev end positions ---
+        if op.ref_span is not None:
+            prev_ref_end = op.ref_span.stop
+        if op.hyp_span is not None:
+            prev_hyp_end = op.hyp_span.stop
+
+        # --- Separator after op ---
+        if surface and op_idx < n_ops - 1:
+            next_op = alignment[op_idx + 1]
+            ref_inter_raw = ""
+            hyp_inter_raw = ""
+            if next_op.ref_span is not None:
+                ref_inter_raw = ref_std[prev_ref_end : next_op.ref_span.start]
+            if next_op.hyp_span is not None:
+                hyp_inter_raw = hyp_std[prev_hyp_end : next_op.hyp_span.start]
+
+            ref_inter_text = _eliminate_newlines(ref_inter_raw)
+            hyp_inter_text = _eliminate_newlines(hyp_inter_raw)
+
+            ref_inter_len = len(ref_inter_text)
+            hyp_inter_len = len(hyp_inter_text)
+            sep_length = max(ref_inter_len, hyp_inter_len, 1)
+
+            ref_inter = _escape_and_nbsp(ref_inter_text)
+            hyp_inter = _escape_and_nbsp(hyp_inter_text)
+
+            if ref_inter_len < sep_length:
+                ref_inter += get_html_padding(sep_length - ref_inter_len, color_scheme)
+            if hyp_inter_len < sep_length:
+                hyp_inter += get_html_padding(sep_length - hyp_inter_len, color_scheme)
+
+            if is_kt_open:
+                ref_inter = format_key_term(ref_inter)
+
+            if op.hyp_right_partial:
+                hyp_inter = get_html_padding(sep_length, color_scheme)
+        else:
+            sep_ref = format_key_term("&nbsp;") if is_kt_open else "&nbsp;"
+            sep_hyp = get_html_padding(1, color_scheme=color_scheme) if op.hyp_right_partial else "&nbsp;"
+            sep_length = 1
+            ref_inter = sep_ref
+            hyp_inter = sep_hyp
+
+        if current_length + sep_length > max_line_length and current_length > 0:
+            lines.append((ref_line, hyp_line))
+            ref_line, hyp_line = "", ""
+            current_length = 0
+
+        ref_line += ref_inter
+        hyp_line += hyp_inter
+        current_length += sep_length
 
     lines.append((ref_line, hyp_line))
     return lines
