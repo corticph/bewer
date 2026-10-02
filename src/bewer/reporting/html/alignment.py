@@ -288,7 +288,7 @@ def generate_alignment_html_lines(
                 # Ref inter-token
                 if op.ref_span is not None and not prev_was_insert:
                     ref_inter_raw = ref_std[prev_ref_end : op.ref_span.start]
-                elif op.type == OpType.INSERT:
+                elif op.type == OpType.INSERT and not prev_was_insert:
                     next_ref_idx = next_ref_span_after[op_idx]
                     end = alignment[next_ref_idx].ref_span.start if next_ref_idx is not None else prev_ref_end
                     ref_inter_raw = ref_std[prev_ref_end:end]
@@ -298,7 +298,7 @@ def generate_alignment_html_lines(
                 # Hyp inter-token
                 if op.hyp_span is not None and not prev_was_delete:
                     hyp_inter_raw = hyp_std[prev_hyp_end : op.hyp_span.start]
-                elif op.type == OpType.DELETE:
+                elif op.type == OpType.DELETE and not prev_was_delete:
                     next_hyp_idx = next_hyp_span_after[op_idx]
                     end = alignment[next_hyp_idx].hyp_span.start if next_hyp_idx is not None else prev_hyp_end
                     hyp_inter_raw = hyp_std[prev_hyp_end:end]
