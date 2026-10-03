@@ -883,24 +883,24 @@ def generate_alignment_html_lines_multi(
     lines: list[list[tuple[tuple[str, str], tuple[str, str]]]] = []
 
     for ref_token_idx in range(max_ref_tokens):
-        # Add first separator (inter-token between ref tokens) to current line before break check
-        if ref_token_idx > 0:
-            first_sep_norm_lens = [0] * n_alignments
-            first_sep_surf_lens = [0] * n_alignments
-            for a in range(n_alignments):
-                if ref_token_idx >= len(all_units[a]):
-                    continue
-                if all_units[a][ref_token_idx]:
-                    sep = all_units[a][ref_token_idx][0][0]
-                    norm_ref_lines[a] += sep[0]
-                    norm_hyp_lines[a] += sep[1]
-                    norm_lengths[a] += sep[2]
-                    surf_ref_lines[a] += sep[3]
-                    surf_hyp_lines[a] += sep[4]
-                    surf_lengths[a] += sep[5]
-                    first_sep_norm_lens[a] = sep[2]
-                    first_sep_surf_lens[a] = sep[5]
+        # Add first separator (inter-token between ref tokens, or leading prefix for group 0)
+        first_sep_norm_lens = [0] * n_alignments
+        first_sep_surf_lens = [0] * n_alignments
+        for a in range(n_alignments):
+            if ref_token_idx >= len(all_units[a]):
+                continue
+            if all_units[a][ref_token_idx]:
+                sep = all_units[a][ref_token_idx][0][0]
+                norm_ref_lines[a] += sep[0]
+                norm_hyp_lines[a] += sep[1]
+                norm_lengths[a] += sep[2]
+                surf_ref_lines[a] += sep[3]
+                surf_hyp_lines[a] += sep[4]
+                surf_lengths[a] += sep[5]
+                first_sep_norm_lens[a] = sep[2]
+                first_sep_surf_lens[a] = sep[5]
 
+        if ref_token_idx > 0:
             needs_break = False
             for a in range(n_alignments):
                 if ref_token_idx >= len(all_units[a]):
