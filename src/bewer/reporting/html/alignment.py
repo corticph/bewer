@@ -545,6 +545,26 @@ def generate_alignment_html_lines_dual(
         if op.hyp_span is not None:
             prev_hyp_end = op.hyp_span.stop
 
+    # Trailing inter-token content after the last op
+    if has_surface:
+        ref_trail = ref_std[prev_ref_end:] if prev_ref_end < len(ref_std) else ""
+        hyp_trail = hyp_std[prev_hyp_end:] if prev_hyp_end < len(hyp_std) else ""
+        ref_trail = _eliminate_newlines(ref_trail)
+        hyp_trail = _eliminate_newlines(hyp_trail)
+        if ref_trail or hyp_trail:
+            ref_len = len(ref_trail)
+            hyp_len = len(hyp_trail)
+            sep_len = max(ref_len, hyp_len, 1)
+            surf_ref_trail = _escape_and_nbsp(ref_trail)
+            surf_hyp_trail = _escape_and_nbsp(hyp_trail)
+            if ref_len < sep_len:
+                surf_ref_trail += get_html_padding(sep_len - ref_len, color_scheme)
+            if hyp_len < sep_len:
+                surf_hyp_trail += get_html_padding(sep_len - hyp_len, color_scheme)
+            surf_ref_line += surf_ref_trail
+            surf_hyp_line += surf_hyp_trail
+            surf_length += sep_len
+
     lines.append(((norm_ref_line, norm_hyp_line), (surf_ref_line, surf_hyp_line)))
     return lines
 
@@ -714,6 +734,27 @@ def _precompute_alignment_units(
             prev_ref_end = op.ref_span.stop
         if op.hyp_span is not None:
             prev_hyp_end = op.hyp_span.stop
+
+    # Trailing separator (inter-token content after the last op)
+    if has_surface:
+        ref_trail = ref_std[prev_ref_end:] if prev_ref_end < len(ref_std) else ""
+        hyp_trail = hyp_std[prev_hyp_end:] if prev_hyp_end < len(hyp_std) else ""
+        ref_trail = _eliminate_newlines(ref_trail)
+        hyp_trail = _eliminate_newlines(hyp_trail)
+        if ref_trail or hyp_trail:
+            ref_len = len(ref_trail)
+            hyp_len = len(hyp_trail)
+            sep_len = max(ref_len, hyp_len, 1)
+            trail_ref = _escape_and_nbsp(ref_trail)
+            trail_hyp = _escape_and_nbsp(hyp_trail)
+            if ref_len < sep_len:
+                trail_ref += get_html_padding(sep_len - ref_len, color_scheme)
+            if hyp_len < sep_len:
+                trail_hyp += get_html_padding(sep_len - hyp_len, color_scheme)
+            trail_sep = ("", "", 0, trail_ref, trail_hyp, sep_len)
+            trail_content = ("", "", 0, "", "", 0)
+            if units_by_ref_token:
+                units_by_ref_token[-1].append((trail_sep, trail_content))
 
     return units_by_ref_token
 
