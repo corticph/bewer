@@ -152,3 +152,6 @@ temp/
 
 # Local TODO
 TODO.md
+
+# Magic Context plugin
+.cortexkit/
