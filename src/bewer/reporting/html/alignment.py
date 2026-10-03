@@ -37,8 +37,8 @@ def _eliminate_newlines(text: str) -> str:
 
 
 def _escape_and_nbsp(text: str) -> str:
-    """HTML-escape text and convert spaces to &nbsp; entities."""
-    return escape(text).replace(" ", "&nbsp;")
+    """HTML-escape text and convert all whitespace to &nbsp; entities."""
+    return escape(text).replace(" ", "&nbsp;").replace("\t", "&nbsp;")
 
 
 def get_html_padding(length: int, color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors) -> str:
@@ -431,6 +431,33 @@ def generate_alignment_html_lines_dual(
     prev_ref_end = 0
     prev_hyp_end = 0
 
+    # Leading prefix (inter-token content before the first op)
+    if has_surface:
+        first_ref_start = None
+        first_hyp_start = None
+        for op in alignment:
+            if op.ref_span is not None and first_ref_start is None:
+                first_ref_start = op.ref_span.start
+            if op.hyp_span is not None and first_hyp_start is None:
+                first_hyp_start = op.hyp_span.start
+            if first_ref_start is not None and first_hyp_start is not None:
+                break
+        ref_prefix = ref_std[:first_ref_start] if first_ref_start else ""
+        hyp_prefix = hyp_std[:first_hyp_start] if first_hyp_start else ""
+        ref_prefix = _eliminate_newlines(ref_prefix)
+        hyp_prefix = _eliminate_newlines(hyp_prefix)
+        if ref_prefix or hyp_prefix:
+            ref_len = len(ref_prefix)
+            hyp_len = len(hyp_prefix)
+            sep_len = max(ref_len, hyp_len, 1)
+            surf_ref_line += _escape_and_nbsp(ref_prefix)
+            surf_hyp_line += _escape_and_nbsp(hyp_prefix)
+            if ref_len < sep_len:
+                surf_ref_line += get_html_padding(sep_len - ref_len, color_scheme)
+            if hyp_len < sep_len:
+                surf_hyp_line += get_html_padding(sep_len - hyp_len, color_scheme)
+            surf_length += sep_len
+
     lines: list[tuple[tuple[str, str], tuple[str, str]]] = []
     for op_idx, op in enumerate(alignment):
         # --- Pre-separator (inter-token content before this op) ---
@@ -523,8 +550,10 @@ def generate_alignment_html_lines_dual(
         surf_length += surf_sep_length
 
         # --- Line wrap: break when EITHER view would exceed max ---
+        # Guard: don't break if the line only has the separator (no token content yet),
+        # to avoid producing separator-only lines in normalized mode.
         if (norm_length + norm_op_length > max_line_length or surf_length + surf_op_length > max_line_length) and (
-            norm_length > 0 or surf_length > 0
+            norm_length > norm_sep_length or surf_length > surf_sep_length
         ):
             lines.append(((norm_ref_line, norm_hyp_line), (surf_ref_line, surf_hyp_line)))
             norm_ref_line, norm_hyp_line = "", ""
@@ -629,6 +658,36 @@ def _precompute_alignment_units(
     prev_ref_end = 0
     prev_hyp_end = 0
     current_ref_token = -1
+
+    # Leading prefix (inter-token content before the first op)
+    if has_surface:
+        first_ref_start = None
+        first_hyp_start = None
+        for op in alignment:
+            if op.ref_span is not None and first_ref_start is None:
+                first_ref_start = op.ref_span.start
+            if op.hyp_span is not None and first_hyp_start is None:
+                first_hyp_start = op.hyp_span.start
+            if first_ref_start is not None and first_hyp_start is not None:
+                break
+        ref_prefix = ref_std[:first_ref_start] if first_ref_start else ""
+        hyp_prefix = hyp_std[:first_hyp_start] if first_hyp_start else ""
+        ref_prefix = _eliminate_newlines(ref_prefix)
+        hyp_prefix = _eliminate_newlines(hyp_prefix)
+        if ref_prefix or hyp_prefix:
+            ref_len = len(ref_prefix)
+            hyp_len = len(hyp_prefix)
+            sep_len = max(ref_len, hyp_len, 1)
+            prefix_ref = _escape_and_nbsp(ref_prefix)
+            prefix_hyp = _escape_and_nbsp(hyp_prefix)
+            if ref_len < sep_len:
+                prefix_ref += get_html_padding(sep_len - ref_len, color_scheme)
+            if hyp_len < sep_len:
+                prefix_hyp += get_html_padding(sep_len - hyp_len, color_scheme)
+            prefix_sep = ("", "", 0, prefix_ref, prefix_hyp, sep_len)
+            prefix_content = ("", "", 0, "", "", 0)
+            if units_by_ref_token:
+                units_by_ref_token[0].insert(0, (prefix_sep, prefix_content))
 
     for op_idx, op in enumerate(alignment):
         if op_idx in op_to_ref_token:
@@ -820,6 +879,8 @@ def generate_alignment_html_lines_multi(
     for ref_token_idx in range(max_ref_tokens):
         # Add first separator (inter-token between ref tokens) to current line before break check
         if ref_token_idx > 0:
+            first_sep_norm_lens = [0] * n_alignments
+            first_sep_surf_lens = [0] * n_alignments
             for a in range(n_alignments):
                 if ref_token_idx >= len(all_units[a]):
                     continue
@@ -831,6 +892,8 @@ def generate_alignment_html_lines_multi(
                     surf_ref_lines[a] += sep[3]
                     surf_hyp_lines[a] += sep[4]
                     surf_lengths[a] += sep[5]
+                    first_sep_norm_lens[a] = sep[2]
+                    first_sep_surf_lens[a] = sep[5]
 
             needs_break = False
             for a in range(n_alignments):
@@ -840,7 +903,7 @@ def generate_alignment_html_lines_multi(
                 next_surf = token_surf_content_lens[a][ref_token_idx]
                 if (
                     norm_lengths[a] + next_norm > max_line_length or surf_lengths[a] + next_surf > max_line_length
-                ) and (norm_lengths[a] > 0 or surf_lengths[a] > 0):
+                ) and (norm_lengths[a] > first_sep_norm_lens[a] or surf_lengths[a] > first_sep_surf_lens[a]):
                     needs_break = True
                     break
 
