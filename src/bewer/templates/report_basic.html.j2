@@ -277,8 +277,9 @@
         .surface-toggle-box .help-mark[data-tooltip]:hover::after {
             content: attr(data-tooltip);
             position: absolute;
-            right: 100%;
-            top: -4px;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
             white-space: normal;
             width: 200px;
             background-color: #333;
@@ -287,7 +288,7 @@
             border-radius: 4px;
             font-size: 12px;
             font-weight: normal;
-            margin-right: 8px;
+            margin-top: 4px;
             z-index: 200;
         }
         .surface-toggle-box .toggle-divider {
