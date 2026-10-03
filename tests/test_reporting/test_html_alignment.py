@@ -7,6 +7,8 @@ import pytest
 
 from bewer.alignment import Alignment, Op, OpType
 from bewer.reporting.html.alignment import (
+    _eliminate_newlines,
+    _escape_and_nbsp,
     format_alignment_op_html,
     format_delete_op_html,
     format_insert_op_html,
@@ -349,3 +351,331 @@ class TestGenerateAlignmentHtmlLines:
         assert "&lt;script&gt;" in ref_line
         assert "&lt;script&gt;" in hyp_line
         assert "<script>" not in ref_line
+
+
+class TestEliminateNewlines:
+    """Tests for _eliminate_newlines function."""
+
+    def test_no_newlines(self):
+        """Text without newlines is unchanged."""
+        assert _eliminate_newlines("Hello, world!") == "Hello, world!"
+
+    def test_single_newline_no_adjacent_ws(self):
+        """Newline with no adjacent whitespace is replaced with a space."""
+        assert _eliminate_newlines("Hello,\nWorld") == "Hello, World"
+
+    def test_newline_with_trailing_space(self):
+        """Newline preceded by a space is removed."""
+        assert _eliminate_newlines("Hello, \nWorld") == "Hello, World"
+
+    def test_newline_with_leading_space(self):
+        """Newline followed by a space is removed."""
+        assert _eliminate_newlines("Hello,\n World") == "Hello, World"
+
+    def test_double_newline(self):
+        """Two consecutive newlines each become a space (no adjacent non-newline ws)."""
+        assert _eliminate_newlines("Hello,\n\nWorld") == "Hello,  World"
+
+    def test_newline_between_spaces(self):
+        """Newline between spaces is removed."""
+        assert _eliminate_newlines("Hello, \n World") == "Hello,  World"
+
+    def test_empty_string(self):
+        """Empty string returns empty."""
+        assert _eliminate_newlines("") == ""
+
+    def test_only_newlines(self):
+        """Multiple newlines with no adjacent non-newline whitespace become spaces."""
+        assert _eliminate_newlines("\n\n\n") == "   "
+
+
+class TestEscapeAndNbsp:
+    """Tests for _escape_and_nbsp function."""
+
+    def test_plain_text(self):
+        """Plain text is escaped but otherwise unchanged."""
+        assert _escape_and_nbsp("Hello") == "Hello"
+
+    def test_spaces_become_nbsp(self):
+        """Spaces are converted to &nbsp; entities."""
+        assert _escape_and_nbsp("Hello, world") == "Hello,&nbsp;world"
+
+    def test_html_escaping(self):
+        """HTML special characters are escaped."""
+        assert _escape_and_nbsp("<script>") == "&lt;script&gt;"
+
+    def test_combined(self):
+        """HTML escaping and space conversion work together."""
+        assert _escape_and_nbsp("a < b & c > d") == "a&nbsp;&lt;&nbsp;b&nbsp;&amp;&nbsp;c&nbsp;&gt;&nbsp;d"
+
+
+class TestSurfaceFormRendering:
+    """Tests for surface form rendering in generate_alignment_html_lines."""
+
+    def _create_dataset(self):
+        """Create a dataset with punctuation and mixed case for surface testing."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("Hello, world! This is a test.", "Hello, world! This was test.")
+        return ds
+
+    def test_surface_shows_standardized_form(self):
+        """Surface mode shows the standardized (cased) form, not normalized (lowercase)."""
+        ds = self._create_dataset()
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_text = " ".join(ref for ref, _ in result)
+        assert "Hello" in ref_text
+        assert "This" in ref_text
+
+    def test_normalized_shows_lowercased_form(self):
+        """Normalized mode (default) shows the lowercased form."""
+        ds = self._create_dataset()
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment)
+        ref_text = " ".join(ref for ref, _ in result)
+        assert "hello" in ref_text
+        assert "Hello" not in ref_text
+
+    def test_surface_includes_inter_token_punctuation(self):
+        """Surface mode includes punctuation between tokens."""
+        ds = self._create_dataset()
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_text = " ".join(ref for ref, _ in result)
+        assert "," in ref_text
+        assert "!" in ref_text
+
+    def test_normalized_omits_inter_token_punctuation(self):
+        """Normalized mode does not include inter-token punctuation."""
+        ds = self._create_dataset()
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment)
+        ref_text = " ".join(ref for ref, _ in result)
+        assert "," not in ref_text
+        assert "!" not in ref_text
+
+    def test_surface_with_newlines(self):
+        """Surface mode eliminates newlines in inter-token content."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("Hello,\nworld!", "Hello,\nworld!")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        all_html = " ".join(ref for ref, _ in result) + " ".join(hyp for _, hyp in result)
+        assert "\n" not in all_html
+
+    def test_surface_fallback_without_src(self):
+        """Surface mode falls back to normalized when alignment.src is None."""
+        ops = [Op(type=OpType.MATCH, ref="hello", hyp="hello")]
+        alignment = Alignment(ops, src=Mock(vocabs=set()))
+        result = generate_alignment_html_lines(alignment, surface=True)
+        assert len(result) >= 1
+        ref_text = result[0][0]
+        assert "hello" in ref_text
+
+    def test_surface_error_align_includes_punctuation(self):
+        """Surface mode works with error_align alignments and includes punctuation."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("Hello, world! Bye.", "Hello, world! Bye.")
+        alignment = ds[0].metrics.error_align().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_text = " ".join(ref for ref, _ in result)
+        assert "," in ref_text
+        assert "!" in ref_text
+
+    def test_surface_same_op_types_and_colors(self):
+        """Surface mode uses the same op type colors as normalized mode."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("the cat", "the dog")
+        alignment = ds[0].metrics.levenshtein().alignment
+
+        norm_result = generate_alignment_html_lines(alignment)
+        surf_result = generate_alignment_html_lines(alignment, surface=True)
+
+        norm_html = " ".join(ref for ref, _ in norm_result)
+        surf_html = " ".join(ref for ref, _ in surf_result)
+
+        assert HTMLDefaultAlignmentColors.MATCH in norm_html
+        assert HTMLDefaultAlignmentColors.MATCH in surf_html
+        assert HTMLDefaultAlignmentColors.SUB in norm_html
+        assert HTMLDefaultAlignmentColors.SUB in surf_html
+
+    def test_surface_format_text_overrides(self):
+        """format_*_op_html functions accept ref_text/hyp_text overrides."""
+        op = Op(type=OpType.MATCH, ref="hello", hyp="hello")
+        ref_str, hyp_str, length = format_match_op_html(op, ref_text="Hello", hyp_text="Hello")
+        assert "Hello" in ref_str
+        assert "Hello" in hyp_str
+        assert length == 5
+
+        op = Op(type=OpType.SUBSTITUTE, ref="cat", hyp="dog")
+        ref_str, hyp_str, length = format_substitute_op_html(op, ref_text="Cat", hyp_text="Dog")
+        assert "Cat" in ref_str
+        assert "Dog" in hyp_str
+
+        op = Op(type=OpType.DELETE, ref="old", hyp=None)
+        ref_str, _, length = format_delete_op_html(op, ref_text="Old")
+        assert "Old" in ref_str
+        assert length == 3
+
+        op = Op(type=OpType.INSERT, ref=None, hyp="new")
+        _, hyp_str, length = format_insert_op_html(op, hyp_text="New")
+        assert "New" in hyp_str
+        assert length == 3
+
+    def test_surface_no_src_uses_op_text(self):
+        """Without src, surface mode uses op.ref/op.hyp (same as normalized)."""
+        ops = [Op(type=OpType.MATCH, ref="hello", hyp="hello")]
+        alignment = Alignment(ops, src=Mock(vocabs=set()))
+        norm_result = generate_alignment_html_lines(alignment, surface=False)
+        surf_result = generate_alignment_html_lines(alignment, surface=True)
+        assert norm_result == surf_result
+
+    def test_surface_key_term_highlighting(self):
+        """Key term highlighting works in surface mode."""
+        from bewer import Vocabulary
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("the quick brown fox", "the quick brown dog")
+        ds.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_text = " ".join(ref for ref, _ in result)
+        assert "kw" in ref_text
+
+
+class TestPreSeparatorLineBreaking:
+    """Tests that line breaks occur after inter-token separators, not before."""
+
+    def test_separator_not_at_line_start(self):
+        """Inter-token separator should not be the first thing on a new line."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("one two three four five six seven eight nine ten", "one two three four five six seven eight nine ten")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True, max_line_length=20)
+        for ref_line, hyp_line in result:
+            assert not ref_line.startswith("&nbsp;")
+            assert not hyp_line.startswith('<span style="background-color:')
+
+    def test_separator_attached_to_preceding_token(self):
+        """Separator stays attached to the token it follows, not the next token."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("one two three", "one two three")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True, max_line_length=10)
+        for ref_line, _ in result:
+            assert not ref_line.startswith("&nbsp;")
+
+    def test_no_trailing_separator(self):
+        """Lines should not end with a trailing separator (pre-separator approach)."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("hello world", "hello world")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_line = result[-1][0]
+        assert not ref_line.endswith("&nbsp;")
+
+
+class TestOneSidedOpInterTokenAlignment:
+    """Tests that one-sided ops (INSERT/DELETE) align inter-token content correctly."""
+
+    def test_delete_hyp_space_aligns_with_first_ref_gap(self):
+        """For DELETE, the hyp inter-token space should align with the first ref gap."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("the old cat sat", "the cat sat")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_html = result[0][0]
+        hyp_html = result[0][1]
+
+        # The hyp's real &nbsp; (not padding) should appear right after "the",
+        # aligned with the ref's first space (before "old").
+        assert "the</span>&nbsp;" in ref_html
+        assert "the</span>&nbsp;" in hyp_html
+
+    def test_insert_ref_space_aligns_with_first_hyp_gap(self):
+        """For INSERT, the ref inter-token space should align with the first hyp gap."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("the cat sat", "the big cat sat")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_html = result[0][0]
+        hyp_html = result[0][1]
+
+        # The ref's real &nbsp; should appear right after "the",
+        # aligned with the hyp's first space (before "big").
+        assert "the</span>&nbsp;" in ref_html
+        assert "the</span>&nbsp;" in hyp_html
+
+    def test_delete_second_ref_gap_has_padding_on_hyp(self):
+        """For DELETE, the second ref inter-token gap should have padding on the hyp side."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("the old cat sat", "the cat sat")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_html = result[0][0]
+        hyp_html = result[0][1]
+
+        # After "old" on the ref side, the separator should be a real &nbsp;.
+        # After the padding (for "old") on the hyp side, the separator should be padding.
+        # The hyp side should have: the + &nbsp; + PAD(3 for old) + PAD(1 for separator) + cat
+        # i.e., padding background appears between the first &nbsp; and "cat"
+        assert "background-color:" in hyp_html
+        assert "background-color:" not in ref_html or "dc3545" in ref_html  # ref has red for delete, not padding
+
+    def test_insert_second_hyp_gap_has_padding_on_ref(self):
+        """For INSERT, the second hyp inter-token gap should have padding on the ref side."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("the cat sat", "the big cat sat")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        ref_html = result[0][0]
+        hyp_html = result[0][1]
+
+        # The ref side should have: the + &nbsp; + PAD(3 for big) + PAD(1 for separator) + cat
+        assert "background-color:" in ref_html
+        # The hyp side should have: the + &nbsp; + big + &nbsp; + cat (no padding for big)
+        assert "17a2b8" in hyp_html  # teal color for insert
+
+    def test_consecutive_deletes(self):
+        """Consecutive DELETE ops handle inter-token content correctly."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("a b c d e", "a e")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        # Should produce valid output without errors
+        assert len(result) >= 1
+
+    def test_consecutive_inserts(self):
+        """Consecutive INSERT ops handle inter-token content correctly."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("a e", "a b c d e")
+        alignment = ds[0].metrics.levenshtein().alignment
+        result = generate_alignment_html_lines(alignment, surface=True)
+        assert len(result) >= 1
