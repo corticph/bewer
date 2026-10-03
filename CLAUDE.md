@@ -89,7 +89,7 @@ poetry run twine check dist/*  # Validate built packages
 
 ### Vocabulary Extractors (`src/bewer/extractors/`)
 
-Library of pre-defined `ExtractorFn` callables — `(dataset) -> Iterable[str]` functions that derive key terms from a dataset's references and are registered via `Vocabulary(name).add_extractor(fn)`.
+Library of pre-defined `ExtractorFn` callables — `Dataset -> Iterable[str]` functions that derive key terms from a dataset and are registered via `Vocabulary(name).add_extractor(fn)`. An extractor receives the whole dataset, so it may read the references, the hypotheses, or neither.
 
 - **`RegexExtractor`** (`extractors/regex.py`): generic base that full-matches each reference token against a compiled pattern and returns the matching surface forms. Subclass it (override `default_pattern`) or instantiate it with a `pattern` to define a new regex-based term family. Its matching primitive `match_token_regex` returns unit token slices.
 - **`OrthographicallyComplexTermExtractor`** (`extractors/orthographically_complex_term.py`): a `RegexExtractor` with `ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`, backing the orthographically-complex term metrics. Expects the `orthographically_complex_term` tokenizer (no hyphen split) so `CT-scan` is a single token.
@@ -172,6 +172,7 @@ normalizers:
 
 - The preprocessing pipeline is immutable and lazy - Text objects cache results
 - Metrics are computed lazily and cached - avoid manual cache invalidation
-- Keywords must exist in reference text or a warning is issued
+- Key terms need not appear in the references; terms that do not simply contribute no
+  reference-side counts (the old KeyTermNotFoundWarning no longer exists)
 - The project uses semantic versioning via git tags (hatch-vcs)
 - Pre-commit hooks include poetry-lock which auto-updates on pyproject.toml changes
