@@ -189,14 +189,18 @@
         }
         .surface-toggle-box {
             position: fixed;
-            top: 20px;
+            top: 0;
             right: 20px;
             z-index: 100;
-            background-color: {{ base_color_scheme.DIV_BG_COLOR }};
-            border: 1px solid {{ base_color_scheme.TABLE_HEADER_BG }};
+            background-color: {{ base_color_scheme.TABLE_HEADER_BG }};
+            color: #ffffff;
             border-radius: 5px;
             padding: 10px 15px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: none;
+        }
+        .surface-toggle-box.visible {
+            display: block;
         }
         .surface-toggle-box label {
             cursor: pointer;
@@ -254,9 +258,32 @@
     </div>
 
     <script>
-        document.getElementById("surface-toggle")?.addEventListener("change", function() {
-            document.body.classList.toggle("surface-view", this.checked);
-        });
+        (function() {
+            var toggleBox = document.getElementById("surface-toggle-box");
+            if (!toggleBox) return;
+            var legend = document.querySelector(".legend-container");
+            if (!legend) return;
+
+            function positionToggle() {
+                var legendRect = legend.getBoundingClientRect();
+                var toggleRect = toggleBox.getBoundingClientRect();
+                if (legendRect.top > 0) {
+                    toggleBox.style.top = legendRect.top + "px";
+                    toggleBox.classList.add("visible");
+                } else {
+                    toggleBox.style.top = "0px";
+                    toggleBox.classList.add("visible");
+                }
+            }
+
+            window.addEventListener("scroll", positionToggle);
+            window.addEventListener("resize", positionToggle);
+            positionToggle();
+
+            document.getElementById("surface-toggle")?.addEventListener("change", function() {
+                document.body.classList.toggle("surface-view", this.checked);
+            });
+        })();
     </script>
 </body>
 </html>
