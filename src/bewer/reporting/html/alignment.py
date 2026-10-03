@@ -857,13 +857,19 @@ def generate_alignment_html_lines_multi(
     if max_ref_tokens == 0:
         return [[(("", ""), ("", "")) for _ in range(n_alignments)]]
 
-    # Precompute content-only lengths per ref token for break checks
+    # Precompute content+separator lengths per ref token for break checks
+    # Include all separators within each group (not just content) so the
+    # wrap estimate accounts for inter-token separators between insertions
     token_norm_content_lens = [
-        [sum(unit[1][2] for unit in tokens) for tokens in all_units[a]] if all_units[a] else []
+        [sum(unit[1][2] for unit in tokens) + sum(unit[0][2] for unit in tokens[1:]) for tokens in all_units[a]]
+        if all_units[a]
+        else []
         for a in range(n_alignments)
     ]
     token_surf_content_lens = [
-        [sum(unit[1][5] for unit in tokens) for tokens in all_units[a]] if all_units[a] else []
+        [sum(unit[1][5] for unit in tokens) + sum(unit[0][5] for unit in tokens[1:]) for tokens in all_units[a]]
+        if all_units[a]
+        else []
         for a in range(n_alignments)
     ]
 
@@ -930,6 +936,25 @@ def generate_alignment_html_lines_multi(
                 continue
             for unit_idx, (sep, content) in enumerate(all_units[a][ref_token_idx]):
                 if unit_idx > 0:
+                    # Check if adding this separator + content would exceed the limit
+                    if norm_lengths[a] + sep[2] + content[2] > max_line_length and norm_lengths[a] > 0:
+                        # Flush current line and start a new one
+                        if any(norm_lengths[x] > 0 or surf_lengths[x] > 0 for x in range(n_alignments)):
+                            line = []
+                            for x in range(n_alignments):
+                                line.append(
+                                    (
+                                        (norm_ref_lines[x], norm_hyp_lines[x]),
+                                        (surf_ref_lines[x], surf_hyp_lines[x]),
+                                    )
+                                )
+                            lines.append(line)
+                            norm_ref_lines = [""] * n_alignments
+                            norm_hyp_lines = [""] * n_alignments
+                            surf_ref_lines = [""] * n_alignments
+                            surf_hyp_lines = [""] * n_alignments
+                            norm_lengths = [0] * n_alignments
+                            surf_lengths = [0] * n_alignments
                     norm_ref_lines[a] += sep[0]
                     norm_hyp_lines[a] += sep[1]
                     norm_lengths[a] += sep[2]

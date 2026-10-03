@@ -442,14 +442,14 @@ class TestMultiDatasetReport:
         """Report contains CSS classes for dataset visibility."""
         ds_a, ds_b = self._make_two_datasets()
         html = render_report_html({"System A": ds_a, "System B": ds_b})
-        assert "alignment-dataset-System-A" in html
-        assert "alignment-dataset-System-B" in html
+        assert "alignment-dataset-0" in html
+        assert "alignment-dataset-1" in html
 
     def test_multi_dataset_first_dataset_active_by_default(self):
         """First dataset is active by default (body class set)."""
         ds_a, ds_b = self._make_two_datasets()
         html = render_report_html({"System A": ds_a, "System B": ds_b})
-        assert 'class="dataset-System-A"' in html
+        assert 'class="dataset-0"' in html
 
     def test_multi_dataset_metrics_table_has_columns(self):
         """Metrics table has a column per dataset."""
@@ -490,10 +490,10 @@ class TestMultiDatasetReport:
         # Tables are: <table class="alignment-table alignment-normalized alignment-dataset-{A|B}">
         # Each ref row has class="alignment-row" with labels.REF
         a_tables = re.findall(
-            r'<table class="alignment-table alignment-normalized alignment-dataset-A">(.*?)</table>', html, re.DOTALL
+            r'<table class="alignment-table alignment-normalized alignment-dataset-0">(.*?)</table>', html, re.DOTALL
         )
         b_tables = re.findall(
-            r'<table class="alignment-table alignment-normalized alignment-dataset-B">(.*?)</table>', html, re.DOTALL
+            r'<table class="alignment-table alignment-normalized alignment-dataset-1">(.*?)</table>', html, re.DOTALL
         )
         a_ref_rows = sum(t.count("alignment-table-lines") for t in a_tables)
         b_ref_rows = sum(t.count("alignment-table-lines") for t in b_tables)

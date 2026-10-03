@@ -11,7 +11,7 @@
 {%- if multi_dataset %}
 {% for example in example_iterator -%}
 {% set alignment_content -%}
-{%- with example=example, alignments=alignments[loop.index0], color_scheme=color_scheme, labels=labels, title_index=loop.index, multi_dataset=True, dataset_names=dataset_names, dataset_css_names=dataset_css_names -%}
+{%- with example=example, alignments=alignments[loop.index0], color_scheme=color_scheme, labels=labels, title_index=loop.index, multi_dataset=True, refs_match=refs_match, dataset_names=dataset_names, dataset_css_names=dataset_css_names, n_examples=n_examples -%}
 {%- include 'alignment_container.html.j2' -%}
 {%- endwith -%}
 {%- endset -%}

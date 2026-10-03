@@ -158,7 +158,7 @@ def render_report_html(
             stacklevel=2,
         )
 
-    n_examples = min(len(ds) for ds in dataset_list)
+    n_examples = max(len(ds) for ds in dataset_list) if dataset_list else 0
 
     if multi_dataset:
         resolved_metrics = []
@@ -199,8 +199,13 @@ def render_report_html(
         for ex_idx in range(n_examples):
             ex_alignments = []
             for ds in dataset_list:
-                alignment = ds[ex_idx].metrics.get(report_alignment.name)(**report_alignment.metric_kwargs).alignment
-                ex_alignments.append(alignment)
+                if ex_idx < len(ds):
+                    alignment = (
+                        ds[ex_idx].metrics.get(report_alignment.name)(**report_alignment.metric_kwargs).alignment
+                    )
+                    ex_alignments.append(alignment)
+                else:
+                    ex_alignments.append(None)
             resolved_alignments.append(ex_alignments)
     else:
         ds = dataset_list[0]
@@ -217,9 +222,10 @@ def render_report_html(
         dataset=dataset_list[0],
         datasets=datasets,
         dataset_names=dataset_names,
-        dataset_css_names=[_sanitize_css_class(n) for n in dataset_names],
+        dataset_css_names=[str(i) for i in range(len(dataset_names))],
         multi_dataset=multi_dataset,
         refs_match=refs_match,
+        n_examples=n_examples,
         title=title,
         creation_date=datetime.now().strftime("%B %d, %Y"),
         base_color_scheme=base_color_scheme,
