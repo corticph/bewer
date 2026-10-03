@@ -219,6 +219,8 @@
             left: calc(50% + 510px);
             z-index: 100;
             border: 1px solid {{ base_color_scheme.TABLE_HEADER_BG }};
+            border-radius: 5px;
+            overflow: visible;
         }
         .surface-toggle-box-header {
             background-color: {{ base_color_scheme.TABLE_HEADER_BG }};
@@ -226,12 +228,10 @@
             padding: 8px 15px;
             font-size: 14px;
             font-weight: normal;
-            border-radius: 5px 5px 0 0;
         }
         .surface-toggle-box-body {
             background-color: #ffffff;
             padding: 10px 28px;
-            border-radius: 0 0 5px 5px;
         }
         .surface-toggle-box label {
             cursor: pointer;
