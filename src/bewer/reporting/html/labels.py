@@ -23,9 +23,9 @@ class HTMLAlignmentLabels:
     KEYWORD = "Keyword"
 
     # Legend tooltips (None = no tooltip rendered)
-    MATCH_TOOLTIP: str | None = None
-    SUBSTITUTION_TOOLTIP: str | None = None
-    INSERTION_TOOLTIP: str | None = None
-    DELETION_TOOLTIP: str | None = None
-    PADDING_TOOLTIP: str | None = None
-    KEYWORD_TOOLTIP: str | None = None
+    MATCH_TOOLTIP: str | None = "Correct: hypothesis matches reference."
+    SUBSTITUTION_TOOLTIP: str | None = "Hypothesis differs from reference."
+    INSERTION_TOOLTIP: str | None = "Extra word in hypothesis not in reference."
+    DELETION_TOOLTIP: str | None = "Missing word from reference not in hypothesis."
+    PADDING_TOOLTIP: str | None = "Alignment padding to keep both sides in sync."
+    KEYWORD_TOOLTIP: str | None = "Key term highlighted for targeted metrics."
