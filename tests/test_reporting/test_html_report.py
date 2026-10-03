@@ -374,7 +374,7 @@ class TestSurfaceToggle:
         """Report HTML contains the surface toggle checkbox."""
         result = render_report_html(sample_dataset)
         assert 'id="surface-toggle"' in result
-        assert "Surface form" in result
+        assert "Normalize" in result
 
     def test_report_contains_toggle_css(self, sample_dataset):
         """Report HTML contains CSS for surface view toggling."""

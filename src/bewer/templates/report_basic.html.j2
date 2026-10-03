@@ -192,17 +192,28 @@
             top: 0;
             right: 20px;
             z-index: 100;
+            border: 1px solid {{ base_color_scheme.TABLE_HEADER_BG }};
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .surface-toggle-box-header {
             background-color: {{ base_color_scheme.TABLE_HEADER_BG }};
             color: #ffffff;
-            border-radius: 5px;
+            padding: 8px 15px;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        .surface-toggle-box-body {
+            background-color: #ffffff;
             padding: 10px 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
         .surface-toggle-box label {
             cursor: pointer;
             user-select: none;
             font-size: 13px;
             vertical-align: middle;
+            color: #000000;
         }
         .surface-toggle-box input {
             margin-right: 8px;
@@ -252,7 +263,10 @@
 
 
     <div class="surface-toggle-box" id="surface-toggle-box">
-        <label><input type="checkbox" id="surface-toggle">Surface form</label>
+        <div class="surface-toggle-box-header">Options</div>
+        <div class="surface-toggle-box-body">
+            <label><input type="checkbox" id="surface-toggle" checked>Normalize</label>
+        </div>
     </div>
 
     <script>
@@ -276,8 +290,9 @@
             positionToggle();
 
             document.getElementById("surface-toggle")?.addEventListener("change", function() {
-                document.body.classList.toggle("surface-view", this.checked);
+                document.body.classList.toggle("surface-view", !this.checked);
             });
+            document.body.classList.toggle("surface-view", !document.getElementById("surface-toggle").checked);
         })();
     </script>
 </body>
