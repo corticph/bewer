@@ -99,6 +99,10 @@
         }
         .list-values-table tr.value-row td:nth-child(2) {
             font-weight: normal;
+            text-align: center;
+        }
+        .list-values-table tr.value-row td:nth-child(n+3) {
+            text-align: center;
         }
         .list-values-table tr.value-row:first-child td {
             padding-top: 15px;
@@ -334,7 +338,7 @@
 
 
 {% set alignment_gallery -%}
-{%- with example_iterator=dataset, alignments=alignments, color_scheme=alignment_color_scheme, labels=alignment_labels, multi_dataset=multi_dataset, dataset_names=dataset_names, dataset_css_names=dataset_css_names -%}
+{%- with example_iterator=dataset, alignments=alignments, color_scheme=alignment_color_scheme, labels=alignment_labels, multi_dataset=multi_dataset, refs_match=refs_match, dataset_names=dataset_names, dataset_css_names=dataset_css_names, n_examples=n_examples -%}
 {%- include 'alignment_gallery.html.j2' -%}
 {%- endwith -%}
 {%- endset -%}
@@ -347,9 +351,9 @@
             <label><input type="checkbox" id="surface-toggle" checked>Normalize<span class="help-mark" data-tooltip="Toggle between normalized and original text. Alignment is not affected.">?</span></label>
             {%- if multi_dataset %}
             <div class="toggle-divider"></div>
-            <label class="toggle-section-label">Comparison<span class="help-mark" data-tooltip="Switch between datasets. Line breaks are synchronized when references match.">?</span></label>
+            <label class="toggle-section-label">Comparison<span class="help-mark" data-tooltip="Switch between evaluation runs. Line breaks are synchronized when references match.">?</span></label>
             {%- for ds_name in dataset_names %}
-            <label class="radio-label"><input type="radio" name="dataset-toggle" value="{{ ds_name }}"{% if loop.first %} checked{% endif %}>{{ ds_name }}</label>
+            <label class="radio-label"><input type="radio" name="dataset-toggle" value="{{ dataset_css_names[loop.index0] }}"{% if loop.first %} checked{% endif %}>{{ ds_name }}</label>
             {%- endfor %}
             {%- endif %}
         </div>
@@ -387,7 +391,7 @@
                     {%- for css_name in dataset_css_names %}
                     document.body.classList.remove("dataset-{{ css_name }}");
                     {%- endfor %}
-                    document.body.classList.add("dataset-" + this.value.replace(/[^a-zA-Z0-9_-]/g, "-"));
+                    document.body.classList.add("dataset-" + this.value);
                 });
             });
             {%- endif %}
