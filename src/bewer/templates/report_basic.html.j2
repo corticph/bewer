@@ -197,10 +197,6 @@
             border-radius: 5px;
             padding: 10px 15px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            display: none;
-        }
-        .surface-toggle-box.visible {
-            display: block;
         }
         .surface-toggle-box label {
             cursor: pointer;
@@ -266,13 +262,10 @@
 
             function positionToggle() {
                 var legendRect = legend.getBoundingClientRect();
-                var toggleRect = toggleBox.getBoundingClientRect();
                 if (legendRect.top > 0) {
                     toggleBox.style.top = legendRect.top + "px";
-                    toggleBox.classList.add("visible");
                 } else {
                     toggleBox.style.top = "0px";
-                    toggleBox.classList.add("visible");
                 }
             }
 
