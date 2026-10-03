@@ -187,13 +187,23 @@
         body.surface-view .alignment-surface {
             display: table;
         }
-        .surface-toggle {
-            display: inline-block;
-            margin: 0px 10px;
+        .surface-toggle-box {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background-color: {{ base_color_scheme.DIV_BG_COLOR }};
+            border: 1px solid {{ base_color_scheme.TABLE_HEADER_BG }};
+            border-radius: 5px;
+            padding: 10px 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .surface-toggle-box label {
             cursor: pointer;
             user-select: none;
+            font-size: 13px;
         }
-        .surface-toggle input {
+        .surface-toggle-box input {
             margin-right: 4px;
         }
      </style>
@@ -238,6 +248,10 @@
 {%- endset -%}
 {{- alignment_gallery | indent_tabs(2) | safe }}
 
+
+    <div class="surface-toggle-box">
+        <label><input type="checkbox" id="surface-toggle">Surface form</label>
+    </div>
 
     <script>
         document.getElementById("surface-toggle")?.addEventListener("change", function() {
