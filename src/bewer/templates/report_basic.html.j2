@@ -251,6 +251,13 @@
             margin-right: 8px;
             vertical-align: middle;
         }
+        .surface-toggle-box .toggle-section-label {
+            font-size: 13px;
+            color: #000000;
+            display: block;
+            margin-bottom: 6px;
+            margin-top: 6px;
+        }
         .surface-toggle-box .radio-label {
             display: flex;
             align-items: center;
@@ -318,6 +325,7 @@
             <label><input type="checkbox" id="surface-toggle" checked>Normalize</label>
             {%- if multi_dataset %}
             <div class="toggle-divider"></div>
+            <label class="toggle-section-label">Comparison</label>
             {%- for ds_name in dataset_names %}
             <label class="radio-label"><input type="radio" name="dataset-toggle" value="{{ ds_name }}"{% if loop.first %} checked{% endif %}>{{ ds_name }}</label>
             {%- endfor %}
