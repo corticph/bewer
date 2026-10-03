@@ -190,11 +190,10 @@ class TestCustomAlignmentLabels:
         assert "Correct" in result
         assert "Replaced" in result
 
-    def test_default_tooltips_present(self, sample_dataset):
-        """Test that default tooltips are rendered as data-tooltip attributes."""
+    def test_no_tooltips_by_default(self, sample_dataset):
+        """Test that no data-tooltip attributes are rendered with default labels."""
         result = render_report_html(sample_dataset)
-        assert 'data-tooltip="Correct: hypothesis matches reference."' in result
-        assert 'data-tooltip="Extra word in hypothesis not in reference."' in result
+        assert 'class="legend-container-item" data-tooltip=' not in result
 
     def test_tooltips_render_as_data_tooltip_attributes(self, sample_dataset):
         """Test that tooltips render as data-tooltip attributes when set."""
