@@ -267,6 +267,27 @@
         .surface-toggle-box .radio-label input[type="radio"] {
             margin-top: 1px;
         }
+        .surface-toggle-box .help-mark {
+            font-weight: bold;
+            color: #888;
+            cursor: help;
+            margin-left: 4px;
+        }
+        .surface-toggle-box .help-mark[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            right: 100%;
+            white-space: normal;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: normal;
+            margin-right: 8px;
+            z-index: 200;
+        }
         .surface-toggle-box .toggle-divider {
             border-top: 1px solid #e0e0e0;
             margin: 8px 0;
@@ -317,10 +338,10 @@
     <div class="surface-toggle-box" id="surface-toggle-box">
         <div class="surface-toggle-box-header">Options</div>
         <div class="surface-toggle-box-body">
-            <label><input type="checkbox" id="surface-toggle" checked>Normalize</label>
+            <label><input type="checkbox" id="surface-toggle" checked>Normalize<span class="help-mark" data-tooltip="Toggle between normalized (lowercased, transliterated) and original text. Alignment is not affected.">?</span></label>
             {%- if multi_dataset %}
             <div class="toggle-divider"></div>
-            <label class="toggle-section-label">Comparison</label>
+            <label class="toggle-section-label">Comparison<span class="help-mark" data-tooltip="Switch between datasets. Line breaks are synchronized when references match.">?</span></label>
             {%- for ds_name in dataset_names %}
             <label class="radio-label"><input type="radio" name="dataset-toggle" value="{{ ds_name }}"{% if loop.first %} checked{% endif %}>{{ ds_name }}</label>
             {%- endfor %}
