@@ -13,6 +13,9 @@ from bewer.reporting.html.alignment import (
 from bewer.reporting.html.alignment import (
     generate_alignment_html_lines_dual as _generate_alignment_html_lines_dual,
 )
+from bewer.reporting.html.alignment import (
+    generate_alignment_html_lines_multi as _generate_alignment_html_lines_multi,
+)
 from bewer.reporting.html.color_schemes import HTMLDefaultAlignmentColors
 from bewer.reporting.python.alignment import DefaultColorScheme, display_basic_aligned
 
@@ -263,6 +266,26 @@ class Alignment(tuple["Op", ...]):
         """
         return _generate_alignment_html_lines_dual(
             self, color_scheme=color_scheme, allow_subset_matches=allow_subset_matches
+        )
+
+    @staticmethod
+    def _to_html_lines_multi(
+        alignments: list["Alignment"],
+        color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
+        allow_subset_matches: bool = False,
+    ) -> list[list[tuple[tuple[str, str], tuple[str, str]]]]:
+        """Render multiple alignments with synchronized line breaks.
+
+        Args:
+            alignments: List of alignments (one per dataset) for the same example.
+            color_scheme (type[HTMLAlignmentColors]): Color scheme for display.
+            allow_subset_matches: If True, allow subset key term matches.
+
+        Returns:
+            Per line, per alignment, ``((norm_ref, norm_hyp), (surf_ref, surf_hyp))``.
+        """
+        return _generate_alignment_html_lines_multi(
+            alignments, color_scheme=color_scheme, allow_subset_matches=allow_subset_matches
         )
 
     def __getitem__(self, index: int | slice) -> Union[Op, "Alignment"]:

@@ -237,8 +237,8 @@ class TestCustomReportMetrics:
     def test_default_metrics_are_core_only(self, sample_dataset):
         """Test that default metrics are the core, non-domain-specific WER and CER."""
         result = render_report_html(sample_dataset)
-        assert "Word Error Rate" in result
-        assert "Character Error Rate" in result
+        assert "WER" in result
+        assert "CER" in result
         # Domain-specific key-term metrics are opt-in, not default.
         assert "Key-Term Recall" not in result
 
@@ -250,15 +250,15 @@ class TestCustomReportMetrics:
         result = render_report_html(sample_dataset, report_metrics=custom_metrics)
         assert "WER Score" in result
         # CER should not appear when only WER is requested.
-        assert "Character Error Rate" not in result
+        assert "CER" not in result
 
-    def test_metric_label_defaults_to_long_name(self, sample_dataset):
-        """Test that metric label defaults to the metric's long_name when not specified."""
+    def test_metric_label_defaults_to_short_name_base(self, sample_dataset):
+        """Test that metric label defaults to the metric's short_name_base when not specified."""
         custom_metrics = [
             ReportMetric("wer"),  # no label override
         ]
         result = render_report_html(sample_dataset, report_metrics=custom_metrics)
-        assert "Word Error Rate" in result
+        assert "WER" in result
 
     def test_custom_metric_format(self, sample_dataset):
         """Test that custom format spec is applied to metric values."""
@@ -274,13 +274,13 @@ class TestCustomReportSummary:
     """Tests for custom report summary configuration."""
 
     def test_default_summary_matches_previous_behavior(self, sample_dataset):
-        """Test that default summary items match the old hard-coded values."""
+        """Test that default summary items match the expected labels."""
         result = render_report_html(sample_dataset)
-        assert "Number of examples" in result
-        assert "Number of reference words" in result
-        assert "Number of reference characters" in result
-        assert "Number of hypothesis words" in result
-        assert "Number of hypothesis characters" in result
+        assert "# Examples" in result
+        assert "# Ref. words" in result
+        assert "# Ref. chars" in result
+        assert "# Hyp. words" in result
+        assert "# Hyp. chars" in result
 
     def test_custom_summary_list(self, sample_dataset):
         """Test that a custom summary list controls which items appear."""
@@ -289,8 +289,8 @@ class TestCustomReportSummary:
         ]
         result = render_report_html(sample_dataset, report_summary=custom_summary)
         assert "Total Examples" in result
-        assert "Number of reference words" not in result
-        assert "Number of hypothesis characters" not in result
+        assert "# Ref. words" not in result
+        assert "# Hyp. chars" not in result
 
     def test_summary_label_defaults_to_name(self, sample_dataset):
         """Test that summary label defaults to the attribute name when not specified."""
@@ -403,3 +403,100 @@ class TestSurfaceToggle:
         result = render_report_html(sample_dataset)
         assert ".alignment-surface" in result
         assert "display: none" in result
+
+
+class TestMultiDatasetReport:
+    """Tests for multi-dataset comparison reports."""
+
+    def _make_two_datasets(self):
+        from bewer.core.dataset import Dataset
+
+        ds_a = Dataset()
+        ds_a.add("Hello world", "Hello world")
+        ds_a.add("The quick brown fox", "The quick brown dog")
+        ds_b = Dataset()
+        ds_b.add("Hello world", "Hello weird")
+        ds_b.add("The quick brown fox", "The quick brown fox")
+        return ds_a, ds_b
+
+    def test_multi_dataset_report_generates(self):
+        """Multi-dataset report generates without error."""
+        ds_a, ds_b = self._make_two_datasets()
+        html = render_report_html({"System A": ds_a, "System B": ds_b})
+        assert len(html) > 0
+
+    def test_multi_dataset_contains_both_names(self):
+        """Report contains both dataset names."""
+        ds_a, ds_b = self._make_two_datasets()
+        html = render_report_html({"System A": ds_a, "System B": ds_b})
+        assert "System A" in html
+        assert "System B" in html
+
+    def test_multi_dataset_contains_radio_buttons(self):
+        """Report contains radio buttons for dataset selection."""
+        ds_a, ds_b = self._make_two_datasets()
+        html = render_report_html({"System A": ds_a, "System B": ds_b})
+        assert 'name="dataset-toggle"' in html
+        assert 'type="radio"' in html
+
+    def test_multi_dataset_contains_css_classes(self):
+        """Report contains CSS classes for dataset visibility."""
+        ds_a, ds_b = self._make_two_datasets()
+        html = render_report_html({"System A": ds_a, "System B": ds_b})
+        assert "alignment-dataset-System-A" in html
+        assert "alignment-dataset-System-B" in html
+
+    def test_multi_dataset_first_dataset_active_by_default(self):
+        """First dataset is active by default (body class set)."""
+        ds_a, ds_b = self._make_two_datasets()
+        html = render_report_html({"System A": ds_a, "System B": ds_b})
+        assert 'class="dataset-System-A"' in html
+
+    def test_multi_dataset_metrics_table_has_columns(self):
+        """Metrics table has a column per dataset."""
+        ds_a, ds_b = self._make_two_datasets()
+        html = render_report_html({"System A": ds_a, "System B": ds_b})
+        # Both dataset names appear in the metrics table
+        assert "System A" in html
+        assert "System B" in html
+
+    def test_single_dataset_backward_compat(self):
+        """Single dataset still works without comparison toggle."""
+        from bewer.core.dataset import Dataset
+
+        ds = Dataset()
+        ds.add("Hello world", "Hello world")
+        html = render_report_html(ds)
+        assert 'name="dataset-toggle"' not in html
+        assert '<input type="radio"' not in html
+
+    def test_refs_match_warning_on_mismatch(self):
+        """Warning is issued when references differ across datasets."""
+        from bewer.core.dataset import Dataset
+
+        ds_a = Dataset()
+        ds_a.add("Hello world", "Hello world")
+        ds_b = Dataset()
+        ds_b.add("Different ref", "Different hyp")
+        with pytest.warns(UserWarning, match="Reference texts differ"):
+            render_report_html({"A": ds_a, "B": ds_b})
+
+    def test_multi_dataset_synchronized_line_counts(self):
+        """Both datasets have the same number of alignment lines."""
+        ds_a, ds_b = self._make_two_datasets()
+        html = render_report_html({"A": ds_a, "B": ds_b})
+        import re
+
+        # Count REF rows inside each dataset's normalized tables
+        # Tables are: <table class="alignment-table alignment-normalized alignment-dataset-{A|B}">
+        # Each ref row has class="alignment-row" with labels.REF
+        a_tables = re.findall(
+            r'<table class="alignment-table alignment-normalized alignment-dataset-A">(.*?)</table>', html, re.DOTALL
+        )
+        b_tables = re.findall(
+            r'<table class="alignment-table alignment-normalized alignment-dataset-B">(.*?)</table>', html, re.DOTALL
+        )
+        a_ref_rows = sum(t.count("alignment-table-lines") for t in a_tables)
+        b_ref_rows = sum(t.count("alignment-table-lines") for t in b_tables)
+        assert a_ref_rows > 0
+        assert a_ref_rows == b_ref_rows

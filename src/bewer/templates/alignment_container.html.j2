@@ -1,4 +1,57 @@
 <div class="alignment-container">
+{%- if multi_dataset %}
+    {%- set multi_lines = alignments[0]._to_html_lines_multi(alignments, color_scheme=color_scheme) %}
+    {%- for ds_idx in range(dataset_names|length) %}
+    {%- set ds_name = dataset_names[ds_idx] %}
+    {%- set css_name = dataset_css_names[ds_idx] %}
+    <table class="alignment-table alignment-normalized alignment-dataset-{{ css_name }}">
+        <colgroup>
+            <col style="width: 3ch;">
+            <col style="width: 4ch;">
+            <col style="width: 100%;">
+        </colgroup>
+        <tr>
+            <th colspan="3">Example {{ title_index | default('-', true) }}<span class="ds-name-header">: {{ ds_name }}</span></th>
+        </tr>
+
+        {%- for line in multi_lines %}
+        <tr class="alignment-row">
+            <td class="alignment-table-lines">{{loop.index}}</td>
+            <td class="alignment-table-names">{{ labels.REF }}</td>
+            <td>{{ line[ds_idx][0][0] | safe }}</td>
+        </tr>
+        <tr class="alignment-row">
+            <td class="alignment-table-lines"></td>
+            <td class="alignment-table-names">{{ labels.HYP }}</td>
+            <td>{{ line[ds_idx][0][1] | safe }}</td>
+        </tr>
+        {%- endfor %}
+    </table>
+    <table class="alignment-table alignment-surface alignment-dataset-{{ css_name }}">
+        <colgroup>
+            <col style="width: 3ch;">
+            <col style="width: 4ch;">
+            <col style="width: 100%;">
+        </colgroup>
+        <tr>
+            <th colspan="3">Example {{ title_index | default('-', true) }}<span class="ds-name-header">: {{ ds_name }}</span></th>
+        </tr>
+
+        {%- for line in multi_lines %}
+        <tr class="alignment-row">
+            <td class="alignment-table-lines">{{loop.index}}</td>
+            <td class="alignment-table-names">{{ labels.REF }}</td>
+            <td>{{ line[ds_idx][1][0] | safe }}</td>
+        </tr>
+        <tr class="alignment-row">
+            <td class="alignment-table-lines"></td>
+            <td class="alignment-table-names">{{ labels.HYP }}</td>
+            <td>{{ line[ds_idx][1][1] | safe }}</td>
+        </tr>
+        {%- endfor %}
+    </table>
+    {%- endfor %}
+{%- else %}
     {%- set dual_lines = alignment._to_html_lines_dual(color_scheme=color_scheme) %}
     <table class="alignment-table alignment-normalized">
         <colgroup>
@@ -46,4 +99,5 @@
         </tr>
         {%- endfor %}
     </table>
+{%- endif %}
 </div>
