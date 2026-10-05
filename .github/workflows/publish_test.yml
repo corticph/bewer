@@ -42,8 +42,8 @@ jobs:
             IS_PRERELEASE=true
           fi
 
-          # Strip any pre-release suffix to get the base version
-          BASE_VERSION=$(echo "$VERSION" | sed 's/\(dev\|alpha\|a\|beta\|b\|rc\).*//')
+          # Strip any pre-release suffix (and its preceding dot) to get the base version
+          BASE_VERSION=$(echo "$VERSION" | sed 's/\.\?\(dev\|alpha\|a\|beta\|b\|rc\).*//')
 
           # Bump patch only for final releases; keep base for pre-releases (unreleased)
           if [ "$IS_PRERELEASE" = false ]; then
