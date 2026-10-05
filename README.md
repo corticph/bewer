@@ -8,8 +8,9 @@
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" style="margin-left:5px;">
 </p>
 
-**⚠️ Important:** This project is not production ready and is still in early development. Breaking
-changes may occur, and backwards compatibility between alpha versions is not guaranteed.
+<br>
+
+**⚠️ Important:** Bewer is pre-1.0 and under active development. The API may change. Breaking changes are signalled by a **minor** version bump (e.g. `0.2.x → 0.3.0`); patch releases contain only fixes and backwards-compatible additions. Pin with `bewer~=0.Y.0` (pip) or `^0.Y.0` (Poetry).
 
 **Bewer is an evaluation and analysis framework for automatic speech recognition in Python.** It defines a flexible
 approach for configuring and customizing speech recognition evaluation. The hierarchical structure, going from the

@@ -176,3 +176,21 @@ normalizers:
   reference-side counts (the old KeyTermNotFoundWarning no longer exists)
 - The project uses semantic versioning via git tags (hatch-vcs)
 - Pre-commit hooks include poetry-lock which auto-updates on pyproject.toml changes
+
+## Versioning & Releases
+
+The project follows SemVer with the pre-1.0 convention:
+
+- **Breaking change**: bump **minor** (`0.2.3 → 0.3.0`).
+- **New feature or bug fix**: bump **patch** (`0.2.3 → 0.2.4`).
+- Pre-release suffixes (`rcN`, `bN`) stage an upcoming release only.
+- `1.0.0` marks API stability; after that, standard SemVer applies (breaking → major).
+- Versions are derived from git tags via `hatch-vcs`. Do not hardcode a version.
+
+PR label → version bump mapping:
+
+- `major` label = breaking change → minor bump (pre-1.0).
+- `minor` label = new feature → patch bump.
+- `patch` label = fix → patch bump.
+
+This mapping lives in `.github/release_drafter_main_branch.yml` and must be reverted to one-to-one (`major→major`, etc.) when releasing `1.0.0`.
