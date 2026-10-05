@@ -315,9 +315,9 @@ def generate_alignment_html_lines(
                 hyp_sep = _escape_and_nbsp(hyp_inter_text)
 
                 if ref_inter_len < sep_length:
-                    ref_sep += get_html_padding(sep_length - ref_inter_len, color_scheme)
+                    ref_sep = get_html_padding(sep_length - ref_inter_len, color_scheme) + ref_sep
                 if hyp_inter_len < sep_length:
-                    hyp_sep += get_html_padding(sep_length - hyp_inter_len, color_scheme)
+                    hyp_sep = get_html_padding(sep_length - hyp_inter_len, color_scheme) + hyp_sep
 
                 if prev_kt_open:
                     ref_sep = format_key_term(ref_sep)
@@ -450,12 +450,12 @@ def generate_alignment_html_lines_dual(
             ref_len = len(ref_prefix)
             hyp_len = len(hyp_prefix)
             sep_len = max(ref_len, hyp_len, 1)
-            surf_ref_line += _escape_and_nbsp(ref_prefix)
-            surf_hyp_line += _escape_and_nbsp(hyp_prefix)
             if ref_len < sep_len:
                 surf_ref_line += get_html_padding(sep_len - ref_len, color_scheme)
             if hyp_len < sep_len:
                 surf_hyp_line += get_html_padding(sep_len - hyp_len, color_scheme)
+            surf_ref_line += _escape_and_nbsp(ref_prefix)
+            surf_hyp_line += _escape_and_nbsp(hyp_prefix)
             surf_length += sep_len
 
     lines: list[tuple[tuple[str, str], tuple[str, str]]] = []
@@ -502,9 +502,9 @@ def generate_alignment_html_lines_dual(
                 surf_hyp_sep = _escape_and_nbsp(hyp_inter_text)
 
                 if ref_inter_len < surf_sep_length:
-                    surf_ref_sep += get_html_padding(surf_sep_length - ref_inter_len, color_scheme)
+                    surf_ref_sep = get_html_padding(surf_sep_length - ref_inter_len, color_scheme) + surf_ref_sep
                 if hyp_inter_len < surf_sep_length:
-                    surf_hyp_sep += get_html_padding(surf_sep_length - hyp_inter_len, color_scheme)
+                    surf_hyp_sep = get_html_padding(surf_sep_length - hyp_inter_len, color_scheme) + surf_hyp_sep
 
                 if prev_kt_open:
                     surf_ref_sep = format_key_term(surf_ref_sep)
@@ -587,9 +587,9 @@ def generate_alignment_html_lines_dual(
             surf_ref_trail = _escape_and_nbsp(ref_trail)
             surf_hyp_trail = _escape_and_nbsp(hyp_trail)
             if ref_len < sep_len:
-                surf_ref_trail += get_html_padding(sep_len - ref_len, color_scheme)
+                surf_ref_trail = get_html_padding(sep_len - ref_len, color_scheme) + surf_ref_trail
             if hyp_len < sep_len:
-                surf_hyp_trail += get_html_padding(sep_len - hyp_len, color_scheme)
+                surf_hyp_trail = get_html_padding(sep_len - hyp_len, color_scheme) + surf_hyp_trail
             surf_ref_line += surf_ref_trail
             surf_hyp_line += surf_hyp_trail
             surf_length += sep_len
@@ -681,9 +681,9 @@ def _precompute_alignment_units(
             prefix_ref = _escape_and_nbsp(ref_prefix)
             prefix_hyp = _escape_and_nbsp(hyp_prefix)
             if ref_len < sep_len:
-                prefix_ref += get_html_padding(sep_len - ref_len, color_scheme)
+                prefix_ref = get_html_padding(sep_len - ref_len, color_scheme) + prefix_ref
             if hyp_len < sep_len:
-                prefix_hyp += get_html_padding(sep_len - hyp_len, color_scheme)
+                prefix_hyp = get_html_padding(sep_len - hyp_len, color_scheme) + prefix_hyp
             prefix_sep = ("", "", 0, prefix_ref, prefix_hyp, sep_len)
             prefix_content = ("", "", 0, "", "", 0)
             if units_by_ref_token:
@@ -732,9 +732,9 @@ def _precompute_alignment_units(
                 surf_hyp_sep = _escape_and_nbsp(hyp_inter_text)
 
                 if ref_inter_len < surf_sep_length:
-                    surf_ref_sep += get_html_padding(surf_sep_length - ref_inter_len, color_scheme)
+                    surf_ref_sep = get_html_padding(surf_sep_length - ref_inter_len, color_scheme) + surf_ref_sep
                 if hyp_inter_len < surf_sep_length:
-                    surf_hyp_sep += get_html_padding(surf_sep_length - hyp_inter_len, color_scheme)
+                    surf_hyp_sep = get_html_padding(surf_sep_length - hyp_inter_len, color_scheme) + surf_hyp_sep
 
                 if prev_kt_open:
                     surf_ref_sep = format_key_term(surf_ref_sep)
