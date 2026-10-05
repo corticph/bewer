@@ -33,27 +33,42 @@ jobs:
           LATEST_TAG=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || echo "v0.0.0")
           echo "Latest production tag: ${LATEST_TAG}"
 
-          # Remove 'v' prefix and parse version
+          # Remove 'v' prefix
           VERSION=${LATEST_TAG#v}
 
-          # Strip any pre-release suffix (dev, a, b, rc and anything after)
-          VERSION=$(echo "$VERSION" | sed 's/\(dev\|alpha\|a\|beta\|b\|rc\).*//')
+          # Detect whether the latest tag is a pre-release (dev, alpha, beta, rc)
+          IS_PRERELEASE=false
+          if echo "$VERSION" | grep -qiE '(dev|alpha|a|beta|b|rc)[0-9]+'; then
+            IS_PRERELEASE=true
+          fi
 
-          # Use the base version as-is (no version increment)
-          BASE_VERSION="$VERSION"
+          # Strip any pre-release suffix to get the base version
+          BASE_VERSION=$(echo "$VERSION" | sed 's/\(dev\|alpha\|a\|beta\|b\|rc\).*//')
 
-          # Determine version suffix based on type
+          # Bump patch only for final releases; keep base for pre-releases (unreleased)
+          if [ "$IS_PRERELEASE" = false ]; then
+            MAJOR=$(echo "$BASE_VERSION" | cut -d. -f1)
+            MINOR=$(echo "$BASE_VERSION" | cut -d. -f2)
+            PATCH=$(echo "$BASE_VERSION" | cut -d. -f3)
+            BASE_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+          fi
+
+          # Determine version suffix and separator based on type
           case "${{ inputs.version_type }}" in
             dev)
+              SEPARATOR="."
               SUFFIX="dev"
               ;;
             alpha)
+              SEPARATOR=""
               SUFFIX="a"
               ;;
             beta)
+              SEPARATOR=""
               SUFFIX="b"
               ;;
             rc)
+              SEPARATOR=""
               SUFFIX="rc"
               ;;
           esac
@@ -66,7 +81,7 @@ jobs:
             SUFFIX_NUM=$(date +%Y%m%d%H%M%S)
           fi
 
-          TEST_VERSION="${BASE_VERSION}${SUFFIX}${SUFFIX_NUM}"
+          TEST_VERSION="${BASE_VERSION}${SEPARATOR}${SUFFIX}${SUFFIX_NUM}"
           echo "test_version=${TEST_VERSION}" >> $GITHUB_OUTPUT
           echo "Test version: ${TEST_VERSION}"
 

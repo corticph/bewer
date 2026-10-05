@@ -1,13 +1,13 @@
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 categories:
-  - title: '🔴 Major changes'
+  - title: '🔴 Breaking changes'
     label: 'major'
     exclude-label: 'dependabot'
-  - title: '🟠 Minor changes'
+  - title: '🟠 New features'
     label: 'minor'
     exclude-label: 'dependabot'
-  - title: '🟡 Patch changes'
+  - title: '🟡 Fixes'
     label: 'patch'
     exclude-label: 'dependabot'
   - title: '📦 Dependencies'
@@ -16,14 +16,14 @@ categories:
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 change-title-escapes: '\<*_&'
 version-resolver:
-  major:
-    labels:
-      - 'major'
+  # Pre-1.0: breaking change (major label) → minor bump, everything else → patch.
+  # Revert to one-to-one mapping (major→major, minor→minor, patch→patch) when releasing 1.0.0.
   minor:
     labels:
-      - 'minor'
+      - 'major'
   patch:
     labels:
+      - 'minor'
       - 'patch'
   default: patch
 filter-by-commitish: true

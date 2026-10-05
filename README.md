@@ -10,7 +10,7 @@
 
 <br>
 
-**⚠️ Important:** This project is not production ready and is still in early development. Breaking changes may occur, and backwards compatibility between alpha versions is not guaranteed.
+**⚠️ Important:** Bewer is pre-1.0 and under active development. The API may change. Breaking changes are signalled by a **minor** version bump (e.g. `0.2.x → 0.3.0`); patch releases contain only fixes and backwards-compatible additions. Pin with `bewer~=0.Y.0` (pip) or `^0.Y.0` (Poetry).
 
 **Bewer is an evaluation and analysis framework for automatic speech recognition in Python.** It defines a transparent YAML-based approach for configuring evaluation pipelines and makes it easy to inspect and analyze individual examples through a web-based interface. The built-in preprocessing pipeline and metrics collection are designed to cover all conventional use cases and then some, while still being fully extensible.
 
