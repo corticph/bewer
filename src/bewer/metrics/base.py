@@ -881,6 +881,13 @@ class MetricRegistry:
 
         return decorator
 
+    def list(self) -> list[str]:
+        """Return sorted names of all registered metrics."""
+        return sorted(self.metric_factories)
+
+    def __contains__(self, name: str) -> bool:
+        return name in self.metric_factories
+
 
 METRIC_REGISTRY = MetricRegistry()
 

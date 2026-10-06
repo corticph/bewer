@@ -27,6 +27,7 @@ ordinals (``1st``) and plain numbers (``2024``) are rejected.
 from __future__ import annotations
 
 from bewer.extractors.regex import RegexExtractor
+from bewer.registry import REGISTRY
 
 __all__ = ["ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN", "OrthographicallyComplexTermExtractor"]
 
@@ -60,3 +61,6 @@ class OrthographicallyComplexTermExtractor(RegexExtractor):
     """
 
     default_pattern = ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN
+
+
+REGISTRY.extractors.register("orthographically_complex", OrthographicallyComplexTermExtractor())
