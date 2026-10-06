@@ -288,53 +288,26 @@ def generate_alignment_html_lines(
             prev_was_insert = prev_op.type == OpType.INSERT
             prev_kt_open = (op_idx - 1) in open_indices
 
+            sep_result = _compute_separator(
+                op,
+                op_idx,
+                alignment,
+                prev_op,
+                prev_was_insert,
+                prev_was_delete,
+                prev_kt_open,
+                prev_ref_end,
+                prev_hyp_end,
+                next_ref_span_after,
+                next_hyp_span_after,
+                ref_std,
+                hyp_std,
+                color_scheme,
+            )
             if surface:
-                # Ref inter-token: gap from prev ref end to this op's ref span.
-                # INSERTs look ahead to next ref span. Skip if prev was INSERT.
-                if op.ref_span is not None and not prev_was_insert:
-                    ref_inter_raw = ref_std[prev_ref_end : op.ref_span.start]
-                elif op.type == OpType.INSERT and not prev_was_insert:
-                    next_ref_idx = next_ref_span_after[op_idx]
-                    end = alignment[next_ref_idx].ref_span.start if next_ref_idx is not None else prev_ref_end
-                    ref_inter_raw = ref_std[prev_ref_end:end]
-                else:
-                    ref_inter_raw = ""
-
-                # Hyp inter-token: symmetric to ref side.
-                if op.hyp_span is not None and not prev_was_delete:
-                    hyp_inter_raw = hyp_std[prev_hyp_end : op.hyp_span.start]
-                elif op.type == OpType.DELETE and not prev_was_delete:
-                    next_hyp_idx = next_hyp_span_after[op_idx]
-                    end = alignment[next_hyp_idx].hyp_span.start if next_hyp_idx is not None else prev_hyp_end
-                    hyp_inter_raw = hyp_std[prev_hyp_end:end]
-                else:
-                    hyp_inter_raw = ""
-
-                ref_inter_text = _eliminate_newlines(ref_inter_raw)
-                hyp_inter_text = _eliminate_newlines(hyp_inter_raw)
-                ref_inter_len = len(ref_inter_text)
-                hyp_inter_len = len(hyp_inter_text)
-                sep_length = max(ref_inter_len, hyp_inter_len, 1)
-
-                ref_sep = _escape_and_nbsp(ref_inter_text)
-                hyp_sep = _escape_and_nbsp(hyp_inter_text)
-
-                # Leading-pad the shorter side so content aligns at the end.
-                if ref_inter_len < sep_length:
-                    ref_sep = get_html_padding(sep_length - ref_inter_len, color_scheme) + ref_sep
-                if hyp_inter_len < sep_length:
-                    hyp_sep = get_html_padding(sep_length - hyp_inter_len, color_scheme) + hyp_sep
-
-                if prev_kt_open:
-                    ref_sep = format_key_term(ref_sep)
-
-                if prev_op.hyp_right_partial:
-                    hyp_sep = get_html_padding(sep_length, color_scheme)
+                ref_sep, hyp_sep, sep_length = sep_result[3], sep_result[4], sep_result[5]
             else:
-                # Normalized mode: separator is always a single &nbsp;
-                sep_length = 1
-                ref_sep = format_key_term("&nbsp;") if prev_kt_open else "&nbsp;"
-                hyp_sep = get_html_padding(1, color_scheme=color_scheme) if prev_op.hyp_right_partial else "&nbsp;"
+                ref_sep, hyp_sep, sep_length = sep_result[0], sep_result[1], sep_result[2]
         else:
             # First op: no separator.
             sep_length = 0
@@ -382,6 +355,86 @@ def generate_alignment_html_lines(
 
     lines.append((ref_line, hyp_line))
     return lines
+
+
+def _compute_separator(
+    op: "Op",
+    op_idx: int,
+    alignment: "Alignment",
+    prev_op: "Op",
+    prev_was_insert: bool,
+    prev_was_delete: bool,
+    prev_kt_open: bool,
+    prev_ref_end: int,
+    prev_hyp_end: int,
+    next_ref_span_after: list[int | None],
+    next_hyp_span_after: list[int | None],
+    ref_std: str | None,
+    hyp_std: str | None,
+    color_scheme: type[HTMLAlignmentColors],
+) -> tuple[str, str, int, str, str, int]:
+    """Compute the pre-separator for an op.
+
+    Returns (norm_ref_sep, norm_hyp_sep, norm_sep_length,
+             surf_ref_sep, surf_hyp_sep, surf_sep_length).
+
+    Normalized mode: always &nbsp;.
+    Surface mode: actual inter-token text from standardized text.
+    One-sided ops (INSERT/DELETE) consume the gap up to the next op
+    with a span on the missing side; consecutive one-sided ops skip
+    (gap already consumed by the first).
+    """
+    # Normalized separator (always &nbsp;)
+    norm_sep_length = 1
+    norm_ref_sep = format_key_term("&nbsp;") if prev_kt_open else "&nbsp;"
+    norm_hyp_sep = get_html_padding(1, color_scheme=color_scheme) if prev_op.hyp_right_partial else "&nbsp;"
+
+    # Surface separator
+    if ref_std is not None and hyp_std is not None:
+        if op.ref_span is not None and not prev_was_insert:
+            ref_inter_raw = ref_std[prev_ref_end : op.ref_span.start]
+        elif op.type == OpType.INSERT and not prev_was_insert:
+            next_ref_idx = next_ref_span_after[op_idx]
+            end = alignment[next_ref_idx].ref_span.start if next_ref_idx is not None else prev_ref_end
+            ref_inter_raw = ref_std[prev_ref_end:end]
+        else:
+            ref_inter_raw = ""
+
+        if op.hyp_span is not None and not prev_was_delete:
+            hyp_inter_raw = hyp_std[prev_hyp_end : op.hyp_span.start]
+        elif op.type == OpType.DELETE and not prev_was_delete:
+            next_hyp_idx = next_hyp_span_after[op_idx]
+            end = alignment[next_hyp_idx].hyp_span.start if next_hyp_idx is not None else prev_hyp_end
+            hyp_inter_raw = hyp_std[prev_hyp_end:end]
+        else:
+            hyp_inter_raw = ""
+
+        ref_inter_text = _eliminate_newlines(ref_inter_raw)
+        hyp_inter_text = _eliminate_newlines(hyp_inter_raw)
+        ref_inter_len = len(ref_inter_text)
+        hyp_inter_len = len(hyp_inter_text)
+        surf_sep_length = max(ref_inter_len, hyp_inter_len, 1)
+
+        surf_ref_sep = _escape_and_nbsp(ref_inter_text)
+        surf_hyp_sep = _escape_and_nbsp(hyp_inter_text)
+
+        # Leading-pad the shorter side so content aligns at the end.
+        if ref_inter_len < surf_sep_length:
+            surf_ref_sep = get_html_padding(surf_sep_length - ref_inter_len, color_scheme) + surf_ref_sep
+        if hyp_inter_len < surf_sep_length:
+            surf_hyp_sep = get_html_padding(surf_sep_length - hyp_inter_len, color_scheme) + surf_hyp_sep
+
+        if prev_kt_open:
+            surf_ref_sep = format_key_term(surf_ref_sep)
+
+        if prev_op.hyp_right_partial:
+            surf_hyp_sep = get_html_padding(surf_sep_length, color_scheme)
+    else:
+        surf_sep_length = norm_sep_length
+        surf_ref_sep = norm_ref_sep
+        surf_hyp_sep = norm_hyp_sep
+
+    return (norm_ref_sep, norm_hyp_sep, norm_sep_length, surf_ref_sep, surf_hyp_sep, surf_sep_length)
 
 
 def generate_alignment_html_lines_dual(
@@ -707,52 +760,23 @@ def _precompute_alignment_units(
             prev_was_insert = prev_op.type == OpType.INSERT
             prev_kt_open = (op_idx - 1) in open_indices
 
-            norm_sep_length = 1
-            norm_ref_sep = format_key_term("&nbsp;") if prev_kt_open else "&nbsp;"
-            norm_hyp_sep = get_html_padding(1, color_scheme=color_scheme) if prev_op.hyp_right_partial else "&nbsp;"
-
-            if has_surface:
-                if op.ref_span is not None and not prev_was_insert:
-                    ref_inter_raw = ref_std[prev_ref_end : op.ref_span.start]
-                elif op.type == OpType.INSERT and not prev_was_insert:
-                    next_ref_idx = next_ref_span_after[op_idx]
-                    end = alignment[next_ref_idx].ref_span.start if next_ref_idx is not None else prev_ref_end
-                    ref_inter_raw = ref_std[prev_ref_end:end]
-                else:
-                    ref_inter_raw = ""
-
-                if op.hyp_span is not None and not prev_was_delete:
-                    hyp_inter_raw = hyp_std[prev_hyp_end : op.hyp_span.start]
-                elif op.type == OpType.DELETE and not prev_was_delete:
-                    next_hyp_idx = next_hyp_span_after[op_idx]
-                    end = alignment[next_hyp_idx].hyp_span.start if next_hyp_idx is not None else prev_hyp_end
-                    hyp_inter_raw = hyp_std[prev_hyp_end:end]
-                else:
-                    hyp_inter_raw = ""
-
-                ref_inter_text = _eliminate_newlines(ref_inter_raw)
-                hyp_inter_text = _eliminate_newlines(hyp_inter_raw)
-                ref_inter_len = len(ref_inter_text)
-                hyp_inter_len = len(hyp_inter_text)
-                surf_sep_length = max(ref_inter_len, hyp_inter_len, 1)
-
-                surf_ref_sep = _escape_and_nbsp(ref_inter_text)
-                surf_hyp_sep = _escape_and_nbsp(hyp_inter_text)
-
-                if ref_inter_len < surf_sep_length:
-                    surf_ref_sep = get_html_padding(surf_sep_length - ref_inter_len, color_scheme) + surf_ref_sep
-                if hyp_inter_len < surf_sep_length:
-                    surf_hyp_sep = get_html_padding(surf_sep_length - hyp_inter_len, color_scheme) + surf_hyp_sep
-
-                if prev_kt_open:
-                    surf_ref_sep = format_key_term(surf_ref_sep)
-
-                if prev_op.hyp_right_partial:
-                    surf_hyp_sep = get_html_padding(surf_sep_length, color_scheme)
-            else:
-                surf_sep_length = 1
-                surf_ref_sep = norm_ref_sep
-                surf_hyp_sep = norm_hyp_sep
+            sep_result = _compute_separator(
+                op,
+                op_idx,
+                alignment,
+                prev_op,
+                prev_was_insert,
+                prev_was_delete,
+                prev_kt_open,
+                prev_ref_end,
+                prev_hyp_end,
+                next_ref_span_after,
+                next_hyp_span_after,
+                ref_std if has_surface else None,
+                hyp_std if has_surface else None,
+                color_scheme,
+            )
+            norm_ref_sep, norm_hyp_sep, norm_sep_length, surf_ref_sep, surf_hyp_sep, surf_sep_length = sep_result
         else:
             norm_sep_length = 0
             surf_sep_length = 0
