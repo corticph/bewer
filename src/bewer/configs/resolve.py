@@ -7,6 +7,7 @@ from omegaconf import OmegaConf
 from bewer.flags import NORMALIZERS, STANDARDIZERS, TOKENIZERS
 from bewer.preprocessing.normalization import Normalizer
 from bewer.preprocessing.tokenization import Tokenizer
+from bewer.registry import REGISTRY
 
 __all__: list[str] = []  # All symbols are internal
 
@@ -30,10 +31,17 @@ class Pipelines(_PipelinesBase):
 
 
 def _resolve_function(path: str):
-    """Resolve a function from a dot-separated path string."""
-    module_name, func_name = path.rsplit(".", 1)
-    module = import_module(module_name)
-    return getattr(module, func_name)
+    """Resolve a function from a dot-separated path string or registry name.
+
+    If the string contains a dot, it is treated as a dotted import path
+    (e.g. ``bewer.preprocessing.normalization.lowercase``).  Otherwise it
+    is looked up in ``REGISTRY.transforms`` (e.g. ``lowercase``).
+    """
+    if "." in path:
+        module_name, func_name = path.rsplit(".", 1)
+        module = import_module(module_name)
+        return getattr(module, func_name)
+    return REGISTRY.transforms.get(path)
 
 
 def _resolve_func_pipeline(name, cfg):
@@ -73,7 +81,10 @@ def _resolve_tokenizer(name, cfg):
 
     func, cfg_params = next(iter(cfg.items()))
     cfg_params = cfg_params or {}
-    tokenizer_func = _resolve_function(func)
+    if "." in func:
+        tokenizer_func = _resolve_function(func)
+    else:
+        tokenizer_func = REGISTRY.tokenizers.get(func)
     pattern = tokenizer_func(**cfg_params)
     return Tokenizer(pattern, name)
 

@@ -114,3 +114,64 @@ class TestResolveTokenizer:
         )
         with pytest.raises(ValueError, match="exactly one tokenizer"):
             resolve_pipelines(cfg)
+
+
+class TestRegistryNameResolution:
+    """Tests that the YAML loader accepts registry names alongside dotted paths."""
+
+    def test_registry_name_for_transform(self):
+        """A bare registry name (no dot) resolves from REGISTRY.transforms."""
+        cfg = OmegaConf.create(
+            {
+                "standardizers": {"default": {"nfc": {}}},
+                "tokenizers": {"default": {"whitespace_pattern": {}}},
+                "normalizers": {"default": {"lowercase": {}}},
+            }
+        )
+        pipelines = resolve_pipelines(cfg)
+        assert "default" in pipelines.standardizers
+        assert "default" in pipelines.tokenizers
+        assert "default" in pipelines.normalizers
+
+    def test_registry_name_for_tokenizer(self):
+        """A bare registry name for a tokenizer resolves from REGISTRY.tokenizers."""
+        cfg = OmegaConf.create(
+            {
+                "standardizers": {"default": {"nfc": {}}},
+                "tokenizers": {"default": {"strip_punctuation_keep_symbols_pattern": {"split_on_escaped": "-/"}}},
+                "normalizers": {"default": {"lowercase": {}}},
+            }
+        )
+        pipelines = resolve_pipelines(cfg)
+        assert "default" in pipelines.tokenizers
+
+    def test_registry_name_and_dotted_path_mixed(self):
+        """Registry names and dotted paths can be mixed in the same config."""
+        cfg = OmegaConf.create(
+            {
+                "standardizers": {"default": {"bewer.preprocessing.normalization.nfc": {}}},
+                "tokenizers": {"default": {"whitespace_pattern": {}}},
+                "normalizers": {
+                    "default": {
+                        "lowercase": {},
+                        "bewer.preprocessing.normalization.transliterate_symbols": {},
+                    }
+                },
+            }
+        )
+        pipelines = resolve_pipelines(cfg)
+        assert "default" in pipelines.normalizers
+
+    def test_unknown_registry_name_raises(self):
+        """An unknown registry name raises ComponentNotFoundError."""
+        from bewer.registry import ComponentNotFoundError
+
+        cfg = OmegaConf.create(
+            {
+                "standardizers": {"default": {"nfc": {}}},
+                "tokenizers": {"default": {"whitespace_pattern": {}}},
+                "normalizers": {"default": {"nonexistent_func": {}}},
+            }
+        )
+        with pytest.raises(ComponentNotFoundError, match="Transform 'nonexistent_func' not found"):
+            resolve_pipelines(cfg)

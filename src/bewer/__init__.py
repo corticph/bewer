@@ -8,6 +8,7 @@ from bewer import reporting as reporting
 from bewer.core.dataset import Dataset, DatasetFrozenError
 from bewer.core.vocabulary import ExtractorFn, Vocabulary, VocabularyExtractorError, VocabularyFrozenError
 from bewer.preprocessing.context import set_pipeline
+from bewer.registry import REGISTRY
 
 try:
     __version__ = version("bewer")
@@ -21,6 +22,7 @@ __all__ = [
     "VocabularyExtractorError",
     "VocabularyFrozenError",
     "ExtractorFn",
+    "REGISTRY",
     "set_pipeline",
     "core",
     "extractors",

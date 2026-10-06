@@ -27,6 +27,7 @@ The direct-call form requires an explicit name.
 from __future__ import annotations
 
 import difflib
+import inspect
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator
 
@@ -46,6 +47,41 @@ class ComponentNotFoundError(LookupError):
         super().__init__(f"{kind.capitalize()} '{name}' not found. Available: {sorted(available)}{hint}")
 
 
+def _validate_transform(fn: Callable) -> None:
+    """A transform must accept exactly one required positional parameter (the text).
+
+    Additional parameters are allowed as long as they have defaults (i.e. they
+    are optional keyword params).
+    """
+    sig = inspect.signature(fn)
+    positional = [
+        p
+        for p in sig.parameters.values()
+        if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    ]
+    required = [p for p in positional if p.default is inspect.Parameter.empty]
+    if len(required) != 1:
+        raise TypeError(
+            f"Transform '{fn.__name__}' must have exactly one required positional parameter, got {len(required)}"
+        )
+
+
+def _validate_tokenizer(fn: Callable) -> None:
+    """A tokenizer factory must have at least zero positional-only parameters.
+
+    All existing tokenizer factories use keyword-or-keyword-only parameters.
+    POSITIONAL_ONLY parameters (``/``) would break the keyword-call convention.
+    """
+    sig = inspect.signature(fn)
+    pos_only = [p for p in sig.parameters.values() if p.kind == inspect.Parameter.POSITIONAL_ONLY]
+    if pos_only:
+        names = ", ".join(p.name for p in pos_only)
+        raise TypeError(
+            f"Tokenizer '{fn.__name__}' has positional-only parameter(s) [{names}] "
+            f"— tokenizer params must be passable by keyword"
+        )
+
+
 class ComponentRegistry:
     """A name -> component registry with decorator-friendly registration.
 
@@ -53,10 +89,14 @@ class ComponentRegistry:
     ----------
     kind:
         Human-readable label for error messages (e.g. "transform").
+    validate_fn:
+        Optional callable invoked on the component at registration time.
+        If it raises, registration is aborted.
     """
 
-    def __init__(self, kind: str):
+    def __init__(self, kind: str, *, validate_fn: Callable[[Any], None] | None = None):
         self._kind = kind
+        self._validate_fn = validate_fn
         self._components: dict[str, Any] = {}
 
     def register(
@@ -98,6 +138,8 @@ class ComponentRegistry:
         def _do_register(n: str, c: Any) -> Any:
             if not allow_override and n in self._components:
                 raise ValueError(f"{self._kind} '{n}' is already registered")
+            if self._validate_fn is not None:
+                self._validate_fn(c)
             for k, v in attrs.items():
                 setattr(c, k, v)
             self._components[n] = c
@@ -155,8 +197,8 @@ class Registry:
     """
 
     def __init__(self):
-        self.transforms = ComponentRegistry("transform")
-        self.tokenizers = ComponentRegistry("tokenizer")
+        self.transforms = ComponentRegistry("transform", validate_fn=_validate_transform)
+        self.tokenizers = ComponentRegistry("tokenizer", validate_fn=_validate_tokenizer)
         self.extractors = ComponentRegistry("extractor")
         self.vocabularies = ComponentRegistry("vocabulary")
         self.profiles = ComponentRegistry("profile")
