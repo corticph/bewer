@@ -223,7 +223,7 @@ def generate_alignment_html_lines(
     max_line_length: int = 100,
     color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
     allow_subset_matches: bool = False,
-    surface: bool = False,
+    normalized: bool = True,
 ) -> list[tuple[str, str]]:
     """Render the alignment as an HTML table.
 
@@ -235,18 +235,20 @@ def generate_alignment_html_lines(
         alignment: The alignment to render.
         max_line_length: The maximum character length per line for wrapping.
         color_scheme: The color scheme to use for display.
-        surface: If True, render the surface (standardized) form of tokens and include
-            inter-token content (punctuation, whitespace) between ops. Requires
-            ``alignment.src`` to be set. Falls back to normalized form if unavailable.
+        normalized: If True (default), render the normalized form of tokens.
+            If False, render the surface (standardized) form and include
+            inter-token content (punctuation, whitespace) between ops.
+            Requires ``alignment.src`` to be set. Falls back to normalized
+            form if unavailable.
 
     Returns:
         A list of tuples, each containing the reference and hypothesis HTML strings for each line.
     """
-    if surface and alignment.src is not None:
+    if not normalized and alignment.src is not None:
         ref_std = alignment.src.ref.standardized
         hyp_std = alignment.src.hyp.standardized
     else:
-        surface = False
+        normalized = True
         ref_std = None
         hyp_std = None
 
@@ -304,7 +306,7 @@ def generate_alignment_html_lines(
                 hyp_std,
                 color_scheme,
             )
-            if surface:
+            if not normalized:
                 ref_sep, hyp_sep, sep_length = sep_result[3], sep_result[4], sep_result[5]
             else:
                 ref_sep, hyp_sep, sep_length = sep_result[0], sep_result[1], sep_result[2]
@@ -315,7 +317,7 @@ def generate_alignment_html_lines(
             hyp_sep = ""
 
         # --- Op content ---
-        if surface:
+        if not normalized:
             ref_text = ref_std[op.ref_span] if op.ref_span is not None else None
             hyp_text = hyp_std[op.hyp_span] if op.hyp_span is not None else None
         else:

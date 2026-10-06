@@ -424,7 +424,7 @@ class TestSurfaceFormRendering:
         """Surface mode shows the standardized (cased) form, not normalized (lowercase)."""
         ds = self._create_dataset()
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         ref_text = " ".join(ref for ref, _ in result)
         assert "Hello" in ref_text
         assert "This" in ref_text
@@ -442,7 +442,7 @@ class TestSurfaceFormRendering:
         """Surface mode includes punctuation between tokens."""
         ds = self._create_dataset()
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         ref_text = " ".join(ref for ref, _ in result)
         assert "," in ref_text
         assert "!" in ref_text
@@ -463,7 +463,7 @@ class TestSurfaceFormRendering:
         ds = Dataset()
         ds.add("Hello,\nworld!", "Hello,\nworld!")
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         all_html = " ".join(ref for ref, _ in result) + " ".join(hyp for _, hyp in result)
         assert "\n" not in all_html
 
@@ -471,7 +471,7 @@ class TestSurfaceFormRendering:
         """Surface mode falls back to normalized when alignment.src is None."""
         ops = [Op(type=OpType.MATCH, ref="hello", hyp="hello")]
         alignment = Alignment(ops, src=Mock(vocabs=set()))
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         assert len(result) >= 1
         ref_text = result[0][0]
         assert "hello" in ref_text
@@ -483,7 +483,7 @@ class TestSurfaceFormRendering:
         ds = Dataset()
         ds.add("Hello, world! Bye.", "Hello, world! Bye.")
         alignment = ds[0].metrics.error_align().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         ref_text = " ".join(ref for ref, _ in result)
         assert "," in ref_text
         assert "!" in ref_text
@@ -497,7 +497,7 @@ class TestSurfaceFormRendering:
         alignment = ds[0].metrics.levenshtein().alignment
 
         norm_result = generate_alignment_html_lines(alignment)
-        surf_result = generate_alignment_html_lines(alignment, surface=True)
+        surf_result = generate_alignment_html_lines(alignment, normalized=False)
 
         norm_html = " ".join(ref for ref, _ in norm_result)
         surf_html = " ".join(ref for ref, _ in surf_result)
@@ -534,8 +534,8 @@ class TestSurfaceFormRendering:
         """Without src, surface mode uses op.ref/op.hyp (same as normalized)."""
         ops = [Op(type=OpType.MATCH, ref="hello", hyp="hello")]
         alignment = Alignment(ops, src=Mock(vocabs=set()))
-        norm_result = generate_alignment_html_lines(alignment, surface=False)
-        surf_result = generate_alignment_html_lines(alignment, surface=True)
+        norm_result = generate_alignment_html_lines(alignment, normalized=True)
+        surf_result = generate_alignment_html_lines(alignment, normalized=False)
         assert norm_result == surf_result
 
     def test_surface_key_term_highlighting(self):
@@ -547,7 +547,7 @@ class TestSurfaceFormRendering:
         ds.add("the quick brown fox", "the quick brown dog")
         ds.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         ref_text = " ".join(ref for ref, _ in result)
         assert "kw" in ref_text
 
@@ -562,7 +562,7 @@ class TestPreSeparatorLineBreaking:
         ds = Dataset()
         ds.add("one two three four five six seven eight nine ten", "one two three four five six seven eight nine ten")
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True, max_line_length=20)
+        result = generate_alignment_html_lines(alignment, normalized=False, max_line_length=20)
         for ref_line, hyp_line in result:
             assert not ref_line.startswith("&nbsp;")
             assert not hyp_line.startswith('<span style="background-color:')
@@ -574,7 +574,7 @@ class TestPreSeparatorLineBreaking:
         ds = Dataset()
         ds.add("one two three", "one two three")
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True, max_line_length=10)
+        result = generate_alignment_html_lines(alignment, normalized=False, max_line_length=10)
         for ref_line, _ in result:
             assert not ref_line.startswith("&nbsp;")
 
@@ -585,7 +585,7 @@ class TestPreSeparatorLineBreaking:
         ds = Dataset()
         ds.add("hello world", "hello world")
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         ref_line = result[-1][0]
         assert not ref_line.endswith("&nbsp;")
 
@@ -600,7 +600,7 @@ class TestOneSidedOpInterTokenAlignment:
         ds = Dataset()
         ds.add("the old cat sat", "the cat sat")
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         ref_html = result[0][0]
         hyp_html = result[0][1]
 
@@ -616,7 +616,7 @@ class TestOneSidedOpInterTokenAlignment:
         ds = Dataset()
         ds.add("the cat sat", "the big cat sat")
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         ref_html = result[0][0]
         hyp_html = result[0][1]
 
@@ -632,7 +632,7 @@ class TestOneSidedOpInterTokenAlignment:
         ds = Dataset()
         ds.add("the old cat sat", "the cat sat")
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         ref_html = result[0][0]
         hyp_html = result[0][1]
 
@@ -650,7 +650,7 @@ class TestOneSidedOpInterTokenAlignment:
         ds = Dataset()
         ds.add("the cat sat", "the big cat sat")
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         ref_html = result[0][0]
         hyp_html = result[0][1]
 
@@ -666,7 +666,7 @@ class TestOneSidedOpInterTokenAlignment:
         ds = Dataset()
         ds.add("a b c d e", "a e")
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         # Should produce valid output without errors
         assert len(result) >= 1
 
@@ -677,5 +677,5 @@ class TestOneSidedOpInterTokenAlignment:
         ds = Dataset()
         ds.add("a e", "a b c d e")
         alignment = ds[0].metrics.levenshtein().alignment
-        result = generate_alignment_html_lines(alignment, surface=True)
+        result = generate_alignment_html_lines(alignment, normalized=False)
         assert len(result) >= 1
