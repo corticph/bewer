@@ -311,7 +311,8 @@ def generate_alignment_html_lines(
             else:
                 ref_sep, hyp_sep, sep_length = sep_result[0], sep_result[1], sep_result[2]
         else:
-            # First op: no separator.
+            # First op: no inter-token separator. Leading pre-token content
+            # (e.g. opening quotes) is handled separately as prefix above.
             sep_length = 0
             ref_sep = ""
             hyp_sep = ""
