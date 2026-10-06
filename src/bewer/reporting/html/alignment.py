@@ -278,6 +278,10 @@ def generate_alignment_html_lines(
     lines = []
     for op_idx, op in enumerate(alignment):
         # --- Pre-separator (inter-token content before this op) ---
+        # Normalized: always &nbsp;. Surface: actual inter-token text from
+        # standardized text. One-sided ops (INSERT/DELETE) consume the gap
+        # up to the next op with a span on the missing side; consecutive
+        # one-sided ops skip (gap already consumed by the first).
         if op_idx > 0:
             prev_op = alignment[op_idx - 1]
             prev_was_delete = prev_op.type == OpType.DELETE
@@ -285,7 +289,8 @@ def generate_alignment_html_lines(
             prev_kt_open = (op_idx - 1) in open_indices
 
             if surface:
-                # Ref inter-token
+                # Ref inter-token: gap from prev ref end to this op's ref span.
+                # INSERTs look ahead to next ref span. Skip if prev was INSERT.
                 if op.ref_span is not None and not prev_was_insert:
                     ref_inter_raw = ref_std[prev_ref_end : op.ref_span.start]
                 elif op.type == OpType.INSERT and not prev_was_insert:
@@ -295,7 +300,7 @@ def generate_alignment_html_lines(
                 else:
                     ref_inter_raw = ""
 
-                # Hyp inter-token
+                # Hyp inter-token: symmetric to ref side.
                 if op.hyp_span is not None and not prev_was_delete:
                     hyp_inter_raw = hyp_std[prev_hyp_end : op.hyp_span.start]
                 elif op.type == OpType.DELETE and not prev_was_delete:
@@ -314,6 +319,7 @@ def generate_alignment_html_lines(
                 ref_sep = _escape_and_nbsp(ref_inter_text)
                 hyp_sep = _escape_and_nbsp(hyp_inter_text)
 
+                # Leading-pad the shorter side so content aligns at the end.
                 if ref_inter_len < sep_length:
                     ref_sep = get_html_padding(sep_length - ref_inter_len, color_scheme) + ref_sep
                 if hyp_inter_len < sep_length:
@@ -325,10 +331,12 @@ def generate_alignment_html_lines(
                 if prev_op.hyp_right_partial:
                     hyp_sep = get_html_padding(sep_length, color_scheme)
             else:
+                # Normalized mode: separator is always a single &nbsp;
                 sep_length = 1
                 ref_sep = format_key_term("&nbsp;") if prev_kt_open else "&nbsp;"
                 hyp_sep = get_html_padding(1, color_scheme=color_scheme) if prev_op.hyp_right_partial else "&nbsp;"
         else:
+            # First op: no separator.
             sep_length = 0
             ref_sep = ""
             hyp_sep = ""
