@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from bewer.alignment import Alignment, OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, metric_value
 
 if TYPE_CHECKING:
     from bewer.core.key_term import KeyTermMatch
@@ -190,7 +190,7 @@ class _KTStats(Metric):
     example_cls = _KTStats_
 
     @dataclass
-    class param_schema(MetricParams):
+    class param_schema(KeyTermParams):
         """Parameters for the _KTStats metric.
 
         Attributes:
@@ -201,15 +201,7 @@ class _KTStats(Metric):
                 instead of the exact-match view (occurrence-level counts).
         """
 
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
         partial_credit: bool = False
-
-        def validate(self) -> None:
-            """Validate that the metric can be computed with the given parameters and source data."""
-            if self.vocab not in self.metric.dataset._vocabularies:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @metric_value
     def num_ref_terms(self) -> int:

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from bewer.alignment import Alignment
 from bewer.metrics._rkt_stats import TermStat
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, dependency, metric_value
 
 __all__ = ["RKTR"]
 
@@ -58,7 +58,7 @@ class RKTR(Metric):
     example_cls = RKTR_
 
     @dataclass
-    class param_schema(MetricParams):
+    class param_schema(KeyTermParams):
         """Parameters for the RKTR metric.
 
         Attributes:
@@ -69,16 +69,12 @@ class RKTR(Metric):
                 means exact match (equivalent to KTR).
         """
 
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
         threshold: float = 0.0
 
         def validate(self) -> None:
             if not 0.0 <= self.threshold <= 1.0:
                 raise ValueError(f"threshold must be between 0.0 and 1.0, got {self.threshold}.")
-            if self.vocab not in self.metric.dataset._vocabularies:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
+            super().validate()
 
     @dependency
     def _rkt_stats(self):

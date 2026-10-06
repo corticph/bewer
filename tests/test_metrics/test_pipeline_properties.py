@@ -26,22 +26,17 @@ class TestMetricPipelineProperties:
         wer = sample_dataset.metrics.wer()
         assert wer.pipeline == (wer.standardizer, wer.tokenizer, wer.normalizer)
 
-    def test_custom_standardizer(self, sample_dataset):
-        """Test that a custom standardizer is returned correctly."""
-        wer = sample_dataset.metrics.wer(standardizer="custom_std")
-        assert wer.standardizer == "custom_std"
-        assert wer.tokenizer == DEFAULT
+    def test_custom_tokenizer(self, sample_dataset):
+        """Test that a non-default tokenizer is returned correctly."""
+        wer = sample_dataset.metrics.wer(tokenizer="with_punctuation")
+        assert wer.tokenizer == "with_punctuation"
+        assert wer.standardizer == DEFAULT
         assert wer.normalizer == DEFAULT
 
-    def test_custom_tokenizer(self, sample_dataset):
-        """Test that a custom tokenizer is returned correctly."""
-        wer = sample_dataset.metrics.wer(tokenizer="custom_tok")
-        assert wer.tokenizer == "custom_tok"
-
     def test_custom_normalizer(self, sample_dataset):
-        """Test that a custom normalizer is returned correctly."""
-        wer = sample_dataset.metrics.wer(normalizer="custom_norm")
-        assert wer.normalizer == "custom_norm"
+        """Test that a non-default normalizer is returned correctly."""
+        wer = sample_dataset.metrics.wer(normalizer="cased")
+        assert wer.normalizer == "cased"
 
 
 class TestExampleMetricPipelineProperties:
@@ -78,7 +73,7 @@ class TestExampleMetricPipelineProperties:
     def test_custom_pipeline_propagates(self, sample_dataset):
         """Test that custom pipeline settings propagate to ExampleMetric."""
         example = sample_dataset[0]
-        wer_example = example.metrics.wer(standardizer="custom_std", tokenizer="custom_tok")
-        assert wer_example.standardizer == "custom_std"
-        assert wer_example.tokenizer == "custom_tok"
-        assert wer_example.normalizer == DEFAULT
+        wer_example = example.metrics.wer(tokenizer="with_punctuation", normalizer="cased")
+        assert wer_example.standardizer == DEFAULT
+        assert wer_example.tokenizer == "with_punctuation"
+        assert wer_example.normalizer == "cased"

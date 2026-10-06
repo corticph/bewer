@@ -347,6 +347,25 @@ class TestMetricCollection:
         wer2 = sample_dataset.metrics.get("wer")()
         assert wer1 is wer2
 
+    def test_invalid_pipeline_variant_raises_before_freeze(self, sample_dataset):
+        """A typo in a pipeline variant name raises ValueError and does not freeze."""
+        with pytest.raises(ValueError, match="Standardizer 'nonexistent' not found"):
+            sample_dataset.metrics.wer(standardizer="nonexistent")
+        assert sample_dataset.is_frozen is False
+
+        with pytest.raises(ValueError, match="Tokenizer 'nonexistent' not found"):
+            sample_dataset.metrics.wer(tokenizer="nonexistent")
+        assert sample_dataset.is_frozen is False
+
+        with pytest.raises(ValueError, match="Normalizer 'nonexistent' not found"):
+            sample_dataset.metrics.wer(normalizer="nonexistent")
+        assert sample_dataset.is_frozen is False
+
+    def test_invalid_pipeline_variant_lists_available(self, sample_dataset):
+        """The error message lists available variant names."""
+        with pytest.raises(ValueError, match="Available:"):
+            sample_dataset.metrics.wer(normalizer="defualt")
+
 
 class TestExampleMetricCollection:
     """Tests for ExampleMetricCollection class."""

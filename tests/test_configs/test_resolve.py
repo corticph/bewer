@@ -1,7 +1,10 @@
 """Tests for bewer.configs.resolve module."""
 
+import pytest
+from omegaconf import OmegaConf
+
 from bewer import Dataset
-from bewer.configs.resolve import Pipelines
+from bewer.configs.resolve import Pipelines, resolve_pipelines
 
 STAGES = ("standardizers", "tokenizers", "normalizers")
 
@@ -62,3 +65,52 @@ class TestPipelinesRepr:
         assert tuple(pipelines) == ({"a": 1}, {"b": 2}, {"c": 3})
         assert pipelines._fields == STAGES
         assert getattr(pipelines, "tokenizers") == {"b": 2}
+
+
+class TestResolveFuncPipeline:
+    """Tests for _resolve_func_pipeline param validation."""
+
+    def test_unexpected_param_raises(self):
+        """An unexpected parameter in the config raises ValueError."""
+        cfg = OmegaConf.create(
+            {
+                "standardizers": {"default": {"bewer.preprocessing.normalization.nfc": {"bogus": True}}},
+                "tokenizers": {"default": {"bewer.preprocessing.tokenization.whitespace_strip_symbols_and_custom": {}}},
+                "normalizers": {"default": {"bewer.preprocessing.normalization.lowercase": {}}},
+            }
+        )
+        with pytest.raises(ValueError, match="Unexpected parameter 'bogus'"):
+            resolve_pipelines(cfg)
+
+    def test_first_positional_arg_not_in_config(self):
+        """The first positional argument should not be passed in config params."""
+        cfg = OmegaConf.create(
+            {
+                "standardizers": {"default": {"bewer.preprocessing.normalization.nfc": {"text": "hello"}}},
+                "tokenizers": {"default": {"bewer.preprocessing.tokenization.whitespace_strip_symbols_and_custom": {}}},
+                "normalizers": {"default": {"bewer.preprocessing.normalization.lowercase": {}}},
+            }
+        )
+        with pytest.raises(ValueError, match="First positional argument 'text' should not be passed"):
+            resolve_pipelines(cfg)
+
+
+class TestResolveTokenizer:
+    """Tests for _resolve_tokenizer validation."""
+
+    def test_multiple_tokenizers_raises(self):
+        """A tokenizer config with more than one definition raises ValueError."""
+        cfg = OmegaConf.create(
+            {
+                "standardizers": {"default": {"bewer.preprocessing.normalization.nfc": {}}},
+                "tokenizers": {
+                    "default": {
+                        "bewer.preprocessing.tokenization.whitespace_strip_symbols_and_custom": {},
+                        "bewer.preprocessing.tokenization.keep_symbols_and_punctuation_pattern": {},
+                    }
+                },
+                "normalizers": {"default": {"bewer.preprocessing.normalization.lowercase": {}}},
+            }
+        )
+        with pytest.raises(ValueError, match="exactly one tokenizer"):
+            resolve_pipelines(cfg)

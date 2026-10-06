@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from rapidfuzz.distance import Levenshtein
 
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, metric_value
 
 if TYPE_CHECKING:
     from bewer.core.key_term import KeyTermMatch
@@ -119,7 +119,7 @@ class _RKTStats(Metric):
     example_cls = _RKTStats_
 
     @dataclass
-    class param_schema(MetricParams):
+    class param_schema(KeyTermParams):
         """Parameters for the _RKTStats metric.
 
         Attributes:
@@ -127,14 +127,6 @@ class _RKTStats(Metric):
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
         """
-
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
-
-        def validate(self) -> None:
-            if self.vocab not in self.metric.dataset._vocabularies:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @metric_value
     def num_ref_terms(self) -> int:

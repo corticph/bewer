@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Iterator, Optional, Union, get_type_hints
 
 from typeguard import check_type
 
-from bewer.flags import DEFAULT
+from bewer.flags import DEFAULT, NORMALIZERS, STANDARDIZERS, TOKENIZERS
 from bewer.preprocessing.context import set_pipeline
 from bewer.reporting.python.tables import print_metric_table
 
@@ -19,6 +19,7 @@ __all__ = [
     "Metric",
     "ExampleMetric",
     "MetricParams",
+    "KeyTermParams",
     "metric_value",
     "dependency",
     "METRIC_REGISTRY",
@@ -210,6 +211,25 @@ class MetricParams:
         Called from Metric.__init__ after src is set, so self.metric.src is the Dataset.
         """
         pass
+
+
+@dataclass
+class KeyTermParams(MetricParams):
+    """Base class for key-term metric parameter dataclasses.
+
+    Subclass this with @dataclass to define key-term metric parameters.
+    Provides the common ``vocab``, ``normalized``, and ``allow_subset_matches``
+    fields and validates that the vocabulary exists on the dataset.
+    """
+
+    vocab: str
+    normalized: bool = True
+    allow_subset_matches: bool = False
+
+    def validate(self) -> None:
+        """Validate that the vocabulary exists on the dataset."""
+        if self.vocab not in self.metric.dataset._vocabularies:
+            raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
 
 class Metric(ABC):
@@ -476,6 +496,26 @@ class ExampleMetric(ABC):
         return _get_dependencies(cls)
 
 
+_PIPELINE_STAGES = (
+    ("standardizer", STANDARDIZERS),
+    ("tokenizer", TOKENIZERS),
+    ("normalizer", NORMALIZERS),
+)
+
+
+def _validate_pipeline_variants(resolved: dict, pipelines) -> None:
+    """Check that resolved pipeline variant names exist in the dataset's pipelines.
+
+    Raises ValueError with the available variant names if a name is not found.
+    Called before metric creation so a typo does not freeze the dataset.
+    """
+    for stage_name, stage_attr in _PIPELINE_STAGES:
+        variant = resolved.get(stage_name, DEFAULT)
+        available = getattr(pipelines, stage_attr)
+        if variant not in available:
+            raise ValueError(f"{stage_name.capitalize()} '{variant}' not found. Available: {sorted(available)}")
+
+
 class MetricCollection(object):
     """Collection of metrics for a dataset or an example.
 
@@ -559,6 +599,8 @@ class MetricCollection(object):
 
             # Create new metric instance. This may raise on invalid/missing params; in that
             # case no metric was obtained, so the dataset must be left modifiable.
+            # Validate pipeline variant names before creation so a typo doesn't freeze.
+            _validate_pipeline_variants(resolved, self._src.pipelines)
             metric_instance = METRIC_REGISTRY.create_metric(name, src=self._src, **kwargs)
 
             # A metric was successfully requested: freeze the dataset so its contents (and the
