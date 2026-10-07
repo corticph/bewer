@@ -279,11 +279,6 @@ def generate_alignment_html_lines(
 
     lines = []
     for op_idx, op in enumerate(alignment):
-        # --- Pre-separator (inter-token content before this op) ---
-        # Normalized: always &nbsp;. Surface: actual inter-token text from
-        # standardized text. One-sided ops (INSERT/DELETE) consume the gap
-        # up to the next op with a span on the missing side; consecutive
-        # one-sided ops skip (gap already consumed by the first).
         if op_idx > 0:
             prev_op = alignment[op_idx - 1]
             prev_was_delete = prev_op.type == OpType.DELETE
