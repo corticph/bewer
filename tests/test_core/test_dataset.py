@@ -356,7 +356,7 @@ class TestDatasetLanguage:
         """Test that an unknown language raises an error."""
         from bewer.registry import ComponentNotFoundError
 
-        with pytest.raises(ComponentNotFoundError, match="Profile 'xx' not found"):
+        with pytest.raises(ComponentNotFoundError, match="Config 'xx' not found"):
             Dataset("xx")
 
     def test_language_does_not_affect_non_language_pipeline(self):

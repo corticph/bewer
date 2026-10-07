@@ -20,7 +20,7 @@ __all__ = [
     "Pipelines",
     "merge_configs",
     "resolve_config",
-    "resolve_profile",
+    "get_config",
     "from_yaml",
     "to_yaml",
     "SerializationError",
@@ -182,21 +182,21 @@ def _validate_params(fn: Callable, params: dict[str, Any], *, skip_first: bool =
 
 
 # ============================================================
-# Profile resolution
+# Config name resolution
 # ============================================================
 
 
-def resolve_profile(name: str) -> BewerConfig:
-    """Resolve a profile by name, following the extends chain.
+def get_config(name: str) -> BewerConfig:
+    """Resolve a registered config by name, following the extends chain.
 
-    A profile without ``extends`` returns its delta directly.
-    A profile with ``extends`` is merged onto its parent.
+    A config without ``extends`` returns its delta directly.
+    A config with ``extends`` is merged onto its parent.
     """
-    fn = REGISTRY.profiles.get(name)
+    fn = REGISTRY.configs.get(name)
     extends = getattr(fn, "extends", None)
     delta = fn()
     if extends:
-        base = resolve_profile(extends)
+        base = get_config(extends)
         return merge_configs(base, delta)
     return delta
 

@@ -190,8 +190,8 @@ class Registry:
         Extractor instances (``dataset -> Iterable[str]``).
     vocabularies:
         ``Vocabulary`` instances (frozen on registration).
-    profiles:
-        Profile functions returning ``BewerConfig`` deltas.
+    configs:
+        Config functions returning ``BewerConfig`` deltas.
     metrics:
         The existing ``MetricRegistry`` (not a ``ComponentRegistry``).
     """
@@ -201,7 +201,7 @@ class Registry:
         self.tokenizers = ComponentRegistry("tokenizer", validate_fn=_validate_tokenizer)
         self.extractors = ComponentRegistry("extractor")
         self.vocabularies = ComponentRegistry("vocabulary")
-        self.profiles = ComponentRegistry("profile")
+        self.configs = ComponentRegistry("config")
         # metrics is set lazily to avoid a circular import: MetricRegistry
         # lives in metrics/base.py which imports from preprocessing modules
         # that import REGISTRY from this module.
@@ -228,7 +228,7 @@ class Registry:
         """
         snapshots = {
             ns: dict(getattr(self, ns)._components)
-            for ns in ("transforms", "tokenizers", "extractors", "vocabularies", "profiles")
+            for ns in ("transforms", "tokenizers", "extractors", "vocabularies", "configs")
         }
         try:
             yield
@@ -236,23 +236,6 @@ class Registry:
             for ns, snap in snapshots.items():
                 getattr(self, ns)._components.clear()
                 getattr(self, ns)._components.update(snap)
-
-    def register_profile(self, name: str, *, extends: str | None = None, allow_override: bool = False):
-        """Decorator to register a profile function.
-
-        The function must take no arguments and return a BewerConfig delta.
-        If ``extends`` is given, the delta is merged onto the parent at resolution time.
-        """
-
-        def decorator(fn: Callable) -> Callable:
-            if not allow_override and name in self.profiles:
-                raise ValueError(f"Profile '{name}' is already registered")
-            if extends:
-                fn.extends = extends
-            self.profiles.register(name, fn, allow_override=allow_override)
-            return fn
-
-        return decorator
 
 
 REGISTRY = Registry()

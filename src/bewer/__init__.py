@@ -1,10 +1,10 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from bewer import core as core
+from bewer import defaults as defaults
 from bewer import extractors as extractors
 from bewer import metrics as metrics
 from bewer import preprocessing as preprocessing
-from bewer import profiles as profiles
 from bewer import reporting as reporting
 from bewer.config import BewerConfig, PipelineStep
 from bewer.core.dataset import Dataset, DatasetFrozenError
@@ -32,7 +32,7 @@ __all__ = [
     "extractors",
     "metrics",
     "preprocessing",
-    "profiles",
+    "defaults",
     "reporting",
     "__version__",
 ]

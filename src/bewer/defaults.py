@@ -1,6 +1,6 @@
-"""Built-in language profiles.
+"""Built-in config presets.
 
-Each profile returns a BewerConfig delta — only the variants it changes.
+Each config returns a BewerConfig delta — only the variants it changes.
 The registry builds the full chain from the ``extends`` attribute.
 """
 
@@ -13,11 +13,11 @@ __all__: list[str] = []
 
 
 # ============================================================
-# Base profile (mirrors configs/base.yml byte-for-byte)
+# Base config
 # ============================================================
 
 
-@REGISTRY.register_profile("base")
+@REGISTRY.configs.register("base")
 def base_config() -> BewerConfig:
     return BewerConfig(
         standardizers={
@@ -35,7 +35,7 @@ def base_config() -> BewerConfig:
             ),
             "with_punctuation": PipelineStep(
                 "keep_symbols_and_punctuation_pattern",
-                params={"punct_chars": '.,!?:;"-/()“”«»„¡¿', "keep_newlines": True},
+                params={"punct_chars": '.,!?:;"-/()\u201c\u201d\u00ab\u00bb\u201e\u00a1\u00bf', "keep_newlines": True},
             ),
             "key_term": PipelineStep(
                 "strip_punctuation_keep_symbols_pattern",
@@ -61,21 +61,21 @@ def base_config() -> BewerConfig:
 
 
 # ============================================================
-# English — no changes from base (mirrors en.yml)
+# English — no changes from base
 # ============================================================
 
 
-@REGISTRY.register_profile("en", extends="base")
+@REGISTRY.configs.register("en", extends="base")
 def english_delta() -> BewerConfig:
     return BewerConfig()
 
 
 # ============================================================
-# Danish (mirrors da.yml)
+# Danish
 # ============================================================
 
 
-@REGISTRY.register_profile("da", extends="base")
+@REGISTRY.configs.register("da", extends="base")
 def danish_delta() -> BewerConfig:
     return BewerConfig(
         normalizers={
@@ -89,11 +89,11 @@ def danish_delta() -> BewerConfig:
 
 
 # ============================================================
-# German (mirrors de.yml)
+# German
 # ============================================================
 
 
-@REGISTRY.register_profile("de", extends="base")
+@REGISTRY.configs.register("de", extends="base")
 def german_delta() -> BewerConfig:
     return BewerConfig(
         normalizers={
@@ -107,11 +107,11 @@ def german_delta() -> BewerConfig:
 
 
 # ============================================================
-# French (mirrors fr.yml)
+# French
 # ============================================================
 
 
-@REGISTRY.register_profile("fr", extends="base")
+@REGISTRY.configs.register("fr", extends="base")
 def french_delta() -> BewerConfig:
     return BewerConfig(
         tokenizers={

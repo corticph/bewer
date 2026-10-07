@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Union
 
 import pandas as pd
 
-from bewer.config import BewerConfig, resolve_config, resolve_profile
+from bewer.config import BewerConfig, get_config, resolve_config
 from bewer.core.example import Example
 from bewer.core.text import TokenList
 from bewer.core.vocabulary import Vocabulary
@@ -44,17 +44,17 @@ class Dataset(object):
         The dataset must be populated using one of the load_* methods or manually using the add() method.
 
         Args:
-            config (BewerConfig | str | None): A BewerConfig, a registered profile
-                name (e.g. "base", "en", "da"), or None for the base profile.
+            config (BewerConfig | str | None): A BewerConfig, a registered config
+                name (e.g. "base", "en", "da"), or None for the base config.
             vocabularies (list[str] | None): Names of registered vocabularies to
                 attach eagerly at init time.
         """
         if isinstance(config, BewerConfig):
             self._config = config
         elif isinstance(config, str):
-            self._config = resolve_profile(config)
+            self._config = get_config(config)
         elif config is None:
-            self._config = resolve_profile("base")
+            self._config = get_config("base")
         else:
             raise TypeError(f"config must be BewerConfig, str, or None, got {type(config)}")
 
