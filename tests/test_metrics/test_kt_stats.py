@@ -263,7 +263,7 @@ class TestKTStatsDatasetMetric:
     def test_empty_dataset(self):
         """Test _KTStats raises ValueError for unknown vocab."""
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
+        with pytest.raises(ValueError, match="not found"):
             dataset.metrics._kt_stats(vocab="animals").num_tp
 
 

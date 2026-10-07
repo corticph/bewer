@@ -353,8 +353,10 @@ class TestDatasetLanguage:
         assert ds_default[0].ref.tokens.normalized == ds_en[0].ref.tokens.normalized
 
     def test_unknown_language_raises(self):
-        """Test that an unknown language raises ValueError."""
-        with pytest.raises(ValueError, match="Unknown language"):
+        """Test that an unknown language raises an error."""
+        from bewer.registry import ComponentNotFoundError
+
+        with pytest.raises(ComponentNotFoundError, match="Profile 'xx' not found"):
             Dataset(language="xx")
 
     def test_language_does_not_affect_non_language_pipeline(self):

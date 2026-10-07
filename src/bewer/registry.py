@@ -237,5 +237,22 @@ class Registry:
                 getattr(self, ns)._components.clear()
                 getattr(self, ns)._components.update(snap)
 
+    def register_profile(self, name: str, *, extends: str | None = None, allow_override: bool = False):
+        """Decorator to register a profile function.
+
+        The function must take no arguments and return a BewerConfig delta.
+        If ``extends`` is given, the delta is merged onto the parent at resolution time.
+        """
+
+        def decorator(fn: Callable) -> Callable:
+            if not allow_override and name in self.profiles:
+                raise ValueError(f"Profile '{name}' is already registered")
+            if extends:
+                fn.extends = extends
+            self.profiles.register(name, fn, allow_override=allow_override)
+            return fn
+
+        return decorator
+
 
 REGISTRY = Registry()

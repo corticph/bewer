@@ -227,9 +227,8 @@ class KeyTermParams(MetricParams):
     allow_subset_matches: bool = False
 
     def validate(self) -> None:
-        """Validate that the vocabulary exists on the dataset."""
-        if self.vocab not in self.metric.dataset._vocabularies:
-            raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
+        """Validate that the vocabulary exists — attached or registered."""
+        self.metric.dataset._resolve_vocabulary(self.vocab)
 
 
 class Metric(ABC):

@@ -143,7 +143,7 @@ class TestKTRDatasetMetric:
     def test_empty_dataset(self):
         """Test KTR on empty dataset raises when vocab is not registered."""
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
+        with pytest.raises(ValueError, match="not found"):
             dataset.metrics.ktr(vocab="key_terms").value
 
     def test_all_correct(self):

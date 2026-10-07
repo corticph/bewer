@@ -24,7 +24,7 @@ class TestKTFPRValidation:
     def test_unknown_vocab_raises(self):
         ds = Dataset()
         ds.add(ref="hello", hyp="hello")
-        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
+        with pytest.raises(ValueError, match="not found"):
             ds.metrics.ktfpr(vocab="missing").value
 
     def test_default_partial_credit_is_true(self):
