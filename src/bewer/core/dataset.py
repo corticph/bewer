@@ -46,8 +46,8 @@ class Dataset(object):
         The dataset must be populated using one of the load_* methods or manually using the add() method.
 
         Args:
-            config (BewerConfig | str | None): A BewerConfig, a profile name, a YAML file
-                path, or None for the base profile.
+            config (BewerConfig | str | None): A BewerConfig, a profile name,
+                or None for the base profile.
             language (str | None): Language/profile alias for backward compatibility.
                 Equivalent to ``profile=``.
             profile (str | None): Profile name (e.g. "base", "en", "da"). Ignored if
