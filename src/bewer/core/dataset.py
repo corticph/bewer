@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Union
 
 import pandas as pd
 
-from bewer.config import BewerConfig, from_yaml, merge_configs, resolve_config, resolve_profile
+from bewer.config import BewerConfig, resolve_config, resolve_profile
 from bewer.core.example import Example
 from bewer.core.text import TokenList
 from bewer.core.vocabulary import Vocabulary
@@ -36,9 +36,7 @@ class Dataset(object):
     def __init__(
         self,
         config: BewerConfig | str | None = None,
-        language: str | None = None,
         *,
-        profile: str | None = None,
         vocabularies: list[str] | None = None,
     ):
         """Initialize the Dataset.
@@ -46,33 +44,17 @@ class Dataset(object):
         The dataset must be populated using one of the load_* methods or manually using the add() method.
 
         Args:
-            config (BewerConfig | str | None): A BewerConfig, a profile name,
-                or None for the base profile.
-            language (str | None): Language/profile alias for backward compatibility.
-                Equivalent to ``profile=``.
-            profile (str | None): Profile name (e.g. "base", "en", "da"). Ignored if
-                ``config`` is already a BewerConfig without a language.
+            config (BewerConfig | str | None): A BewerConfig, a registered profile
+                name (e.g. "base", "en", "da"), or None for the base profile.
             vocabularies (list[str] | None): Names of registered vocabularies to
                 attach eagerly at init time.
         """
-        prof = profile or language
-
         if isinstance(config, BewerConfig):
             self._config = config
-            if prof:
-                self._config = merge_configs(resolve_profile(prof), config)
         elif isinstance(config, str):
-            if config in REGISTRY.profiles:
-                self._config = resolve_profile(config)
-            elif prof:
-                self._config = merge_configs(resolve_profile(prof), from_yaml(config))
-            else:
-                self._config = from_yaml(config)
+            self._config = resolve_profile(config)
         elif config is None:
-            if prof is not None:
-                self._config = resolve_profile(prof)
-            else:
-                self._config = resolve_profile("base")
+            self._config = resolve_profile("base")
         else:
             raise TypeError(f"config must be BewerConfig, str, or None, got {type(config)}")
 

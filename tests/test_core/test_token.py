@@ -178,7 +178,7 @@ class TestTokenInctx:
     @staticmethod
     def _nfc_text():
         """A Text whose standardization (NFC) shortens the string by three characters."""
-        dataset = Dataset(language="en")
+        dataset = Dataset("en")
         source = "cafe\u0301 latte and re\u0301sume\u0301 words here"
         dataset.add(ref=source, hyp=source)
         return dataset[0].ref

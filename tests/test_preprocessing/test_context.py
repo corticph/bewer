@@ -23,7 +23,7 @@ class TestSetPipelineContext:
 
     def test_tokenizer_switch_applies_and_reverts(self):
         """The key_term tokenizer splits possessives, so "Crohn's" becomes two tokens."""
-        dataset = Dataset(language="en")
+        dataset = Dataset("en")
         dataset.add(ref="Crohn's disease", hyp="Crohn's disease")
         text = dataset[0].ref
 
@@ -35,7 +35,7 @@ class TestSetPipelineContext:
         assert text.tokens.normalized == ["crohn's", "disease"]
 
     def test_normalizer_switch_applies_and_reverts(self):
-        dataset = Dataset(language="en")
+        dataset = Dataset("en")
         dataset.add(ref="An MRI", hyp="An MRI")
         text = dataset[0].ref
 

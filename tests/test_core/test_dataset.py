@@ -325,21 +325,21 @@ class TestDatasetLanguage:
 
     def test_danish_language_preserves_chars(self):
         """Test that language='da' retains æ/ø/å in normalization."""
-        ds = Dataset(language="da")
+        ds = Dataset("da")
         ds.add("patienten har høj blodtryk", "patienten har hoj blodtryk")
         normalized = ds[0].ref.tokens.normalized
         assert "høj" in normalized
 
     def test_german_language_preserves_chars(self):
         """Test that language='de' retains ä/ö/ü/ß in normalization."""
-        ds = Dataset(language="de")
+        ds = Dataset("de")
         ds.add("straße", "strasse")
         normalized = ds[0].ref.tokens.normalized
         assert "straße" in normalized
 
     def test_french_language_preserves_chars(self):
         """Test that language='fr' retains accented chars in normalization."""
-        ds = Dataset(language="fr")
+        ds = Dataset("fr")
         ds.add("café", "cafe")
         normalized = ds[0].ref.tokens.normalized
         assert "café" in normalized
@@ -347,7 +347,7 @@ class TestDatasetLanguage:
     def test_english_language_same_as_default(self):
         """Test that language='en' behaves the same as no language arg."""
         ds_default = Dataset()
-        ds_en = Dataset(language="en")
+        ds_en = Dataset("en")
         ds_default.add("café", "cafe")
         ds_en.add("café", "cafe")
         assert ds_default[0].ref.tokens.normalized == ds_en[0].ref.tokens.normalized
@@ -357,12 +357,12 @@ class TestDatasetLanguage:
         from bewer.registry import ComponentNotFoundError
 
         with pytest.raises(ComponentNotFoundError, match="Profile 'xx' not found"):
-            Dataset(language="xx")
+            Dataset("xx")
 
     def test_language_does_not_affect_non_language_pipeline(self):
         """Test that language overlay only changes normalizer, not other pipeline steps."""
         ds_default = Dataset()
-        ds_da = Dataset(language="da")
+        ds_da = Dataset("da")
         ds_default.add("Hello World", "hello world")
         ds_da.add("Hello World", "hello world")
         # Standardization should be the same
