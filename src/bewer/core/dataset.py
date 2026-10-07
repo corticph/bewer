@@ -1,7 +1,5 @@
 from functools import cached_property
-from importlib import resources
 from itertools import chain
-from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
 import pandas as pd
@@ -284,14 +282,6 @@ class Dataset(object):
     @property
     def config(self) -> BewerConfig:
         return self._config
-
-    @staticmethod
-    def get_config_path(config_path: str | None) -> str:
-        """Get the configuration path. Deprecated — use profiles instead."""
-        if config_path is None or not Path(config_path).is_file():
-            config_path = "base" if config_path is None else config_path
-            return resources.files("bewer.configs").joinpath(f"{config_path}.yml")
-        return Path(config_path).resolve()
 
     def __len__(self) -> int:
         """Get the number of examples in the dataset."""

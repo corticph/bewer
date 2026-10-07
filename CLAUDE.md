@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-BeWER (Beyond Word Error Rate) is an evaluation and analysis framework for automatic speech recognition (ASR) in Python. It provides a YAML-based configuration system for evaluation pipelines with metrics computation, preprocessing, and web-based reporting.
+BeWER (Beyond Word Error Rate) is an evaluation and analysis framework for automatic speech recognition (ASR) in Python. It provides a Python-based configuration system for evaluation pipelines with metrics computation, preprocessing, and web-based reporting.
 
 **Status**: Early development, not production-ready. Breaking changes may occur between alpha versions.
 
@@ -49,7 +49,7 @@ poetry run twine check dist/*  # Validate built packages
 - Main entry point for the framework
 - Manages collections of Examples and provides lazy metric computation
 - Supports loading data from CSV, pandas DataFrames (with planned HuggingFace support)
-- Configuration system based on OmegaConf with YAML config files
+- Configuration system based on BewerConfig (frozen dataclass) with Python profiles
 
 **Example** (`src/bewer/core/example.py`)
 - Represents a single reference-hypothesis pair
@@ -64,7 +64,7 @@ poetry run twine check dist/*  # Validate built packages
 
 **Preprocessing Pipeline** (`src/bewer/preprocessing/`)
 - Three-stage pipeline: standardization → tokenization → token-level normalization
-- Configured via YAML (`src/bewer/configs/base.yml`)
+- Configured via Python profiles (`src/bewer/profiles/__init__.py`)
 - Each stage is a series of function applications
 - Standardizers: Unicode normalization (NFC)
 - Tokenizers: Whitespace-based with customizable symbol handling
@@ -115,28 +115,36 @@ Library of pre-defined `ExtractorFn` callables — `(dataset) -> Iterable[str]` 
 
 ## Configuration System
 
-Configuration is managed through YAML files with OmegaConf:
+Configuration is managed through `BewerConfig` (a frozen dataclass) and Python profiles:
 
-- Default config: `src/bewer/configs/base.yml`
-- Defines preprocessing pipelines (standardizers, tokenizers, normalizers)
-- Extensible: users can provide custom configs
-- Pipeline resolution happens in `configs/resolve.py`
+- Config dataclass: `src/bewer/config.py` — `BewerConfig`, `PipelineStep`, `merge_configs()`, `resolve_config()`, `resolve_profile()`, `to_yaml()`, `from_yaml()`
+- Profiles: `src/bewer/profiles/__init__.py` — language delta profiles (`base`, `en`, `da`, `de`, `fr`) registered via `@REGISTRY.register_profile`
+- Registry: `src/bewer/registry.py` — unified registry for transforms, tokenizers, extractors, vocabularies, metrics, and profiles
+- Extensible: users can provide custom `BewerConfig` instances or register custom profiles
+- Pipeline resolution happens in `config.py` (`resolve_config()`)
+- YAML round-trip supported via `to_yaml()`/`from_yaml()` for sharing eval setups
 
 Example config structure:
-```yaml
-standardizers:
-  default:
-    bewer.preprocessing.normalization.nfc:
+```python
+from bewer import BewerConfig, PipelineStep
 
-tokenizers:
-  default:
-    bewer.preprocessing.tokenization.whitespace_strip_symbols_and_custom:
-      split_on: "-/"
-
-normalizers:
-  default:
-    bewer.preprocessing.normalization.lowercase:
-    bewer.preprocessing.normalization.transliterate_latin_letters:
+config = BewerConfig(
+    standardizers={
+        "default": (
+            PipelineStep("nfc"),
+        ),
+    },
+    tokenizers={
+        "default": PipelineStep("strip_punctuation_keep_symbols_pattern",
+                                params={"split_on_escaped": "-/"}),
+    },
+    normalizers={
+        "default": (
+            PipelineStep("lowercase"),
+            PipelineStep("transliterate_latin_letters"),
+        ),
+    },
+)
 ```
 
 ## Testing Conventions
@@ -158,7 +166,7 @@ normalizers:
 **Core Dependencies**:
 - pandas: Data handling
 - regex, rapidfuzz: Text processing and matching
-- pyyaml, omegaconf: Configuration management
+- pyyaml: Configuration management (YAML round-trip)
 - error-align: External alignment library (Corti package)
 - jinja2: HTML template rendering
 - rich: CLI output formatting

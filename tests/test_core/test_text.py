@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer.configs.resolve import Pipelines
+from bewer.config import Pipelines
 from bewer.core.text import Text, TextType, TokenList
 
 

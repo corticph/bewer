@@ -1,12 +1,10 @@
 """Tests for bewer.config module — BewerConfig, profiles, merge, resolution."""
 
-from importlib import resources
-
 import pytest
-from omegaconf import OmegaConf
 
 from bewer.config import (
     BewerConfig,
+    Pipelines,
     PipelineStep,
     from_yaml,
     merge_configs,
@@ -14,7 +12,6 @@ from bewer.config import (
     resolve_profile,
     to_yaml,
 )
-from bewer.configs.resolve import resolve_pipelines
 
 
 class TestBewerConfig:
@@ -129,8 +126,6 @@ class TestResolveConfig:
 
     def test_resolves_to_pipelines(self):
         """resolve_config returns a Pipelines namedtuple."""
-        from bewer.configs.resolve import Pipelines
-
         config = resolve_profile("base")
         pipelines = resolve_config(config)
         assert isinstance(pipelines, Pipelines)
@@ -189,72 +184,3 @@ class TestYamlRoundTrip:
         config = BewerConfig(normalizers={"default": (PipelineStep(my_upper),)})
         with pytest.raises(SerializationError):
             to_yaml(config)
-
-
-class TestParity:
-    """Parity tests: Python profiles must produce the same pipelines as YAML configs.
-
-    These tests exist only while YAML and Python profiles coexist.
-    """
-
-    @pytest.mark.parametrize("lang", ["en", "da", "de", "fr"])
-    def test_tokenizer_patterns_match(self, lang):
-        """Python profile tokenizer patterns match YAML config patterns."""
-        yaml_base = OmegaConf.load(resources.files("bewer.configs").joinpath("base.yml"))
-        lang_path = resources.files("bewer.configs").joinpath("languages").joinpath(f"{lang}.yml")
-        yaml_lang = OmegaConf.load(lang_path)
-        yaml_merged = OmegaConf.merge(yaml_base, yaml_lang)
-        yaml_pipelines = resolve_pipelines(yaml_merged)
-
-        py_config = resolve_profile(lang)
-        py_pipelines = resolve_config(py_config)
-
-        for name in yaml_pipelines.tokenizers:
-            assert name in py_pipelines.tokenizers, f"tokenizer {name} missing in Python profile"
-            yaml_pattern = yaml_pipelines.tokenizers[name].pattern.pattern
-            py_pattern = py_pipelines.tokenizers[name].pattern.pattern
-            assert yaml_pattern == py_pattern, f"tokenizer {name} pattern mismatch"
-
-    @pytest.mark.parametrize("lang", ["en", "da", "de", "fr"])
-    def test_normalizer_functions_match(self, lang):
-        """Python profile normalizer functions and params match YAML config."""
-        yaml_base = OmegaConf.load(resources.files("bewer.configs").joinpath("base.yml"))
-        lang_path = resources.files("bewer.configs").joinpath("languages").joinpath(f"{lang}.yml")
-        yaml_lang = OmegaConf.load(lang_path)
-        yaml_merged = OmegaConf.merge(yaml_base, yaml_lang)
-        yaml_pipelines = resolve_pipelines(yaml_merged)
-
-        py_config = resolve_profile(lang)
-        py_pipelines = resolve_config(py_config)
-
-        for name in yaml_pipelines.normalizers:
-            assert name in py_pipelines.normalizers, f"normalizer {name} missing in Python profile"
-            yaml_pipeline = yaml_pipelines.normalizers[name]._pipeline
-            py_pipeline = py_pipelines.normalizers[name]._pipeline
-            assert len(yaml_pipeline) == len(py_pipeline), f"normalizer {name} step count mismatch"
-            for i, (yf, ykw) in enumerate(yaml_pipeline):
-                pf, pkw = py_pipeline[i]
-                assert yf == pf, f"normalizer {name} step {i}: function mismatch"
-                assert ykw == pkw, f"normalizer {name} step {i}: params mismatch"
-
-    @pytest.mark.parametrize("lang", ["en", "da", "de", "fr"])
-    def test_standardizer_functions_match(self, lang):
-        """Python profile standardizer functions and params match YAML config."""
-        yaml_base = OmegaConf.load(resources.files("bewer.configs").joinpath("base.yml"))
-        lang_path = resources.files("bewer.configs").joinpath("languages").joinpath(f"{lang}.yml")
-        yaml_lang = OmegaConf.load(lang_path)
-        yaml_merged = OmegaConf.merge(yaml_base, yaml_lang)
-        yaml_pipelines = resolve_pipelines(yaml_merged)
-
-        py_config = resolve_profile(lang)
-        py_pipelines = resolve_config(py_config)
-
-        for name in yaml_pipelines.standardizers:
-            assert name in py_pipelines.standardizers, f"standardizer {name} missing in Python profile"
-            yaml_pipeline = yaml_pipelines.standardizers[name]._pipeline
-            py_pipeline = py_pipelines.standardizers[name]._pipeline
-            assert len(yaml_pipeline) == len(py_pipeline), f"standardizer {name} step count mismatch"
-            for i, (yf, ykw) in enumerate(yaml_pipeline):
-                pf, pkw = py_pipeline[i]
-                assert yf == pf, f"standardizer {name} step {i}: function mismatch"
-                assert ykw == pkw, f"standardizer {name} step {i}: params mismatch"

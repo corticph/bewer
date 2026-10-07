@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+from collections import namedtuple
 from dataclasses import dataclass, field, replace
 from importlib import import_module
 from os import PathLike
@@ -8,7 +9,7 @@ from typing import Any, Callable
 
 import yaml
 
-from bewer.configs.resolve import Pipelines
+from bewer.flags import NORMALIZERS, STANDARDIZERS, TOKENIZERS
 from bewer.preprocessing.normalization import Normalizer
 from bewer.preprocessing.tokenization import Tokenizer
 from bewer.registry import REGISTRY
@@ -16,6 +17,7 @@ from bewer.registry import REGISTRY
 __all__ = [
     "BewerConfig",
     "PipelineStep",
+    "Pipelines",
     "merge_configs",
     "resolve_config",
     "resolve_profile",
@@ -23,6 +25,29 @@ __all__ = [
     "to_yaml",
     "SerializationError",
 ]
+
+
+# ============================================================
+# Pipelines namedtuple (moved from configs/resolve.py)
+# ============================================================
+
+_PipelinesBase = namedtuple("_PipelinesBase", [STANDARDIZERS, TOKENIZERS, NORMALIZERS])
+
+
+class Pipelines(_PipelinesBase):
+    """The preprocessing variants resolved from a configuration, grouped by stage.
+
+    A plain namedtuple of three ``{name: pipeline}`` dicts, with a repr that lists the
+    available variant names per stage instead of dumping every resolved object.
+    """
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        stages = ((STANDARDIZERS, self.standardizers), (TOKENIZERS, self.tokenizers), (NORMALIZERS, self.normalizers))
+        width = max(len(name) for name, _ in stages) + 1
+        rows = "\n".join(f"    {name + ':':<{width}} {', '.join(entries) or '-'}" for name, entries in stages)
+        return f"Pipelines(\n{rows}\n)"
 
 
 # ============================================================
