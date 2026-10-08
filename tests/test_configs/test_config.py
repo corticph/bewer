@@ -6,11 +6,9 @@ from bewer.config import (
     BewerConfig,
     Pipelines,
     Transform,
-    from_yaml,
     get_config,
     merge_configs,
     resolve_config,
-    to_yaml,
 )
 from bewer.preprocessing.normalization import lowercase, nfc, transliterate_latin_letters, transliterate_symbols
 
@@ -145,32 +143,3 @@ class TestResolveConfigToPipelines:
         )
         pipelines = resolve_config(config)
         assert "default" in pipelines.normalizers
-
-
-class TestYamlRoundTrip:
-    """Tests for to_yaml / from_yaml."""
-
-    def test_round_trip_base(self):
-        """to_yaml then from_yaml then to_yaml produces the same YAML for base config."""
-        config = get_config("base")
-        yaml_str = to_yaml(config)
-        restored = from_yaml(yaml_str)
-        assert to_yaml(restored) == yaml_str
-
-    def test_round_trip_da(self):
-        """to_yaml then from_yaml then to_yaml produces the same YAML for Danish config."""
-        config = get_config("da")
-        yaml_str = to_yaml(config)
-        restored = from_yaml(yaml_str)
-        assert to_yaml(restored) == yaml_str
-
-    def test_callable_not_serializable(self):
-        """A config with a local callable raises SerializationError."""
-        from bewer.config import SerializationError
-
-        def my_upper(text: str) -> str:
-            return text.upper()
-
-        config = BewerConfig(normalizers={"default": (Transform(my_upper),)})
-        with pytest.raises(SerializationError):
-            to_yaml(config)

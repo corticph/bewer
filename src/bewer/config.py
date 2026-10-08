@@ -4,10 +4,7 @@ import inspect
 from collections import namedtuple
 from dataclasses import dataclass, field, replace
 from importlib import import_module
-from os import PathLike
 from typing import Any, Callable
-
-import yaml
 
 from bewer.flags import NORMALIZERS, STANDARDIZERS, TOKENIZERS
 from bewer.preprocessing.normalization import Normalizer
@@ -21,9 +18,6 @@ __all__ = [
     "merge_configs",
     "resolve_config",
     "get_config",
-    "from_yaml",
-    "to_yaml",
-    "SerializationError",
 ]
 
 
@@ -222,156 +216,3 @@ def get_config(name: str) -> BewerConfig:
         base = get_config(extends)
         return merge_configs(base, delta)
     return delta
-
-
-# ============================================================
-# YAML I/O
-# ============================================================
-
-
-class SerializationError(ValueError):
-    """Raised when a BewerConfig cannot be serialized to YAML."""
-
-
-def to_yaml(config: BewerConfig) -> str:
-    """Serialize a BewerConfig to YAML using dotted-path names."""
-    data = {
-        "standardizers": _pipelines_to_yaml(config.standardizers),
-        "tokenizers": {name: _pattern_to_yaml_dict(pattern) for name, pattern in config.tokenizers.items()},
-        "normalizers": _pipelines_to_yaml(config.normalizers),
-        "vocabularies": list(config.vocabularies) if config.vocabularies else None,
-    }
-    data = {k: v for k, v in data.items() if v}
-    return yaml.dump(data, sort_keys=False, allow_unicode=True)
-
-
-def _pipelines_to_yaml(pipelines: dict[str, tuple[Transform, ...]]) -> dict[str, dict[str, dict[str, Any]]] | None:
-    if not pipelines:
-        return None
-    result = {}
-    for name, steps in pipelines.items():
-        result[name] = {}
-        seen = set()
-        for step in steps:
-            key = _transform_to_yaml_key(step)
-            if key in seen:
-                raise SerializationError(f"Duplicate component '{key}' in pipeline '{name}'")
-            seen.add(key)
-            result[name][key] = step.params or None
-    return result
-
-
-def _transform_to_yaml_key(step: Transform) -> str:
-    module = getattr(step.component, "__module__", None)
-    qualname = getattr(step.component, "__qualname__", None) or getattr(step.component, "__name__", None)
-    if not module or not qualname:
-        raise SerializationError(f"Cannot serialize callable {step.component!r}: no module/name metadata.")
-    if "<locals>" in qualname:
-        raise SerializationError(
-            f"Cannot serialize callable {step.component!r}: it is a local function "
-            f"that cannot be imported by dotted path."
-        )
-    return f"{module}.{qualname}"
-
-
-def _pattern_to_yaml_dict(pattern: Any) -> dict[str, Any]:
-    """Serialize a tokenizer pattern to YAML.
-
-    Tokenizer patterns are compiled regex Patterns produced by factory calls.
-    We store the factory's dotted path and the params used to create the pattern.
-    """
-    # Patterns from factory calls carry their factory's metadata via the pattern
-    # itself — but we can't reconstruct the factory from the pattern.
-    # For YAML round-trip, we store the pattern string.
-    import regex as re
-
-    if isinstance(pattern, (re.Pattern, type(__import__("re").compile("")))):
-        return {pattern.pattern: None}
-    raise SerializationError(f"Cannot serialize tokenizer pattern of type {type(pattern)!r}")
-
-
-def from_yaml(source: str | PathLike) -> BewerConfig:
-    """Parse YAML into a BewerConfig.
-
-    Accepts dotted paths (e.g. ``bewer.preprocessing.normalization.lowercase``).
-    Any name containing ``.`` is treated as a dotted path and imported.
-
-    ``source`` may be a YAML string, a file path (``str`` or ``PathLike``).
-    """
-    from pathlib import Path
-
-    if isinstance(source, PathLike):
-        text = Path(source).read_text(encoding="utf-8")
-    elif isinstance(source, str):
-        try:
-            path = Path(source)
-            if path.is_file():
-                text = path.read_text(encoding="utf-8")
-            else:
-                text = source
-        except OSError:
-            text = source
-    else:
-        raise TypeError(f"from_yaml expects str or PathLike, got {type(source)}")
-
-    raw = yaml.safe_load(text) or {}
-    return _raw_to_config(raw)
-
-
-def _raw_to_config(raw: dict) -> BewerConfig:
-    standardizers = _parse_pipelines(raw.get("standardizers", {}))
-    tokenizers = _parse_tokenizers(raw.get("tokenizers", {}))
-    normalizers = _parse_pipelines(raw.get("normalizers", {}))
-    vocabularies = raw.get("vocabularies", ())
-    if isinstance(vocabularies, list):
-        vocabularies = tuple(vocabularies)
-    elif isinstance(vocabularies, dict):
-        vocabularies = tuple(vocabularies.keys())
-    else:
-        vocabularies = ()
-    return BewerConfig(
-        standardizers=standardizers,
-        tokenizers=tokenizers,
-        normalizers=normalizers,
-        vocabularies=vocabularies,
-    )
-
-
-def _parse_pipelines(raw: dict) -> dict[str, tuple[Transform, ...]]:
-    result = {}
-    for name, steps in raw.items():
-        if steps is None:
-            result[name] = ()
-            continue
-        step_list = []
-        for component_path, params in steps.items():
-            fn = _resolve_component(component_path)
-            step_list.append(Transform(fn, **(params or {})))
-        result[name] = tuple(step_list)
-    return result
-
-
-def _parse_tokenizers(raw: dict) -> dict[str, Any]:
-    result = {}
-    for name, steps in raw.items():
-        if steps is None:
-            continue
-        if len(steps) != 1:
-            raise ValueError(f"Tokenizer config for '{name}' must contain exactly one definition, got {len(steps)}")
-        key, params = next(iter(steps.items()))
-        if _looks_like_dotted_path(key):
-            fn = _resolve_component(key)
-            result[name] = fn(**(params or {}))
-        else:
-            import regex as re
-
-            result[name] = re.compile(key, re.V1)
-    return result
-
-
-def _looks_like_dotted_path(s: str) -> bool:
-    """Heuristic: a dotted path has at least one dot and each segment is a valid identifier."""
-    if "." not in s:
-        return False
-    parts = s.rsplit(".", 1)
-    return all(p.isidentifier() for p in parts)
