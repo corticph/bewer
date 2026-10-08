@@ -44,7 +44,7 @@ def base_config() -> BewerConfig:
         tokenizers={
             "default": strip_punctuation_keep_symbols_pattern(split_on_escaped="-/"),
             "with_punctuation": keep_symbols_and_punctuation_pattern(
-                punct_chars='.,!?:;"-/()\u201c\u201d\u00ab\u00bb\u201e\u00a1\u00bf',
+                punct_chars='.,!?:;"-/()“”«»„¡¿',
                 keep_newlines=True,
             ),
             "key_term": strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'"),
