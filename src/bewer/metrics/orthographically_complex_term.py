@@ -2,112 +2,43 @@
 
 These mirror the key-term metrics (KTR / KTP / KTF) but draw their terms from an
 *orthographically-complex term* vocabulary — abbreviations, acronyms, alphanumerics and
-hyphen compounds auto-extracted from the references by
-:class:`~bewer.extractors.OrthographicallyComplexTermExtractor`. They answer: of those terms
-in the references, how many did the system transcribe correctly (recall), how precisely
-(precision), and their F-score.
+hyphen compounds auto-extracted from the references. The vocabulary is declared in the
+base config and attached at Dataset init.
 
-The terms are selected by their *orthography* (capitalization, digit/letter mixing, symbols,
-Greek), so this is one dimension of "term complexity" (cf. a future ``phonetically_complex_term``).
-The vocabulary (named ``orthographically_complex_terms`` by default) is registered on the
-dataset on first use if not already present, so the metrics work out of the box::
-
-    >>> dataset.metrics.orthographically_complex_term_recall().value
-
-They run under the ``orthographically_complex_term`` tokenizer (which does not split on hyphens, so ``CT-scan``
-is one token) and the ``cased`` normalizer (which does not lowercase), so a term's surface form
-is scored strictly: neither ``CT scan`` nor ``ct-scan`` matches a ``CT-scan`` term.
+They run under the ``orthographically_complex_term`` tokenizer (no hyphen split, so
+``CT-scan`` is one token) and the ``cased`` normalizer (no lowercasing), so a term's
+surface form is scored strictly.
 """
 
 from __future__ import annotations
-
-from dataclasses import dataclass
 
 from bewer.metrics.base import METRIC_REGISTRY
 from bewer.metrics.ktf import KTF
 from bewer.metrics.ktp import KTP
 from bewer.metrics.ktr import KTR
 
-__all__ = [
-    "OrthographicallyComplexTermRecall",
-    "OrthographicallyComplexTermPrecision",
-    "OrthographicallyComplexTermFscore",
-    "DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB",
-]
-
-#: Name of the auto-registered orthographically-complex term vocabulary.
 DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB = "orthographically_complex_terms"
 
-
-@dataclass
-class OrthographicallyComplexTermMetricParams(KTR.param_schema):
-    """Parameters for the orthographically-complex term recall/precision metrics.
-
-    Identical to the key-term metric parameters, except that ``vocab`` defaults to the
-    orthographically-complex term vocabulary declared in the base config.
-
-    Attributes:
-        vocab: Name of the vocabulary.
-    """
-
-    vocab: str = DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB
-
-
-@dataclass
-class OrthographicallyComplexTermFScoreParams(KTF.param_schema):
-    """Parameters for the orthographically-complex term F-score metric.
-
-    Identical to the key-term F-score parameters, except that ``vocab`` defaults to the
-    orthographically-complex term vocabulary declared in the base config.
-
-    Attributes:
-        vocab: Name of the vocabulary.
-        beta: F-score beta parameter. beta=1 gives F1 (equal weight to precision and recall);
-            beta>1 weights recall more heavily; beta<1 weights precision more heavily.
-    """
-
-    vocab: str = DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB
-
-
-@METRIC_REGISTRY.register(
-    "orthographically_complex_term_recall", tokenizer="orthographically_complex_term", normalizer="cased"
+METRIC_REGISTRY.register_metric(
+    KTR,
+    "orthographically_complex_term_recall",
+    tokenizer="orthographically_complex_term",
+    normalizer="cased",
+    vocab=DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB,
 )
-class OrthographicallyComplexTermRecall(KTR):
-    short_name_base = "orthographically_complex_term_recall"
-    long_name_base = "Orthographically Complex Term Recall"
-    description = (
-        "Orthographically-complex term recall is key term recall (TP / (TP + FN)) computed over terms "
-        "selected by their orthography — abbreviations, acronyms, alphanumerics and hyphen compounds "
-        "(e.g. MRI, HbA1c, CO2, CT-scan). It measures the fraction of such reference terms the system "
-        "transcribed correctly. Scoring is case-sensitive and does not split hyphen compounds."
-    )
-    param_schema = OrthographicallyComplexTermMetricParams
 
-
-@METRIC_REGISTRY.register(
-    "orthographically_complex_term_precision", tokenizer="orthographically_complex_term", normalizer="cased"
+METRIC_REGISTRY.register_metric(
+    KTP,
+    "orthographically_complex_term_precision",
+    tokenizer="orthographically_complex_term",
+    normalizer="cased",
+    vocab=DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB,
 )
-class OrthographicallyComplexTermPrecision(KTP):
-    short_name_base = "orthographically_complex_term_precision"
-    long_name_base = "Orthographically Complex Term Precision"
-    description = (
-        "Orthographically-complex term precision is key term precision (TP / (TP + FP)) computed over terms "
-        "selected by their orthography. It measures how precisely the system transcribed the such terms it "
-        "produced. Scoring is case-sensitive and does not split hyphen compounds."
-    )
-    param_schema = OrthographicallyComplexTermMetricParams
 
-
-@METRIC_REGISTRY.register(
-    "orthographically_complex_term_fscore", tokenizer="orthographically_complex_term", normalizer="cased"
+METRIC_REGISTRY.register_metric(
+    KTF,
+    "orthographically_complex_term_fscore",
+    tokenizer="orthographically_complex_term",
+    normalizer="cased",
+    vocab=DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB,
 )
-class OrthographicallyComplexTermFscore(KTF):
-    short_name_base = "orthographically_complex_term_fscore"
-    long_name_base = "Orthographically Complex Term F-Score"
-    description = (
-        "Orthographically-complex term F-score is the weighted harmonic mean of the precision and recall "
-        "computed over terms selected by their orthography. The beta parameter controls the trade-off "
-        "(beta=1 gives F1). At the dataset level it is a micro F-score: TP, FN and FP are summed across "
-        "examples before applying the formula."
-    )
-    param_schema = OrthographicallyComplexTermFScoreParams
