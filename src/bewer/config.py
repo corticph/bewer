@@ -59,6 +59,7 @@ class Transform:
     def __init__(self, component: Callable[..., Any], **params: Any):
         self.component = component
         self.params = params
+        _validate_params(component, params, skip_first=True)
 
     def __call__(self, text: str) -> str:
         return self.component(text, **self.params)
@@ -142,12 +143,7 @@ def resolve_config(config: BewerConfig) -> Pipelines:
 
 def _resolve_normalizer(name: str, steps: tuple[Transform, ...]) -> Normalizer:
     """Resolve a tuple of Transforms to a Normalizer."""
-    pipeline = []
-    for step in steps:
-        if not callable(step.component):
-            raise TypeError(f"Transform component must be callable, got {type(step.component)}")
-        _validate_params(step.component, step.params, skip_first=True)
-        pipeline.append((step.component, step.params))
+    pipeline = [(step.component, step.params) for step in steps]
     return Normalizer(pipeline, name)
 
 
