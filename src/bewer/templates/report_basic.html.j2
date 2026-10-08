@@ -20,15 +20,18 @@
             overflow-x: auto;
         }
         h1 {
+            font-family: sans-serif;
+            font-weight: 200;
             color: {{ base_color_scheme.TABLE_HEADER_BG }};
             margin: 60px 0px 30px 0px;
             text-align: center;
         }
         .report-metadata {
+            font-family: sans-serif;
+            font-weight: 200;
             text-align: center;
             color: {{ base_color_scheme.DIV_TEXT_COLOR }};
-            margin: 0px 0px 30px 0px;  /* Bottom margin to maintain spacing */
-            font-style: italic;  /* Optional: makes it look more like metadata */
+            margin: 0px 0px 30px 0px;
         }
         .kw {
             position: relative;
@@ -54,9 +57,11 @@
         }
         .tables-side-by-side {
             display: flex;
-            gap: 50px;  /* Space between tables */
+            gap: 50px;
         }
         .divider-title {
+            font-family: sans-serif;
+            font-weight: 200;
             font-size: 24px;
             color: {{ base_color_scheme.DIV_TEXT_COLOR }};
             margin: 60px 0px 30px 0px;
@@ -79,13 +84,30 @@
         .list-values-table tr.value-row:not(:last-child) td {
             border-bottom: 1px solid #e0e0e0;
         }
+        .list-values-table td:first-child,
+        .list-values-table tr.value-row th:first-child {
+            border-right: 1px solid #e0e0e0;
+        }
         .list-values-table th {
             font-weight: normal;
             background-color: {{ base_color_scheme.TABLE_HEADER_BG }};
             color: #ffffff;
         }
+        .list-values-table tr:first-child > th[colspan] {
+            color: #ffffff;
+        }
+        .list-values-table th.dataset-name-header {
+            color: #cccccc;
+        }
+        .list-values-table th.dataset-name-header {
+            background-color: {{ base_color_scheme.TABLE_HEADER_BG }};
+        }
         .list-values-table tr.value-row td:nth-child(2) {
-            font-weight: 600;
+            font-weight: normal;
+            text-align: center;
+        }
+        .list-values-table tr.value-row td:nth-child(n+3) {
+            text-align: center;
         }
         .list-values-table tr.value-row:first-child td {
             padding-top: 15px;
@@ -94,7 +116,7 @@
             padding-bottom: 15px;
         }
         .alignment-gallery {
-            overflow: visible; /* The legend will stop sticking when this container scrolls out of view */
+            overflow: visible;
         }
         .alignment-container {
             border-radius: 5px;
@@ -124,12 +146,18 @@
             background-color: {{ base_color_scheme.TABLE_HEADER_BG }};
             color: white;
             padding: 10px 10px;
+            position: sticky;
+            top: 43px;
+            z-index: 5;
         }
-        .alignment-table tr.alignment-row:nth-child(even) td {   /* odd rows starting from row 3 */
+        .alignment-table th .ds-name-header {
+            color: #cccccc;
+        }
+        .alignment-table tr.alignment-row:nth-child(even) td {
             padding-top: 15px;
             padding-bottom: 5px;
         }
-        .alignment-table tr:nth-child(odd) td {   /* odd rows starting from row 3 */
+        .alignment-table tr:nth-child(odd) td {
             padding-top: 5px;
             padding-bottom: 15px;
         }
@@ -178,9 +206,116 @@
         .icon svg path {
             fill: #00000013;
         }
-    </style>
+        .alignment-surface {
+            display: none;
+        }
+        body.surface-view .alignment-normalized {
+            display: none;
+        }
+        body.surface-view .alignment-surface {
+            display: table;
+        }
+        {%- if multi_dataset %}
+        {%- for css_name in dataset_css_names %}
+        body:not(.dataset-{{ css_name }}) .alignment-dataset-{{ css_name }} {
+            display: none;
+        }
+        {%- endfor %}
+        {%- endif %}
+        .surface-toggle-box {
+            position: fixed;
+            top: 0;
+            left: calc(50% + 510px);
+            z-index: 100;
+            border: 1px solid {{ base_color_scheme.TABLE_HEADER_BG }};
+            border-radius: 5px;
+            overflow: visible;
+        }
+        .surface-toggle-box-header {
+            background-color: {{ base_color_scheme.TABLE_HEADER_BG }};
+            color: #ffffff;
+            padding: 8px 15px;
+            font-size: 14px;
+            font-weight: normal;
+            border-radius: 4px 4px 0 0;
+        }
+        .surface-toggle-box-body {
+            background-color: #ffffff;
+            padding: 10px 28px;
+            border-radius: 0 0 4px 4px;
+        }
+        .surface-toggle-box label {
+            cursor: pointer;
+            user-select: none;
+            font-size: 13px;
+            vertical-align: middle;
+            color: #000000;
+            display: block;
+            text-align: left;
+            margin-right: 25px;
+        }
+        .surface-toggle-box input[type="checkbox"] {
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .surface-toggle-box input[type="radio"] {
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .surface-toggle-box .toggle-section-label {
+            font-size: 13px;
+            color: #000000;
+            display: block;
+            margin-bottom: 6px;
+            margin-top: 6px;
+        }
+        .surface-toggle-box .radio-label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            position: relative;
+        }
+        .surface-toggle-box .radio-label input[type="radio"] {
+            margin-top: 1px;
+        }
+        .surface-toggle-box .help-mark {
+            font-weight: bold;
+            color: #e0e0e0;
+            font-size: 11px;
+            cursor: help;
+            margin-left: 4px;
+            position: relative;
+        }
+        .surface-toggle-box .help-mark[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: normal;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: normal;
+            margin-top: 4px;
+            z-index: 200;
+        }
+        .surface-toggle-box .toggle-divider {
+            border-top: 1px solid #e0e0e0;
+            margin: 8px 0;
+        }
+        @media (max-width: 1100px) {
+            .surface-toggle-box {
+                left: auto;
+                right: 20px;
+            }
+        }
+     </style>
 </head>
-<body>
+<body{% if multi_dataset %} class="dataset-{{ dataset_css_names[0] }}"{% endif %}>
 
     <h1>{{ title | default('Speech Recognition Performance Report', true) }}</h1>
     <p class="report-metadata">Created: {{ creation_date }}{% for key, value in metadata.items() %} &bull; {{ key }}: {{ value }}{% endfor %}</p>
@@ -196,7 +331,7 @@
 
     <div class="tables-side-by-side">
 {% set metrics_content %}
-{% with title="Dataset Metrics", values=metrics %}
+{% with title="Metrics", values=metrics, multi_dataset=multi_dataset, dataset_names=dataset_names, leftmost_header="Name" %}
 {% include 'table_list_values.html.j2' %}
 {% endwith %}
 {% endset %}
@@ -204,7 +339,7 @@
 
 
 {% set summary_content %}
-{% with title="Dataset Summary", values=summary %}
+{% with title="Descriptive Statistics", values=summary, multi_dataset=multi_dataset, dataset_names=dataset_names, leftmost_header="Count" %}
 {% include 'table_list_values.html.j2' %}
 {% endwith %}
 {% endset %}
@@ -214,12 +349,64 @@
 
 
 {% set alignment_gallery -%}
-{%- with example_iterator=dataset, alignments=alignments, color_scheme=alignment_color_scheme, labels=alignment_labels -%}
+{%- with example_iterator=dataset, alignments=alignments, color_scheme=alignment_color_scheme, labels=alignment_labels, multi_dataset=multi_dataset, refs_match=refs_match, dataset_names=dataset_names, dataset_css_names=dataset_css_names, n_examples=n_examples -%}
 {%- include 'alignment_gallery.html.j2' -%}
 {%- endwith -%}
 {%- endset -%}
 {{- alignment_gallery | indent_tabs(2) | safe }}
 
 
+    <div class="surface-toggle-box" id="surface-toggle-box">
+        <div class="surface-toggle-box-header">Options</div>
+        <div class="surface-toggle-box-body">
+            <label><input type="checkbox" id="surface-toggle" checked>Normalized<span class="help-mark" data-tooltip="Toggle between normalized and original text. Alignment is not affected.">?</span></label>
+            {%- if multi_dataset %}
+            <div class="toggle-divider"></div>
+            <label class="toggle-section-label">Comparison<span class="help-mark" data-tooltip="Switch between evaluation runs. Line breaks are synchronized when references match.">?</span></label>
+            {%- for ds_name in dataset_names %}
+            <label class="radio-label"><input type="radio" name="dataset-toggle" value="{{ dataset_css_names[loop.index0] }}"{% if loop.first %} checked{% endif %}>{{ ds_name }}</label>
+            {%- endfor %}
+            {%- endif %}
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var toggleBox = document.getElementById("surface-toggle-box");
+            if (!toggleBox) return;
+            var legend = document.querySelector(".legend-container");
+            if (!legend) return;
+
+            function positionToggle() {
+                var legendRect = legend.getBoundingClientRect();
+                if (legendRect.top > 0) {
+                    toggleBox.style.top = legendRect.top + "px";
+                } else {
+                    toggleBox.style.top = "0px";
+                }
+            }
+
+            window.addEventListener("scroll", positionToggle);
+            window.addEventListener("resize", positionToggle);
+            positionToggle();
+
+            document.getElementById("surface-toggle")?.addEventListener("change", function() {
+                document.body.classList.toggle("surface-view", !this.checked);
+            });
+            document.body.classList.toggle("surface-view", !document.getElementById("surface-toggle").checked);
+
+            {%- if multi_dataset %}
+            var datasetRadios = document.querySelectorAll('input[name="dataset-toggle"]');
+            datasetRadios.forEach(function(radio) {
+                radio.addEventListener("change", function() {
+                    {%- for css_name in dataset_css_names %}
+                    document.body.classList.remove("dataset-{{ css_name }}");
+                    {%- endfor %}
+                    document.body.classList.add("dataset-" + this.value);
+                });
+            });
+            {%- endif %}
+        })();
+    </script>
 </body>
 </html>

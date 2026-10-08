@@ -1,8 +1,10 @@
 """Module for generating HTML reports from datasets."""
 
+import re
+import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from jinja2 import Environment, PackageLoader
 
@@ -29,7 +31,7 @@ class ReportMetric:
 
     def __init__(self, name: str, label: str | None = None, format: str = ".2%", **metric_kwargs):
         self.name = name  # metric registry name (e.g. "wer")
-        self.label = label  # display label override (default: metric.long_name)
+        self.label = label  # display label override (default: metric.short_name_base)
         self.format = format  # format spec for the value
         self.metric_kwargs = metric_kwargs  # optional kwargs to pass when resolving the metric from the dataset
 
@@ -62,11 +64,11 @@ DEFAULT_REPORT_METRICS = [
 ]
 
 DEFAULT_REPORT_SUMMARY_ITEMS = [
-    ReportSummaryItem("num_examples", label="Number of examples"),
-    ReportSummaryItem("num_ref_words", label="Number of reference words"),
-    ReportSummaryItem("num_ref_chars", label="Number of reference characters"),
-    ReportSummaryItem("num_hyp_words", label="Number of hypothesis words"),
-    ReportSummaryItem("num_hyp_chars", label="Number of hypothesis characters"),
+    ReportSummaryItem("num_examples", label="# Examples"),
+    ReportSummaryItem("num_ref_words", label="# Ref. words"),
+    ReportSummaryItem("num_ref_chars", label="# Ref. chars"),
+    ReportSummaryItem("num_hyp_words", label="# Hyp. words"),
+    ReportSummaryItem("num_hyp_chars", label="# Hyp. chars"),
 ]
 
 
@@ -76,8 +78,27 @@ def indent_tabs(text: str, width: int = 1) -> str:
     return "\n".join(padding + line for line in text.split("\n"))
 
 
+def _sanitize_css_class(name: str) -> str:
+    """Sanitize a dataset name for use as a CSS class."""
+    return re.sub(r"[^a-zA-Z0-9_-]", "-", name)
+
+
+def _refs_match(datasets: list["Dataset"]) -> bool:
+    """Check if all datasets have identical reference texts."""
+    if len(datasets) <= 1:
+        return True
+    first_refs = [ex.ref.raw for ex in datasets[0]]
+    for ds in datasets[1:]:
+        if len(ds) != len(first_refs):
+            return False
+        for i, ex in enumerate(ds):
+            if ex.ref.raw != first_refs[i]:
+                return False
+    return True
+
+
 def render_report_html(
-    dataset: "Dataset",
+    dataset: Union["Dataset", dict[str, "Dataset"]],
     template: str = "report_basic",
     title: str | None = None,
     base_color_scheme: type[HTMLBaseColors] = HTMLBaseColors,
@@ -91,7 +112,9 @@ def render_report_html(
     """Render an HTML report with alignment visualizations for all examples in a dataset.
 
     Args:
-        dataset: The dataset to generate the report for.
+        dataset: A dataset or a dict of named datasets to compare. When a dict is given,
+            the keys are used as display names and a comparison toggle is added to the
+            Options box.
         template: The template name to use (e.g., "report_basic"). Templates are looked up in the bewer.templates
             package.
         title: An optional title for the report.
@@ -118,33 +141,91 @@ def render_report_html(
     if metadata is None:
         metadata = {}
 
-    # Resolve metrics against the dataset
-    resolved_metrics = []
-    for spec in report_metrics:
-        metric = dataset.metrics.get(spec.name)(**spec.metric_kwargs)
-        label = spec.label if spec.label is not None else metric.long_name
-        resolved_metrics.append({"name": label, "value": f"{metric.value:{spec.format}}"})
+    if isinstance(dataset, dict):
+        datasets = dataset
+        multi_dataset = len(datasets) > 1
+    else:
+        datasets = {"Default": dataset}
+        multi_dataset = False
 
-    # Resolve summary items against the dataset summary
-    resolved_summary = []
-    for spec in report_summary:
-        value = getattr(dataset.metrics.summary(), spec.name)
-        label = spec.label if spec.label is not None else spec.name
-        resolved_summary.append({"name": label, "value": f"{value:{spec.format}}"})
+    dataset_names = list(datasets.keys())
+    dataset_list = [datasets[name] for name in dataset_names]
 
-    # Resolve alignments for each example
-    resolved_alignments = []
-    for example in dataset:
-        alignment = example.metrics.get(report_alignment.name)(**report_alignment.metric_kwargs).alignment
-        resolved_alignments.append(alignment)
+    refs_match = _refs_match(dataset_list) if multi_dataset else False
+    if multi_dataset and not refs_match:
+        warnings.warn(
+            "Reference texts differ across datasets. Line breaks will not be synchronized across datasets.",
+            stacklevel=2,
+        )
 
-    # Load and render the Jinja template
+    n_examples = max(len(ds) for ds in dataset_list) if dataset_list else 0
+
+    if multi_dataset:
+        resolved_metrics = []
+        for spec in report_metrics:
+            values = []
+            label = spec.label
+            for ds in dataset_list:
+                metric = ds.metrics.get(spec.name)(**spec.metric_kwargs)
+                if label is None:
+                    label = metric.short_name_base
+                values.append(f"{metric.value:{spec.format}}")
+            resolved_metrics.append({"name": label, "values": values})
+
+        resolved_summary = []
+        for spec in report_summary:
+            values = []
+            for ds in dataset_list:
+                value = getattr(ds.metrics.summary(), spec.name)
+                values.append(f"{value:{spec.format}}")
+            label = spec.label if spec.label is not None else spec.name
+            resolved_summary.append({"name": label, "values": values})
+    else:
+        ds = dataset_list[0]
+        resolved_metrics = []
+        for spec in report_metrics:
+            metric = ds.metrics.get(spec.name)(**spec.metric_kwargs)
+            label = spec.label if spec.label is not None else metric.short_name_base
+            resolved_metrics.append({"name": label, "value": f"{metric.value:{spec.format}}"})
+
+        resolved_summary = []
+        for spec in report_summary:
+            value = getattr(ds.metrics.summary(), spec.name)
+            label = spec.label if spec.label is not None else spec.name
+            resolved_summary.append({"name": label, "value": f"{value:{spec.format}}"})
+
+    if multi_dataset:
+        resolved_alignments = []
+        for ex_idx in range(n_examples):
+            ex_alignments = []
+            for ds in dataset_list:
+                if ex_idx < len(ds):
+                    alignment = (
+                        ds[ex_idx].metrics.get(report_alignment.name)(**report_alignment.metric_kwargs).alignment
+                    )
+                    ex_alignments.append(alignment)
+                else:
+                    ex_alignments.append(None)
+            resolved_alignments.append(ex_alignments)
+    else:
+        ds = dataset_list[0]
+        resolved_alignments = []
+        for example in ds:
+            alignment = example.metrics.get(report_alignment.name)(**report_alignment.metric_kwargs).alignment
+            resolved_alignments.append(alignment)
+
     env = Environment(loader=PackageLoader("bewer", "templates"), autoescape=True)
     env.filters["indent_tabs"] = indent_tabs
     jinja_template = env.get_template(f"{template}.html.j2")
 
     html = jinja_template.render(
-        dataset=dataset,
+        dataset=dataset_list[0],
+        datasets=datasets,
+        dataset_names=dataset_names,
+        dataset_css_names=[str(i) for i in range(len(dataset_names))],
+        multi_dataset=multi_dataset,
+        refs_match=refs_match,
+        n_examples=n_examples,
         title=title,
         creation_date=datetime.now().strftime("%B %d, %Y"),
         base_color_scheme=base_color_scheme,
@@ -160,7 +241,7 @@ def render_report_html(
 
 
 def generate_report(
-    dataset: "Dataset",
+    dataset: Union["Dataset", dict[str, "Dataset"]],
     path: str | Path | None = None,
     allow_overwrite: bool = False,
     template: str = "report_basic",
@@ -176,7 +257,9 @@ def generate_report(
     """Generate an HTML report with alignment visualizations for all examples.
 
     Args:
-        dataset: The dataset to generate the report for.
+        dataset: A dataset or a dict of named datasets to compare. When a dict is given,
+            the keys are used as display names and a comparison toggle is added to the
+            Options box.
         path: If provided, write the HTML to this file.
         allow_overwrite: If True, overwrite the file if it exists.
         template: The template name to use (e.g., "report_basic"). Templates are looked up
@@ -187,7 +270,7 @@ def generate_report(
         alignment_labels: The labels and tooltips to use for alignment display.
         report_metrics: List of ReportMetric specs controlling which metrics appear. Defaults to
             DEFAULT_REPORT_METRICS.
-        report_summary: List of ReportSummaryItem specs controlling the summary section. Defaults to
+        report_summary: List ofReportSummaryItem specs controlling the summary section. Defaults to
             DEFAULT_REPORT_SUMMARY_ITEMS.
         report_alignment: ReportAlignment spec controlling which alignment to display. Defaults to
             DEFAULT_REPORT_ALIGNMENT.
