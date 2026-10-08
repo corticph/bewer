@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-from collections import namedtuple
 from dataclasses import dataclass, field, replace
 from typing import Any, Callable
 
@@ -21,20 +20,20 @@ __all__ = [
 
 
 # ============================================================
-# Pipelines namedtuple
+# Pipelines
 # ============================================================
 
-_PipelinesBase = namedtuple("_PipelinesBase", [STANDARDIZERS, TOKENIZERS, NORMALIZERS])
 
-
-class Pipelines(_PipelinesBase):
+@dataclass(frozen=True)
+class Pipelines:
     """The preprocessing variants resolved from a configuration, grouped by stage.
 
-    A plain namedtuple of three ``{name: pipeline}`` dicts, with a repr that lists the
-    available variant names per stage instead of dumping every resolved object.
+    Three ``{name: pipeline}`` dicts: standardizers, tokenizers, normalizers.
     """
 
-    __slots__ = ()
+    standardizers: dict[str, Any] = field(default_factory=dict)
+    tokenizers: dict[str, Any] = field(default_factory=dict)
+    normalizers: dict[str, Any] = field(default_factory=dict)
 
     def __repr__(self) -> str:
         stages = ((STANDARDIZERS, self.standardizers), (TOKENIZERS, self.tokenizers), (NORMALIZERS, self.normalizers))
