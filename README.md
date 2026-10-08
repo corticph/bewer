@@ -44,8 +44,7 @@ WER: 50.00%
 
 ### Hierarchy
 
-In `bewer`, evaluation is centered around the `Dataset` object, which implements a hierarchical
-structure, from a collection of reference-hypothesis pairs to individual tokens.
+In `bewer`, evaluation is centered around the `Dataset` object, which implements a hierarchical structure, from a collection of reference-hypothesis pairs to individual tokens.
 
 ```python
 dataset = Dataset(language="en")            # Create a dataset ...
@@ -69,17 +68,11 @@ Token("two")
 
 ### Preprocessing
 
-Text preprocessing is a central part of speech recognition evaluation, and typically requires
-specific considerations for different languages, domains, or tasks. The `bewer` preprocessing
-pipeline runs in three stages:
+Text preprocessing is a central part of speech recognition evaluation, and typically requires specific considerations for different languages, domains, or tasks. The `bewer` preprocessing pipeline runs in three stages:
 
-- **Standardization** runs on the whole string, before tokenization. It irons out inconsistencies
-  that would otherwise affect how the text is split. The default standardizer applies Unicode NFC
-  and unifies apostrophe, hyphen, and slash variants.
-- **Tokenization** is regex-based, to track token boundaries in the standardized text. While not
-  essential for metric computation, it supports richer post-hoc analysis.
-- **Normalization** runs per token, after tokenization. At this point, token boundaries are fixed.
-  It typically handles lowercasing, removing diacritics, and other language-specific adjustments.
+- **Standardization** runs on the whole string, before tokenization. It irons out inconsistencies that would otherwise affect how the text is split. The default standardizer applies Unicode NFC and unifies apostrophe, hyphen, and slash variants.
+- **Tokenization** is regex-based, to track token boundaries in the standardized text. While not essential for metric computation, it supports richer post-hoc analysis.
+- **Normalization** runs per token, after tokenization. At this point, token boundaries are fixed. It typically handles lowercasing, removing diacritics, and other language-specific adjustments.
 
 The result of each stage is accessible from the corresponding objects.
 
@@ -104,18 +97,13 @@ Pipelines(
 )
 ```
 
-Each component is named and defined as part of the dataset's configuration. Typically, it is
-sufficient to just choose the language, and the configuration for that language is applied
-automatically, but you can adapt and extend the pipeline as needed.
+Each component is named and defined as part of the dataset's configuration. Typically, it is sufficient to just choose the language, and the configuration for that language is applied automatically, but you can adapt and extend the pipeline as needed.
 
 ```python
 # TODO: Example of customizing the pipeline for a dataset
 ```
 
-Any component can be switched with the `set_pipeline` context manager. The English `key_term`
-tokenizer, for instance, splits on apostrophes as well as hyphens and slashes, so that a term
-is still matched when it appears in the possessive form. In contrast, the `default` tokenizer
-does not.
+Any component can be switched with the `set_pipeline` context manager. The English `key_term` tokenizer, for instance, splits on apostrophes as well as hyphens and slashes, so that a term is still matched when it appears in the possessive form. In contrast, the `default` tokenizer does not.
 
 ```python
 from bewer import set_pipeline
@@ -135,22 +123,17 @@ with set_pipeline(tokenizer="key_term"):
 ['Jane', 'Doe', 's']
 ```
 
-In practice you will rarely need to adjust the pipeline manually. As we will see next, metrics
-carry the pipeline they run under, so a key-term metric is already defined to use the `key_term`
-tokenizer.
+In practice you will rarely need to adjust the pipeline manually. As we will see next, metrics carry the pipeline they run under, so a key-term metric is already defined to use the `key_term` tokenizer.
 
 ### Metrics
 
-Every metric in `bewer` is registered under one or more names, which makes it accessible from a
-dataset's metrics collection.
+Every metric in `bewer` is registered under one or more names, which makes it accessible from a dataset's metrics collection.
 
 ```python
 wer = dataset.metrics.wer()
 ```
 
-All metrics accept the preprocessing components `standardizer`, `tokenizer` and `normalizer` as
-keyword arguments, allowing you to override the defaults they were registered with. Some metrics
-also accept arguments specific to their computation.
+All metrics accept the preprocessing components `standardizer`, `tokenizer` and `normalizer` as keyword arguments, allowing you to override the defaults they were registered with. Some metrics also accept arguments specific to their computation.
 
 ```python
 # Override the pipeline components a metric runs under (see Vocabularies below
@@ -161,8 +144,7 @@ ktf = dataset.metrics.ktf(
 )
 ```
 
-Call `dataset.metrics.list_metrics()` to get an overview of available metrics and their parameters
-or see the [metrics catalog](#metrics-catalog) below.
+Call `dataset.metrics.list_metrics()` to get an overview of available metrics and their parameters or see the [metrics catalog](#metrics-catalog) below.
 
 You can also register new variants of existing metrics or your own custom metrics.
 
@@ -176,8 +158,7 @@ METRIC_REGISTRY.register_metric(WER, name="my_wer", tokenizer="key_term")
 my_wer = dataset.metrics.my_wer()
 ```
 
-Every metric exposes a main value alongside the constituents it was computed from. By convention,
-the main value is simply `value` for numeric metrics and `alignment` for alignments.
+Every metric exposes a main value alongside the constituents it was computed from. By convention, the main value is simply `value` for numeric metrics and `alignment` for alignments.
 
 ```python
 print(wer.metric_values())
@@ -189,9 +170,7 @@ print(f"{wer.value:.2%} = {wer.num_edits}/{wer.ref_length}")
 12.50% = 1/8
 ```
 
-Most metrics are defined by aggregating over example-level values. This structure is
-reflected in `bewer`, which also exposes example-level metrics accessible through
-the example objects or directly from the metric object itself.
+Most metrics are defined by aggregating over example-level values. This structure is reflected in `bewer`, which also exposes example-level metrics accessible through the example objects or directly from the metric object itself.
 
 ```python
 wer = dataset.metrics.wer()
@@ -202,9 +181,7 @@ assert wer.num_edits == sum(ex_wer.num_edits for ex_wer in wer)
 
 #### Vocabularies
 
-Key-term metrics measure performance on a pre-defined subset of terms (medical, financial,
-acronyms, etc.). To use them, build a [`Vocabulary`](src/bewer/core/vocabulary.py) and attach
-it to the dataset.
+Key-term metrics measure performance on a pre-defined subset of terms (medical, financial, acronyms, etc.). To use them, build a [`Vocabulary`](src/bewer/core/vocabulary.py) and attach it to the dataset.
 
 ```python
 from bewer import Vocabulary
@@ -229,15 +206,11 @@ print(f"{ktr.long_name_base}: {ktr.value:.2%}")
 Key-Term Recall: 50.00%
 ```
 
-You can also load line-separated key terms directly from a file (`add_file`) or write a custom
-function (`Dataset -> Iterable[str]`) to extract key terms from the dataset (`add_extractor`).
+You can also load line-separated key terms directly from a file (`add_file`) or write a custom function (`Dataset -> Iterable[str]`) to extract key terms from the dataset (`add_extractor`).
 
 #### Alignments
 
-Alignments produce an example-level text-to-text alignment as their primary output, rather than
-a dataset-level numeric score. An [`Alignment`](src/bewer/alignment/alignment.py) is a sequence
-of [`Op`](src/bewer/alignment/op.py) objects, each representing a match, substitution, insertion,
-or deletion between hypothesis and reference. Edit counts are available as supportive values.
+Alignments produce an example-level text-to-text alignment as their primary output, rather than a dataset-level numeric score. An [`Alignment`](src/bewer/alignment/alignment.py) is a sequence of [`Op`](src/bewer/alignment/op.py) objects, each representing a match, substitution, insertion, or deletion between hypothesis and reference. Edit counts are available as supportive values.
 
 ```python
 dataset = Dataset(language="en")
@@ -262,10 +235,7 @@ alignment.display()
 
 ### Lazy Computation and Caching
 
-Metric values and pipeline attributes are computed lazily. The dependencies between the pipeline
-stages are tracked to make sure that the full pipeline is considered when deciding which
-computations are necessary. Once a metric is requested from the metrics collection, it is cached
-and reused for subsequent requests with matching parameters or by other metrics that depend on it.
+Metric values and pipeline attributes are computed lazily. The dependencies between the pipeline stages are tracked to make sure that the full pipeline is considered when deciding which computations are necessary. Once a metric is requested from the metrics collection, it is cached and reused for subsequent requests with matching parameters or by other metrics that depend on it.
 
 ```python
 wer = dataset.metrics.wer() # already uses the "default" normalizer
