@@ -92,13 +92,13 @@ class BewerConfig:
 
     - ``standardizers`` / ``normalizers``: variant name -> tuple of Transforms
     - ``tokenizers``: variant name -> compiled regex Pattern
-    - ``vocabularies``: tuple of vocabulary names (for auto-resolution)
+    - ``vocabularies``: dict of name -> Vocabulary instances
     """
 
     standardizers: dict[str, tuple[Transform, ...]] = field(default_factory=dict)
     tokenizers: dict[str, Any] = field(default_factory=dict)
     normalizers: dict[str, tuple[Transform, ...]] = field(default_factory=dict)
-    vocabularies: tuple[str, ...] = ()
+    vocabularies: dict[str, Any] = field(default_factory=dict)
 
     def replace(self, **kwargs) -> BewerConfig:
         """Return a copy with the given fields replaced."""
@@ -120,7 +120,7 @@ def merge_configs(base: BewerConfig, delta: BewerConfig) -> BewerConfig:
         standardizers={**base.standardizers, **delta.standardizers},
         tokenizers={**base.tokenizers, **delta.tokenizers},
         normalizers={**base.normalizers, **delta.normalizers},
-        vocabularies=base.vocabularies + delta.vocabularies,
+        vocabularies={**base.vocabularies, **delta.vocabularies},
     )
 
 

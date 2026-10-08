@@ -23,7 +23,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.core.vocabulary import Vocabulary
 from bewer.extractors.orthographically_complex_term import OrthographicallyComplexTermExtractor
 from bewer.metrics.base import METRIC_REGISTRY
 from bewer.metrics.ktf import KTF
@@ -42,13 +41,16 @@ DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB = "orthographically_complex_terms"
 
 
 def _ensure_orthographically_complex_term_vocabulary(dataset, name: str) -> None:
-    """Register a vocabulary backed by :class:`OrthographicallyComplexTermExtractor` if absent.
+    """Ensure the OCT vocabulary is attached to the dataset if absent.
 
-    Uses :meth:`Dataset._register_derived_vocabulary` so the lookup succeeds even when the
-    dataset has already frozen on an earlier metric request.
+    Creates a Vocabulary backed by OrthographicallyComplexTermExtractor and
+    attaches it via _attach_vocabulary (bypasses the frozen guard since it
+    introduces a brand-new name that cannot stale prior metric results).
     """
     if name not in dataset._vocabularies:
-        dataset._register_derived_vocabulary(Vocabulary(name).add_extractor(OrthographicallyComplexTermExtractor()))
+        from bewer.core.vocabulary import Vocabulary
+
+        dataset._attach_vocabulary(Vocabulary(name).add_extractor(OrthographicallyComplexTermExtractor()))
 
 
 @dataclass

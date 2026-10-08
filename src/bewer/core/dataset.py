@@ -9,7 +9,6 @@ from bewer.core.example import Example
 from bewer.core.text import TokenList
 from bewer.core.vocabulary import Vocabulary
 from bewer.metrics.base import MetricCollection
-from bewer.registry import REGISTRY
 
 __all__ = ["Dataset", "DatasetFrozenError", "TextList", "TextTokenList"]
 
@@ -36,8 +35,6 @@ class Dataset(object):
     def __init__(
         self,
         config: BewerConfig | str | None = None,
-        *,
-        vocabularies: list[str] | None = None,
     ):
         """Initialize the Dataset.
 
@@ -46,8 +43,6 @@ class Dataset(object):
         Args:
             config (BewerConfig | str | None): A BewerConfig, a registered config
                 name (e.g. "base", "en", "da"), or None for the base config.
-            vocabularies (list[str] | None): Names of registered vocabularies to
-                attach eagerly at init time.
         """
         if isinstance(config, BewerConfig):
             self._config = config
@@ -63,11 +58,10 @@ class Dataset(object):
         self._init_blank_state()
         self._pipelines = resolve_config(self._config)
 
-        # Eagerly resolve declared vocabularies
-        for name in self._config.vocabularies:
-            self._resolve_vocabulary(name)
-        for name in vocabularies or []:
-            self._resolve_vocabulary(name)
+        # Eagerly attach vocabularies declared in the config
+        for name, vocab in self._config.vocabularies.items():
+            if name not in self._vocabularies:
+                self._attach_vocabulary(vocab)
 
     def _init_blank_state(self) -> None:
         """Initialize the mutable, modifiable state of the dataset.
@@ -125,7 +119,7 @@ class Dataset(object):
         for example in self.examples:
             new.add(example.ref.raw, example.hyp.raw)
         for vocab in self._vocabularies.values():
-            new.add_vocabulary(vocab)
+            new._attach_vocabulary(vocab)
         return new
 
     @cached_property
@@ -203,62 +197,39 @@ class Dataset(object):
             ValueError: If a different vocabulary is already registered under the same name.
         """
         self._check_not_frozen()
+        self._attach_vocabulary(vocab)
+
+    def _attach_vocabulary(self, vocab: "Vocabulary") -> "Vocabulary":
+        """Attach a vocabulary, bypassing the frozen guard.
+
+        Used by ``add_vocabulary`` (with the guard) and by config-driven
+        eager attachment and metric-derived lazy attachment (without the guard).
+        """
         if not isinstance(vocab, Vocabulary):
-            raise TypeError(f"add_vocabulary() expects a Vocabulary, got {type(vocab)}.")
+            raise TypeError(f"Expected a Vocabulary, got {type(vocab)}.")
         existing = self._vocabularies.get(vocab.name)
         if existing is not None and existing is not vocab:
             raise ValueError(f"A different vocabulary named '{vocab.name}' is already attached to this dataset.")
         self._vocabularies[vocab.name] = vocab
         vocab._freeze()
-
-    def _register_derived_vocabulary(self, vocab: "Vocabulary") -> "Vocabulary":
-        """Register a metric-derived vocabulary, returning the one now bound to its name.
-
-        Metric-derived vocabularies (e.g. the auto-extracted ``orthographically_complex_terms``
-        backing the orthographically-complex-term metrics) are attached lazily the first time such a
-        metric is requested,
-        which may happen after the dataset has frozen on an earlier metric. Because the
-        vocabulary introduces a brand-new name, it cannot change a term set any prior metric
-        already resolved, so registering it on a frozen dataset cannot stale a cached result.
-        This therefore bypasses the frozen guard that :meth:`add_vocabulary` enforces.
-
-        If a vocabulary is already registered under the name it is returned unchanged.
-
-        Args:
-            vocab (Vocabulary): The derived vocabulary to register.
-
-        Returns:
-            Vocabulary: The vocabulary now registered under ``vocab.name``.
-
-        Raises:
-            TypeError: If ``vocab`` is not a Vocabulary.
-        """
-        if not isinstance(vocab, Vocabulary):
-            raise TypeError(f"_register_derived_vocabulary() expects a Vocabulary, got {type(vocab)}.")
-        existing = self._vocabularies.get(vocab.name)
-        if existing is not None:
-            return existing
-        self._vocabularies[vocab.name] = vocab
-        vocab._freeze()
         return vocab
 
     def _resolve_vocabulary(self, name: str) -> "Vocabulary":
-        """Resolve a vocabulary by name — attached first, then registered.
+        """Resolve a vocabulary by name — attached first, then from config.
 
         If the vocabulary is already attached, return it.
-        If it is registered in ``REGISTRY.vocabularies``, attach and return it.
+        If it is declared in the config's vocabularies dict, attach and return it.
         Otherwise raise ValueError with the available names.
         """
         if name in self._vocabularies:
             return self._vocabularies[name]
-        if name in REGISTRY.vocabularies:
-            vocab = REGISTRY.vocabularies.get(name)
-            self._register_derived_vocabulary(vocab)
-            return vocab
+        if name in self._config.vocabularies:
+            vocab = self._config.vocabularies[name]
+            return self._attach_vocabulary(vocab)
         raise ValueError(
             f"Vocabulary '{name}' not found. "
             f"Attached: {sorted(self._vocabularies)}, "
-            f"Registered: {REGISTRY.vocabularies.list()}"
+            f"In config: {sorted(self._config.vocabularies)}"
         )
 
     @property

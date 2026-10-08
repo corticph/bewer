@@ -77,9 +77,11 @@ class TestComponentRegistry:
 class TestRegistry:
     """Tests for the top-level Registry singleton."""
 
-    def test_extractors_has_preregistered(self):
-        """The REGISTRY singleton has the orthographically_complex extractor."""
-        assert "orthographically_complex" in REGISTRY.extractors
+    def test_configs_has_preregistered(self):
+        """The REGISTRY singleton has pre-registered configs."""
+        assert "base" in REGISTRY.configs
+        assert "en" in REGISTRY.configs
+        assert "da" in REGISTRY.configs
 
     def test_metrics_has_preregistered(self):
         """The REGISTRY singleton exposes the metric registry."""
@@ -88,16 +90,16 @@ class TestRegistry:
 
     def test_isolated_restores_state(self, isolated_registry):
         """isolated() restores the registry state after exit."""
-        before = set(isolated_registry.extractors.list())
+        before = set(isolated_registry.configs.list())
         with REGISTRY.isolated():
-            REGISTRY.extractors.register("temp", object())
-            assert "temp" in REGISTRY.extractors
-        assert "temp" not in REGISTRY.extractors
-        assert set(REGISTRY.extractors.list()) == before
+            REGISTRY.configs.register("temp", lambda: None)
+            assert "temp" in REGISTRY.configs
+        assert "temp" not in REGISTRY.configs
+        assert set(REGISTRY.configs.list()) == before
 
     def test_isolated_preserves_preregistered(self, isolated_registry):
         """Pre-registered components are still accessible inside isolated()."""
-        assert "orthographically_complex" in isolated_registry.extractors
+        assert "base" in isolated_registry.configs
         with REGISTRY.isolated():
-            assert "orthographically_complex" in REGISTRY.extractors
-        assert "orthographically_complex" in REGISTRY.extractors
+            assert "base" in REGISTRY.configs
+        assert "base" in REGISTRY.configs

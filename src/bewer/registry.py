@@ -1,21 +1,18 @@
 """Unified registry for BeWER pluggable components.
 
 This module provides a single ``REGISTRY`` singleton with typed namespaces
-for extractors, vocabularies, and configs.  Metrics continue to use the
-existing ``MetricRegistry`` class, exposed as ``REGISTRY.metrics``.
+for configs.  Metrics continue to use the existing ``MetricRegistry`` class,
+exposed as ``REGISTRY.metrics``.
 
 Registration API
 ----------------
-
-    REGISTRY.extractors.register("orthographically_complex", MyExtractor())
-    REGISTRY.vocabularies.register("medical", vocab_instance)
 
     @REGISTRY.configs.register("da", extends="base")
     def danish_delta() -> BewerConfig:
         ...
 
-Preprocessing functions (transforms, tokenizers) are NOT registered —
-they are passed directly as callables in ``Transform``.
+Preprocessing functions (transforms, tokenizers) and vocabularies are NOT
+registered — they are passed directly in ``BewerConfig``.
 """
 
 from __future__ import annotations
@@ -86,8 +83,6 @@ class Registry:
     """Top-level registry holding all typed namespaces."""
 
     def __init__(self):
-        self.extractors = ComponentRegistry("extractor")
-        self.vocabularies = ComponentRegistry("vocabulary")
         self.configs = ComponentRegistry("config")
         self._metrics = None
 
@@ -105,7 +100,7 @@ class Registry:
 
         Useful for tests that register temporary components.
         """
-        snapshots = {ns: dict(getattr(self, ns)._components) for ns in ("extractors", "vocabularies", "configs")}
+        snapshots = {ns: dict(getattr(self, ns)._components) for ns in ("configs",)}
         try:
             yield
         finally:
