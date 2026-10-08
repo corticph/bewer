@@ -29,7 +29,13 @@ from bewer import Dataset
 
 # Create an evaluation dataset
 dataset = Dataset(language="en")
-dataset.add(ref="one two three four", hyp="one too three five")
+
+# Load data
+dataset.load_csv(
+    "data.csv",
+    ref_col="reference",
+    hyp_col="hypothesis",
+)
 
 # Compute a metric
 wer = dataset.metrics.wer()
@@ -37,7 +43,7 @@ print(f"{wer.short_name_base}: {wer.value:.2%}")
 ```
 
 ```text
-WER: 50.00%
+WER: 12.34%
 ```
 
 ## Core Concepts
