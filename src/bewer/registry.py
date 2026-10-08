@@ -20,24 +20,8 @@ they are passed directly as callables in ``Transform``.
 
 from __future__ import annotations
 
-import difflib
 from contextlib import contextmanager
 from typing import Any, Callable
-
-
-class ComponentNotFoundError(LookupError):
-    """Raised when a component is not found in the registry.
-
-    Includes a "did you mean?" hint when a close match exists.
-    """
-
-    def __init__(self, kind: str, name: str, available: list[str]):
-        self.kind = kind
-        self.name = name
-        self.available = available
-        matches = difflib.get_close_matches(name, available, n=1, cutoff=0.6)
-        hint = f" Did you mean '{matches[0]}'?" if matches else ""
-        super().__init__(f"{kind.capitalize()} '{name}' not found. Available: {sorted(available)}{hint}")
 
 
 class ComponentRegistry:
@@ -81,9 +65,10 @@ class ComponentRegistry:
         return decorator
 
     def get(self, name: str) -> Any:
-        """Retrieve a component by name. Raises ComponentNotFoundError if missing."""
+        """Retrieve a component by name. Raises KeyError if missing."""
         if name not in self._components:
-            raise ComponentNotFoundError(self._kind, name, list(self._components))
+            available = sorted(self._components)
+            raise KeyError(f"{self._kind} '{name}' not found. Available: {available}")
         return self._components[name]
 
     def list(self) -> list[str]:

@@ -116,10 +116,8 @@ class TestResolveConfig:
         assert transliterate[0].params.get("preserve") is not None
 
     def test_unknown_config_raises(self):
-        """An unknown config raises ComponentNotFoundError."""
-        from bewer.registry import ComponentNotFoundError
-
-        with pytest.raises(ComponentNotFoundError, match="Config 'xx' not found"):
+        """An unknown config raises KeyError."""
+        with pytest.raises(KeyError, match="config 'xx' not found"):
             get_config("xx")
 
 

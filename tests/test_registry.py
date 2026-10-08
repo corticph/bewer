@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer.registry import REGISTRY, ComponentNotFoundError, ComponentRegistry
+from bewer.registry import REGISTRY, ComponentRegistry
 
 
 class TestComponentRegistry:
@@ -44,18 +44,19 @@ class TestComponentRegistry:
             reg.register("foo", lambda: 2)
 
     def test_get_missing_raises(self):
-        """get() raises ComponentNotFoundError for unknown names."""
+        """get() raises KeyError for unknown names."""
         reg = ComponentRegistry("test")
         reg.register("alpha", lambda: 1)
-        with pytest.raises(ComponentNotFoundError, match="Test 'beta' not found"):
+        with pytest.raises(KeyError, match="test 'beta' not found"):
             reg.get("beta")
 
-    def test_get_missing_did_you_mean(self):
-        """The error includes a 'did you mean?' hint for close matches."""
+    def test_get_missing_lists_available(self):
+        """The error message lists available names."""
         reg = ComponentRegistry("test")
-        reg.register("lowercase", lambda: 1)
-        with pytest.raises(ComponentNotFoundError, match="Did you mean 'lowercase'"):
-            reg.get("lowercas")
+        reg.register("alpha", lambda: 1)
+        reg.register("bravo", lambda: 2)
+        with pytest.raises(KeyError, match="alpha"):
+            reg.get("zzz")
 
     def test_list_returns_sorted(self):
         """list() returns sorted component names."""
