@@ -3,7 +3,6 @@ from __future__ import annotations
 import inspect
 from collections import namedtuple
 from dataclasses import dataclass, field, replace
-from importlib import import_module
 from typing import Any, Callable
 
 from bewer.flags import NORMALIZERS, STANDARDIZERS, TOKENIZERS
@@ -145,35 +144,16 @@ def _resolve_normalizer(name: str, steps: tuple[Transform, ...]) -> Normalizer:
     """Resolve a tuple of Transforms to a Normalizer."""
     pipeline = []
     for step in steps:
-        fn = _resolve_component(step.component)
-        _validate_params(fn, step.params, skip_first=True)
-        pipeline.append((fn, step.params))
+        if not callable(step.component):
+            raise TypeError(f"Transform component must be callable, got {type(step.component)}")
+        _validate_params(step.component, step.params, skip_first=True)
+        pipeline.append((step.component, step.params))
     return Normalizer(pipeline, name)
 
 
 def _resolve_tokenizer(name: str, pattern: Any) -> Tokenizer:
     """Wrap a pattern (from a factory call) in a Tokenizer."""
     return Tokenizer(pattern, name)
-
-
-def _resolve_component(component: str | Callable[..., Any]) -> Callable[..., Any]:
-    """Resolve a component reference to a callable.
-
-    Strings with dots are treated as dotted-path imports.
-    Callables are returned as-is.
-    """
-    if isinstance(component, str):
-        if "." in component:
-            module_name, func_name = component.rsplit(".", 1)
-            module = import_module(module_name)
-            return getattr(module, func_name)
-        raise ValueError(
-            f"Component name '{component}' is not a dotted path. Use 'module.function' or pass a callable directly."
-        )
-    elif callable(component):
-        return component
-    else:
-        raise TypeError(f"Expected str or callable, got {type(component)}")
 
 
 def _validate_params(fn: Callable, params: dict[str, Any], *, skip_first: bool = False) -> None:
