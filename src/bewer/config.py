@@ -54,29 +54,29 @@ class Transform:
     Calls ``component(text, **params)`` when invoked.
     """
 
-    __slots__ = ("component", "params")
+    __slots__ = ("fn", "params")
 
-    def __init__(self, component: Callable[..., Any], **params: Any):
-        self.component = component
+    def __init__(self, fn: Callable[..., Any], **params: Any):
+        self.fn = fn
         self.params = params
-        _validate_params(component, params, skip_first=True)
+        _validate_params(fn, params, skip_first=True)
 
     def __call__(self, text: str) -> str:
-        return self.component(text, **self.params)
+        return self.fn(text, **self.params)
 
     def __repr__(self) -> str:
         if self.params:
             param_str = ", ".join(f"{k}={v!r}" for k, v in self.params.items())
-            return f"Transform({self.component.__name__}, {param_str})"
-        return f"Transform({self.component.__name__})"
+            return f"Transform({self.fn.__name__}, {param_str})"
+        return f"Transform({self.fn.__name__})"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Transform):
             return NotImplemented
-        return self.component is other.component and self.params == other.params
+        return self.fn is other.fn and self.params == other.params
 
     def __hash__(self) -> int:
-        return hash((self.component, tuple(sorted(self.params.items()))))
+        return hash((self.fn, tuple(sorted(self.params.items()))))
 
 
 # ============================================================
@@ -143,7 +143,7 @@ def resolve_config(config: BewerConfig) -> Pipelines:
 
 def _resolve_normalizer(name: str, steps: tuple[Transform, ...]) -> Normalizer:
     """Resolve a tuple of Transforms to a Normalizer."""
-    pipeline = [(step.component, step.params) for step in steps]
+    pipeline = [(step.fn, step.params) for step in steps]
     return Normalizer(pipeline, name)
 
 

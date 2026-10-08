@@ -94,7 +94,7 @@ class TestResolveConfig:
         """Danish config changes the default normalizer."""
         config = get_config("da")
         steps = config.normalizers["default"]
-        transliterate = [s for s in steps if s.component == transliterate_latin_letters]
+        transliterate = [s for s in steps if s.fn == transliterate_latin_letters]
         assert len(transliterate) == 1
         assert transliterate[0].params.get("preserve") == "æøå"
 
@@ -112,7 +112,7 @@ class TestResolveConfig:
         base_pattern = get_config("base").tokenizers["default"]
         assert fr_pattern.pattern != base_pattern.pattern
         steps = config.normalizers["default"]
-        transliterate = [s for s in steps if s.component == transliterate_latin_letters]
+        transliterate = [s for s in steps if s.fn == transliterate_latin_letters]
         assert transliterate[0].params.get("preserve") is not None
 
     def test_unknown_config_raises(self):
