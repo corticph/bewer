@@ -12,11 +12,7 @@
 
 **⚠️ Important:** Bewer is pre-1.0 and under active development. The API may change. Breaking changes are signalled by a **minor** version bump (e.g. `0.2.x → 0.3.0`); patch releases contain only fixes and backwards-compatible additions. Pin with `bewer~=0.Y.0` (pip) or `^0.Y.0` (Poetry).
 
-**Bewer is an evaluation and analysis framework for automatic speech recognition in Python.** It defines a flexible
-approach for configuring and customizing speech recognition evaluation. The hierarchical structure, going from the
-dataset level down to individual tokens, makes it easy to inspect individual examples and understand evaluation
-results. The built-in preprocessing pipeline and metrics collection are designed to cover all conventional use cases
-and then some, while still being fully extensible.
+**Bewer is an evaluation and analysis framework for automatic speech recognition in Python.** It defines a flexible approach for configuring and customizing speech recognition evaluation. The hierarchical structure, going from the dataset level down to individual tokens, makes it easy to inspect individual examples and understand evaluation results. The built-in preprocessing pipeline and metrics collection are designed to cover all conventional use cases and then some, while still being fully extensible.
 
 __Contents__ | [Installation](#installation) | [Quickstart](#quickstart) | [Core Concepts](#core-concepts) | [Metrics Catalog](#metrics-catalog) |
 
@@ -33,20 +29,15 @@ from bewer import Dataset
 
 # Create an evaluation dataset
 dataset = Dataset(language="en")
-
-# Load data
-dataset.load_csv(
-    "data.csv",
-    ref_col="reference",
-    hyp_col="hypothesis",
-)
+dataset.add(ref="one two three four", hyp="one too three five")
 
 # Compute a metric
 wer = dataset.metrics.wer()
 print(f"{wer.short_name_base}: {wer.value:.2%}")
 ```
+
 ```text
-WER: 12.34%
+WER: 50.00%
 ```
 
 ## Core Concepts
@@ -68,6 +59,7 @@ for example in dataset:                     # Dataset -> Example
     for token in text.tokens:               # Text -> Token
         print(token)
 ```
+
 ```text
 Example(ref="one two", hyp="want to")
 Text("one two")
@@ -103,6 +95,7 @@ Pre-defined pipeline components can be found under `dataset.pipelines`.
 ```python
 print(dataset.pipelines)
 ```
+
 ```text
 Pipelines(
     standardizers: default
@@ -136,6 +129,7 @@ print(text.tokens.standardized)
 with set_pipeline(tokenizer="key_term"):
     print(text.tokens.standardized)
 ```
+
 ```text
 ['Jane', "Doe's"]
 ['Jane', 'Doe', 's']
@@ -159,10 +153,11 @@ keyword arguments, allowing you to override the defaults they were registered wi
 also accept arguments specific to their computation.
 
 ```python
-# Key-term F-score (KTF) with ...
+# Override the pipeline components a metric runs under (see Vocabularies below
+# for how to define a key-term vocabulary):
 ktf = dataset.metrics.ktf(
-    tokenizer="my_tokenizer",    # ... a custom tokenizer and ...
-    vocab="my_vocab",            # ... a key-term vocabulary.
+    tokenizer="key_term",
+    vocab="medical",
 )
 ```
 
@@ -174,10 +169,10 @@ You can also register new variants of existing metrics or your own custom metric
 ```python
 from bewer.metrics import METRIC_REGISTRY, WER
 
-# Register a custom metric in the global registry ...
-METRIC_REGISTRY.register_metric(WER, name="my_wer", tokenizer="my_tokenizer")
+# Register a custom metric in the global registry
+METRIC_REGISTRY.register_metric(WER, name="my_wer", tokenizer="key_term")
 
-# ... access it from the dataset's metrics collection
+# Access it from the dataset's metrics collection
 my_wer = dataset.metrics.my_wer()
 ```
 
@@ -188,6 +183,7 @@ the main value is simply `value` for numeric metrics and `alignment` for alignme
 print(wer.metric_values())
 print(f"{wer.value:.2%} = {wer.num_edits}/{wer.ref_length}")
 ```
+
 ```text
 {'main': 'value', 'other': ['num_edits', 'ref_length']}
 12.50% = 1/8
@@ -246,8 +242,8 @@ or deletion between hypothesis and reference. Edit counts are available as suppo
 ```python
 dataset = Dataset(language="en")
 dataset.add(
-    ref="an example with different type of errors",
-    hyp="an odd example with diff type errors",
+    ref="an example with different types of errors",
+    hyp="an odd example with diff types errors",
 )
 
 # Access alignments at the example level
