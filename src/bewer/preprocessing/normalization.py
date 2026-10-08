@@ -5,7 +5,6 @@ import regex as re
 from unidecode import unidecode
 
 from bewer.preprocessing._unicode_normalization_tables import APOSTROPHE_TABLE, HYPHEN_TABLE, SLASH_TABLE
-from bewer.registry import REGISTRY
 
 __all__ = [
     "Normalizer",
@@ -49,7 +48,6 @@ def _set_attrs(**attrs):
 # ============================================================
 
 
-@REGISTRY.transforms.register
 @_set_attrs(token_only=False, length_preserving=True)
 def lowercase(text: str) -> str:
     """
@@ -64,7 +62,6 @@ def lowercase(text: str) -> str:
     return text.lower()
 
 
-@REGISTRY.transforms.register
 @_set_attrs(token_only=False, length_preserving=False)
 def nfc(text: str) -> str:
     """
@@ -79,7 +76,6 @@ def nfc(text: str) -> str:
     return unicodedata.normalize("NFC", text)
 
 
-@REGISTRY.transforms.register
 @_set_attrs(token_only=False, length_preserving=True)
 def normalize_apostrophe_variants(text: str) -> str:
     """Normalize Unicode apostrophe variants (e.g. \u2019, \u02bc) to ASCII apostrophe (').
@@ -93,7 +89,6 @@ def normalize_apostrophe_variants(text: str) -> str:
     return text.translate(APOSTROPHE_TABLE)
 
 
-@REGISTRY.transforms.register
 @_set_attrs(token_only=False, length_preserving=True)
 def normalize_hyphen_variants(text: str) -> str:
     """Normalize Unicode hyphen/dash variants (e.g. \u2013, \u2014) to ASCII hyphen-minus (-).
@@ -107,7 +102,6 @@ def normalize_hyphen_variants(text: str) -> str:
     return text.translate(HYPHEN_TABLE)
 
 
-@REGISTRY.transforms.register
 @_set_attrs(token_only=False, length_preserving=True)
 def normalize_slash_variants(text: str) -> str:
     """Normalize Unicode slash variants (e.g. \uff0f) to ASCII solidus (/).
@@ -126,7 +120,6 @@ def normalize_slash_variants(text: str) -> str:
 # ============================================================
 
 
-@REGISTRY.transforms.register
 @_set_attrs(token_only=True, length_preserving=False)
 def strip_punctuation(text: str) -> str:
     """
@@ -165,7 +158,6 @@ def _transliterate_latin_letters(char: str, preserve: str = "") -> str:
     return unidecode(char)
 
 
-@REGISTRY.transforms.register
 @_set_attrs(token_only=False, length_preserving=False)
 def transliterate_latin_letters(text: str, preserve: str = "") -> str:
     """Transliterate Latin Unicode letters to their ASCII equivalents.
@@ -197,7 +189,6 @@ def _transliterate_symbols(char: str) -> str:
     return char
 
 
-@REGISTRY.transforms.register
 @_set_attrs(token_only=False, length_preserving=False)
 def transliterate_symbols(text: str) -> str:
     """Transliterate Unicode markers, symbols, and punctuation characters to their ASCII equivalents.
@@ -225,7 +216,6 @@ def _remove_symbols(char: str) -> str:
     return char
 
 
-@REGISTRY.transforms.register
 @_set_attrs(token_only=False, length_preserving=False)
 def remove_symbols(text: str) -> str:
     """Remove Unicode markers, symbols, and punctuation characters.

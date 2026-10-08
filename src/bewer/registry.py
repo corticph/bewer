@@ -1,33 +1,28 @@
 """Unified registry for BeWER pluggable components.
 
 This module provides a single ``REGISTRY`` singleton with typed namespaces
-for transforms (standardizers + normalizers), tokenizers, extractors,
-vocabularies, and profiles.  Metrics continue to use the existing
-``MetricRegistry`` class, exposed as ``REGISTRY.metrics``.
+for extractors, vocabularies, and configs.  Metrics continue to use the
+existing ``MetricRegistry`` class, exposed as ``REGISTRY.metrics``.
 
 Registration API
 ----------------
 
 All non-metric namespaces use ``ComponentRegistry.register``::
 
-    @REGISTRY.transforms.register
-    def lowercase(text: str) -> str:
-        return text.lower()
-
-    @REGISTRY.transforms.register(length_preserving=True)
-    def nfc(text: str) -> str:
-        return unicodedata.normalize("NFC", text)
-
     REGISTRY.extractors.register("orthographically_complex", MyExtractor())
+    REGISTRY.vocabularies.register("medical", vocab_instance)
 
-The decorator form defaults the registered name to ``fn.__name__``.
-The direct-call form requires an explicit name.
+    @REGISTRY.configs.register("da", extends="base")
+    def danish_delta() -> BewerConfig:
+        ...
+
+Preprocessing functions (transforms, tokenizers) are NOT registered —
+they are passed directly as callables in ``PipelineStep``.
 """
 
 from __future__ import annotations
 
 import difflib
-import inspect
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator
 
@@ -45,41 +40,6 @@ class ComponentNotFoundError(LookupError):
         matches = difflib.get_close_matches(name, available, n=1, cutoff=0.6)
         hint = f" Did you mean '{matches[0]}'?" if matches else ""
         super().__init__(f"{kind.capitalize()} '{name}' not found. Available: {sorted(available)}{hint}")
-
-
-def _validate_transform(fn: Callable) -> None:
-    """A transform must accept exactly one required positional parameter (the text).
-
-    Additional parameters are allowed as long as they have defaults (i.e. they
-    are optional keyword params).
-    """
-    sig = inspect.signature(fn)
-    positional = [
-        p
-        for p in sig.parameters.values()
-        if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-    ]
-    required = [p for p in positional if p.default is inspect.Parameter.empty]
-    if len(required) != 1:
-        raise TypeError(
-            f"Transform '{fn.__name__}' must have exactly one required positional parameter, got {len(required)}"
-        )
-
-
-def _validate_tokenizer(fn: Callable) -> None:
-    """A tokenizer factory must have at least zero positional-only parameters.
-
-    All existing tokenizer factories use keyword-or-keyword-only parameters.
-    POSITIONAL_ONLY parameters (``/``) would break the keyword-call convention.
-    """
-    sig = inspect.signature(fn)
-    pos_only = [p for p in sig.parameters.values() if p.kind == inspect.Parameter.POSITIONAL_ONLY]
-    if pos_only:
-        names = ", ".join(p.name for p in pos_only)
-        raise TypeError(
-            f"Tokenizer '{fn.__name__}' has positional-only parameter(s) [{names}] "
-            f"— tokenizer params must be passable by keyword"
-        )
 
 
 class ComponentRegistry:
@@ -182,10 +142,6 @@ class Registry:
 
     Attributes
     ----------
-    transforms:
-        Standardizers and normalizers (both are ``str -> str``).
-    tokenizers:
-        Tokenizer factories (``**params -> re.Pattern``).
     extractors:
         Extractor instances (``dataset -> Iterable[str]``).
     vocabularies:
@@ -197,8 +153,6 @@ class Registry:
     """
 
     def __init__(self):
-        self.transforms = ComponentRegistry("transform", validate_fn=_validate_transform)
-        self.tokenizers = ComponentRegistry("tokenizer", validate_fn=_validate_tokenizer)
         self.extractors = ComponentRegistry("extractor")
         self.vocabularies = ComponentRegistry("vocabulary")
         self.configs = ComponentRegistry("config")
@@ -222,14 +176,11 @@ class Registry:
         Useful for tests that register temporary components::
 
             with REGISTRY.isolated():
-                REGISTRY.transforms.register("temp", my_func)
+                REGISTRY.extractors.register("temp", my_extractor)
                 # ... run tests ...
             # "temp" is gone after the context exits
         """
-        snapshots = {
-            ns: dict(getattr(self, ns)._components)
-            for ns in ("transforms", "tokenizers", "extractors", "vocabularies", "configs")
-        }
+        snapshots = {ns: dict(getattr(self, ns)._components) for ns in ("extractors", "vocabularies", "configs")}
         try:
             yield
         finally:

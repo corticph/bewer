@@ -12,6 +12,7 @@ from bewer.config import (
     resolve_config,
     to_yaml,
 )
+from bewer.preprocessing.normalization import transliterate_latin_letters
 
 
 class TestBewerConfig:
@@ -95,7 +96,7 @@ class TestResolveConfig:
         """Danish config changes the default normalizer."""
         config = get_config("da")
         steps = config.normalizers["default"]
-        transliterate = [s for s in steps if s.component == "transliterate_latin_letters"]
+        transliterate = [s for s in steps if s.component == transliterate_latin_letters]
         assert len(transliterate) == 1
         assert transliterate[0].params.get("preserve") == "\u00e6\u00f8\u00e5"
 
@@ -110,7 +111,7 @@ class TestResolveConfig:
         config = get_config("fr")
         assert config.tokenizers["default"].params["split_on_escaped"] == "-/'"
         steps = config.normalizers["default"]
-        transliterate = [s for s in steps if s.component == "transliterate_latin_letters"]
+        transliterate = [s for s in steps if s.component == transliterate_latin_letters]
         assert transliterate[0].params.get("preserve") is not None
 
     def test_unknown_config_raises(self):
@@ -131,15 +132,13 @@ class TestResolveConfigToPipelines:
         assert isinstance(pipelines, Pipelines)
 
     def test_unknown_component_raises(self):
-        """An unknown component name raises ComponentNotFoundError."""
-        from bewer.registry import ComponentNotFoundError
-
+        """A bare component name (no dots) raises ValueError."""
         config = BewerConfig(
             normalizers={"default": (PipelineStep("nonexistent"),)},
             tokenizers={},
             standardizers={},
         )
-        with pytest.raises(ComponentNotFoundError, match="Transform 'nonexistent' not found"):
+        with pytest.raises(ValueError, match="not a dotted path"):
             resolve_config(config)
 
     def test_direct_callable_accepted(self):
@@ -159,20 +158,18 @@ class TestYamlRoundTrip:
     """Tests for to_yaml / from_yaml."""
 
     def test_round_trip_base(self):
-        """to_yaml then from_yaml produces an equal config for the base config."""
+        """to_yaml then from_yaml then to_yaml produces the same YAML for base config."""
         config = get_config("base")
         yaml_str = to_yaml(config)
         restored = from_yaml(yaml_str)
-        assert restored.standardizers == config.standardizers
-        assert restored.tokenizers == config.tokenizers
-        assert restored.normalizers == config.normalizers
+        assert to_yaml(restored) == yaml_str
 
     def test_round_trip_da(self):
-        """to_yaml then from_yaml works for Danish config."""
+        """to_yaml then from_yaml then to_yaml produces the same YAML for Danish config."""
         config = get_config("da")
         yaml_str = to_yaml(config)
         restored = from_yaml(yaml_str)
-        assert restored.normalizers["default"] == config.normalizers["default"]
+        assert to_yaml(restored) == yaml_str
 
     def test_callable_not_serializable(self):
         """A config with direct callables raises SerializationError."""

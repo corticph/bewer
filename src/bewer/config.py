@@ -128,7 +128,7 @@ def _resolve_transform_pipeline(name: str, steps: tuple[PipelineStep, ...]) -> N
     """Resolve a list of PipelineSteps to a Normalizer."""
     pipeline = []
     for step in steps:
-        fn = _resolve_component(step.component, "transforms")
+        fn = _resolve_component(step.component)
         _validate_params(fn, step.params, skip_first=True)
         pipeline.append((fn, step.params))
     return Normalizer(pipeline, name)
@@ -136,19 +136,26 @@ def _resolve_transform_pipeline(name: str, steps: tuple[PipelineStep, ...]) -> N
 
 def _resolve_tokenizer(name: str, step: PipelineStep) -> Tokenizer:
     """Resolve a PipelineStep to a Tokenizer."""
-    fn = _resolve_component(step.component, "tokenizers")
+    fn = _resolve_component(step.component)
     _validate_params(fn, step.params, skip_first=False)
     pattern = fn(**step.params)
     return Tokenizer(pattern, name)
 
 
-def _resolve_component(component: str | Callable[..., Any], namespace: str) -> Callable[..., Any]:
+def _resolve_component(component: str | Callable[..., Any]) -> Callable[..., Any]:
+    """Resolve a component reference to a callable.
+
+    Strings with dots are treated as dotted-path imports.
+    Callables are returned as-is.
+    """
     if isinstance(component, str):
         if "." in component:
             module_name, func_name = component.rsplit(".", 1)
             module = import_module(module_name)
             return getattr(module, func_name)
-        return getattr(REGISTRY, namespace).get(component)
+        raise ValueError(
+            f"Component name '{component}' is not a dotted path. Use 'module.function' or pass a callable directly."
+        )
     elif callable(component):
         return component
     else:
@@ -240,13 +247,16 @@ def _step_to_yaml_key(step: PipelineStep) -> str:
     if isinstance(step.component, str):
         return step.component
     elif callable(step.component):
-        name = getattr(step.component, "__name__", None)
-        if name and name in REGISTRY.transforms:
-            return name
-        raise SerializationError(
-            f"Cannot serialize callable {step.component!r}: not registered in REGISTRY.transforms. "
-            f"Register it with @REGISTRY.transforms.register to make it serializable."
-        )
+        module = getattr(step.component, "__module__", None)
+        qualname = getattr(step.component, "__qualname__", None) or getattr(step.component, "__name__", None)
+        if not module or not qualname:
+            raise SerializationError(f"Cannot serialize callable {step.component!r}: no module/name metadata.")
+        if "<locals>" in qualname:
+            raise SerializationError(
+                f"Cannot serialize callable {step.component!r}: it is a local function "
+                f"that cannot be imported by dotted path."
+            )
+        return f"{module}.{qualname}"
     else:
         raise SerializationError(f"Cannot serialize component of type {type(step.component)!r}")
 
@@ -270,10 +280,13 @@ def from_yaml(source: str | PathLike) -> BewerConfig:
     if isinstance(source, PathLike):
         text = Path(source).read_text(encoding="utf-8")
     elif isinstance(source, str):
-        path = Path(source)
-        if path.is_file():
-            text = path.read_text(encoding="utf-8")
-        else:
+        try:
+            path = Path(source)
+            if path.is_file():
+                text = path.read_text(encoding="utf-8")
+            else:
+                text = source
+        except OSError:
             text = source
     else:
         raise TypeError(f"from_yaml expects str or PathLike, got {type(source)}")

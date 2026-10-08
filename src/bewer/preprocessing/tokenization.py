@@ -8,8 +8,6 @@ from typing import Union
 
 import regex as re
 
-from bewer.registry import REGISTRY
-
 __all__ = [
     "Tokenizer",
     "whitespace_pattern",
@@ -19,7 +17,6 @@ __all__ = [
 ]
 
 
-@REGISTRY.tokenizers.register
 def whitespace_pattern() -> re.Pattern:
     """Return a regex pattern that matches sequences of non-whitespace characters.
 
@@ -29,7 +26,6 @@ def whitespace_pattern() -> re.Pattern:
     return re.compile(r"\S+")
 
 
-@REGISTRY.tokenizers.register
 def strip_punctuation_pattern(split_on_escaped: str | None = None, split_on_pattern: str | None = None) -> re.Pattern:
     """Return a regex pattern that matches tokens without internal whitespace or punctuation per specified characters.
 
@@ -50,7 +46,6 @@ def strip_punctuation_pattern(split_on_escaped: str | None = None, split_on_patt
     )
 
 
-@REGISTRY.tokenizers.register
 def strip_punctuation_keep_symbols_pattern(
     split_on_escaped: str | None = None,
 ) -> re.Pattern:
@@ -72,7 +67,6 @@ def strip_punctuation_keep_symbols_pattern(
     return re.compile(rf"([{math_currency}])|({strip_pattern.pattern})", re.V1)
 
 
-@REGISTRY.tokenizers.register
 def keep_symbols_and_punctuation_pattern(
     punct_chars: str,
     keep_newlines: bool = True,
