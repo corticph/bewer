@@ -17,7 +17,7 @@ All non-metric namespaces use ``ComponentRegistry.register``::
         ...
 
 Preprocessing functions (transforms, tokenizers) are NOT registered —
-they are passed directly as callables in ``PipelineStep``.
+they are passed directly as callables in ``Transform``.
 """
 
 from __future__ import annotations

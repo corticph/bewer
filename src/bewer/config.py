@@ -16,7 +16,7 @@ from bewer.registry import REGISTRY
 
 __all__ = [
     "BewerConfig",
-    "PipelineStep",
+    "Transform",
     "Pipelines",
     "merge_configs",
     "resolve_config",
@@ -28,7 +28,7 @@ __all__ = [
 
 
 # ============================================================
-# Pipelines namedtuple (moved from configs/resolve.py)
+# Pipelines namedtuple
 # ============================================================
 
 _PipelinesBase = namedtuple("_PipelinesBase", [STANDARDIZERS, TOKENIZERS, NORMALIZERS])
@@ -51,20 +51,43 @@ class Pipelines(_PipelinesBase):
 
 
 # ============================================================
-# Data classes
+# Transform — a callable with bound params
 # ============================================================
 
 
-@dataclass(frozen=True)
-class PipelineStep:
-    """A single step in a preprocessing pipeline.
+class Transform:
+    """A transform function bound with parameters.
 
-    ``component`` is a registered name (str) or a direct callable.
-    Direct callables make the config non-serializable.
+    Calls ``component(text, **params)`` when invoked.
     """
 
-    component: str | Callable[..., Any]
-    params: dict[str, Any] = field(default_factory=dict)
+    __slots__ = ("component", "params")
+
+    def __init__(self, component: Callable[..., Any], **params: Any):
+        self.component = component
+        self.params = params
+
+    def __call__(self, text: str) -> str:
+        return self.component(text, **self.params)
+
+    def __repr__(self) -> str:
+        if self.params:
+            param_str = ", ".join(f"{k}={v!r}" for k, v in self.params.items())
+            return f"Transform({self.component.__name__}, {param_str})"
+        return f"Transform({self.component.__name__})"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Transform):
+            return NotImplemented
+        return self.component is other.component and self.params == other.params
+
+    def __hash__(self) -> int:
+        return hash((self.component, tuple(sorted(self.params.items()))))
+
+
+# ============================================================
+# BewerConfig
+# ============================================================
 
 
 @dataclass(frozen=True)
@@ -73,15 +96,15 @@ class BewerConfig:
 
     Each field maps variant names to pipeline definitions:
 
-    - ``standardizers`` / ``normalizers``: variant name -> tuple of PipelineSteps
-    - ``tokenizers``: variant name -> single PipelineStep
-    - ``vocabularies``: alias name -> vocabulary name (for auto-resolution)
+    - ``standardizers`` / ``normalizers``: variant name -> tuple of Transforms
+    - ``tokenizers``: variant name -> compiled regex Pattern
+    - ``vocabularies``: tuple of vocabulary names (for auto-resolution)
     """
 
-    standardizers: dict[str, tuple[PipelineStep, ...]] = field(default_factory=dict)
-    tokenizers: dict[str, PipelineStep] = field(default_factory=dict)
-    normalizers: dict[str, tuple[PipelineStep, ...]] = field(default_factory=dict)
-    vocabularies: dict[str, str] = field(default_factory=dict)
+    standardizers: dict[str, tuple[Transform, ...]] = field(default_factory=dict)
+    tokenizers: dict[str, Any] = field(default_factory=dict)
+    normalizers: dict[str, tuple[Transform, ...]] = field(default_factory=dict)
+    vocabularies: tuple[str, ...] = ()
 
     def replace(self, **kwargs) -> BewerConfig:
         """Return a copy with the given fields replaced."""
@@ -103,7 +126,7 @@ def merge_configs(base: BewerConfig, delta: BewerConfig) -> BewerConfig:
         standardizers={**base.standardizers, **delta.standardizers},
         tokenizers={**base.tokenizers, **delta.tokenizers},
         normalizers={**base.normalizers, **delta.normalizers},
-        vocabularies={**base.vocabularies, **delta.vocabularies},
+        vocabularies=base.vocabularies + delta.vocabularies,
     )
 
 
@@ -113,10 +136,10 @@ def merge_configs(base: BewerConfig, delta: BewerConfig) -> BewerConfig:
 
 
 def resolve_config(config: BewerConfig) -> Pipelines:
-    """Resolve a BewerConfig to the existing Pipelines namedtuple."""
-    standardizers = {name: _resolve_transform_pipeline(name, steps) for name, steps in config.standardizers.items()}
-    tokenizers = {name: _resolve_tokenizer(name, step) for name, step in config.tokenizers.items()}
-    normalizers = {name: _resolve_transform_pipeline(name, steps) for name, steps in config.normalizers.items()}
+    """Resolve a BewerConfig to Pipelines namedtuple."""
+    standardizers = {name: _resolve_normalizer(name, steps) for name, steps in config.standardizers.items()}
+    tokenizers = {name: _resolve_tokenizer(name, pattern) for name, pattern in config.tokenizers.items()}
+    normalizers = {name: _resolve_normalizer(name, steps) for name, steps in config.normalizers.items()}
     return Pipelines(
         standardizers=standardizers,
         tokenizers=tokenizers,
@@ -124,8 +147,8 @@ def resolve_config(config: BewerConfig) -> Pipelines:
     )
 
 
-def _resolve_transform_pipeline(name: str, steps: tuple[PipelineStep, ...]) -> Normalizer:
-    """Resolve a list of PipelineSteps to a Normalizer."""
+def _resolve_normalizer(name: str, steps: tuple[Transform, ...]) -> Normalizer:
+    """Resolve a tuple of Transforms to a Normalizer."""
     pipeline = []
     for step in steps:
         fn = _resolve_component(step.component)
@@ -134,11 +157,8 @@ def _resolve_transform_pipeline(name: str, steps: tuple[PipelineStep, ...]) -> N
     return Normalizer(pipeline, name)
 
 
-def _resolve_tokenizer(name: str, step: PipelineStep) -> Tokenizer:
-    """Resolve a PipelineStep to a Tokenizer."""
-    fn = _resolve_component(step.component)
-    _validate_params(fn, step.params, skip_first=False)
-    pattern = fn(**step.params)
+def _resolve_tokenizer(name: str, pattern: Any) -> Tokenizer:
+    """Wrap a pattern (from a factory call) in a Tokenizer."""
     return Tokenizer(pattern, name)
 
 
@@ -163,13 +183,7 @@ def _resolve_component(component: str | Callable[..., Any]) -> Callable[..., Any
 
 
 def _validate_params(fn: Callable, params: dict[str, Any], *, skip_first: bool = False) -> None:
-    """Validate config params against a function's signature.
-
-    Preserves the checks from the original resolve.py:
-    - first positional arg not in params (only when ``skip_first`` — transforms)
-    - required params supplied
-    - no unknown params
-    """
+    """Validate config params against a function's signature."""
     sig = inspect.signature(fn)
     func_params = sig.parameters
     param_iter = iter(func_params.items())
@@ -180,6 +194,8 @@ def _validate_params(fn: Callable, params: dict[str, Any], *, skip_first: bool =
             raise ValueError(f"First positional argument '{first_param}' should not be passed in params")
 
     for param, value in param_iter:
+        if value.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+            continue
         if value.default is inspect.Parameter.empty and param not in params:
             raise ValueError(f"Parameter '{param}' not found in function '{fn.__name__}'")
 
@@ -218,59 +234,66 @@ class SerializationError(ValueError):
 
 
 def to_yaml(config: BewerConfig) -> str:
-    """Serialize a BewerConfig to YAML using registry names.
-
-    Direct callables (not registered) raise SerializationError.
-    """
+    """Serialize a BewerConfig to YAML using dotted-path names."""
     data = {
         "standardizers": _pipelines_to_yaml(config.standardizers),
-        "tokenizers": {name: _step_to_yaml_dict(step) for name, step in config.tokenizers.items()},
+        "tokenizers": {name: _pattern_to_yaml_dict(pattern) for name, pattern in config.tokenizers.items()},
         "normalizers": _pipelines_to_yaml(config.normalizers),
-        "vocabularies": dict(config.vocabularies) if config.vocabularies else None,
+        "vocabularies": list(config.vocabularies) if config.vocabularies else None,
     }
     data = {k: v for k, v in data.items() if v}
     return yaml.dump(data, sort_keys=False, allow_unicode=True)
 
 
-def _pipelines_to_yaml(pipelines: dict[str, tuple[PipelineStep, ...]]) -> dict[str, dict[str, dict[str, Any]]] | None:
+def _pipelines_to_yaml(pipelines: dict[str, tuple[Transform, ...]]) -> dict[str, dict[str, dict[str, Any]]] | None:
     if not pipelines:
         return None
     result = {}
     for name, steps in pipelines.items():
         result[name] = {}
+        seen = set()
         for step in steps:
-            result[name][_step_to_yaml_key(step)] = step.params or None
+            key = _transform_to_yaml_key(step)
+            if key in seen:
+                raise SerializationError(f"Duplicate component '{key}' in pipeline '{name}'")
+            seen.add(key)
+            result[name][key] = step.params or None
     return result
 
 
-def _step_to_yaml_key(step: PipelineStep) -> str:
-    if isinstance(step.component, str):
-        return step.component
-    elif callable(step.component):
-        module = getattr(step.component, "__module__", None)
-        qualname = getattr(step.component, "__qualname__", None) or getattr(step.component, "__name__", None)
-        if not module or not qualname:
-            raise SerializationError(f"Cannot serialize callable {step.component!r}: no module/name metadata.")
-        if "<locals>" in qualname:
-            raise SerializationError(
-                f"Cannot serialize callable {step.component!r}: it is a local function "
-                f"that cannot be imported by dotted path."
-            )
-        return f"{module}.{qualname}"
-    else:
-        raise SerializationError(f"Cannot serialize component of type {type(step.component)!r}")
+def _transform_to_yaml_key(step: Transform) -> str:
+    module = getattr(step.component, "__module__", None)
+    qualname = getattr(step.component, "__qualname__", None) or getattr(step.component, "__name__", None)
+    if not module or not qualname:
+        raise SerializationError(f"Cannot serialize callable {step.component!r}: no module/name metadata.")
+    if "<locals>" in qualname:
+        raise SerializationError(
+            f"Cannot serialize callable {step.component!r}: it is a local function "
+            f"that cannot be imported by dotted path."
+        )
+    return f"{module}.{qualname}"
 
 
-def _step_to_yaml_dict(step: PipelineStep) -> dict[str, Any]:
-    key = _step_to_yaml_key(step)
-    return {key: step.params or None}
+def _pattern_to_yaml_dict(pattern: Any) -> dict[str, Any]:
+    """Serialize a tokenizer pattern to YAML.
+
+    Tokenizer patterns are compiled regex Patterns produced by factory calls.
+    We store the factory's dotted path and the params used to create the pattern.
+    """
+    # Patterns from factory calls carry their factory's metadata via the pattern
+    # itself — but we can't reconstruct the factory from the pattern.
+    # For YAML round-trip, we store the pattern string.
+    import regex as re
+
+    if isinstance(pattern, (re.Pattern, type(__import__("re").compile("")))):
+        return {pattern.pattern: None}
+    raise SerializationError(f"Cannot serialize tokenizer pattern of type {type(pattern)!r}")
 
 
 def from_yaml(source: str | PathLike) -> BewerConfig:
     """Parse YAML into a BewerConfig.
 
-    Accepts registry names (e.g. ``lowercase``) and, as a permanent fallback,
-    dotted paths (e.g. ``bewer.preprocessing.normalization.lowercase``).
+    Accepts dotted paths (e.g. ``bewer.preprocessing.normalization.lowercase``).
     Any name containing ``.`` is treated as a dotted path and imported.
 
     ``source`` may be a YAML string, a file path (``str`` or ``PathLike``).
@@ -299,11 +322,13 @@ def _raw_to_config(raw: dict) -> BewerConfig:
     standardizers = _parse_pipelines(raw.get("standardizers", {}))
     tokenizers = _parse_tokenizers(raw.get("tokenizers", {}))
     normalizers = _parse_pipelines(raw.get("normalizers", {}))
-    vocabularies = raw.get("vocabularies", {})
-    if vocabularies and isinstance(vocabularies, dict):
-        vocabularies = {k: v for k, v in vocabularies.items()}
+    vocabularies = raw.get("vocabularies", ())
+    if isinstance(vocabularies, list):
+        vocabularies = tuple(vocabularies)
+    elif isinstance(vocabularies, dict):
+        vocabularies = tuple(vocabularies.keys())
     else:
-        vocabularies = {}
+        vocabularies = ()
     return BewerConfig(
         standardizers=standardizers,
         tokenizers=tokenizers,
@@ -312,26 +337,41 @@ def _raw_to_config(raw: dict) -> BewerConfig:
     )
 
 
-def _parse_pipelines(raw: dict) -> dict[str, tuple[PipelineStep, ...]]:
+def _parse_pipelines(raw: dict) -> dict[str, tuple[Transform, ...]]:
     result = {}
     for name, steps in raw.items():
         if steps is None:
             result[name] = ()
             continue
         step_list = []
-        for component, params in steps.items():
-            step_list.append(PipelineStep(component=component, params=params or {}))
+        for component_path, params in steps.items():
+            fn = _resolve_component(component_path)
+            step_list.append(Transform(fn, **(params or {})))
         result[name] = tuple(step_list)
     return result
 
 
-def _parse_tokenizers(raw: dict) -> dict[str, PipelineStep]:
+def _parse_tokenizers(raw: dict) -> dict[str, Any]:
     result = {}
     for name, steps in raw.items():
         if steps is None:
             continue
         if len(steps) != 1:
             raise ValueError(f"Tokenizer config for '{name}' must contain exactly one definition, got {len(steps)}")
-        component, params = next(iter(steps.items()))
-        result[name] = PipelineStep(component=component, params=params or {})
+        key, params = next(iter(steps.items()))
+        if _looks_like_dotted_path(key):
+            fn = _resolve_component(key)
+            result[name] = fn(**(params or {}))
+        else:
+            import regex as re
+
+            result[name] = re.compile(key, re.V1)
     return result
+
+
+def _looks_like_dotted_path(s: str) -> bool:
+    """Heuristic: a dotted path has at least one dot and each segment is a valid identifier."""
+    if "." not in s:
+        return False
+    parts = s.rsplit(".", 1)
+    return all(p.isidentifier() for p in parts)
