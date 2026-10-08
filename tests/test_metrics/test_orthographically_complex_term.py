@@ -11,13 +11,10 @@ from bewer.metrics.orthographically_complex_term import (
 
 
 class TestAutoVocabulary:
-    """The vocabulary is registered on first use, out of the box."""
+    """The vocabulary is declared in the base config and attached at init."""
 
-    def test_first_use_registers_vocabulary(self):
+    def test_vocabulary_attached_at_init(self):
         dataset = Dataset()
-        dataset.add("an MRI scan", "an MRI scan")
-        assert "orthographically_complex_terms" not in dataset._vocabularies
-        dataset.metrics.orthographically_complex_term_recall().value
         assert "orthographically_complex_terms" in dataset._vocabularies
 
     def test_works_after_dataset_already_frozen(self):

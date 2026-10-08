@@ -97,10 +97,10 @@ class TestExamplePrepareAndValidateKeyTerms:
 class TestExampleVocabs:
     """Tests for Example.vocabs property."""
 
-    def test_vocabs_empty_when_no_key_terms(self, sample_dataset):
-        """Test that vocabs is empty when no key terms are set."""
+    def test_vocabs_includes_config_vocabularies(self, sample_dataset):
+        """Test that vocabs includes vocabularies declared in the config."""
         example = sample_dataset[0]
-        assert example.vocabs == set()
+        assert "orthographically_complex_terms" in example.vocabs
 
     def test_vocabs_includes_global_dataset_vocabs(self, sample_dataset):
         """Test that vocabs includes global key term vocabularies from the parent dataset."""

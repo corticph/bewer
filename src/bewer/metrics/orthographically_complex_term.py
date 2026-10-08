@@ -23,7 +23,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.extractors.orthographically_complex_term import OrthographicallyComplexTermExtractor
 from bewer.metrics.base import METRIC_REGISTRY
 from bewer.metrics.ktf import KTF
 from bewer.metrics.ktp import KTP
@@ -40,37 +39,18 @@ __all__ = [
 DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB = "orthographically_complex_terms"
 
 
-def _ensure_orthographically_complex_term_vocabulary(dataset, name: str) -> None:
-    """Ensure the OCT vocabulary is attached to the dataset if absent.
-
-    Creates a Vocabulary backed by OrthographicallyComplexTermExtractor and
-    attaches it via _attach_vocabulary (bypasses the frozen guard since it
-    introduces a brand-new name that cannot stale prior metric results).
-    """
-    if name not in dataset._vocabularies:
-        from bewer.core.vocabulary import Vocabulary
-
-        dataset._attach_vocabulary(Vocabulary(name).add_extractor(OrthographicallyComplexTermExtractor()))
-
-
 @dataclass
 class OrthographicallyComplexTermMetricParams(KTR.param_schema):
     """Parameters for the orthographically-complex term recall/precision metrics.
 
     Identical to the key-term metric parameters, except that ``vocab`` defaults to the
-    auto-registered orthographically-complex term vocabulary.
+    orthographically-complex term vocabulary declared in the base config.
 
     Attributes:
-        vocab: Name of the vocabulary. Registered with a default
-            :class:`OrthographicallyComplexTermExtractor` on first use if not already present.
+        vocab: Name of the vocabulary.
     """
 
     vocab: str = DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB
-
-    def validate(self) -> None:
-        """Ensure the vocabulary exists, then validate as a key-term metric."""
-        _ensure_orthographically_complex_term_vocabulary(self.metric.dataset, self.vocab)
-        super().validate()
 
 
 @dataclass
@@ -78,21 +58,15 @@ class OrthographicallyComplexTermFScoreParams(KTF.param_schema):
     """Parameters for the orthographically-complex term F-score metric.
 
     Identical to the key-term F-score parameters, except that ``vocab`` defaults to the
-    auto-registered orthographically-complex term vocabulary.
+    orthographically-complex term vocabulary declared in the base config.
 
     Attributes:
-        vocab: Name of the vocabulary. Registered with a default
-            :class:`OrthographicallyComplexTermExtractor` on first use if not already present.
+        vocab: Name of the vocabulary.
         beta: F-score beta parameter. beta=1 gives F1 (equal weight to precision and recall);
             beta>1 weights recall more heavily; beta<1 weights precision more heavily.
     """
 
     vocab: str = DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB
-
-    def validate(self) -> None:
-        """Ensure the vocabulary exists, then validate as a key-term F-score metric."""
-        _ensure_orthographically_complex_term_vocabulary(self.metric.dataset, self.vocab)
-        super().validate()
 
 
 @METRIC_REGISTRY.register(

@@ -7,6 +7,8 @@ The registry builds the full chain from the ``extends`` attribute.
 from __future__ import annotations
 
 from bewer.config import BewerConfig, Transform
+from bewer.core.vocabulary import Vocabulary
+from bewer.extractors.orthographically_complex_term import OrthographicallyComplexTermExtractor
 from bewer.preprocessing.normalization import (
     lowercase,
     nfc,
@@ -61,6 +63,11 @@ def base_config() -> BewerConfig:
                 Transform(transliterate_symbols),
             ),
         },
+        vocabularies={
+            "orthographically_complex_terms": Vocabulary("orthographically_complex_terms").add_extractor(
+                OrthographicallyComplexTermExtractor()
+            ),
+        },
     )
 
 
@@ -72,24 +79,6 @@ def base_config() -> BewerConfig:
 @REGISTRY.configs.register("en", extends="base")
 def english_delta() -> BewerConfig:
     return BewerConfig()
-
-
-# ============================================================
-# Danish
-# ============================================================
-
-
-@REGISTRY.configs.register("da", extends="base")
-def danish_delta() -> BewerConfig:
-    return BewerConfig(
-        normalizers={
-            "default": (
-                Transform(lowercase),
-                Transform(transliterate_latin_letters, preserve="æøå"),
-                Transform(transliterate_symbols),
-            ),
-        },
-    )
 
 
 # ============================================================
@@ -125,6 +114,24 @@ def french_delta() -> BewerConfig:
             "default": (
                 Transform(lowercase),
                 Transform(transliterate_latin_letters, preserve="àâäçéèêëîïôöùûüÿœæ"),
+                Transform(transliterate_symbols),
+            ),
+        },
+    )
+
+
+# ============================================================
+# Danish
+# ============================================================
+
+
+@REGISTRY.configs.register("da", extends="base")
+def danish_delta() -> BewerConfig:
+    return BewerConfig(
+        normalizers={
+            "default": (
+                Transform(lowercase),
+                Transform(transliterate_latin_letters, preserve="æøå"),
                 Transform(transliterate_symbols),
             ),
         },
