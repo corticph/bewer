@@ -131,7 +131,7 @@ class TestRKTRDatasetMetric:
 
     def test_empty_vocab_raises(self):
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
+        with pytest.raises(ValueError, match="not found"):
             dataset.metrics.rktr(vocab="key_terms").value
 
     def test_threshold_above_one_raises(self):

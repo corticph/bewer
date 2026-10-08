@@ -139,7 +139,7 @@ def build_dataset(dataset_spec: dict) -> Dataset:
     format), so there is nothing to configure per dataset beyond the path and language.
     """
     language = dataset_spec.get("language")
-    ds = Dataset(language=language) if language else Dataset()
+    ds = Dataset(language) if language else Dataset()
     ds.load_jsonl(str(_resolve(dataset_spec["path"])), ref_col="ref", hyp_col="hyp")
 
     vocab_spec = dataset_spec.get("vocab")

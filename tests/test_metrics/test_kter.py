@@ -228,7 +228,7 @@ class TestKTERDatasetMetric:
     def test_empty_dataset(self):
         """Test KTER on empty dataset raises when vocab is not registered."""
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
+        with pytest.raises(ValueError, match="not found"):
             dataset.metrics.kter(vocab="terms").value
 
 
@@ -248,7 +248,7 @@ class TestKTERParameterValidation:
         dataset = Dataset()
         dataset.add(ref="hello world", hyp="hello world")
         dataset.add_vocabulary(Vocabulary(name="terms").add_terms(["hello"]))
-        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
+        with pytest.raises(ValueError, match="not found"):
             dataset.metrics.kter(vocab="nonexistent").value
 
     def test_vocab_param_type_validation(self):

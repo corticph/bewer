@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, dependency, metric_value
 
 __all__ = ["KTP"]
 
@@ -41,7 +41,7 @@ class KTP(Metric):
     example_cls = KTP_
 
     @dataclass
-    class param_schema(MetricParams):
+    class param_schema(KeyTermParams):
         """Parameters for the KTP metric.
 
         Attributes:
@@ -53,15 +53,7 @@ class KTP(Metric):
                 token-position level within key term spans.
         """
 
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
         partial_credit: bool = False
-
-        def validate(self) -> None:
-            """Validate that the metric can be computed with the given parameters and source data."""
-            if self.vocab not in self.metric.dataset._vocabularies:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @dependency
     def _kt_stats(self):

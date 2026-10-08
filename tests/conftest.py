@@ -3,6 +3,7 @@
 import pytest
 
 from bewer.core.dataset import Dataset
+from bewer.registry import REGISTRY
 
 
 class StubParent:
@@ -80,3 +81,10 @@ def dataset_perfect_match():
     dataset.add("hello world", "hello world")
     dataset.add("test phrase", "test phrase")
     return dataset
+
+
+@pytest.fixture
+def isolated_registry():
+    """Provide an isolated REGISTRY where temporary registrations are cleaned up."""
+    with REGISTRY.isolated():
+        yield REGISTRY

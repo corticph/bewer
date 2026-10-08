@@ -9,7 +9,7 @@ import ahocorasick
 from bewer.core.text import Text, TextType, TokenList
 
 if TYPE_CHECKING:
-    from bewer.configs.resolve import Pipelines
+    from bewer.config import Pipelines
 
 __all__ = ["KeyTerm", "KeyTermMatch"]
 

@@ -1,17 +1,15 @@
 from functools import cached_property
-from importlib import resources
 from itertools import chain
-from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
 import pandas as pd
-from omegaconf import OmegaConf
 
-from bewer.configs.resolve import resolve_pipelines
+from bewer.config import BewerConfig, get_config, resolve_config
 from bewer.core.example import Example
 from bewer.core.text import TokenList
 from bewer.core.vocabulary import Vocabulary
 from bewer.metrics.base import MetricCollection
+from bewer.registry import REGISTRY
 
 __all__ = ["Dataset", "DatasetFrozenError", "TextList", "TextTokenList"]
 
@@ -27,7 +25,7 @@ class Dataset(object):
     """BeWER dataset.
 
     Attributes:
-        config (OmegaConf): The resolved configuration object.
+        config (BewerConfig): The resolved configuration object.
         pipelines: The resolved preprocessing pipelines.
         examples (list[Example]): A list of Example objects.
         metrics (MetricCollection): A metrics collection for the dataset.
@@ -35,30 +33,48 @@ class Dataset(object):
         hyps (TextList): The hypothesis texts in the dataset.
     """
 
-    def __init__(self, config: str | None = None, language: str | None = None):
+    def __init__(
+        self,
+        config: BewerConfig | str | None = None,
+        *,
+        vocabularies: list[str] | None = None,
+    ):
         """Initialize the Dataset.
 
         The dataset must be populated using one of the load_* methods or manually using the add() method.
 
         Args:
-            config (str | None): Path to the configuration file. If None, uses the default configuration.
-            language (str | None): Language code to apply language-specific pipeline settings (e.g. "da",
-                "de", "fr"). If None, uses the default configuration. Supported languages are determined
-                by the files in bewer/configs/languages/.
+            config (BewerConfig | str | None): A BewerConfig, a registered config
+                name (e.g. "base", "en", "da"), or None for the base config.
+            vocabularies (list[str] | None): Names of registered vocabularies to
+                attach eagerly at init time.
         """
-        self.config_path = self.get_config_path(config)
-        self.config = OmegaConf.load(self.config_path)
-        if language is not None:
-            lang_cfg = OmegaConf.load(self._get_language_config_path(language))
-            self.config = OmegaConf.merge(self.config, lang_cfg)
-        self._pipelines = resolve_pipelines(self.config)
+        if isinstance(config, BewerConfig):
+            self._config = config
+        elif isinstance(config, str):
+            self._config = get_config(config)
+        elif config is None:
+            self._config = get_config("base")
+        else:
+            raise TypeError(f"config must be BewerConfig, str, or None, got {type(config)}")
+
+        self.config_path = None
+
         self._init_blank_state()
+        self._pipelines = resolve_config(self._config)
+
+        # Eagerly resolve declared vocabularies
+        for name in self._config.vocabularies:
+            self._resolve_vocabulary(name)
+        for name in vocabularies or []:
+            self._resolve_vocabulary(name)
 
     def _init_blank_state(self) -> None:
         """Initialize the mutable, modifiable state of the dataset.
 
-        Shared by __init__ and clone(). Assumes config_path, config and _pipelines
-        are already set. Leaves the dataset unfrozen with empty data and clean caches.
+        Shared by __init__ and clone(). Assumes config and _pipelines are already
+        set (or will be set immediately after). Leaves the dataset unfrozen with
+        empty data and clean caches.
         """
         self.examples = []
         self._vocabularies: dict[str, "Vocabulary"] = {}
@@ -102,14 +118,12 @@ class Dataset(object):
             Dataset: A modifiable copy containing the same examples and key term vocabularies.
         """
         new = object.__new__(Dataset)
+        new._config = self._config
         new.config_path = self.config_path
-        new.config = self.config.copy()
         new._pipelines = self._pipelines
         new._init_blank_state()
         for example in self.examples:
             new.add(example.ref.raw, example.hyp.raw)
-        # Share the same Vocabulary objects; the clone re-resolves them against itself
-        # (so extractor-defined vocabularies reflect the clone's own examples).
         for vocab in self._vocabularies.values():
             new.add_vocabulary(vocab)
         return new
@@ -228,23 +242,28 @@ class Dataset(object):
         vocab._freeze()
         return vocab
 
-    @staticmethod
-    def _get_language_config_path(language: str):
-        """Resolve the overlay config path for the given language code."""
-        languages_dir = resources.files("bewer.configs").joinpath("languages")
-        path = languages_dir.joinpath(f"{language}.yml")
-        if not path.is_file():
-            supported = [p.name[:-4] for p in languages_dir.iterdir() if p.name.endswith(".yml")]
-            raise ValueError(f"Unknown language '{language}'. Supported languages: {sorted(supported)}.")
-        return path
+    def _resolve_vocabulary(self, name: str) -> "Vocabulary":
+        """Resolve a vocabulary by name — attached first, then registered.
 
-    @staticmethod
-    def get_config_path(config_path: str | None) -> str:
-        """Get the configuration path."""
-        if config_path is None or not Path(config_path).is_file():
-            config_path = "base" if config_path is None else config_path
-            return resources.files("bewer.configs").joinpath(f"{config_path}.yml")
-        return Path(config_path).resolve()
+        If the vocabulary is already attached, return it.
+        If it is registered in ``REGISTRY.vocabularies``, attach and return it.
+        Otherwise raise ValueError with the available names.
+        """
+        if name in self._vocabularies:
+            return self._vocabularies[name]
+        if name in REGISTRY.vocabularies:
+            vocab = REGISTRY.vocabularies.get(name)
+            self._register_derived_vocabulary(vocab)
+            return vocab
+        raise ValueError(
+            f"Vocabulary '{name}' not found. "
+            f"Attached: {sorted(self._vocabularies)}, "
+            f"Registered: {REGISTRY.vocabularies.list()}"
+        )
+
+    @property
+    def config(self) -> BewerConfig:
+        return self._config
 
     def __len__(self) -> int:
         """Get the number of examples in the dataset."""

@@ -153,7 +153,7 @@ class TestKTFDatasetMetric:
     def test_empty_dataset(self):
         """Test KTF raises ValueError for unknown vocab."""
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
+        with pytest.raises(ValueError, match="not found"):
             dataset.metrics.ktf(vocab="animals").value
 
     def test_beta_affects_value(self, mixed_dataset):
