@@ -15,17 +15,6 @@ class TestComponentRegistry:
         assert "foo" in reg
         assert reg.get("foo")(42) == 42
 
-    def test_register_decorator_bare(self):
-        """Bare @register defaults the name to fn.__name__."""
-        reg = ComponentRegistry("test")
-
-        @reg.register
-        def my_func(x):
-            return x * 2
-
-        assert "my_func" in reg
-        assert reg.get("my_func")(3) == 6
-
     def test_register_decorator_named(self):
         """@register("name") uses the explicit name."""
         reg = ComponentRegistry("test")
@@ -37,29 +26,22 @@ class TestComponentRegistry:
         assert "explicit" in reg
         assert "my_func" not in reg
 
-    def test_register_decorator_with_attrs(self):
-        """@register(attr=True) sets attributes on the function."""
+    def test_register_decorator_with_extends(self):
+        """@register("name", extends="base") sets the extends attribute."""
         reg = ComponentRegistry("test")
 
-        @reg.register(custom_attr=True)
-        def my_func(x):
-            return x
+        @reg.register("da", extends="base")
+        def my_func():
+            return None
 
-        assert reg.get("my_func").custom_attr is True
+        assert reg.get("da").extends == "base"
 
     def test_register_duplicate_raises(self):
-        """Registering a duplicate name without allow_override raises."""
+        """Registering a duplicate name raises ValueError."""
         reg = ComponentRegistry("test")
         reg.register("foo", lambda: 1)
         with pytest.raises(ValueError, match="already registered"):
             reg.register("foo", lambda: 2)
-
-    def test_register_duplicate_allow_override(self):
-        """allow_override=True silently replaces the component."""
-        reg = ComponentRegistry("test")
-        reg.register("foo", lambda: 1)
-        reg.register("foo", lambda: 2, allow_override=True)
-        assert reg.get("foo")() == 2
 
     def test_get_missing_raises(self):
         """get() raises ComponentNotFoundError for unknown names."""
@@ -89,20 +71,6 @@ class TestComponentRegistry:
         reg.register("foo", lambda: 1)
         assert "foo" in reg
         assert "bar" not in reg
-
-    def test_iter(self):
-        """__iter__ yields names."""
-        reg = ComponentRegistry("test")
-        reg.register("a", lambda: 1)
-        reg.register("b", lambda: 2)
-        assert set(iter(reg)) == {"a", "b"}
-
-    def test_len(self):
-        """__len__ returns the count."""
-        reg = ComponentRegistry("test")
-        assert len(reg) == 0
-        reg.register("a", lambda: 1)
-        assert len(reg) == 1
 
 
 class TestRegistry:

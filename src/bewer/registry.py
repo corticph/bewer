@@ -7,8 +7,6 @@ existing ``MetricRegistry`` class, exposed as ``REGISTRY.metrics``.
 Registration API
 ----------------
 
-All non-metric namespaces use ``ComponentRegistry.register``::
-
     REGISTRY.extractors.register("orthographically_complex", MyExtractor())
     REGISTRY.vocabularies.register("medical", vocab_instance)
 
@@ -24,7 +22,7 @@ from __future__ import annotations
 
 import difflib
 from contextlib import contextmanager
-from typing import Any, Callable, Iterator
+from typing import Any, Callable
 
 
 class ComponentNotFoundError(LookupError):
@@ -43,74 +41,42 @@ class ComponentNotFoundError(LookupError):
 
 
 class ComponentRegistry:
-    """A name -> component registry with decorator-friendly registration.
+    """A name -> component registry."""
 
-    Parameters
-    ----------
-    kind:
-        Human-readable label for error messages (e.g. "transform").
-    validate_fn:
-        Optional callable invoked on the component at registration time.
-        If it raises, registration is aborted.
-    """
-
-    def __init__(self, kind: str, *, validate_fn: Callable[[Any], None] | None = None):
+    def __init__(self, kind: str):
         self._kind = kind
-        self._validate_fn = validate_fn
         self._components: dict[str, Any] = {}
 
-    def register(
-        self,
-        name: str | Callable | None = None,
-        component: Any = None,
-        *,
-        allow_override: bool = False,
-        **attrs: Any,
-    ) -> Any:
-        """Register a component, optionally as a decorator.
+    def register(self, name: str, component: Any = None, *, extends: str | None = None) -> Any:
+        """Register a component under ``name``.
 
         Direct call::
 
-            registry.register("my_func", my_func)
             registry.register("my_extractor", extractor_instance)
 
-        Decorator (name defaults to ``fn.__name__``)::
+        Decorator (for config functions)::
 
-            @registry.register
-            def my_func(...): ...
+            @registry.register("da", extends="base")
+            def danish_delta() -> BewerConfig: ...
 
-            @registry.register("explicit_name")
-            def my_func(...): ...
-
-            @registry.register(custom_attr=True)
-            def my_func(...): ...
-
-        Extra ``**attrs`` are set as attributes on the component (useful for
-        metadata like ``length_preserving`` or ``token_only``).
-
-        Returns the component itself so decorator stacking works.
+        If ``extends`` is given, it is set as an attribute on the function
+        and used by ``get_config`` to resolve the inheritance chain.
         """
-        # Decorator form: @registry.register or @registry.register("name")
-        if component is None and callable(name):
-            component = name
-            name = component.__name__
-
-        def _do_register(n: str, c: Any) -> Any:
-            if not allow_override and n in self._components:
-                raise ValueError(f"{self._kind} '{n}' is already registered")
-            if self._validate_fn is not None:
-                self._validate_fn(c)
-            for k, v in attrs.items():
-                setattr(c, k, v)
-            self._components[n] = c
-            return c
-
         if component is not None:
-            return _do_register(name, component)
+            if extends:
+                raise TypeError("'extends' is only valid with the decorator form")
+            if name in self._components:
+                raise ValueError(f"{self._kind} '{name}' is already registered")
+            self._components[name] = component
+            return component
 
-        # @registry.register("name", ...) — returns decorator
         def decorator(fn: Callable) -> Callable:
-            return _do_register(name or fn.__name__, fn)
+            if name in self._components:
+                raise ValueError(f"{self._kind} '{name}' is already registered")
+            if extends:
+                fn.extends = extends
+            self._components[name] = fn
+            return fn
 
         return decorator
 
@@ -127,38 +93,17 @@ class ComponentRegistry:
     def __contains__(self, name: str) -> bool:
         return name in self._components
 
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._components)
-
-    def __len__(self) -> int:
-        return len(self._components)
-
     def __repr__(self) -> str:
         return f"ComponentRegistry({self._kind!r}, {list(self._components)})"
 
 
 class Registry:
-    """Top-level registry holding all typed namespaces.
-
-    Attributes
-    ----------
-    extractors:
-        Extractor instances (``dataset -> Iterable[str]``).
-    vocabularies:
-        ``Vocabulary`` instances (frozen on registration).
-    configs:
-        Config functions returning ``BewerConfig`` deltas.
-    metrics:
-        The existing ``MetricRegistry`` (not a ``ComponentRegistry``).
-    """
+    """Top-level registry holding all typed namespaces."""
 
     def __init__(self):
         self.extractors = ComponentRegistry("extractor")
         self.vocabularies = ComponentRegistry("vocabulary")
         self.configs = ComponentRegistry("config")
-        # metrics is set lazily to avoid a circular import: MetricRegistry
-        # lives in metrics/base.py which imports from preprocessing modules
-        # that import REGISTRY from this module.
         self._metrics = None
 
     @property
@@ -171,14 +116,9 @@ class Registry:
 
     @contextmanager
     def isolated(self):
-        """Context manager that snapshots and restores all non-metric namespaces.
+        """Snapshot and restore all non-metric namespaces.
 
-        Useful for tests that register temporary components::
-
-            with REGISTRY.isolated():
-                REGISTRY.extractors.register("temp", my_extractor)
-                # ... run tests ...
-            # "temp" is gone after the context exits
+        Useful for tests that register temporary components.
         """
         snapshots = {ns: dict(getattr(self, ns)._components) for ns in ("extractors", "vocabularies", "configs")}
         try:
