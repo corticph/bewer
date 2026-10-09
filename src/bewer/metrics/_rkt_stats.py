@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 from typing import TYPE_CHECKING, NamedTuple
 
 from rapidfuzz.distance import Levenshtein
@@ -71,8 +72,7 @@ class _RKTStats_(ExampleMetric):
         ).alignment
 
     def _get_ref_matches(self) -> list[KeyTermMatch]:
-        vocab = self.parent_metric.dataset.config.vocabularies[self.params.vocab]
-        matcher = vocab.build_matcher(self.parent_metric.dataset, normalized=self.params.normalized)
+        matcher = self.parent_metric._matcher
         return (
             matcher.find_matches(
                 self.example.ref,
@@ -122,6 +122,15 @@ class _RKTStats(Metric):
         "Not intended for direct use."
     )
     example_cls = _RKTStats_
+
+    @cached_property
+    def _matcher(self):
+        """Build (and cache) the key-term matcher for this metric's vocabulary + pipeline."""
+        vocab = self.dataset.config.vocabularies[self.params.vocab]
+        return vocab.build_matcher(
+            self.dataset,
+            normalized=self.params.normalized,
+        )
 
     @dataclass
     class param_schema(KeyTermParams):
