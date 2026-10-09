@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from bewer.alignment import Alignment, OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, dependency, metric_value
 
 if TYPE_CHECKING:
     from bewer.core.key_term import KeyTermMatch
@@ -13,8 +13,10 @@ __all__: list[str] = []
 
 
 class _KTStats_(ExampleMetric):
-    def _get_alignment(self):
-        """Get the alignment for the example."""
+    
+    @dependency
+    def _alignment(self):
+        """The Levenshtein alignment for this example."""
         return self.example.metrics.levenshtein(
             normalized=self.params.normalized,
             standardizer=self.standardizer,
@@ -39,6 +41,16 @@ class _KTStats_(ExampleMetric):
         )
 
     @metric_value
+    def num_ref_terms(self) -> int:
+        """Get the number of key terms in the reference text."""
+        return len(self.ref_matches)
+
+    @metric_value
+    def num_hyp_terms(self) -> int:
+        """Get the number of key terms in the hypothesis text."""
+        return len(self.hyp_matches)
+
+    @metric_value
     def _exact_match_alignments(self) -> dict[str, list[Alignment]]:
         """Exact-match TP/FN/FP as full-span alignment segments.
 
@@ -53,7 +65,7 @@ class _KTStats_(ExampleMetric):
         if not ref_matches and not hyp_matches:
             return {"tp": [], "fn": [], "fp": []}
 
-        alignment = self._get_alignment()
+        alignment = self._alignment
         tp: list[Alignment] = []
         fn: list[Alignment] = []
         for kt_match in ref_matches:
@@ -74,16 +86,6 @@ class _KTStats_(ExampleMetric):
                 fp.append(segment)
 
         return {"tp": tp, "fn": fn, "fp": fp}
-
-    @metric_value
-    def num_ref_terms(self) -> int:
-        """Get the number of key terms in the reference text."""
-        return len(self.ref_matches)
-
-    @metric_value
-    def num_hyp_terms(self) -> int:
-        """Get the number of key terms in the hypothesis text."""
-        return len(self.hyp_matches)
 
     @metric_value
     def _partial_credit_alignments(self) -> dict[str, list[Alignment]]:
@@ -110,7 +112,7 @@ class _KTStats_(ExampleMetric):
         if not I_R and not I_H:
             return {"tp": [], "fn": [], "fp": []}
 
-        alignment = self._get_alignment()
+        alignment = self._alignment
         tp: list[Alignment] = []
         fn: list[Alignment] = []
         fp: list[Alignment] = []

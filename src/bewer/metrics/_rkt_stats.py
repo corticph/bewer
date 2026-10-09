@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from rapidfuzz.distance import Levenshtein
 
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, dependency, metric_value
 
 if TYPE_CHECKING:
     from bewer.core.key_term import KeyTermMatch
@@ -62,7 +62,8 @@ def _join_op_hyps(ops: Alignment) -> str:
 
 
 class _RKTStats_(ExampleMetric):
-    def _get_alignment(self) -> Alignment:
+    @dependency
+    def _alignment(self) -> Alignment:
         return self.example.metrics.error_align(
             normalized=self.params.normalized,
             standardizer=self.standardizer,
@@ -88,7 +89,7 @@ class _RKTStats_(ExampleMetric):
         key_term_matches = self.ref_matches
         if not key_term_matches:
             return []
-        alignment = self._get_alignment()
+        alignment = self._alignment
         stats: list[TermStat] = []
         for kt_match in key_term_matches:
             op_start = alignment.ref_index_mapping.get(kt_match.start)
