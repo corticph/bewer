@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable, Optional
+from typing import TYPE_CHECKING, Callable, Iterable
 
 from bewer.core.key_term import (
     KeyTerm,
@@ -138,21 +138,19 @@ class Vocabulary:
         *,
         normalized: bool = True,
         add_capitalized: bool = False,
-    ) -> Optional[KeyTermTrie]:
+    ) -> KeyTermTrie:
         """Resolve the vocabulary against ``dataset`` and return a :class:`KeyTermTrie`.
 
         Freezes the vocabulary (so its definition cannot change afterwards) and the
-        dataset (so extractors see a stable snapshot). Returns ``None`` if the vocabulary
-        resolves to no terms.
+        dataset (so extractors see a stable snapshot). A vocabulary with no terms
+        returns a trie that matches nothing — ``find_matches`` on it yields ``[]``.
 
         The caller owns the returned trie — the Vocabulary does not cache it. Metrics
-        should cache the trie via ``@dependency`` or ``@metric_value``.
+        should cache the trie via ``@metric_value``.
         """
         self._freeze()
         dataset.freeze()
         terms = self._resolve_terms(dataset)
-        if not terms:
-            return None
         return KeyTermTrie(terms, normalized=normalized, add_capitalized=add_capitalized)
 
     def __repr__(self):

@@ -238,12 +238,14 @@ class TestVocabularyEdgeCases:
     def test_empty_extractor_output(self):
         dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="e").add_extractor(lambda ds: [])))
         dataset.add("a b c", "a b c")
-        assert dataset.config.vocabularies["e"].build_matcher(dataset) is None
+        matcher = dataset.config.vocabularies["e"].build_matcher(dataset)
+        assert matcher.find_matches(dataset[0].ref) == []
 
     def test_extractor_returning_none(self):
         dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="e").add_extractor(lambda ds: None)))
         dataset.add("a b c", "a b c")
-        assert dataset.config.vocabularies["e"].build_matcher(dataset) is None
+        matcher = dataset.config.vocabularies["e"].build_matcher(dataset)
+        assert matcher.find_matches(dataset[0].ref) == []
 
     def test_extractor_raising_wrapped(self):
         def boom(ds):
@@ -265,7 +267,8 @@ class TestVocabularyEdgeCases:
     def test_source_less_vocab_yields_no_matches(self):
         dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="empty")))
         dataset.add("a b c", "a b c")
-        assert dataset.config.vocabularies["empty"].build_matcher(dataset) is None
+        matcher = dataset.config.vocabularies["empty"].build_matcher(dataset)
+        assert matcher.find_matches(dataset[0].ref) == []
         assert dataset.metrics._kt_stats(vocab="empty").num_ref_terms == 0
 
     def test_unregistered_vocab_name_returns_no_matches(self):

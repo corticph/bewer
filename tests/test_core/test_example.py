@@ -94,7 +94,7 @@ class TestExamplePrepareAndValidateKeyTerms:
         example = dataset[-1]
         vocab = dataset.config.vocabularies["greetings"]
         matcher = vocab.build_matcher(dataset)
-        matches = [] if matcher is None else matcher.find_matches(example.ref)
+        matches = matcher.find_matches(example.ref)
         assert matches == []
 
 

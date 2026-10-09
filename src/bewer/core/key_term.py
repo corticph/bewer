@@ -130,6 +130,8 @@ class KeyTermTrie:
 
     def find_in_tokens(self, tokens: TokenList) -> tuple[list[slice], list[KeyTerm]]:
         """Find all key term matches, returning token spans and the matched key terms."""
+        if not self._vocab:
+            return [], []
         int_text = self.encode(tokens)
         matches: list[slice] = []
         key_terms: list[KeyTerm] = []

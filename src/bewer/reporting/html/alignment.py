@@ -209,8 +209,6 @@ def _get_key_term_indicators(
     for vocab_name in vocabs:
         vocab = dataset.config.vocabularies[vocab_name]
         matcher = vocab.build_matcher(dataset)
-        if matcher is None:
-            continue
         matches = matcher.find_matches(example.ref, allow_subset_matches=allow_subset_matches)
         for match in matches:
             start_op_idx = alignment.ref_index_mapping.get(match.start)

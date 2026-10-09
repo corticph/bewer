@@ -70,15 +70,12 @@ class _RKTStats_(ExampleMetric):
             normalizer=self.normalizer,
         ).alignment
 
-    def _get_ref_matches(self) -> list[KeyTermMatch]:
-        matcher = self.parent_metric._matcher
-        return (
-            matcher.find_matches(
-                self.example.ref,
-                allow_subset_matches=self.params.allow_subset_matches,
-            )
-            if matcher
-            else []
+    @metric_value
+    def ref_matches(self) -> list[KeyTermMatch]:
+        """Key term matches found in the reference text."""
+        return self.parent_metric._matcher.find_matches(
+            self.example.ref,
+            allow_subset_matches=self.params.allow_subset_matches,
         )
 
     @metric_value
@@ -88,7 +85,7 @@ class _RKTStats_(ExampleMetric):
         Alignment is derived from error_align. Results are threshold-agnostic so
         this metric can be shared across RKTR instances with different thresholds.
         """
-        key_term_matches = self._get_ref_matches()
+        key_term_matches = self.ref_matches
         if not key_term_matches:
             return []
         alignment = self._get_alignment()
@@ -107,7 +104,7 @@ class _RKTStats_(ExampleMetric):
     @metric_value
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
-        return len(self._get_ref_matches())
+        return len(self.ref_matches)
 
 
 @METRIC_REGISTRY.register("_rkt_stats", tokenizer="key_term")

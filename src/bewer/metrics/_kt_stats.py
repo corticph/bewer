@@ -22,24 +22,20 @@ class _KTStats_(ExampleMetric):
             normalizer=self.normalizer,
         ).alignment
 
-    def _get_ref_matches(self) -> list[KeyTermMatch]:
-        return (
-            self.parent_metric._matcher.find_matches(
-                self.example.ref,
-                allow_subset_matches=self.params.allow_subset_matches,
-            )
-            if self.parent_metric._matcher
-            else []
+    @metric_value
+    def ref_matches(self) -> list[KeyTermMatch]:
+        """Key term matches found in the reference text."""
+        return self.parent_metric._matcher.find_matches(
+            self.example.ref,
+            allow_subset_matches=self.params.allow_subset_matches,
         )
 
-    def _get_hyp_matches(self) -> list[KeyTermMatch]:
-        return (
-            self.parent_metric._matcher.find_matches(
-                self.example.hyp,
-                allow_subset_matches=self.params.allow_subset_matches,
-            )
-            if self.parent_metric._matcher
-            else []
+    @metric_value
+    def hyp_matches(self) -> list[KeyTermMatch]:
+        """Key term matches found in the hypothesis text."""
+        return self.parent_metric._matcher.find_matches(
+            self.example.hyp,
+            allow_subset_matches=self.params.allow_subset_matches,
         )
 
     @metric_value
@@ -51,8 +47,8 @@ class _KTStats_(ExampleMetric):
         All-MATCH hyp occurrences are excluded from FP regardless of whether they correspond
         to a ref key term.
         """
-        ref_matches = self._get_ref_matches()
-        hyp_matches = self._get_hyp_matches()
+        ref_matches = self.ref_matches
+        hyp_matches = self.hyp_matches
 
         if not ref_matches and not hyp_matches:
             return {"tp": [], "fn": [], "fp": []}
@@ -82,12 +78,12 @@ class _KTStats_(ExampleMetric):
     @metric_value
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
-        return len(self._get_ref_matches())
+        return len(self.ref_matches)
 
     @metric_value
     def num_hyp_terms(self) -> int:
         """Get the number of key terms in the hypothesis text."""
-        return len(self._get_hyp_matches())
+        return len(self.hyp_matches)
 
     @metric_value
     def _partial_credit_alignments(self) -> dict[str, list[Alignment]]:
@@ -100,8 +96,8 @@ class _KTStats_(ExampleMetric):
           - hyp position in I_H + non-MATCH → FP (one single-op slice)
         Positions shared by overlapping or nested terms are counted only once.
         """
-        ref_matches = self._get_ref_matches()
-        hyp_matches = self._get_hyp_matches()
+        ref_matches = self.ref_matches
+        hyp_matches = self.hyp_matches
 
         I_R: set[int] = set()
         for m in ref_matches:
