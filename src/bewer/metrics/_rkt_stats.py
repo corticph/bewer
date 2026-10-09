@@ -62,15 +62,6 @@ def _join_op_hyps(ops: Alignment) -> str:
 
 
 class _RKTStats_(ExampleMetric):
-    @dependency
-    def _alignment(self) -> Alignment:
-        return self.example.metrics.error_align(
-            normalized=self.params.normalized,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        ).alignment
-
     @metric_value
     def ref_matches(self) -> list[KeyTermMatch]:
         """Key term matches found in the reference text."""
@@ -89,7 +80,7 @@ class _RKTStats_(ExampleMetric):
         key_term_matches = self.ref_matches
         if not key_term_matches:
             return []
-        alignment = self._alignment
+        alignment = self.parent_metric._error_align[self.example.index].alignment
         stats: list[TermStat] = []
         for kt_match in key_term_matches:
             op_start = alignment.ref_index_mapping.get(kt_match.start)
@@ -137,6 +128,16 @@ class _RKTStats(Metric):
         return vocab.build_matcher(
             self.dataset,
             normalized=self.params.normalized,
+        )
+
+    @dependency
+    def _error_align(self):
+        """The shared error_align metric instance."""
+        return self.dataset.metrics.error_align(
+            normalized=self.params.normalized,
+            standardizer=self.standardizer,
+            tokenizer=self.tokenizer,
+            normalizer=self.normalizer,
         )
 
     @metric_value

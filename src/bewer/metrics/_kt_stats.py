@@ -13,17 +13,6 @@ __all__: list[str] = []
 
 
 class _KTStats_(ExampleMetric):
-    
-    @dependency
-    def _alignment(self):
-        """The Levenshtein alignment for this example."""
-        return self.example.metrics.levenshtein(
-            normalized=self.params.normalized,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        ).alignment
-
     @metric_value
     def ref_matches(self) -> list[KeyTermMatch]:
         """Key term matches found in the reference text."""
@@ -65,7 +54,7 @@ class _KTStats_(ExampleMetric):
         if not ref_matches and not hyp_matches:
             return {"tp": [], "fn": [], "fp": []}
 
-        alignment = self._alignment
+        alignment = self.parent_metric._levenshtein[self.example.index].alignment
         tp: list[Alignment] = []
         fn: list[Alignment] = []
         for kt_match in ref_matches:
@@ -112,7 +101,7 @@ class _KTStats_(ExampleMetric):
         if not I_R and not I_H:
             return {"tp": [], "fn": [], "fp": []}
 
-        alignment = self._alignment
+        alignment = self.parent_metric._levenshtein[self.example.index].alignment
         tp: list[Alignment] = []
         fn: list[Alignment] = []
         fp: list[Alignment] = []
@@ -214,6 +203,16 @@ class _KTStats(Metric):
         return vocab.build_matcher(
             self.dataset,
             normalized=self.params.normalized,
+        )
+
+    @dependency
+    def _levenshtein(self):
+        """The shared Levenshtein metric instance."""
+        return self.dataset.metrics.levenshtein(
+            normalized=self.params.normalized,
+            standardizer=self.standardizer,
+            tokenizer=self.tokenizer,
+            normalizer=self.normalizer,
         )
 
     @metric_value
