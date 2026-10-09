@@ -2,13 +2,27 @@
     <table class="list-values-table">
         {%- if title %}
         <tr>
-            <th colspan="2">{{title}}</th>
+            <th colspan="{{ (dataset_names|length + 1) if multi_dataset else 2 }}">{{title}}</th>
+        </tr>
+        {%- endif %}
+        {%- if multi_dataset %}
+        <tr>
+            <th class="dataset-name-header">{{ leftmost_header | default('') }}</th>
+            {%- for ds_name in dataset_names %}
+            <th class="dataset-name-header">{{ ds_name }}</th>
+            {%- endfor %}
         </tr>
         {%- endif %}
         {%- for entry in values %}
-        <tr class="value-row">
+        <tr class="value-row{% if multi_dataset %} multi-dataset{% endif %}">
             <td>{{entry["name"]}}</td>
+            {%- if multi_dataset %}
+            {%- for val in entry["values"] %}
+            <td>{{val}}</td>
+            {%- endfor %}
+            {%- else %}
             <td>{{entry["value"]}}</td>
+            {%- endif %}
         </tr>
         {%- endfor %}
     </table>

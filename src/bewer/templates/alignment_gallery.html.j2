@@ -8,12 +8,23 @@
 {%- endset -%}
 {{- legend_content | indent_tabs(2) | safe }}
 
-{% for example in example_iterator -%}
+{%- if multi_dataset %}
+{% for ex_idx in range(n_examples) -%}
 {% set alignment_content -%}
-{%- with example=example, alignment=alignments[loop.index0], color_scheme=color_scheme, labels=labels, title_index=loop.index -%}
+{%- with alignments=alignments[loop.index0], color_scheme=color_scheme, labels=labels, title_index=loop.index, multi_dataset=True, refs_match=refs_match, dataset_names=dataset_names, dataset_css_names=dataset_css_names, n_examples=n_examples -%}
 {%- include 'alignment_container.html.j2' -%}
 {%- endwith -%}
 {%- endset -%}
 {{- alignment_content | indent_tabs(2) | safe }}
 {%- endfor %}
+{%- else %}
+{% for example in example_iterator -%}
+{% set alignment_content -%}
+{%- with example=example, alignment=alignments[loop.index0], color_scheme=color_scheme, labels=labels, title_index=loop.index, multi_dataset=False -%}
+{%- include 'alignment_container.html.j2' -%}
+{%- endwith -%}
+{%- endset -%}
+{{- alignment_content | indent_tabs(2) | safe }}
+{%- endfor %}
+{%- endif %}
 </div>
