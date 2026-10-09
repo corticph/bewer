@@ -11,7 +11,6 @@ from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKE
 if TYPE_CHECKING:
     from bewer.config import Pipelines
     from bewer.core.example import Example
-    from bewer.core.key_term import KeyTermMatch
 
 __all__ = ["Text", "TextType", "TokenList"]
 
@@ -66,7 +65,7 @@ class Text:
         Args:
             raw: The original text string (reference, hypothesis, or key term).
             pipelines: The resolved pipeline registry used for lazy standardization/tokenization (required).
-            src: Optional parent Example object. Used by ``get_key_term_matches`` for vocabulary lookup.
+            src: Optional parent Example object.
             text_type: The type of the text (REF, HYP, or KEY_TERM).
         """
         self._raw = raw
@@ -74,7 +73,6 @@ class Text:
 
         self._cache_standardized = {}
         self._cache_tokens = {}
-        self._cache_key_term_matches = {}
 
         self._src = src
         self._pipelines = pipelines
@@ -115,58 +113,6 @@ class Text:
             normalized (bool): Whether to use normalized tokens.
         """
         return _join_tokens(self.tokens, normalized=normalized)
-
-    def get_key_term_matches(
-        self,
-        vocab: str,
-        normalized: bool = True,
-        add_capitalized: bool = False,
-        allow_subset_matches: bool = False,
-    ) -> "list[KeyTermMatch]":
-        """Find key term matches in this text's tokens.
-
-        Matches against the dataset-wide global vocabulary.
-
-        Args:
-            vocab: Vocabulary name to match against.
-            normalized: Use normalized tokens for matching.
-            add_capitalized: Add capitalized first-token variants (only when ``normalized`` is False).
-            allow_subset_matches: If False, discard matches that are subsets of longer matches.
-
-        Returns:
-            List of :class:`~bewer.core.key_term.KeyTermMatch` objects for the matched token spans.
-        """
-        example = self._src
-        if example is None:
-            return []
-        dataset = example.src
-        if dataset is None:
-            return []
-
-        vocabulary = dataset.config.vocabularies.get(vocab)
-        if vocabulary is None:
-            return []
-
-        cache_key = (
-            STANDARDIZER_NAME.get(),
-            TOKENIZER_NAME.get(),
-            NORMALIZER_NAME.get() if normalized else None,
-            add_capitalized,
-            allow_subset_matches,
-            vocab,
-        )
-        if cache_key in self._cache_key_term_matches:
-            return self._cache_key_term_matches[cache_key]
-
-        matches = vocabulary.find_matches(
-            self,
-            normalized=normalized,
-            add_capitalized=add_capitalized,
-            allow_subset_matches=allow_subset_matches,
-        )
-
-        self._cache_key_term_matches[cache_key] = matches
-        return matches
 
     def __hash__(self):
         return hash((self.raw, self._text_type))

@@ -11,7 +11,7 @@ from bewer.core.text import Text, TextType, TokenList
 if TYPE_CHECKING:
     from bewer.config import Pipelines
 
-__all__ = ["KeyTerm", "KeyTermMatch"]
+__all__ = ["KeyTerm", "KeyTermMatch", "KeyTermTrie"]
 
 
 class KeyTerm(Text):
@@ -138,6 +138,31 @@ class KeyTermTrie:
             matches.append(slice(start, end_idx + 1))
             key_terms.append(key_term)
         return matches, key_terms
+
+    def find_matches(
+        self,
+        text: "Text",
+        *,
+        allow_subset_matches: bool = False,
+    ) -> list[KeyTermMatch]:
+        """Find key term matches in ``text``'s tokens and wrap them as ``KeyTermMatch`` objects.
+
+        Args:
+            text: The :class:`~bewer.core.text.Text` to search.
+            allow_subset_matches: If False (default), discard matches that are subsets
+                of longer matches. If True, keep all matches but deduplicate exact overlaps.
+
+        Returns:
+            A list of :class:`KeyTermMatch` objects.
+        """
+        spans, key_terms = self.find_in_tokens(text.tokens)
+        if not spans:
+            return []
+        matches = [
+            KeyTermMatch(start=span.start, stop=span.stop, src=text, key_term=key_term)
+            for span, key_term in zip(spans, key_terms)
+        ]
+        return _remove_duplicate_matches(matches) if allow_subset_matches else _remove_subset_matches(matches)
 
 
 def _remove_duplicate_matches(matches: list[KeyTermMatch]) -> list[KeyTermMatch]:

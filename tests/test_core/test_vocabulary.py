@@ -1,6 +1,4 @@
-"""Tests for the standalone Vocabulary object (builder, extractors, sharing, caching)."""
-
-import gc
+"""Tests for the standalone Vocabulary object (builder, extractors, sharing, freeze)."""
 
 import pytest
 
@@ -126,8 +124,8 @@ class TestVocabularySharing:
         assert d1.metrics._kt_stats(vocab="last").num_ref_terms == 1
         assert d2.metrics._kt_stats(vocab="last").num_ref_terms == 1
         # The resolved term sets differ between the two datasets.
-        terms1 = {kt.raw for kt in vocab._cache[d1][next(iter(vocab._cache[d1]))].terms}
-        terms2 = {kt.raw for kt in vocab._cache[d2][next(iter(vocab._cache[d2]))].terms}
+        terms1 = {kt.raw for kt in vocab._resolve_terms(d1)}
+        terms2 = {kt.raw for kt in vocab._resolve_terms(d2)}
         assert terms1 == {"diabetes"}
         assert terms2 == {"asthma"}
 
@@ -162,7 +160,7 @@ class TestVocabularyFreezeOnRegistration:
         dataset = Dataset(config=get_config("base").add_vocabulary(vocab))
         dataset.add("a b", "a b")
         # Trigger matching, which freezes the vocabulary.
-        dataset[0].ref.get_key_term_matches(vocab="m")
+        dataset.config.vocabularies["m"].build_matcher(dataset)
         with pytest.raises(VocabularyFrozenError):
             vocab.add_terms(["b"])
 
@@ -170,7 +168,7 @@ class TestVocabularyFreezeOnRegistration:
         vocab = Vocabulary(name="m").add_terms(["a"])
         dataset = Dataset(config=get_config("base").add_vocabulary(vocab))
         dataset.add("a b", "a b")
-        dataset[0].ref.get_key_term_matches(vocab="m")
+        dataset.config.vocabularies["m"].build_matcher(dataset)
         with pytest.raises(VocabularyFrozenError):
             vocab.add_extractor(lambda ds: ["b"])
 
@@ -180,7 +178,7 @@ class TestVocabularyFreezeOnRegistration:
         vocab = Vocabulary(name="m").add_terms(["a"])
         dataset = Dataset(config=get_config("base").add_vocabulary(vocab))
         dataset.add("a b", "a b")
-        dataset[0].ref.get_key_term_matches(vocab="m")
+        dataset.config.vocabularies["m"].build_matcher(dataset)
         with pytest.raises(VocabularyFrozenError):
             vocab.add_file(str(path))
 
@@ -220,36 +218,32 @@ class TestVocabularyFreezeAndCache:
         dataset.add("the quick brown fox", "the quick brown fox")
         assert dataset.is_frozen is False
         # Direct matching triggers resolution, which freezes the dataset.
-        dataset[0].ref.get_key_term_matches(vocab="a")
+        dataset.config.vocabularies["a"].build_matcher(dataset)
         assert dataset.is_frozen is True
         with pytest.raises(DatasetFrozenError):
             dataset.add("more", "more")
 
-    def test_shared_vocab_cache_is_released_on_dataset_gc(self):
+    def test_build_matcher_returns_trie(self):
         vocab = Vocabulary(name="a").add_terms(["fox"])
-
-        def use_once():
-            d = Dataset(config=get_config("base").add_vocabulary(vocab))
-            d.add("the quick brown fox", "the quick brown fox")
-            d.metrics.ktr(vocab="a").value  # triggers resolution -> cache entry keyed by d
-            assert len(vocab._cache) == 1
-
-        use_once()
-        gc.collect()
-        # The dataset is unreferenced; its weak cache entry is gone — no leak for a shared vocab.
-        assert len(vocab._cache) == 0
+        dataset = Dataset(config=get_config("base").add_vocabulary(vocab))
+        dataset.add("the quick brown fox", "the quick brown fox")
+        matcher = vocab.build_matcher(dataset)
+        assert matcher is not None
+        matches = matcher.find_matches(dataset[0].ref)
+        assert len(matches) == 1
+        assert matches[0].key_term.raw == "fox"
 
 
 class TestVocabularyEdgeCases:
     def test_empty_extractor_output(self):
         dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="e").add_extractor(lambda ds: [])))
         dataset.add("a b c", "a b c")
-        assert dataset[0].ref.get_key_term_matches(vocab="e") == []
+        assert dataset.config.vocabularies["e"].build_matcher(dataset) is None
 
     def test_extractor_returning_none(self):
         dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="e").add_extractor(lambda ds: None)))
         dataset.add("a b c", "a b c")
-        assert dataset[0].ref.get_key_term_matches(vocab="e") == []
+        assert dataset.config.vocabularies["e"].build_matcher(dataset) is None
 
     def test_extractor_raising_wrapped(self):
         def boom(ds):
@@ -271,10 +265,10 @@ class TestVocabularyEdgeCases:
     def test_source_less_vocab_yields_no_matches(self):
         dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="empty")))
         dataset.add("a b c", "a b c")
-        assert dataset[0].ref.get_key_term_matches(vocab="empty") == []
+        assert dataset.config.vocabularies["empty"].build_matcher(dataset) is None
         assert dataset.metrics._kt_stats(vocab="empty").num_ref_terms == 0
 
     def test_unregistered_vocab_name_returns_no_matches(self):
         dataset = Dataset()
         dataset.add("a b c", "a b c")
-        assert dataset[0].ref.get_key_term_matches(vocab="missing") == []
+        assert "missing" not in dataset.config.vocabularies

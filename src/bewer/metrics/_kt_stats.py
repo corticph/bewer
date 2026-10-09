@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from bewer.alignment import Alignment, OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, dependency, metric_value
 
 if TYPE_CHECKING:
     from bewer.core.key_term import KeyTermMatch
@@ -22,18 +22,33 @@ class _KTStats_(ExampleMetric):
             normalizer=self.normalizer,
         ).alignment
 
-    def _get_ref_matches(self) -> list[KeyTermMatch]:
-        return self.example.ref.get_key_term_matches(
-            vocab=self.params.vocab,
+    @dependency
+    def _matcher(self):
+        """Build (and cache) the key-term matcher for this metric's vocabulary + pipeline."""
+        vocab = self.parent_metric.dataset.config.vocabularies[self.params.vocab]
+        return vocab.build_matcher(
+            self.parent_metric.dataset,
             normalized=self.params.normalized,
-            allow_subset_matches=self.params.allow_subset_matches,
+        )
+
+    def _get_ref_matches(self) -> list[KeyTermMatch]:
+        return (
+            self._matcher.find_matches(
+                self.example.ref,
+                allow_subset_matches=self.params.allow_subset_matches,
+            )
+            if self._matcher
+            else []
         )
 
     def _get_hyp_matches(self) -> list[KeyTermMatch]:
-        return self.example.hyp.get_key_term_matches(
-            vocab=self.params.vocab,
-            normalized=self.params.normalized,
-            allow_subset_matches=self.params.allow_subset_matches,
+        return (
+            self._matcher.find_matches(
+                self.example.hyp,
+                allow_subset_matches=self.params.allow_subset_matches,
+            )
+            if self._matcher
+            else []
         )
 
     @metric_value

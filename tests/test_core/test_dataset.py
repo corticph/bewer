@@ -196,7 +196,9 @@ class TestDatasetAddVocabularyFromFile:
             dataset = Dataset(config=config)
             dataset.add("the quick brown fox", "the quick brown dog")
             assert "animals" in dataset.config.vocabularies
-            matches = dataset[0].ref.get_key_term_matches(vocab="animals")
+            vocab = dataset.config.vocabularies["animals"]
+            matcher = vocab.build_matcher(dataset)
+            matches = matcher.find_matches(dataset[0].ref)
             assert len(matches) == 1
         finally:
             os.unlink(key_term_path)
@@ -529,7 +531,9 @@ class TestDatasetClone:
         assert "animals" in clone.config.vocabularies
         assert isinstance(clone.config.vocabularies["animals"], Vocabulary)
         # Matching still works against the cloned vocab.
-        assert len(clone[0].ref.get_key_term_matches(vocab="animals")) == 1
+        vocab = clone.config.vocabularies["animals"]
+        matcher = vocab.build_matcher(clone)
+        assert len(matcher.find_matches(clone[0].ref)) == 1
 
     def test_clone_metric_values_match(self, dataset_with_errors):
         original_value = dataset_with_errors.metrics.wer().value

@@ -16,11 +16,6 @@ class TestExampleStandalone:
         assert example.src is None
         assert example.ref.tokens.standardized == ["a", "b", "c"]
 
-    def test_get_key_term_matches_returns_empty(self, pipelines):
-        """Key term matching needs the dataset trie; without a Dataset it yields no matches."""
-        example = Example("a b c", "a x c", pipelines=pipelines)
-        assert example.ref.get_key_term_matches("v") == []
-
     def test_vocabs_empty_without_dataset(self, pipelines):
         """vocabs is empty for an Example with no parent Dataset."""
         example = Example("a b c", "a x c", pipelines=pipelines)
@@ -74,7 +69,9 @@ class TestExamplePrepareAndValidateKeyTerms:
         dataset = Dataset(config=config)
         dataset.add("hello world", "hello world")
         example = dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="missing")
+        vocab = dataset.config.vocabularies["missing"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref)
         assert len(matches) == 0
 
     def test_case_insensitive_key_term_matching(self):
@@ -83,7 +80,9 @@ class TestExamplePrepareAndValidateKeyTerms:
         dataset = Dataset(config=config)
         dataset.add("Hello World", "hello world")
         example = dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="greetings")
+        vocab = dataset.config.vocabularies["greetings"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref)
         assert len(matches) == 1
         assert matches[0].tokens.standardized == ["Hello"]
 
@@ -93,7 +92,9 @@ class TestExamplePrepareAndValidateKeyTerms:
         dataset = Dataset(config=config)
         dataset.add("hello world", "hello world")
         example = dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="greetings")
+        vocab = dataset.config.vocabularies["greetings"]
+        matcher = vocab.build_matcher(dataset)
+        matches = [] if matcher is None else matcher.find_matches(example.ref)
         assert matches == []
 
 
@@ -151,7 +152,7 @@ class TestExampleHash:
 
 
 class TestTextGetKeyTermMatches:
-    """Tests for Text.get_key_term_matches() using global and local key terms."""
+    """Tests for key-term matching using global and local key terms."""
 
     def test_global_key_terms_both_matched(self):
         """Global vocab (from config) produces all matches by default."""
@@ -159,7 +160,9 @@ class TestTextGetKeyTermMatches:
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         example = dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals")
+        vocab = dataset.config.vocabularies["animals"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref)
         matched_standardized = sorted(m.tokens.standardized for m in matches)
         assert ["brown"] in matched_standardized
         assert ["fox"] in matched_standardized
@@ -170,7 +173,9 @@ class TestTextGetKeyTermMatches:
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         example = dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals")
+        vocab = dataset.config.vocabularies["animals"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref)
         assert len(matches) == 1
 
     def test_allow_subset_matches_true_deduplicates_exact(self):
@@ -179,7 +184,9 @@ class TestTextGetKeyTermMatches:
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         example = dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals", allow_subset_matches=True)
+        vocab = dataset.config.vocabularies["animals"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref, allow_subset_matches=True)
         assert len(matches) == 1
 
     def test_allow_subset_matches_false_deduplicates(self):
@@ -188,7 +195,9 @@ class TestTextGetKeyTermMatches:
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         example = dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals", allow_subset_matches=False)
+        vocab = dataset.config.vocabularies["animals"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref, allow_subset_matches=False)
         assert len(matches) == 1
 
 

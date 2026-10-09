@@ -178,7 +178,7 @@ class TestRemoveSubsetMatches:
 
 
 class TestTextGetKeyTermMatchesAllowSubsets:
-    """Tests for Text.get_key_term_matches() with allow_subset_matches parameter."""
+    """Tests for KeyTermTrie.find_matches() with allow_subset_matches parameter."""
 
     def test_allow_subset_matches_true_returns_all(self, sample_dataset):
         """With allow_subset_matches=True (default), overlapping key terms both match."""
@@ -190,7 +190,9 @@ class TestTextGetKeyTermMatchesAllowSubsets:
             "the quick brown fox",
         )
         example = dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=True)
+        vocab = dataset.config.vocabularies["phrases"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref, allow_subset_matches=True)
         assert len(matches) == 2
 
     def test_allow_subset_matches_false_keeps_longer(self, sample_dataset):
@@ -203,7 +205,9 @@ class TestTextGetKeyTermMatchesAllowSubsets:
             "the quick brown fox",
         )
         example = dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
+        vocab = dataset.config.vocabularies["phrases"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref, allow_subset_matches=False)
         assert len(matches) == 1
         assert matches[0].tokens.standardized == ["quick", "brown"]
 
@@ -231,14 +235,16 @@ class TestKeyTermTrieAddCapitalized:
 
 
 class TestKeyTermMatch:
-    """Tests for the structured KeyTermMatch returned by get_key_term_matches()."""
+    """Tests for the structured KeyTermMatch returned by find_matches()."""
 
     def test_returns_key_term_match_instances(self, sample_dataset):
-        """get_key_term_matches returns KeyTermMatch objects, not raw slices."""
+        """find_matches returns KeyTermMatch objects, not raw slices."""
         dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="med").add_terms(["diabetes"])))
         dataset.add("the patient has diabetes", "the patient has diabetes")
         example = dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="med")
+        vocab = dataset.config.vocabularies["med"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref)
         assert len(matches) == 1
         assert all(isinstance(m, KeyTermMatch) for m in matches)
 
@@ -249,7 +255,9 @@ class TestKeyTermMatch:
         )
         dataset.add("the quick brown fox", "the quick brown fox")
         example = dataset[-1]
-        (match,) = example.ref.get_key_term_matches(vocab="phrases")
+        vocab = dataset.config.vocabularies["phrases"]
+        matcher = vocab.build_matcher(dataset)
+        (match,) = matcher.find_matches(example.ref)
         assert (match.start, match.stop) == (1, 3)
         assert match.token_slice == slice(1, 3)
         assert example.ref.tokens[match.token_slice].standardized == ["quick", "brown"]
@@ -261,7 +269,9 @@ class TestKeyTermMatch:
         )
         dataset.add("the quick brown fox", "the quick brown fox")
         example = dataset[-1]
-        (match,) = example.ref.get_key_term_matches(vocab="phrases")
+        vocab = dataset.config.vocabularies["phrases"]
+        matcher = vocab.build_matcher(dataset)
+        (match,) = matcher.find_matches(example.ref)
         assert match.src is example.ref
         assert isinstance(match.key_term, KeyTerm)
         assert match.key_term.raw == "quick brown"
@@ -272,8 +282,10 @@ class TestKeyTermMatch:
         dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["brown"])))
         dataset.add("the brown fox", "the brown dog")
         example = dataset[-1]
-        (ref_match,) = example.ref.get_key_term_matches(vocab="animals")
-        (hyp_match,) = example.hyp.get_key_term_matches(vocab="animals")
+        vocab = dataset.config.vocabularies["animals"]
+        matcher = vocab.build_matcher(dataset)
+        (ref_match,) = matcher.find_matches(example.ref)
+        (hyp_match,) = matcher.find_matches(example.hyp)
         assert ref_match.side == TextType.REF
         assert hyp_match.side == TextType.HYP
 
@@ -282,7 +294,9 @@ class TestKeyTermMatch:
         dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="greetings").add_terms(["hello"])))
         dataset.add("Hello World", "hello world")
         example = dataset[-1]
-        (match,) = example.ref.get_key_term_matches(vocab="greetings")
+        vocab = dataset.config.vocabularies["greetings"]
+        matcher = vocab.build_matcher(dataset)
+        (match,) = matcher.find_matches(example.ref)
         assert match.tokens.standardized == ["Hello"]
         assert match.key_term.raw == "hello"
 
@@ -293,7 +307,9 @@ class TestKeyTermMatch:
         )
         dataset.add("the quick brown fox", "the quick brown fox")
         example = dataset[-1]
-        (match,) = example.ref.get_key_term_matches(vocab="phrases", allow_subset_matches=False)
+        vocab = dataset.config.vocabularies["phrases"]
+        matcher = vocab.build_matcher(dataset)
+        (match,) = matcher.find_matches(example.ref, allow_subset_matches=False)
         assert isinstance(match, KeyTermMatch)
         assert match.tokens.standardized == ["quick", "brown"]
 
@@ -305,5 +321,7 @@ class TestKeyTermMatch:
         )
         dataset.add("the patient has diabetes", "the patient has diabetes")
         example = dataset[-1]
-        (match,) = example.ref.get_key_term_matches(vocab="med")
+        vocab = dataset.config.vocabularies["med"]
+        matcher = vocab.build_matcher(dataset)
+        (match,) = matcher.find_matches(example.ref)
         assert match.key_term.raw == "Diabetes"

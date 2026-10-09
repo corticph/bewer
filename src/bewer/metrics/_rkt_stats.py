@@ -71,10 +71,15 @@ class _RKTStats_(ExampleMetric):
         ).alignment
 
     def _get_ref_matches(self) -> list[KeyTermMatch]:
-        return self.example.ref.get_key_term_matches(
-            vocab=self.params.vocab,
-            normalized=self.params.normalized,
-            allow_subset_matches=self.params.allow_subset_matches,
+        vocab = self.parent_metric.dataset.config.vocabularies[self.params.vocab]
+        matcher = vocab.build_matcher(self.parent_metric.dataset, normalized=self.params.normalized)
+        return (
+            matcher.find_matches(
+                self.example.ref,
+                allow_subset_matches=self.params.allow_subset_matches,
+            )
+            if matcher
+            else []
         )
 
     @metric_value

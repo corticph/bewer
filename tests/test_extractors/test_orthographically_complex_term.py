@@ -181,7 +181,9 @@ class TestOrthographicallyComplexTermExtractor:
             )
         )
         dataset.add("the MRI and CT-scan", "the MRI and CT-scan")
-        matches = dataset[0].ref.get_key_term_matches(vocab="cts", normalized=True)
+        vocab = dataset.config.vocabularies["cts"]
+        matcher = vocab.build_matcher(dataset, normalized=True)
+        matches = matcher.find_matches(dataset[0].ref)
         # Resolved under the default key-term-ish context; just assert the vocab resolves.
         assert isinstance(matches, list)
 
