@@ -8,6 +8,7 @@ from rapidfuzz.distance import Levenshtein
 
 from bewer.alignment import Alignment
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, metric_value
+from bewer.preprocessing.context import set_pipeline
 
 if TYPE_CHECKING:
     from bewer.core.key_term import KeyTermMatch
@@ -127,10 +128,11 @@ class _RKTStats(Metric):
     def _matcher(self):
         """Build (and cache) the key-term matcher for this metric's vocabulary + pipeline."""
         vocab = self.dataset.config.vocabularies[self.params.vocab]
-        return vocab.build_matcher(
-            self.dataset,
-            normalized=self.params.normalized,
-        )
+        with set_pipeline(*self.pipeline):
+            return vocab.build_matcher(
+                self.dataset,
+                normalized=self.params.normalized,
+            )
 
     @dataclass
     class param_schema(KeyTermParams):
