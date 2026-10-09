@@ -190,18 +190,18 @@ assert wer.num_edits == sum(ex_wer.num_edits for ex_wer in wer)
 Key-term metrics measure performance on a pre-defined subset of terms (medical, financial, acronyms, etc.). To use them, build a [`Vocabulary`](src/bewer/core/vocabulary.py) and attach it to the dataset.
 
 ```python
-from bewer import Vocabulary
+from bewer import Dataset, Vocabulary, get_config
 
-dataset = Dataset(config="en")
+config = get_config("en")
+vocab = Vocabulary(name="medical")
+vocab.add_terms(["diabetes", "blood sugar"])
+config = config.add_vocabulary(vocab)
+
+dataset = Dataset(config=config)
 dataset.add(
     ref="the patient has diabetes and high blood sugar",
     hyp="the patient has diabetis and high blood sugar",
 )
-
-# Add key terms from a Python list
-vocab = Vocabulary(name="medical")
-vocab.add_terms(["diabetes", "blood sugar"])
-dataset.add_vocabulary(vocab)
 
 # Compute key-term recall by referencing the vocabulary name
 ktr = dataset.metrics.ktr(vocab="medical")

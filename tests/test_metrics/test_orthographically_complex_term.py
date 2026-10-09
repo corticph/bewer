@@ -10,7 +10,7 @@ class TestAutoVocabulary:
 
     def test_vocabulary_attached_at_init(self):
         dataset = Dataset()
-        assert "orthographically_complex_terms" in dataset._vocabularies
+        assert "orthographically_complex_terms" in dataset.config.vocabularies
 
     def test_works_after_dataset_already_frozen(self):
         dataset = Dataset()

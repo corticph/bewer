@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass, field, replace
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from bewer.flags import NORMALIZERS, STANDARDIZERS, TOKENIZERS
 from bewer.preprocessing.normalization import Normalizer
 from bewer.preprocessing.tokenization import Tokenizer
 from bewer.registry import REGISTRY
+
+if TYPE_CHECKING:
+    from bewer.core.vocabulary import Vocabulary
 
 __all__ = [
     "BewerConfig",
@@ -102,6 +105,18 @@ class BewerConfig:
     def replace(self, **kwargs) -> BewerConfig:
         """Return a copy with the given fields replaced."""
         return replace(self, **kwargs)
+
+    def add_vocabulary(self, vocab: "Vocabulary") -> BewerConfig:
+        """Return a new config with ``vocab`` added under its own name.
+
+        Args:
+            vocab: The :class:`~bewer.Vocabulary` to add. A different vocabulary
+                under the same name overwrites the existing one.
+
+        Returns:
+            A new ``BewerConfig`` — the original is unchanged (frozen dataclass).
+        """
+        return self.replace(vocabularies={**self.vocabularies, vocab.name: vocab})
 
 
 # ============================================================

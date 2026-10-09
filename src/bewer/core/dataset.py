@@ -7,7 +7,6 @@ import pandas as pd
 from bewer.config import BewerConfig, get_config, resolve_config
 from bewer.core.example import Example
 from bewer.core.text import TokenList
-from bewer.core.vocabulary import Vocabulary
 from bewer.metrics.base import MetricCollection
 
 __all__ = ["Dataset", "DatasetFrozenError", "TextList", "TextTokenList"]
@@ -58,11 +57,6 @@ class Dataset(object):
         self._init_blank_state()
         self._pipelines = resolve_config(self._config)
 
-        # Eagerly attach vocabularies declared in the config
-        for name, vocab in self._config.vocabularies.items():
-            if name not in self._vocabularies:
-                self._attach_vocabulary(vocab)
-
     def _init_blank_state(self) -> None:
         """Initialize the mutable, modifiable state of the dataset.
 
@@ -71,7 +65,6 @@ class Dataset(object):
         empty data and clean caches.
         """
         self.examples = []
-        self._vocabularies: dict[str, "Vocabulary"] = {}
         self.metrics = MetricCollection(self)
         self._frozen = False
 
@@ -118,8 +111,6 @@ class Dataset(object):
         new._init_blank_state()
         for example in self.examples:
             new.add(example.ref.raw, example.hyp.raw)
-        for vocab in self._vocabularies.values():
-            new._attach_vocabulary(vocab)
         return new
 
     @cached_property
@@ -177,60 +168,6 @@ class Dataset(object):
         self._check_not_frozen()
         df = pd.read_json(jsonl_file, lines=True, **kwargs)
         self.load_pandas(df, ref_col, hyp_col)
-
-    def add_vocabulary(self, vocab: "Vocabulary") -> None:
-        """Attach a key term vocabulary to the dataset.
-
-        The vocabulary is registered under its own ``name`` and can be referenced by key
-        term metrics via ``metrics.ktr(vocab=name)``. The same Vocabulary object may be
-        attached to multiple datasets; it resolves its terms against each one independently.
-
-        Attaching freezes the vocabulary's definition: it can no longer be modified via
-        ``add_terms``/``add_file``/``add_extractor``, so its resolved terms stay fixed for
-        every dataset it is attached to.
-
-        Args:
-            vocab (Vocabulary): The vocabulary to attach.
-
-        Raises:
-            TypeError: If ``vocab`` is not a Vocabulary.
-            ValueError: If a different vocabulary is already registered under the same name.
-        """
-        self._check_not_frozen()
-        self._attach_vocabulary(vocab)
-
-    def _attach_vocabulary(self, vocab: "Vocabulary") -> "Vocabulary":
-        """Attach a vocabulary, bypassing the frozen guard.
-
-        Used by ``add_vocabulary`` (with the guard) and by config-driven
-        eager attachment and metric-derived lazy attachment (without the guard).
-        """
-        if not isinstance(vocab, Vocabulary):
-            raise TypeError(f"Expected a Vocabulary, got {type(vocab)}.")
-        existing = self._vocabularies.get(vocab.name)
-        if existing is not None and existing is not vocab:
-            raise ValueError(f"A different vocabulary named '{vocab.name}' is already attached to this dataset.")
-        self._vocabularies[vocab.name] = vocab
-        vocab._freeze()
-        return vocab
-
-    def _resolve_vocabulary(self, name: str) -> "Vocabulary":
-        """Resolve a vocabulary by name — attached first, then from config.
-
-        If the vocabulary is already attached, return it.
-        If it is declared in the config's vocabularies dict, attach and return it.
-        Otherwise raise ValueError with the available names.
-        """
-        if name in self._vocabularies:
-            return self._vocabularies[name]
-        if name in self._config.vocabularies:
-            vocab = self._config.vocabularies[name]
-            return self._attach_vocabulary(vocab)
-        raise ValueError(
-            f"Vocabulary '{name}' not found. "
-            f"Attached: {sorted(self._vocabularies)}, "
-            f"In config: {sorted(self._config.vocabularies)}"
-        )
 
     @property
     def config(self) -> BewerConfig:

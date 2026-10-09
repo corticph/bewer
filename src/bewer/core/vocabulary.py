@@ -50,8 +50,8 @@ class Vocabulary:
     A vocabulary holds only its *definition*; the concrete key terms are resolved lazily
     per dataset (extractor functions read the dataset's examples, and static terms are
     tokenized with the dataset's pipelines). Resolution and the resulting trie are cached
-    per dataset, so a single Vocabulary can be attached to and shared across multiple
-    datasets via :meth:`Dataset.add_vocabulary`.
+    per dataset, so a single Vocabulary can be shared across multiple datasets by
+    including it in their configs.
     """
 
     def __init__(self, name: str):
@@ -66,9 +66,9 @@ class Vocabulary:
         self._name = name
         self._static_terms: set[str] = set()
         self._extractors: list[ExtractorFn] = []
-        # Frozen once attached to a dataset (see Dataset.add_vocabulary). A frozen
-        # vocabulary's definition cannot change, so its resolved terms / trie can never
-        # go stale for any dataset it is registered to.
+        # Frozen once used for matching (see _get_trie). A frozen vocabulary's
+        # definition cannot change, so its resolved terms / trie can never go stale
+        # for any dataset it is used with.
         self._frozen = False
         # Per-dataset resolution cache. Weak keys so an attached-but-discarded dataset's
         # resolution (and trie) is collected with it — a shared vocabulary never leaks.
@@ -76,14 +76,16 @@ class Vocabulary:
         self._lock = threading.Lock()
 
     def _freeze(self) -> None:
-        """Mark the vocabulary's definition as immutable. Idempotent. Called by Dataset.add_vocabulary."""
+        """Mark the vocabulary's definition as immutable. Idempotent. Called lazily
+        on first resolution (``_get_trie``), so the definition is locked as soon as
+        it is first used against any dataset."""
         self._frozen = True
 
     def _check_not_frozen(self) -> None:
         if self._frozen:
             raise VocabularyFrozenError(
-                f"Cannot modify vocabulary '{self._name}' after it has been attached to a dataset. "
-                "Build it fully before calling Dataset.add_vocabulary(), or create a new Vocabulary."
+                f"Cannot modify vocabulary '{self._name}' after it has been used for matching. "
+                "Build it fully before using it in a metric, or create a new Vocabulary."
             )
 
     @property
@@ -172,6 +174,7 @@ class Vocabulary:
             ds_cache = self._cache.setdefault(dataset, {})
             if key in ds_cache:
                 return ds_cache[key].trie
+            self._freeze()
             terms = self._resolve_terms(dataset)
             trie = KeyTermTrie(terms, normalized=normalized, add_capitalized=add_capitalized) if terms else None
             ds_cache[key] = _Resolved(terms, trie)

@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer import Dataset, Vocabulary
+from bewer import Dataset, Vocabulary, get_config
 from bewer.metrics.ktp import KTP, KTP_
 
 
@@ -12,34 +12,31 @@ class TestKTPExampleMetric:
     @pytest.fixture
     def dataset_keyword_match(self):
         """Dataset where a key term is correctly transcribed (TP=1, FP=0)."""
-        dataset = Dataset()
+        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
         )
-        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
     def dataset_keyword_error(self):
         """Dataset where a key term is in ref but absent from hyp (TP=0, FP=0)."""
-        dataset = Dataset()
+        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
         dataset.add(
             ref="the fox jumps",
             hyp="the dog jumps",
         )
-        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
     def dataset_keyword_fp(self):
         """Dataset where ref has a key term once but hyp has it twice (TP=1, FP=1)."""
-        dataset = Dataset()
+        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
         dataset.add(
             ref="the fox jumps",
             hyp="the fox fox jumps",
         )
-        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     def test_value_perfect_match(self, dataset_keyword_match):
@@ -86,12 +83,11 @@ class TestKTPExampleMetric:
 
     def test_works_with_any_vocab(self):
         """Test KTP is domain-agnostic and works with any vocabulary name."""
-        dataset = Dataset()
+        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="medical").add_terms(["diabetes"])))
         dataset.add(
             ref="patient has diabetes",
             hyp="patient has diabetes",
         )
-        dataset.add_vocabulary(Vocabulary(name="medical").add_terms(["diabetes"]))
         ktp = dataset[0].metrics.ktp(vocab="medical")
         assert ktp.value == 1.0
         assert ktp.num_matches == 1
@@ -103,7 +99,9 @@ class TestKTPDatasetMetric:
     @pytest.fixture
     def ktp_dataset(self):
         """Dataset with mixed precision: one exact match, one FP."""
-        dataset = Dataset()
+        dataset = Dataset(
+            config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
+        )
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
@@ -112,7 +110,6 @@ class TestKTPDatasetMetric:
             ref="the rabbit runs",
             hyp="the rabbit rabbit runs",
         )
-        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         return dataset
 
     def test_num_fp_aggregates(self, ktp_dataset):
@@ -137,10 +134,11 @@ class TestKTPDatasetMetric:
 
     def test_all_correct(self):
         """Test KTP = 1.0 when all transcriptions are correct."""
-        dataset = Dataset()
+        dataset = Dataset(
+            config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
+        )
         dataset.add(ref="the fox", hyp="the fox")
         dataset.add(ref="the rabbit", hyp="the rabbit")
-        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         ktp = dataset.metrics.ktp(vocab="animals")
         assert ktp.value == 1.0
 

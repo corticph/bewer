@@ -143,7 +143,7 @@ class Text:
         if dataset is None:
             return []
 
-        vocabulary = dataset._vocabularies.get(vocab)
+        vocabulary = dataset.config.vocabularies.get(vocab)
         if vocabulary is None:
             return []
 
