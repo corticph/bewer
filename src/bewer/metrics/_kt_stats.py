@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import cached_property
 from typing import TYPE_CHECKING
 
 from bewer.alignment import Alignment, OpType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, metric_value
-from bewer.preprocessing.context import set_pipeline
 
 if TYPE_CHECKING:
     from bewer.core.key_term import KeyTermMatch
@@ -197,16 +195,6 @@ class _KTStats(Metric):
     )
     example_cls = _KTStats_
 
-    @cached_property
-    def _matcher(self):
-        """Build (and cache) the key-term matcher for this metric's vocabulary + pipeline."""
-        vocab = self.dataset.config.vocabularies[self.params.vocab]
-        with set_pipeline(*self.pipeline):
-            return vocab.build_matcher(
-                self.dataset,
-                normalized=self.params.normalized,
-            )
-
     @dataclass
     class param_schema(KeyTermParams):
         """Parameters for the _KTStats metric.
@@ -220,6 +208,15 @@ class _KTStats(Metric):
         """
 
         partial_credit: bool = False
+
+    @metric_value
+    def _matcher(self):
+        """Build (and cache) the key-term matcher for this metric's vocabulary + pipeline."""
+        vocab = self.dataset.config.vocabularies[self.params.vocab]
+        return vocab.build_matcher(
+            self.dataset,
+            normalized=self.params.normalized,
+        )
 
     @metric_value
     def num_ref_terms(self) -> int:
