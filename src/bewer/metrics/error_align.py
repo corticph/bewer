@@ -9,7 +9,7 @@ from error_align.utils import OpType as EAOpType
 from error_align.utils import basic_normalizer, basic_tokenizer
 
 from bewer.alignment import Alignment, Op, OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
 from bewer.preprocessing.context import get_normalizer, get_tokenizer
 
 __all__ = ["ErrorAlign"]
@@ -25,32 +25,32 @@ class ErrorAlign_(ExampleMetric):
         EAOpType.DELETE: OpType.DELETE,
     }
 
-    @metric_value
+    @metric_property
     def num_substitutions(self) -> int:
         """Get the number of substitutions."""
         return self.alignment.num_substitutions
 
-    @metric_value
+    @metric_property
     def num_insertions(self) -> int:
         """Get the number of insertions."""
         return self.alignment.num_insertions
 
-    @metric_value
+    @metric_property
     def num_deletions(self) -> int:
         """Get the number of deletions."""
         return self.alignment.num_deletions
 
-    @metric_value
+    @metric_property
     def num_edits(self) -> int:
         """Get the number of edits."""
         return self.alignment.num_edits
 
-    @metric_value
+    @metric_property
     def num_matches(self) -> int:
         """Get the number of matches."""
         return self.alignment.num_matches
 
-    @metric_value(main=True)
+    @metric_property(main=True)
     def alignment(self) -> Alignment:
         """Get the error alignment operations between the hypothesis and reference text."""
         return self._get_ops()

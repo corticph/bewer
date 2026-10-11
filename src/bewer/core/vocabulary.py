@@ -146,7 +146,7 @@ class Vocabulary:
         returns a trie that matches nothing — ``find_matches`` on it yields ``[]``.
 
         The caller owns the returned trie — the Vocabulary does not cache it. Metrics
-        should cache the trie via ``@metric_value``.
+        should cache the trie via ``@metric_property``.
         """
         self._freeze()
         dataset.freeze()

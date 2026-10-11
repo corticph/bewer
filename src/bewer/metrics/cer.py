@@ -4,13 +4,13 @@ from dataclasses import dataclass
 
 from rapidfuzz.distance import Levenshtein
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
 
 __all__ = ["CER"]
 
 
 class CER_(ExampleMetric):
-    @metric_value
+    @metric_property
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference text."""
         return Levenshtein.distance(
@@ -18,12 +18,12 @@ class CER_(ExampleMetric):
             self.example.ref.joined(normalized=self.params.normalized),
         )
 
-    @metric_value
+    @metric_property
     def ref_length(self) -> int:
         """Get the number of characters in the reference text."""
         return len(self.example.ref.joined(normalized=self.params.normalized))
 
-    @metric_value(main=True)
+    @metric_property(main=True)
     def value(self) -> float:
         """Get the example-level character error rate."""
         if self.ref_length == 0:
@@ -45,17 +45,17 @@ class CER(Metric):
     class param_schema(MetricParams):
         normalized: bool = True
 
-    @metric_value
+    @metric_property
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference texts."""
         return sum(em.num_edits for em in self)
 
-    @metric_value
+    @metric_property
     def ref_length(self) -> int:
         """Get the number of characters in the reference texts."""
         return sum(em.ref_length for em in self)
 
-    @metric_value(main=True)
+    @metric_property(main=True)
     def value(self) -> float:
         """Get the character error rate."""
         if self.ref_length == 0:

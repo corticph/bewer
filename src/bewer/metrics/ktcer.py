@@ -2,23 +2,23 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, metric_property
 
 __all__ = ["KTCER"]
 
 
 class KTCER_(ExampleMetric):
-    @metric_value
+    @metric_property
     def num_char_edits(self) -> int:
         """Get the total character edits across all key term occurrences in the example."""
         return sum(ts.char_edits for ts in self.parent_metric._rkt_stats[self.example.index].term_stats)
 
-    @metric_value
+    @metric_property
     def ref_chars(self) -> int:
         """Get the total reference character count across all key term occurrences in the example."""
         return sum(ts.ref_chars for ts in self.parent_metric._rkt_stats[self.example.index].term_stats)
 
-    @metric_value(main=True)
+    @metric_property(main=True)
     def value(self) -> float:
         """Get the example-level key term character error rate."""
         if self.ref_chars == 0:
@@ -48,7 +48,7 @@ class KTCER(Metric):
             allow_subset_matches: Whether to allow subset matches.
         """
 
-    @dependency
+    @metric_property(set_pipeline=False, is_dependency=True)
     def _rkt_stats(self):
         """Get the shared _RKTStats metric instance."""
         return self.dataset.metrics._rkt_stats(
@@ -60,17 +60,17 @@ class KTCER(Metric):
             normalizer=self.normalizer,
         )
 
-    @metric_value
+    @metric_property
     def num_char_edits(self) -> int:
         """Get the total character edits across all key term occurrences."""
         return sum(em.num_char_edits for em in self)
 
-    @metric_value
+    @metric_property
     def ref_chars(self) -> int:
         """Get the total reference character count across all key term occurrences."""
         return sum(em.ref_chars for em in self)
 
-    @metric_value(main=True)
+    @metric_property(main=True)
     def value(self) -> float:
         """Get the key term character error rate."""
         if self.ref_chars == 0:

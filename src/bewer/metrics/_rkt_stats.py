@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from rapidfuzz.distance import Levenshtein
 
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, metric_property
 
 if TYPE_CHECKING:
     from bewer.core.key_term import KeyTermMatch
@@ -62,7 +62,7 @@ def _join_op_hyps(ops: Alignment) -> str:
 
 
 class _RKTStats_(ExampleMetric):
-    @metric_value
+    @metric_property
     def ref_matches(self) -> list[KeyTermMatch]:
         """Key term matches found in the reference text."""
         return self.parent_metric._matcher.find_matches(
@@ -70,7 +70,7 @@ class _RKTStats_(ExampleMetric):
             allow_subset_matches=self.params.allow_subset_matches,
         )
 
-    @metric_value
+    @metric_property
     def term_stats(self) -> list[TermStat]:
         """Compute TermStat for each ref key term match.
 
@@ -93,7 +93,7 @@ class _RKTStats_(ExampleMetric):
             stats.append(TermStat(char_edits=char_edits, ref_chars=len(ref_text), segment=segment))
         return stats
 
-    @metric_value
+    @metric_property
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
         return len(self.ref_matches)
@@ -121,7 +121,7 @@ class _RKTStats(Metric):
             allow_subset_matches: Whether to allow subset matches.
         """
 
-    @metric_value
+    @metric_property(is_value=False)
     def _matcher(self):
         """Build (and cache) the key-term matcher for this metric's vocabulary + pipeline."""
         vocab = self.dataset.config.vocabularies[self.params.vocab]
@@ -130,7 +130,7 @@ class _RKTStats(Metric):
             normalized=self.params.normalized,
         )
 
-    @dependency
+    @metric_property(set_pipeline=False, is_dependency=True)
     def _error_align(self):
         """The shared error_align metric instance."""
         return self.dataset.metrics.error_align(
@@ -140,7 +140,7 @@ class _RKTStats(Metric):
             normalizer=self.normalizer,
         )
 
-    @metric_value
+    @metric_property
     def num_ref_terms(self) -> int:
         """Get the total number of key terms in the reference texts."""
         return sum(em.num_ref_terms for em in self)

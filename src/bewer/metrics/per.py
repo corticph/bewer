@@ -37,7 +37,7 @@ from dataclasses import dataclass
 
 from rapidfuzz.distance import Levenshtein as RFLevenshtein
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
 
 __all__ = ["PER"]
 
@@ -56,7 +56,7 @@ class PER_(ExampleMetric):
     # dependency once #91 enables metrics to configure their preprocessing
     # pipeline (tokenizer + masking normalizer) at computation time.
 
-    @metric_value
+    @metric_property
     def _per_components(self) -> tuple[int, int, int, int, int, int]:
         """Compute and cache PER components.
 
@@ -98,43 +98,43 @@ class PER_(ExampleMetric):
 
         return (s_p, i_p, d_p, c_p, n_punct_ref, n_punct_hyp)
 
-    @metric_value
+    @metric_property
     def num_substitutions(self) -> int:
         """Number of punctuation substitutions (position correct, value wrong)."""
         return self._per_components[0]
 
-    @metric_value
+    @metric_property
     def num_insertions(self) -> int:
         """Number of spurious punctuation tokens in the hypothesis."""
         return self._per_components[1]
 
-    @metric_value
+    @metric_property
     def num_deletions(self) -> int:
         """Number of punctuation tokens missing from the hypothesis."""
         return self._per_components[2]
 
-    @metric_value
+    @metric_property
     def num_correct(self) -> int:
         """Number of correctly predicted punctuation tokens."""
         return self._per_components[3]
 
-    @metric_value
+    @metric_property
     def num_punct_ref(self) -> int:
         """Total punctuation tokens in the reference."""
         return self._per_components[4]
 
-    @metric_value
+    @metric_property
     def num_punct_hyp(self) -> int:
         """Total punctuation tokens in the hypothesis."""
         return self._per_components[5]
 
-    @metric_value
+    @metric_property
     def num_edits(self) -> int:
         """Total punctuation edits (substitutions + insertions + deletions)."""
         s_p, i_p, d_p, _, _, _ = self._per_components
         return s_p + i_p + d_p
 
-    @metric_value(main=True)
+    @metric_property(main=True)
     def value(self) -> float:
         """Punctuation error rate for this example."""
         s_p, i_p, d_p, c_p, _, _ = self._per_components
@@ -184,42 +184,42 @@ class PER(Metric):
         )
         normalized: bool = True
 
-    @metric_value
+    @metric_property
     def num_substitutions(self) -> int:
         """Total punctuation substitutions across all examples."""
         return sum(em.num_substitutions for em in self)
 
-    @metric_value
+    @metric_property
     def num_insertions(self) -> int:
         """Total punctuation insertions across all examples."""
         return sum(em.num_insertions for em in self)
 
-    @metric_value
+    @metric_property
     def num_deletions(self) -> int:
         """Total punctuation deletions across all examples."""
         return sum(em.num_deletions for em in self)
 
-    @metric_value
+    @metric_property
     def num_correct(self) -> int:
         """Total correctly predicted punctuation tokens across all examples."""
         return sum(em.num_correct for em in self)
 
-    @metric_value
+    @metric_property
     def num_punct_ref(self) -> int:
         """Total punctuation tokens in all reference texts."""
         return sum(em.num_punct_ref for em in self)
 
-    @metric_value
+    @metric_property
     def num_punct_hyp(self) -> int:
         """Total punctuation tokens in all hypothesis texts."""
         return sum(em.num_punct_hyp for em in self)
 
-    @metric_value
+    @metric_property
     def num_edits(self) -> int:
         """Total punctuation edits across all examples."""
         return sum(em.num_edits for em in self)
 
-    @metric_value(main=True)
+    @metric_property(main=True)
     def value(self) -> float:
         """Dataset-level punctuation error rate (micro-averaged)."""
         s_p = self.num_substitutions

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from bewer.alignment import Alignment
 from bewer.metrics._rkt_stats import TermStat
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, metric_property
 
 __all__ = ["RKTR"]
 
@@ -16,29 +16,29 @@ def _is_tp(ts: TermStat, threshold: float) -> bool:
 
 
 class RKTR_(ExampleMetric):
-    @metric_value
+    @metric_property
     def tp_alignments(self) -> list[Alignment]:
         """Get alignment segments for each key term classified as TP."""
         stats = self.parent_metric._rkt_stats[self.example.index].term_stats
         return [ts.segment for ts in stats if _is_tp(ts, self.params.threshold)]
 
-    @metric_value
+    @metric_property
     def fn_alignments(self) -> list[Alignment]:
         """Get alignment segments for each key term classified as FN."""
         stats = self.parent_metric._rkt_stats[self.example.index].term_stats
         return [ts.segment for ts in stats if not _is_tp(ts, self.params.threshold)]
 
-    @metric_value
+    @metric_property
     def num_relaxed_matches(self) -> int:
         """Get the number of key terms classified as TP in the hypothesis text."""
         return len(self.tp_alignments)
 
-    @metric_value
+    @metric_property
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
         return self.parent_metric._rkt_stats[self.example.index].num_ref_terms
 
-    @metric_value(main=True)
+    @metric_property(main=True)
     def value(self) -> float:
         """Get the example-level relaxed key term recall."""
         if self.num_ref_terms == 0:
@@ -76,7 +76,7 @@ class RKTR(Metric):
                 raise ValueError(f"threshold must be between 0.0 and 1.0, got {self.threshold}.")
             super().validate()
 
-    @dependency
+    @metric_property(set_pipeline=False, is_dependency=True)
     def _rkt_stats(self):
         """Get the shared _RKTStats metric instance."""
         return self.dataset.metrics._rkt_stats(
@@ -88,7 +88,7 @@ class RKTR(Metric):
             normalizer=self.normalizer,
         )
 
-    @metric_value
+    @metric_property
     def num_relaxed_matches(self) -> int:
         """Get the number of key terms classified as TP across all hypothesis texts."""
         return sum(
@@ -96,12 +96,12 @@ class RKTR(Metric):
             for ex in self._src
         )
 
-    @metric_value
+    @metric_property
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference texts."""
         return self._rkt_stats.num_ref_terms
 
-    @metric_value(main=True)
+    @metric_property(main=True)
     def value(self) -> float:
         """Get the relaxed key term recall."""
         if self.num_ref_terms == 0:

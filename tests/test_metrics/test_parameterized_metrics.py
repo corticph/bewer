@@ -345,10 +345,10 @@ class TestRequiredHyperparams:
     def test_required_hyperparam_raises_on_construction(self, sample_dataset):
         """Test that missing required hyperparams raise error eagerly at construction."""
         # Create a test metric with required param
-        from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
+        from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample(ExampleMetric):
-            @metric_value(main=True)
+            @metric_property(main=True)
             def value(self) -> float:
                 return 0.5
 
@@ -363,7 +363,7 @@ class TestRequiredHyperparams:
             class param_schema(MetricParams):
                 threshold: float
 
-            @metric_value(main=True)
+            @metric_property(main=True)
             def value(self) -> float:
                 threshold = self.params.threshold
                 return sum(em.value for em in self if em.value >= threshold)
@@ -376,10 +376,10 @@ class TestRequiredHyperparams:
 
     def test_required_hyperparam_works_when_provided(self, sample_dataset):
         """Test that required hyperparams work when provided."""
-        from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
+        from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample2(ExampleMetric):
-            @metric_value(main=True)
+            @metric_property(main=True)
             def value(self) -> float:
                 return 0.5
 
@@ -394,7 +394,7 @@ class TestRequiredHyperparams:
             class param_schema(MetricParams):
                 threshold: float
 
-            @metric_value(main=True)
+            @metric_property(main=True)
             def value(self) -> float:
                 threshold = self.params.threshold
                 return threshold * 2
@@ -405,10 +405,10 @@ class TestRequiredHyperparams:
 
     def test_mixed_required_and_optional_params(self, sample_dataset):
         """Test metrics with both required and optional hyperparams."""
-        from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
+        from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample3(ExampleMetric):
-            @metric_value(main=True)
+            @metric_property(main=True)
             def value(self) -> float:
                 return 0.5
 
@@ -424,7 +424,7 @@ class TestRequiredHyperparams:
                 threshold: float
                 min_length: int = 1
 
-            @metric_value(main=True)
+            @metric_property(main=True)
             def value(self) -> float:
                 threshold = self.params.threshold
                 min_length = self.params.min_length
@@ -445,10 +445,10 @@ class TestRequiredHyperparams:
 
     def test_params_printed_in_definition_order(self, sample_dataset):
         """Test that parameters are printed in the order they're defined in param_schema."""
-        from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
+        from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample4(ExampleMetric):
-            @metric_value(main=True)
+            @metric_property(main=True)
             def value(self) -> float:
                 return 0.5
 
@@ -465,7 +465,7 @@ class TestRequiredHyperparams:
                 beta: int = 2
                 gamma: float = 3.0
 
-            @metric_value(main=True)
+            @metric_property(main=True)
             def value(self) -> float:
                 return 1.0
 

@@ -100,7 +100,7 @@ def _resolve_value(metric: Any, value_name: str) -> int | float:
     1. If the dataset-level metric exposes the value as a scalar, use it directly
        (e.g. WER.value / WER.num_edits).
     2. Otherwise read it from each example metric and sum across examples. This is
-       valid because example-only ``metric_value``s in bewer are additive counts
+       valid because example-only ``metric_property``s in bewer are additive counts
        (e.g. Levenshtein.num_substitutions).
     3. If it is neither, raise — catches typos and non-numeric values such as the
        Levenshtein ``alignment`` object.
