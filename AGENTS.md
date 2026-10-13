@@ -49,7 +49,7 @@ poetry run twine check dist/*  # Validate built packages
 - Main entry point for the framework
 - Manages collections of Examples and provides lazy metric computation
 - Supports loading data from CSV, pandas DataFrames (with planned HuggingFace support)
-- Configuration system based on BewerConfig (frozen dataclass) with Python profiles
+- Configuration system based on BewerConfig (frozen dataclass) with Python configs
 
 **Example** (`src/bewer/core/example.py`)
 - Represents a single reference-hypothesis pair
@@ -64,7 +64,7 @@ poetry run twine check dist/*  # Validate built packages
 
 **Preprocessing Pipeline** (`src/bewer/preprocessing/`)
 - Three-stage pipeline: standardization → tokenization → token-level normalization
-- Configured via Python profiles (`src/bewer/profiles/__init__.py`)
+- Configured via Python configs (`src/bewer/defaults.py`)
 - Each stage is a series of function applications
 - Standardizers: Unicode normalization (NFC)
 - Tokenizers: Whitespace-based with customizable symbol handling
@@ -85,7 +85,7 @@ poetry run twine check dist/*  # Validate built packages
 - Error alignment metrics: `error_align.py` (uses external error-align package)
 - Insertion rate: `insertion_rate.py` — counts insertions that are part of contiguous insertion runs of length >= `min_run_length` (default 1), normalized by the number of reference tokens. When `min_run_length=1`, all insertions are counted. When `min_run_length>=2`, only burst insertion runs are counted — a hallucination signal. The `alignment` parameter (default `'levenshtein'`) selects the alignment backend; `'error_align'` is also available. Depends on the Levenshtein or ErrorAlign metric for alignment.
 - Key term metrics (recall, precision, F-score, CER, etc.): `ktr.py`, `ktp.py`, `ktf.py`, `ktcer.py`, `rktr.py`, `kter.py`
-- Orthographically-complex term metrics: `orthographically_complex_term.py` — subclass the key-term metrics over an `orthographically_complex_terms` vocabulary auto-extracted from the references (terms selected by orthography: acronyms, alphanumerics, hyphen compounds, Greek-bearing tokens; e.g. `MRI`, `HbA1c`, `CT-scan`). Auto-registered on first use, so `dataset.metrics.orthographically_complex_term_recall().value` works out of the box. Run under the `orthographically_complex_term` tokenizer (no hyphen split) and `cased` normalizer (no lowercasing), so a term's surface form is scored strictly. The name marks the orthographic dimension of "term complexity".
+- Orthographically-complex term metrics: `orthographically_complex_term.py` — registers KTR/KTP/KTF with a different tokenizer, normalizer, and vocab. The `orthographically_complex_terms` vocabulary is auto-extracted from the references (terms selected by orthography: acronyms, alphanumerics, hyphen compounds; e.g. `MRI`, `HbA1c`, `CT-scan`). Run under the `orthographically_complex_term` tokenizer (no hyphen split) and `cased` normalizer (no lowercasing).
 
 ### Vocabulary Extractors (`src/bewer/extractors/`)
 
@@ -115,33 +115,30 @@ Library of pre-defined `ExtractorFn` callables — `Dataset -> Iterable[str]` fu
 
 ## Configuration System
 
-Configuration is managed through `BewerConfig` (a frozen dataclass) and Python profiles:
+Configuration is managed through `BewerConfig` (a frozen dataclass) and Python configs:
 
-- Config dataclass: `src/bewer/config.py` — `BewerConfig`, `PipelineStep`, `merge_configs()`, `resolve_config()`, `resolve_profile()`, `to_yaml()`, `from_yaml()`
-- Profiles: `src/bewer/profiles/__init__.py` — language delta profiles (`base`, `en`, `da`, `de`, `fr`) registered via `@REGISTRY.register_profile`
-- Registry: `src/bewer/registry.py` — unified registry for transforms, tokenizers, extractors, vocabularies, metrics, and profiles
-- Extensible: users can provide custom `BewerConfig` instances or register custom profiles
+- Config dataclass: `src/bewer/config.py` — `BewerConfig`, `Transform`, `merge_configs()`, `resolve_config()`, `get_config()`
+- Configs: `src/bewer/defaults.py` — built-in config presets (`base`, `en`, `da`, `de`, `fr`) registered via `@REGISTRY.configs.register`
+- Registry: `src/bewer/registry.py` — unified registry for configs and metrics
+- Extensible: users can provide custom `BewerConfig` instances or register custom configs
 - Pipeline resolution happens in `config.py` (`resolve_config()`)
-- YAML round-trip supported via `to_yaml()`/`from_yaml()` for sharing eval setups
 
 Example config structure:
 ```python
-from bewer import BewerConfig, PipelineStep
+from bewer import BewerConfig, Transform
+from bewer.preprocessing.normalization import lowercase, transliterate_latin_letters
 
 config = BewerConfig(
     standardizers={
-        "default": (
-            PipelineStep("nfc"),
-        ),
+        "default": (Transform(nfc),),
     },
     tokenizers={
-        "default": PipelineStep("strip_punctuation_keep_symbols_pattern",
-                                params={"split_on_escaped": "-/"}),
+        "default": strip_punctuation_keep_symbols_pattern(split_on_escaped="-/"),
     },
     normalizers={
         "default": (
-            PipelineStep("lowercase"),
-            PipelineStep("transliterate_latin_letters"),
+            Transform(lowercase),
+            Transform(transliterate_latin_letters),
         ),
     },
 )
@@ -166,7 +163,6 @@ config = BewerConfig(
 **Core Dependencies**:
 - pandas: Data handling
 - regex, rapidfuzz: Text processing and matching
-- pyyaml: Configuration management (YAML round-trip)
 - error-align: External alignment library (Corti package)
 - jinja2: HTML template rendering
 - rich: CLI output formatting
