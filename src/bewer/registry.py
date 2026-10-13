@@ -7,9 +7,7 @@ exposed as ``REGISTRY.metrics``.
 Registration API
 ----------------
 
-    @REGISTRY.configs.register("da", extends="base")
-    def danish_delta() -> BewerConfig:
-        ...
+    REGISTRY.configs.register("da", merge_configs(base, delta))
 
 Preprocessing functions (transforms, tokenizers) and vocabularies are NOT
 registered — they are passed directly in ``BewerConfig``.
@@ -18,7 +16,7 @@ registered — they are passed directly in ``BewerConfig``.
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Any, Callable
+from typing import Any
 
 
 class ComponentRegistry:
@@ -28,38 +26,15 @@ class ComponentRegistry:
         self._kind = kind
         self._components: dict[str, Any] = {}
 
-    def register(self, name: str, component: Any = None, *, extends: str | None = None) -> Any:
+    def register(self, name: str, component: Any) -> Any:
         """Register a component under ``name``.
 
-        Direct call::
-
-            registry.register("my_extractor", extractor_instance)
-
-        Decorator (for config functions)::
-
-            @registry.register("da", extends="base")
-            def danish_delta() -> BewerConfig: ...
-
-        If ``extends`` is given, it is set as an attribute on the function
-        and used by ``get_config`` to resolve the inheritance chain.
+        Raises ValueError if the name is already registered.
         """
-        if component is not None:
-            if extends:
-                raise TypeError("'extends' is only valid with the decorator form")
-            if name in self._components:
-                raise ValueError(f"{self._kind} '{name}' is already registered")
-            self._components[name] = component
-            return component
-
-        def decorator(fn: Callable) -> Callable:
-            if name in self._components:
-                raise ValueError(f"{self._kind} '{name}' is already registered")
-            if extends:
-                fn.extends = extends
-            self._components[name] = fn
-            return fn
-
-        return decorator
+        if name in self._components:
+            raise ValueError(f"{self._kind} '{name}' is already registered")
+        self._components[name] = component
+        return component
 
     def get(self, name: str) -> Any:
         """Retrieve a component by name. Raises KeyError if missing."""

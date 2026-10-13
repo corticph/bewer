@@ -2,6 +2,7 @@
 
 import pytest
 
+from bewer.config import BewerConfig
 from bewer.registry import REGISTRY, ComponentRegistry
 
 
@@ -14,27 +15,6 @@ class TestComponentRegistry:
         reg.register("foo", lambda x: x)
         assert "foo" in reg
         assert reg.get("foo")(42) == 42
-
-    def test_register_decorator_named(self):
-        """@register("name") uses the explicit name."""
-        reg = ComponentRegistry("test")
-
-        @reg.register("explicit")
-        def my_func(x):
-            return x
-
-        assert "explicit" in reg
-        assert "my_func" not in reg
-
-    def test_register_decorator_with_extends(self):
-        """@register("name", extends="base") sets the extends attribute."""
-        reg = ComponentRegistry("test")
-
-        @reg.register("da", extends="base")
-        def my_func():
-            return None
-
-        assert reg.get("da").extends == "base"
 
     def test_register_duplicate_raises(self):
         """Registering a duplicate name raises ValueError."""
@@ -92,7 +72,7 @@ class TestRegistry:
         """isolated() restores the registry state after exit."""
         before = set(isolated_registry.configs.list())
         with REGISTRY.isolated():
-            REGISTRY.configs.register("temp", lambda: None)
+            REGISTRY.configs.register("temp", BewerConfig())
             assert "temp" in REGISTRY.configs
         assert "temp" not in REGISTRY.configs
         assert set(REGISTRY.configs.list()) == before

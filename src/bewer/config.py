@@ -196,15 +196,5 @@ def _validate_params(fn: Callable, params: dict[str, Any], *, skip_first: bool =
 
 
 def get_config(name: str) -> BewerConfig:
-    """Resolve a registered config by name, following the extends chain.
-
-    A config without ``extends`` returns its delta directly.
-    A config with ``extends`` is merged onto its parent.
-    """
-    fn = REGISTRY.configs.get(name)
-    extends = getattr(fn, "extends", None)
-    delta = fn()
-    if extends:
-        base = get_config(extends)
-        return merge_configs(base, delta)
-    return delta
+    """Retrieve a registered config by name."""
+    return REGISTRY.configs.get(name)
