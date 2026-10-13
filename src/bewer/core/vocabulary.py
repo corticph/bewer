@@ -72,11 +72,6 @@ class Vocabulary:
         """The vocabulary name."""
         return self._name
 
-    @property
-    def has_sources(self) -> bool:
-        """Whether the vocabulary has any term source (static terms or extractors)."""
-        return bool(self._static_terms or self._extractors)
-
     # ---- builder ---------------------------------------------------------------------
 
     def add_terms(self, terms: Iterable[str]) -> "Vocabulary":

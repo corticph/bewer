@@ -28,11 +28,6 @@ class TestVocabularyBuilder:
         assert vocab.add_terms(["a"]) is vocab
         assert vocab.add_extractor(lambda ds: []) is vocab
 
-    def test_has_sources(self):
-        assert Vocabulary(name="x").has_sources is False
-        assert Vocabulary(name="x").add_terms(["a"]).has_sources is True
-        assert Vocabulary(name="x").add_extractor(lambda ds: []).has_sources is True
-
     def test_add_terms_rejects_bare_string(self):
         with pytest.raises(TypeError):
             Vocabulary(name="x").add_terms("not_a_list")
@@ -53,7 +48,7 @@ class TestVocabularyBuilder:
         path = tmp_path / "terms.txt"
         path.write_text("diabetes\nasthma\n")
         vocab = Vocabulary(name="m").add_file(str(path))
-        assert vocab.has_sources is True
+        assert "diabetes" in vocab._static_terms
 
     def test_add_file_missing_raises(self):
         with pytest.raises(FileNotFoundError):
