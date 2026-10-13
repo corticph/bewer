@@ -10,7 +10,7 @@ __all__ = ["InsertionRate"]
 
 
 class InsertionRate_(ExampleMetric):
-    @property
+    @metric_property(is_value=False)
     def _alignment(self) -> Alignment:
         return self.parent_metric._alignment[self.example.index].alignment
 
