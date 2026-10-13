@@ -4,6 +4,8 @@ import inspect
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any, Callable
 
+import regex
+
 from bewer.flags import NORMALIZERS, STANDARDIZERS, TOKENIZERS
 from bewer.preprocessing.normalization import Normalizer
 from bewer.preprocessing.tokenization import Tokenizer
@@ -34,9 +36,9 @@ class Pipelines:
     Three ``{name: pipeline}`` dicts: standardizers, tokenizers, normalizers.
     """
 
-    standardizers: dict[str, Any] = field(default_factory=dict)
-    tokenizers: dict[str, Any] = field(default_factory=dict)
-    normalizers: dict[str, Any] = field(default_factory=dict)
+    standardizers: dict[str, Normalizer] = field(default_factory=dict)
+    tokenizers: dict[str, Tokenizer] = field(default_factory=dict)
+    normalizers: dict[str, Normalizer] = field(default_factory=dict)
 
     def __repr__(self) -> str:
         stages = ((STANDARDIZERS, self.standardizers), (TOKENIZERS, self.tokenizers), (NORMALIZERS, self.normalizers))
@@ -98,9 +100,9 @@ class BewerConfig:
     """
 
     standardizers: dict[str, tuple[Transform, ...]] = field(default_factory=dict)
-    tokenizers: dict[str, Any] = field(default_factory=dict)
+    tokenizers: dict[str, regex.Pattern] = field(default_factory=dict)
     normalizers: dict[str, tuple[Transform, ...]] = field(default_factory=dict)
-    vocabularies: dict[str, Any] = field(default_factory=dict)
+    vocabularies: dict[str, "Vocabulary"] = field(default_factory=dict)
 
     def replace(self, **kwargs) -> BewerConfig:
         """Return a copy with the given fields replaced."""
@@ -161,7 +163,7 @@ def _resolve_normalizer(name: str, steps: tuple[Transform, ...]) -> Normalizer:
     return Normalizer(pipeline, name)
 
 
-def _resolve_tokenizer(name: str, pattern: Any) -> Tokenizer:
+def _resolve_tokenizer(name: str, pattern: regex.Pattern) -> Tokenizer:
     """Wrap a pattern (from a factory call) in a Tokenizer."""
     return Tokenizer(pattern, name)
 
