@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Union
 
 import pandas as pd
 
-from bewer.config import BewerConfig, get_config, resolve_config
+from bewer.configs.config import BewerConfig, get_config, resolve_config
 from bewer.core.example import Example
 from bewer.core.text import TokenList
 from bewer.metrics.base import MetricCollection

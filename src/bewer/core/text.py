@@ -9,7 +9,7 @@ from bewer.core.token import Token
 from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
-    from bewer.config import Pipelines
+    from bewer.configs import Pipelines
     from bewer.core.example import Example
 
 __all__ = ["Text", "TextType", "TokenList"]

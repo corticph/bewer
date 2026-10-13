@@ -4,7 +4,7 @@ from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
 
 if TYPE_CHECKING:
-    from bewer.config import Pipelines
+    from bewer.configs import Pipelines
     from bewer.core.dataset import Dataset
 
 __all__ = ["Example"]

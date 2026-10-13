@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer.config import BewerConfig
+from bewer.configs import BewerConfig
 from bewer.registry import REGISTRY, ComponentRegistry
 
 

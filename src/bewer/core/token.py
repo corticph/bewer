@@ -7,7 +7,7 @@ from bewer.preprocessing.context import NORMALIZER_NAME
 from bewer.reporting.python.utils import highlight_span
 
 if TYPE_CHECKING:
-    from bewer.config import Pipelines
+    from bewer.configs import Pipelines
     from bewer.core.text import Text
 
 __all__ = ["Token"]

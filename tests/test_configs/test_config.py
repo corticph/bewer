@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer.config import (
+from bewer.configs import (
     BewerConfig,
     Pipelines,
     Transform,

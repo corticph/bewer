@@ -38,9 +38,8 @@ class metric_property(cached_property):
 
     Common usage patterns::
 
-        @metric_property(main=True)                              # the metric's main value
+        @metric_property(main=True)                               # the metric's main value
         @metric_property()                                        # a regular metric value
-        @metric_property                                          # private value (inferred from _ prefix)
         @metric_property(is_value=False)                          # internal computed property (e.g. _matcher)
         @metric_property(set_pipeline=False, is_dependency=True)  # borrowed metric dependency
 
