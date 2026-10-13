@@ -234,19 +234,19 @@ class TestTokenizer:
 
     def test_init_with_string_pattern(self):
         """Test initialization with string pattern."""
-        tokenizer = Tokenizer(r"\S+", name="whitespace")
+        tokenizer = Tokenizer("whitespace", r"\S+")
         assert tokenizer._name == "whitespace"
         assert isinstance(tokenizer._pattern, re.Pattern)
 
     def test_init_with_compiled_pattern(self):
         """Test initialization with compiled pattern."""
         pattern = re.compile(r"\S+")
-        tokenizer = Tokenizer(pattern, name="whitespace")
+        tokenizer = Tokenizer("whitespace", pattern)
         assert tokenizer._pattern is pattern
 
     def test_basic_tokenization(self):
         """Test basic tokenization."""
-        tokenizer = Tokenizer(r"\S+", name="whitespace")
+        tokenizer = Tokenizer("whitespace", r"\S+")
         matches = tokenizer("hello world")
         assert len(matches) == 2
         assert matches[0].group() == "hello"
@@ -254,13 +254,13 @@ class TestTokenizer:
 
     def test_returns_match_objects(self):
         """Test that tokenizer returns regex Match objects."""
-        tokenizer = Tokenizer(r"\S+", name="whitespace")
+        tokenizer = Tokenizer("whitespace", r"\S+")
         matches = tokenizer("hello world")
         assert all(isinstance(m, re.Match) for m in matches)
 
     def test_match_positions(self):
         """Test that matches have correct positions."""
-        tokenizer = Tokenizer(r"\S+", name="whitespace")
+        tokenizer = Tokenizer("whitespace", r"\S+")
         matches = tokenizer("hello world")
         assert matches[0].start() == 0
         assert matches[0].end() == 5
@@ -269,32 +269,26 @@ class TestTokenizer:
 
     def test_empty_string(self):
         """Test tokenization of empty string."""
-        tokenizer = Tokenizer(r"\S+", name="whitespace")
+        tokenizer = Tokenizer("whitespace", r"\S+")
         matches = tokenizer("")
         assert len(matches) == 0
 
     def test_whitespace_only(self):
         """Test tokenization of whitespace-only string."""
-        tokenizer = Tokenizer(r"\S+", name="whitespace")
+        tokenizer = Tokenizer("whitespace", r"\S+")
         matches = tokenizer("   \t\n   ")
         assert len(matches) == 0
 
     def test_repr_with_name(self):
         """Test string representation with name."""
-        tokenizer = Tokenizer(r"\S+", name="test_tokenizer")
+        tokenizer = Tokenizer("test_tokenizer", r"\S+")
         repr_str = repr(tokenizer)
         assert "test_tokenizer" in repr_str
         assert r"\S+" in repr_str
 
-    def test_repr_without_name(self):
-        """Test string representation without name."""
-        tokenizer = Tokenizer(r"\S+", name=None)
-        repr_str = repr(tokenizer)
-        assert r"\S+" in repr_str
-
     def test_leading_trailing_whitespace(self):
         """Test tokenization with leading/trailing whitespace."""
-        tokenizer = Tokenizer(r"\S+", name="whitespace")
+        tokenizer = Tokenizer("whitespace", r"\S+")
         matches = tokenizer("  hello world  ")
         assert len(matches) == 2
         assert matches[0].group() == "hello"
@@ -302,7 +296,7 @@ class TestTokenizer:
 
     def test_punctuation_in_tokens(self):
         """Test that punctuation is included in tokens."""
-        tokenizer = Tokenizer(r"\S+", name="whitespace")
+        tokenizer = Tokenizer("whitespace", r"\S+")
         matches = tokenizer("hello, world!")
         assert matches[0].group() == "hello,"
         assert matches[1].group() == "world!"

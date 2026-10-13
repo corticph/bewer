@@ -1,13 +1,21 @@
+from __future__ import annotations
+
 import unicodedata
 from functools import lru_cache
+from typing import TYPE_CHECKING
 
 import regex as re
 from unidecode import unidecode
 
 from bewer.preprocessing._unicode_normalization_tables import APOSTROPHE_TABLE, HYPHEN_TABLE, SLASH_TABLE
 
+if TYPE_CHECKING:
+    from bewer.configs.config import Transform
+
 __all__ = [
+    "TransformPipeline",
     "Normalizer",
+    "Standardizer",
     "lowercase",
     "nfc",
     "normalize_apostrophe_variants",
@@ -232,42 +240,50 @@ def remove_symbols(text: str) -> str:
     return "".join(_remove_symbols(c) for c in text)
 
 
-class Normalizer(object):
-    def __init__(
-        self,
-        pipeline: list[callable],
-        name: str = "__no_name__",
-    ):
-        """Initialize a normalizer with a pipeline of normalization functions.
+class TransformPipeline:
+    """A pipeline of transforms applied to text or tokens.
 
-        Args:
-            name (str): The config name of the normalizer.
-            pipeline (list[callable]): A list of normalization functions to apply in sequence.
-        """
-        self._pipeline = pipeline
+    The pipeline holds a name (for repr and introspection) and a sequence of
+    ``Transform`` objects applied in order.
+    """
+
+    def __init__(self, name: str, *transforms: Transform):
         self._name = name
+        self._transforms = transforms
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def transforms(self) -> tuple[Transform, ...]:
+        return self._transforms
 
     def __call__(self, text: str) -> str:
-        """Apply the normalization pipeline to the input text.
-
-        Args:
-            text (str): The input text to normalize.
-
-        Returns:
-            str: The normalized text.
-        """
-        return self._normalize(text)
+        return self._apply(text)
 
     @lru_cache(maxsize=32768)
-    def _normalize(self, text: str) -> str:
-        """Cached normalization."""
-        for func, kwargs in self._pipeline:
-            text = func(text, **kwargs)
+    def _apply(self, text: str) -> str:
+        for transform in self._transforms:
+            text = transform(text)
         return text
 
-    def __repr__(self):
-        """Return a string representation of the Normalizer object."""
-        func_names = " -> ".join(func.__name__ for func, _ in self._pipeline)
-        if self._name is None:
-            return f"Normalizer({func_names})"
-        return f"Normalizer({self._name}: {func_names})"
+    def __repr__(self) -> str:
+        func_names = " -> ".join(t.fn.__name__ for t in self._transforms)
+        return f"{type(self).__name__}({self._name}: {func_names})"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return self._name == other._name and self._transforms == other._transforms
+
+    def __hash__(self) -> int:
+        return hash((self._name, self._transforms))
+
+
+class Normalizer(TransformPipeline):
+    """A pipeline of transforms applied at the normalization stage."""
+
+
+class Standardizer(TransformPipeline):
+    """A pipeline of transforms applied at the standardization stage."""

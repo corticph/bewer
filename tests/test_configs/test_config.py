@@ -1,4 +1,4 @@
-"""Tests for bewer.config module — BewerConfig, configs, merge, resolution."""
+"""Tests for bewer.configs module — BewerConfig, configs, merge, resolution."""
 
 import pytest
 
@@ -10,7 +10,13 @@ from bewer.configs import (
     merge_configs,
     resolve_config,
 )
-from bewer.preprocessing.normalization import lowercase, nfc, transliterate_latin_letters, transliterate_symbols
+from bewer.preprocessing.normalization import (
+    Normalizer,
+    lowercase,
+    nfc,
+    transliterate_latin_letters,
+    transliterate_symbols,
+)
 
 
 class TestBewerConfig:
@@ -20,7 +26,7 @@ class TestBewerConfig:
         """Each BewerConfig gets its own default dicts (no shared mutable default)."""
         a = BewerConfig()
         b = BewerConfig()
-        a.standardizers["x"] = ()
+        a.standardizers["x"] = None
         assert b.standardizers == {}
 
 
@@ -31,23 +37,23 @@ class TestMergeConfigs:
         """Delta variant replaces base variant entirely."""
         base = BewerConfig(
             normalizers={
-                "default": (Transform(lowercase),),
-                "cased": (Transform(transliterate_symbols),),
+                "default": Normalizer("default", Transform(lowercase)),
+                "cased": Normalizer("cased", Transform(transliterate_symbols)),
             },
         )
         delta = BewerConfig(
             normalizers={
-                "default": (Transform(transliterate_latin_letters),),
+                "default": Normalizer("default", Transform(transliterate_latin_letters)),
             },
         )
         merged = merge_configs(base, delta)
-        assert merged.normalizers["default"] == (Transform(transliterate_latin_letters),)
-        assert merged.normalizers["cased"] == (Transform(transliterate_symbols),)
+        assert merged.normalizers["default"] == Normalizer("default", Transform(transliterate_latin_letters))
+        assert merged.normalizers["cased"] == Normalizer("cased", Transform(transliterate_symbols))
 
     def test_empty_delta_inherits_all(self):
         """An empty delta inherits everything from the base."""
         base = BewerConfig(
-            standardizers={"default": (Transform(nfc),)},
+            standardizers={"default": Normalizer("default", Transform(nfc))},
         )
         merged = merge_configs(base, BewerConfig())
         assert merged.standardizers == base.standardizers
@@ -75,8 +81,8 @@ class TestResolveConfig:
     def test_da_config_changes_normalizer(self):
         """Danish config changes the default normalizer."""
         config = get_config("da")
-        steps = config.normalizers["default"]
-        transliterate = [s for s in steps if s.fn == transliterate_latin_letters]
+        normalizer = config.normalizers["default"]
+        transliterate = [t for t in normalizer.transforms if t.fn == transliterate_latin_letters]
         assert len(transliterate) == 1
         assert transliterate[0].params.get("preserve") == "æøå"
 
@@ -93,8 +99,8 @@ class TestResolveConfig:
         fr_pattern = config.tokenizers["default"]
         base_pattern = get_config("base").tokenizers["default"]
         assert fr_pattern.pattern != base_pattern.pattern
-        steps = config.normalizers["default"]
-        transliterate = [s for s in steps if s.fn == transliterate_latin_letters]
+        normalizer = config.normalizers["default"]
+        transliterate = [t for t in normalizer.transforms if t.fn == transliterate_latin_letters]
         assert transliterate[0].params.get("preserve") is not None
 
     def test_unknown_config_raises(self):
@@ -107,7 +113,7 @@ class TestResolveConfigToPipelines:
     """Tests for resolve_config()."""
 
     def test_resolves_to_pipelines(self):
-        """resolve_config returns a Pipelines namedtuple."""
+        """resolve_config returns a Pipelines object."""
         config = get_config("base")
         pipelines = resolve_config(config)
         assert isinstance(pipelines, Pipelines)
@@ -119,7 +125,7 @@ class TestResolveConfigToPipelines:
             return text.upper()
 
         config = BewerConfig(
-            normalizers={"default": (Transform(my_upper),)},
+            normalizers={"default": Normalizer("default", Transform(my_upper))},
         )
         pipelines = resolve_config(config)
         assert "default" in pipelines.normalizers

@@ -4,10 +4,8 @@ import inspect
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable
 
-import regex
-
 from bewer.flags import NORMALIZERS, STANDARDIZERS, TOKENIZERS
-from bewer.preprocessing.normalization import Normalizer
+from bewer.preprocessing.normalization import Normalizer, Standardizer
 from bewer.preprocessing.tokenization import Tokenizer
 from bewer.registry import REGISTRY
 
@@ -91,18 +89,19 @@ class Transform:
 class BewerConfig:
     """A preprocessing configuration.
 
-    Each field maps variant names to pipeline definitions:
+    Each field maps variant names to resolved pipeline objects:
 
-    - ``standardizers`` / ``normalizers``: variant name -> tuple of Transforms
-    - ``tokenizers``: variant name -> compiled regex Pattern
+    - ``standardizers``: variant name -> Standardizer
+    - ``tokenizers``: variant name -> Tokenizer
+    - ``normalizers``: variant name -> Normalizer
     - ``vocabularies``: dict of name -> Vocabulary instances
     """
 
     def __init__(
         self,
-        standardizers: dict[str, tuple[Transform, ...]] | None = None,
-        tokenizers: dict[str, regex.Pattern] | None = None,
-        normalizers: dict[str, tuple[Transform, ...]] | None = None,
+        standardizers: dict[str, Standardizer] | None = None,
+        tokenizers: dict[str, Tokenizer] | None = None,
+        normalizers: dict[str, Normalizer] | None = None,
         vocabularies: dict[str, Vocabulary] | None = None,
         *,
         extends: str | None = None,
@@ -169,26 +168,12 @@ def merge_configs(base: BewerConfig, delta: BewerConfig) -> BewerConfig:
 
 
 def resolve_config(config: BewerConfig) -> Pipelines:
-    """Resolve a BewerConfig to Pipelines namedtuple."""
-    standardizers = {name: _resolve_normalizer(name, steps) for name, steps in config.standardizers.items()}
-    tokenizers = {name: _resolve_tokenizer(name, pattern) for name, pattern in config.tokenizers.items()}
-    normalizers = {name: _resolve_normalizer(name, steps) for name, steps in config.normalizers.items()}
+    """Wrap a BewerConfig's pipeline dicts into a Pipelines object."""
     return Pipelines(
-        standardizers=standardizers,
-        tokenizers=tokenizers,
-        normalizers=normalizers,
+        standardizers=config.standardizers,
+        tokenizers=config.tokenizers,
+        normalizers=config.normalizers,
     )
-
-
-def _resolve_normalizer(name: str, steps: tuple[Transform, ...]) -> Normalizer:
-    """Resolve a tuple of Transforms to a Normalizer."""
-    pipeline = [(step.fn, step.params) for step in steps]
-    return Normalizer(pipeline, name)
-
-
-def _resolve_tokenizer(name: str, pattern: regex.Pattern) -> Tokenizer:
-    """Wrap a pattern (from a factory call) in a Tokenizer."""
-    return Tokenizer(pattern, name)
 
 
 def _validate_params(fn: Callable, params: dict[str, Any], *, skip_first: bool = False) -> None:

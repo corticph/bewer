@@ -1,5 +1,6 @@
 """Tests for bewer.preprocessing.normalization module."""
 
+from bewer.configs.config import Transform
 from bewer.preprocessing.normalization import (
     Normalizer,
     lowercase,
@@ -329,38 +330,26 @@ class TestNormalizer:
 
     def test_single_function_pipeline(self):
         """Test normalizer with a single function."""
-        normalizer = Normalizer([(lowercase, {})], name="lowercase_only")
+        normalizer = Normalizer("lowercase_only", Transform(lowercase))
         assert normalizer("HELLO") == "hello"
 
     def test_multi_function_pipeline(self):
         """Test normalizer with multiple functions."""
-        normalizer = Normalizer(
-            [(lowercase, {}), (remove_symbols, {})],
-            name="lowercase_and_remove",
-        )
+        normalizer = Normalizer("lowercase_and_remove", Transform(lowercase), Transform(remove_symbols))
         assert normalizer("HELLO!") == "hello"
 
     def test_empty_pipeline(self):
         """Test normalizer with empty pipeline."""
-        normalizer = Normalizer([], name="empty")
+        normalizer = Normalizer("empty")
         assert normalizer("hello") == "hello"
 
     def test_repr_with_name(self):
         """Test string representation with name."""
-        normalizer = Normalizer([(lowercase, {})], name="test")
+        normalizer = Normalizer("test", Transform(lowercase))
         assert "test" in repr(normalizer)
-        assert "lowercase" in repr(normalizer)
-
-    def test_repr_no_name(self):
-        """Test string representation without name."""
-        normalizer = Normalizer([(lowercase, {})], name=None)
         assert "lowercase" in repr(normalizer)
 
     def test_pipeline_order(self):
         """Test that pipeline functions are applied in order."""
-        # If we lowercase first, then transliterate, result differs from reverse
-        normalizer = Normalizer(
-            [(nfc, {}), (lowercase, {})],
-            name="nfc_then_lower",
-        )
+        normalizer = Normalizer("nfc_then_lower", Transform(nfc), Transform(lowercase))
         assert normalizer("CAFÉ") == "café"

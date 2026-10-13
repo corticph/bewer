@@ -6,6 +6,8 @@ from bewer.configs.config import BewerConfig, Transform
 from bewer.core.vocabulary import Vocabulary
 from bewer.extractors.orthographically_complex_term import OrthographicallyComplexTermExtractor
 from bewer.preprocessing.normalization import (
+    Normalizer,
+    Standardizer,
     lowercase,
     nfc,
     normalize_apostrophe_variants,
@@ -15,6 +17,7 @@ from bewer.preprocessing.normalization import (
     transliterate_symbols,
 )
 from bewer.preprocessing.tokenization import (
+    Tokenizer,
     keep_symbols_and_punctuation_pattern,
     strip_punctuation_keep_symbols_pattern,
 )
@@ -27,7 +30,8 @@ REGISTRY.configs.register(
     "base",
     BewerConfig(
         standardizers={
-            "default": (
+            "default": Standardizer(
+                "default",
                 Transform(nfc),
                 Transform(normalize_apostrophe_variants),
                 Transform(normalize_hyphen_variants),
@@ -35,21 +39,29 @@ REGISTRY.configs.register(
             ),
         },
         tokenizers={
-            "default": strip_punctuation_keep_symbols_pattern(split_on_escaped="-/"),
-            "with_punctuation": keep_symbols_and_punctuation_pattern(
-                punct_chars='.,!?:;"-/()“”«»„¡¿',
-                keep_newlines=True,
+            "default": Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/")),
+            "with_punctuation": Tokenizer(
+                "with_punctuation",
+                keep_symbols_and_punctuation_pattern(
+                    punct_chars='.,!?:;"-/()“”«»„¡¿',
+                    keep_newlines=True,
+                ),
             ),
-            "key_term": strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'"),
-            "orthographically_complex_term": strip_punctuation_keep_symbols_pattern(split_on_escaped="/'"),
+            "key_term": Tokenizer("key_term", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'")),
+            "orthographically_complex_term": Tokenizer(
+                "orthographically_complex_term",
+                strip_punctuation_keep_symbols_pattern(split_on_escaped="/'"),
+            ),
         },
         normalizers={
-            "default": (
+            "default": Normalizer(
+                "default",
                 Transform(lowercase),
                 Transform(transliterate_latin_letters),
                 Transform(transliterate_symbols),
             ),
-            "cased": (
+            "cased": Normalizer(
+                "cased",
                 Transform(transliterate_latin_letters),
                 Transform(transliterate_symbols),
             ),
