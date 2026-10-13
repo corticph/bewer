@@ -16,13 +16,7 @@ class KTFPR_(ExampleMetric):
     @metric_property
     def num_ref_tokens(self) -> int:
         """Get the number of reference tokens (N_R) for this example."""
-        alignment = self.example.metrics.levenshtein(
-            normalized=self.params.normalized,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        ).alignment
-        return alignment.num_matches + alignment.num_substitutions + alignment.num_deletions
+        return self.parent_metric._kt_stats[self.example.index].num_ref_tokens
 
     @metric_property(main=True)
     def value(self) -> float:
@@ -89,7 +83,7 @@ class KTFPR(Metric):
     @metric_property
     def num_ref_tokens(self) -> int:
         """Get the total number of reference tokens (N_R) across the dataset."""
-        return sum(em.num_ref_tokens for em in self)
+        return self._kt_stats.num_ref_tokens
 
     @metric_property(main=True)
     def value(self) -> float:

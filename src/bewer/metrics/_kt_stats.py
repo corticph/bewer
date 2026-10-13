@@ -165,6 +165,12 @@ class _KTStats_(ExampleMetric):
         """Get the number of FP units (occurrences in exact-match mode, token positions in partial-credit mode)."""
         return len(self.fp_alignments)
 
+    @metric_property
+    def num_ref_tokens(self) -> int:
+        """Get the number of reference tokens (N_R) for this example."""
+        lev = self.parent_metric._levenshtein[self.example.index]
+        return lev.num_matches + lev.num_substitutions + lev.num_deletions
+
 
 @METRIC_REGISTRY.register("_kt_stats", tokenizer="key_term")
 class _KTStats(Metric):
@@ -239,3 +245,8 @@ class _KTStats(Metric):
     def num_fp(self) -> int:
         """Get the number of key terms in the hypothesis texts that are not in the reference texts."""
         return sum(em.num_fp for em in self)
+
+    @metric_property
+    def num_ref_tokens(self) -> int:
+        """Get the total number of reference tokens (N_R) across the dataset."""
+        return sum(em.num_ref_tokens for em in self)
