@@ -14,25 +14,7 @@ from bewer.preprocessing.normalization import lowercase, nfc, transliterate_lati
 
 
 class TestBewerConfig:
-    """Tests for the BewerConfig dataclass."""
-
-    def test_frozen(self):
-        """BewerConfig is frozen and cannot be mutated."""
-        config = BewerConfig()
-        with pytest.raises(AttributeError):
-            config.standardizers = {}
-
-    def test_replace(self):
-        """replace() returns a copy with the given fields changed."""
-        config = BewerConfig()
-        new = config.replace(
-            normalizers={
-                "default": (Transform(lowercase),),
-            },
-        )
-        assert "default" in new.normalizers
-        assert len(new.normalizers["default"]) == 1
-        assert config.normalizers == {}
+    """Tests for the BewerConfig class."""
 
     def test_default_factory_independent(self):
         """Each BewerConfig gets its own default dicts (no shared mutable default)."""

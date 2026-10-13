@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable
 
 import regex
@@ -88,9 +88,8 @@ class Transform:
 # ============================================================
 
 
-@dataclass(frozen=True)
 class BewerConfig:
-    """A frozen preprocessing configuration.
+    """A preprocessing configuration.
 
     Each field maps variant names to pipeline definitions:
 
@@ -99,26 +98,50 @@ class BewerConfig:
     - ``vocabularies``: dict of name -> Vocabulary instances
     """
 
-    standardizers: dict[str, tuple[Transform, ...]] = field(default_factory=dict)
-    tokenizers: dict[str, regex.Pattern] = field(default_factory=dict)
-    normalizers: dict[str, tuple[Transform, ...]] = field(default_factory=dict)
-    vocabularies: dict[str, "Vocabulary"] = field(default_factory=dict)
-
-    def replace(self, **kwargs) -> BewerConfig:
-        """Return a copy with the given fields replaced."""
-        return replace(self, **kwargs)
+    def __init__(
+        self,
+        standardizers: dict[str, tuple[Transform, ...]] | None = None,
+        tokenizers: dict[str, regex.Pattern] | None = None,
+        normalizers: dict[str, tuple[Transform, ...]] | None = None,
+        vocabularies: dict[str, Vocabulary] | None = None,
+        *,
+        extends: str | None = None,
+    ):
+        if extends is not None:
+            base = get_config(extends)
+            self.standardizers = {**base.standardizers, **(standardizers or {})}
+            self.tokenizers = {**base.tokenizers, **(tokenizers or {})}
+            self.normalizers = {**base.normalizers, **(normalizers or {})}
+            self.vocabularies = {**base.vocabularies, **(vocabularies or {})}
+        else:
+            self.standardizers = standardizers or {}
+            self.tokenizers = tokenizers or {}
+            self.normalizers = normalizers or {}
+            self.vocabularies = vocabularies or {}
 
     def add_vocabulary(self, vocab: "Vocabulary") -> BewerConfig:
         """Return a new config with ``vocab`` added under its own name.
 
-        Args:
-            vocab: The :class:`~bewer.Vocabulary` to add. A different vocabulary
-                under the same name overwrites the existing one.
-
-        Returns:
-            A new ``BewerConfig`` — the original is unchanged (frozen dataclass).
+        A different vocabulary under the same name overwrites the existing one.
         """
-        return self.replace(vocabularies={**self.vocabularies, vocab.name: vocab})
+        return BewerConfig(
+            standardizers=self.standardizers,
+            tokenizers=self.tokenizers,
+            normalizers=self.normalizers,
+            vocabularies={**self.vocabularies, vocab.name: vocab},
+        )
+
+    def __repr__(self) -> str:
+        parts = []
+        for name, value in (
+            ("standardizers", self.standardizers),
+            ("tokenizers", self.tokenizers),
+            ("normalizers", self.normalizers),
+            ("vocabularies", self.vocabularies),
+        ):
+            if value:
+                parts.append(f"{name}={value!r}")
+        return f"BewerConfig({', '.join(parts)})"
 
 
 # ============================================================
