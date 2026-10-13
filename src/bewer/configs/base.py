@@ -29,47 +29,42 @@ __all__: list[str] = []
 REGISTRY.configs.register(
     "base",
     BewerConfig(
-        standardizers={
-            "default": Standardizer(
+        standardizers=(
+            Standardizer(
                 "default",
                 Transform(nfc),
                 Transform(normalize_apostrophe_variants),
                 Transform(normalize_hyphen_variants),
                 Transform(normalize_slash_variants),
             ),
-        },
-        tokenizers={
-            "default": Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/")),
-            "with_punctuation": Tokenizer(
+        ),
+        tokenizers=(
+            Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/")),
+            Tokenizer(
                 "with_punctuation",
                 keep_symbols_and_punctuation_pattern(
                     punct_chars='.,!?:;"-/()“”«»„¡¿',
                     keep_newlines=True,
                 ),
             ),
-            "key_term": Tokenizer("key_term", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'")),
-            "orthographically_complex_term": Tokenizer(
-                "orthographically_complex_term",
-                strip_punctuation_keep_symbols_pattern(split_on_escaped="/'"),
-            ),
-        },
-        normalizers={
-            "default": Normalizer(
+            Tokenizer("key_term", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'")),
+            Tokenizer("orthographically_complex_term", strip_punctuation_keep_symbols_pattern(split_on_escaped="/'")),
+        ),
+        normalizers=(
+            Normalizer(
                 "default",
                 Transform(lowercase),
                 Transform(transliterate_latin_letters),
                 Transform(transliterate_symbols),
             ),
-            "cased": Normalizer(
+            Normalizer(
                 "cased",
                 Transform(transliterate_latin_letters),
                 Transform(transliterate_symbols),
             ),
-        },
-        vocabularies={
-            "orthographically_complex_terms": Vocabulary("orthographically_complex_terms").add_extractor(
-                OrthographicallyComplexTermExtractor()
-            ),
-        },
+        ),
+        vocabularies=(
+            Vocabulary("orthographically_complex_terms").add_extractor(OrthographicallyComplexTermExtractor()),
+        ),
     ),
 )

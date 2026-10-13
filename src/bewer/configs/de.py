@@ -13,13 +13,13 @@ REGISTRY.configs.register(
     "de",
     BewerConfig(
         extends="base",
-        normalizers={
-            "default": Normalizer(
+        normalizers=(
+            Normalizer(
                 "default",
                 Transform(lowercase),
                 Transform(transliterate_latin_letters, preserve="äöüß"),
                 Transform(transliterate_symbols),
             ),
-        },
+        ),
     ),
 )

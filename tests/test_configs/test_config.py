@@ -36,15 +36,13 @@ class TestMergeConfigs:
     def test_variant_level_merge(self):
         """Delta variant replaces base variant entirely."""
         base = BewerConfig(
-            normalizers={
-                "default": Normalizer("default", Transform(lowercase)),
-                "cased": Normalizer("cased", Transform(transliterate_symbols)),
-            },
+            normalizers=(
+                Normalizer("default", Transform(lowercase)),
+                Normalizer("cased", Transform(transliterate_symbols)),
+            ),
         )
         delta = BewerConfig(
-            normalizers={
-                "default": Normalizer("default", Transform(transliterate_latin_letters)),
-            },
+            normalizers=(Normalizer("default", Transform(transliterate_latin_letters)),),
         )
         merged = merge_configs(base, delta)
         assert merged.normalizers["default"] == Normalizer("default", Transform(transliterate_latin_letters))
@@ -53,7 +51,7 @@ class TestMergeConfigs:
     def test_empty_delta_inherits_all(self):
         """An empty delta inherits everything from the base."""
         base = BewerConfig(
-            standardizers={"default": Normalizer("default", Transform(nfc))},
+            standardizers=(Normalizer("default", Transform(nfc)),),
         )
         merged = merge_configs(base, BewerConfig())
         assert merged.standardizers == base.standardizers
@@ -125,7 +123,7 @@ class TestResolveConfigToPipelines:
             return text.upper()
 
         config = BewerConfig(
-            normalizers={"default": Normalizer("default", Transform(my_upper))},
+            normalizers=(Normalizer("default", Transform(my_upper)),),
         )
         pipelines = resolve_config(config)
         assert "default" in pipelines.normalizers

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -81,6 +82,23 @@ class Transform:
         return hash((self.fn, tuple(sorted(self.params.items()))))
 
 
+def _to_dict(items) -> dict:
+    """Convert a sequence of named objects or a dict into a dict keyed by ``.name``.
+
+    Raises ``ValueError`` on duplicate names.
+    """
+    if items is None:
+        return {}
+    if isinstance(items, dict):
+        return dict(items)
+    result = {}
+    for item in items:
+        if item.name in result:
+            raise ValueError(f"Duplicate name: {item.name!r}")
+        result[item.name] = item
+    return result
+
+
 # ============================================================
 # BewerConfig
 # ============================================================
@@ -89,34 +107,35 @@ class Transform:
 class BewerConfig:
     """A preprocessing configuration.
 
-    Each field maps variant names to resolved pipeline objects:
+    Each field accepts a sequence of pipeline objects (each carrying its own
+    ``.name``) or a pre-built dict. Internally stored as ``{name: object}`` dicts:
 
-    - ``standardizers``: variant name -> Standardizer
-    - ``tokenizers``: variant name -> Tokenizer
-    - ``normalizers``: variant name -> Normalizer
-    - ``vocabularies``: dict of name -> Vocabulary instances
+    - ``standardizers``: sequence of Standardizer
+    - ``tokenizers``: sequence of Tokenizer
+    - ``normalizers``: sequence of Normalizer
+    - ``vocabularies``: sequence of Vocabulary
     """
 
     def __init__(
         self,
-        standardizers: dict[str, Standardizer] | None = None,
-        tokenizers: dict[str, Tokenizer] | None = None,
-        normalizers: dict[str, Normalizer] | None = None,
-        vocabularies: dict[str, Vocabulary] | None = None,
+        standardizers: Sequence[Standardizer] | dict[str, Standardizer] | None = None,
+        tokenizers: Sequence[Tokenizer] | dict[str, Tokenizer] | None = None,
+        normalizers: Sequence[Normalizer] | dict[str, Normalizer] | None = None,
+        vocabularies: Sequence[Vocabulary] | dict[str, Vocabulary] | None = None,
         *,
         extends: str | None = None,
     ):
         if extends is not None:
             base = get_config(extends)
-            self.standardizers = {**base.standardizers, **(standardizers or {})}
-            self.tokenizers = {**base.tokenizers, **(tokenizers or {})}
-            self.normalizers = {**base.normalizers, **(normalizers or {})}
-            self.vocabularies = {**base.vocabularies, **(vocabularies or {})}
+            self.standardizers = {**base.standardizers, **_to_dict(standardizers)}
+            self.tokenizers = {**base.tokenizers, **_to_dict(tokenizers)}
+            self.normalizers = {**base.normalizers, **_to_dict(normalizers)}
+            self.vocabularies = {**base.vocabularies, **_to_dict(vocabularies)}
         else:
-            self.standardizers = standardizers or {}
-            self.tokenizers = tokenizers or {}
-            self.normalizers = normalizers or {}
-            self.vocabularies = vocabularies or {}
+            self.standardizers = _to_dict(standardizers)
+            self.tokenizers = _to_dict(tokenizers)
+            self.normalizers = _to_dict(normalizers)
+            self.vocabularies = _to_dict(vocabularies)
 
     def add_vocabulary(self, vocab: "Vocabulary") -> BewerConfig:
         """Return a new config with ``vocab`` added under its own name.
