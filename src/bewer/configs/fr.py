@@ -10,10 +10,11 @@ from bewer.registry import REGISTRY
 
 __all__: list[str] = []
 
+DEFAULT_PATTERN = strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'")
 
 FR_CONFIG = BewerConfig(
     extends=BASE_CONFIG,
-    tokenizers=(Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'")),),
+    tokenizers=(Tokenizer("default", DEFAULT_PATTERN),),
     normalizers=(
         Normalizer(
             "default",
