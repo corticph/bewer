@@ -54,6 +54,29 @@ class TestVocabularyBuilder:
         with pytest.raises(FileNotFoundError):
             Vocabulary(name="m").add_file("/nonexistent/terms.txt")
 
+    def test_init_with_terms(self):
+        vocab = Vocabulary(name="m", terms=["diabetes", "asthma"])
+        assert vocab._static_terms == {"diabetes", "asthma"}
+
+    def test_init_with_files(self, tmp_path):
+        path = tmp_path / "terms.txt"
+        path.write_text("diabetes\nasthma\n")
+        vocab = Vocabulary(name="m", files=[str(path)])
+        assert vocab._static_terms == {"diabetes", "asthma"}
+
+    def test_init_with_extractors(self):
+        fn = lambda ds: ["diabetes"]  # noqa: E731
+        vocab = Vocabulary(name="m", extractors=[fn])
+        assert vocab._extractors == [fn]
+
+    def test_init_combined(self, tmp_path):
+        path = tmp_path / "terms.txt"
+        path.write_text("asthma\n")
+        fn = lambda ds: ["hypertension"]  # noqa: E731
+        vocab = Vocabulary(name="m", terms=["diabetes"], files=[str(path)], extractors=[fn])
+        assert vocab._static_terms == {"diabetes", "asthma"}
+        assert vocab._extractors == [fn]
+
 
 class TestVocabularyMatching:
     """End-to-end matching through metrics with the new Vocabulary API."""
@@ -148,46 +171,47 @@ class TestVocabularySharing:
 
 
 class TestVocabularyFreezeOnRegistration:
-    """First use of a vocabulary (matching) freezes its definition (loud, not silent)."""
+    """Adding a vocabulary to a config freezes its definition (loud, not silent)."""
 
     def test_add_terms_after_registration_raises(self):
-        vocab = Vocabulary(name="m").add_terms(["a"])
-        dataset = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
-        dataset.add("a b", "a b")
-        # Trigger matching, which freezes the vocabulary.
-        dataset.config.vocabularies["m"].build_matcher(dataset)
+        vocab = Vocabulary(name="m", terms=["a"])
+        get_config("base").clone().add_vocabulary(vocab)
         with pytest.raises(VocabularyFrozenError):
             vocab.add_terms(["b"])
 
     def test_add_extractor_after_registration_raises(self):
-        vocab = Vocabulary(name="m").add_terms(["a"])
-        dataset = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
-        dataset.add("a b", "a b")
-        dataset.config.vocabularies["m"].build_matcher(dataset)
+        vocab = Vocabulary(name="m", terms=["a"])
+        get_config("base").clone().add_vocabulary(vocab)
         with pytest.raises(VocabularyFrozenError):
             vocab.add_extractor(lambda ds: ["b"])
 
     def test_add_file_after_registration_raises(self, tmp_path):
         path = tmp_path / "terms.txt"
         path.write_text("b\n")
-        vocab = Vocabulary(name="m").add_terms(["a"])
-        dataset = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
-        dataset.add("a b", "a b")
-        dataset.config.vocabularies["m"].build_matcher(dataset)
+        vocab = Vocabulary(name="m", terms=["a"])
+        get_config("base").clone().add_vocabulary(vocab)
         with pytest.raises(VocabularyFrozenError):
             vocab.add_file(str(path))
 
     def test_can_be_attached_to_multiple_datasets_after_freeze(self):
         """Freezing blocks definition edits, not re-use: sharing still works."""
-        vocab = Vocabulary(name="m").add_terms(["fox"])
+        vocab = Vocabulary(name="m", terms=["fox"])
         d1 = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         d1.add("the quick brown fox", "the quick brown fox")
         d2 = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         d2.add("a fox", "a fox")
-        # Using the vocab with d1 triggers resolution, which freezes the definition.
         assert d1.metrics.ktr(vocab="m").value == 1.0
-        # The frozen vocab can still be used with d2.
         assert d2.metrics.ktr(vocab="m").value == 1.0
+
+    def test_clone_allows_modification_after_freeze(self):
+        """clone() returns a mutable copy of a frozen vocabulary."""
+        vocab = Vocabulary(name="m", terms=["a"])
+        get_config("base").clone().add_vocabulary(vocab)
+        assert vocab.is_frozen
+        cloned = vocab.clone()
+        assert not cloned.is_frozen
+        cloned.add_terms(["b"])  # no error
+        assert cloned._static_terms == {"a", "b"}
 
 
 class TestVocabularyClone:

@@ -184,7 +184,9 @@ class BewerConfig:
         return self._add("normalizers", normalizer, allow_override=allow_override)
 
     def add_vocabulary(self, vocab: "Vocabulary", *, allow_override: bool = False) -> BewerConfig:
-        return self._add("vocabularies", vocab, allow_override=allow_override)
+        self._add("vocabularies", vocab, allow_override=allow_override)
+        vocab.freeze()
+        return self
 
     def __repr__(self) -> str:
         parts = []

@@ -35,30 +35,52 @@ class Vocabulary:
     tokenized with the dataset's pipelines). The resolved :class:`KeyTermTrie` is returned
     by :meth:`build_matcher` and cached by the caller (e.g. a metric), not by the
     Vocabulary itself.
+
+    Args:
+        name: The vocabulary name, used to reference it from metrics
+            (``metrics.ktr(vocab=name)``) and label it in reports.
+        terms: Optional static key terms.
+        files: Optional paths to plain-text files (one term per line).
+        extractors: Optional extractor functions ``Callable[[Dataset], Iterable[str]]``.
     """
 
-    def __init__(self, name: str):
-        """Initialize an empty vocabulary.
-
-        Args:
-            name: The vocabulary name, used to reference it from metrics
-                (``metrics.ktr(vocab=name)``) and label it in reports.
-        """
+    def __init__(
+        self,
+        name: str,
+        *,
+        terms: Iterable[str] | None = None,
+        files: Iterable[str | Path] | None = None,
+        extractors: Iterable[ExtractorFn] | None = None,
+    ):
         if not isinstance(name, str):
             raise TypeError(f"Vocabulary name must be a string, got {type(name)}.")
         self._name = name
         self._static_terms: set[str] = set()
         self._extractors: list[ExtractorFn] = []
-        # Frozen once used for matching (see build_matcher). A frozen vocabulary's
-        # definition cannot change, so its resolved terms / trie can never go stale
-        # for any dataset it is used with.
         self._frozen = False
+        if terms is not None:
+            self.add_terms(terms)
+        if files is not None:
+            for path in files:
+                self.add_file(path)
+        if extractors is not None:
+            for fn in extractors:
+                self.add_extractor(fn)
 
-    def _freeze(self) -> None:
-        """Mark the vocabulary's definition as immutable. Idempotent. Called lazily
-        on first resolution (``build_matcher``), so the definition is locked as soon as
-        it is first used against any dataset."""
+    @property
+    def is_frozen(self) -> bool:
+        return self._frozen
+
+    def freeze(self) -> None:
+        """Freeze the vocabulary's definition. Idempotent."""
         self._frozen = True
+
+    def clone(self) -> "Vocabulary":
+        """Return a mutable copy of this vocabulary."""
+        clone = Vocabulary(self._name)
+        clone._static_terms = set(self._static_terms)
+        clone._extractors = list(self._extractors)
+        return clone
 
     def _check_not_frozen(self) -> None:
         if self._frozen:
@@ -143,7 +165,7 @@ class Vocabulary:
         The caller owns the returned trie — the Vocabulary does not cache it. Metrics
         should cache the trie via ``@metric_property``.
         """
-        self._freeze()
+        self.freeze()
         dataset.freeze()
         terms = self._resolve_terms(dataset)
         return KeyTermTrie(terms, normalized=normalized, add_capitalized=add_capitalized)
