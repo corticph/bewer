@@ -10,18 +10,17 @@ from bewer.registry import REGISTRY
 __all__: list[str] = []
 
 
-REGISTRY.configs.register(
-    "fr",
-    BewerConfig(
-        extends="base",
-        tokenizers=(Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'")),),
-        normalizers=(
-            Normalizer(
-                "default",
-                Transform(lowercase),
-                Transform(transliterate_latin_letters, preserve="àâäçéèêëîïôöùûüÿœæ"),
-                Transform(transliterate_symbols),
-            ),
+fr_config = BewerConfig(
+    extends="base",
+    tokenizers=(Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'")),),
+    normalizers=(
+        Normalizer(
+            "default",
+            Transform(lowercase),
+            Transform(transliterate_latin_letters, preserve="àâäçéèêëîïôöùûüÿœæ"),
+            Transform(transliterate_symbols),
         ),
     ),
 )
+
+REGISTRY.configs.register("fr", fr_config)

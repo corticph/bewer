@@ -9,17 +9,16 @@ from bewer.registry import REGISTRY
 __all__: list[str] = []
 
 
-REGISTRY.configs.register(
-    "da",
-    BewerConfig(
-        extends="base",
-        normalizers=(
-            Normalizer(
-                "default",
-                Transform(lowercase),
-                Transform(transliterate_latin_letters, preserve="æøå"),
-                Transform(transliterate_symbols),
-            ),
+da_config = BewerConfig(
+    extends="base",
+    normalizers=(
+        Normalizer(
+            "default",
+            Transform(lowercase),
+            Transform(transliterate_latin_letters, preserve="æøå"),
+            Transform(transliterate_symbols),
         ),
     ),
 )
+
+REGISTRY.configs.register("da", da_config)

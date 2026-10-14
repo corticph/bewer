@@ -26,45 +26,39 @@ from bewer.registry import REGISTRY
 __all__: list[str] = []
 
 
-REGISTRY.configs.register(
-    "base",
-    BewerConfig(
-        standardizers=(
-            Standardizer(
-                "default",
-                Transform(nfc),
-                Transform(normalize_apostrophe_variants),
-                Transform(normalize_hyphen_variants),
-                Transform(normalize_slash_variants),
-            ),
-        ),
-        tokenizers=(
-            Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/")),
-            Tokenizer(
-                "with_punctuation",
-                keep_symbols_and_punctuation_pattern(
-                    punct_chars='.,!?:;"-/()“”«»„¡¿',
-                    keep_newlines=True,
-                ),
-            ),
-            Tokenizer("key_term", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'")),
-            Tokenizer("orthographically_complex_term", strip_punctuation_keep_symbols_pattern(split_on_escaped="/'")),
-        ),
-        normalizers=(
-            Normalizer(
-                "default",
-                Transform(lowercase),
-                Transform(transliterate_latin_letters),
-                Transform(transliterate_symbols),
-            ),
-            Normalizer(
-                "cased",
-                Transform(transliterate_latin_letters),
-                Transform(transliterate_symbols),
-            ),
-        ),
-        vocabularies=(
-            Vocabulary("orthographically_complex_terms").add_extractor(OrthographicallyComplexTermExtractor()),
+base_config = BewerConfig(
+    standardizers=(
+        Standardizer(
+            "default",
+            Transform(nfc),
+            Transform(normalize_apostrophe_variants),
+            Transform(normalize_hyphen_variants),
+            Transform(normalize_slash_variants),
         ),
     ),
+    tokenizers=(
+        Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/")),
+        Tokenizer(
+            "with_punctuation",
+            keep_symbols_and_punctuation_pattern(punct_chars='.,!?:;"-/()“”«»„¡¿', keep_newlines=True),
+        ),
+        Tokenizer("key_term", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'")),
+        Tokenizer("orthographically_complex_term", strip_punctuation_keep_symbols_pattern(split_on_escaped="/'")),
+    ),
+    normalizers=(
+        Normalizer(
+            "default",
+            Transform(lowercase),
+            Transform(transliterate_latin_letters),
+            Transform(transliterate_symbols),
+        ),
+        Normalizer(
+            "cased",
+            Transform(transliterate_latin_letters),
+            Transform(transliterate_symbols),
+        ),
+    ),
+    vocabularies=(Vocabulary("orthographically_complex_terms").add_extractor(OrthographicallyComplexTermExtractor()),),
 )
+
+REGISTRY.configs.register("base", base_config)

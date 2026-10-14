@@ -1,4 +1,4 @@
-"""English config — identical to base."""
+"""English config."""
 
 from __future__ import annotations
 
