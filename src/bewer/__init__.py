@@ -34,7 +34,6 @@ __all__ = [
     "extractors",
     "metrics",
     "preprocessing",
-    "defaults",
     "reporting",
     "__version__",
 ]

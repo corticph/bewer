@@ -49,7 +49,7 @@ poetry run twine check dist/*  # Validate built packages
 - Main entry point for the framework
 - Manages collections of Examples and provides lazy metric computation
 - Supports loading data from CSV, pandas DataFrames (with planned HuggingFace support)
-- Configuration system based on BewerConfig (frozen dataclass) with Python configs
+- Configuration system based on BewerConfig (regular class, frozen on registration or dataset construction) with Python configs
 
 **Example** (`src/bewer/core/example.py`)
 - Represents a single reference-hypothesis pair
@@ -64,8 +64,8 @@ poetry run twine check dist/*  # Validate built packages
 
 **Preprocessing Pipeline** (`src/bewer/preprocessing/`)
 - Three-stage pipeline: standardization → tokenization → token-level normalization
-- Configured via Python configs (`src/bewer/defaults.py`)
-- Each stage is a series of function applications
+- Configured via Python configs (`src/bewer/configs/`)
+- Each stage is a series of function applications (Transforms) wrapped in pipeline objects (Standardizer, Tokenizer, Normalizer)
 - Standardizers: Unicode normalization (NFC)
 - Tokenizers: Whitespace-based with customizable symbol handling
 - Normalizers: Lowercase, transliteration, symbol removal/translation (applied to tokens)
@@ -115,32 +115,36 @@ Library of pre-defined `ExtractorFn` callables — `Dataset -> Iterable[str]` fu
 
 ## Configuration System
 
-Configuration is managed through `BewerConfig` (a frozen dataclass) and Python configs:
+Configuration is managed through `BewerConfig` (a regular class, frozen on registration or dataset construction) and Python configs:
 
-- Config dataclass: `src/bewer/configs/config.py` — `BewerConfig`, `Transform`, `resolve_config()`, `get_config()`
-- Configs: `src/bewer/defaults.py` — built-in config presets (`base`, `en`, `da`, `de`, `fr`) registered via `@REGISTRY.configs.register`
+- Config class: `src/bewer/configs/config.py` — `BewerConfig`, `Transform`, `Pipelines`, `resolve_config()`, `get_config()`
+- Configs: `src/bewer/configs/{base,en,da,de,fr}.py` — built-in config presets, each defined as a module-level constant and registered via `REGISTRY.configs.register(name, config)`
 - Registry: `src/bewer/registry.py` — unified registry for configs and metrics
 - Extensible: users can provide custom `BewerConfig` instances or register custom configs
+- Language configs extend `BASE_CONFIG` via the `extends` keyword argument
 - Pipeline resolution happens in `config.py` (`resolve_config()`)
+- Vocabularies are attached to configs via `config.add_vocabulary(vocab)` (requires `.clone()` first if the config is frozen)
 
 Example config structure:
 ```python
 from bewer import BewerConfig, Transform
-from bewer.preprocessing.normalization import lowercase, transliterate_latin_letters
+from bewer.core.vocabulary import Vocabulary
+from bewer.preprocessing.normalization import Normalizer, Standardizer, lowercase, nfc
+from bewer.preprocessing.tokenization import Tokenizer, strip_punctuation_keep_symbols_pattern
 
 config = BewerConfig(
-    standardizers={
-        "default": (Transform(nfc),),
-    },
-    tokenizers={
-        "default": strip_punctuation_keep_symbols_pattern(split_on_escaped="-/"),
-    },
-    normalizers={
-        "default": (
-            Transform(lowercase),
-            Transform(transliterate_latin_letters),
-        ),
-    },
+    standardizers=(
+        Standardizer("default", Transform(nfc)),
+    ),
+    tokenizers=(
+        Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/")),
+    ),
+    normalizers=(
+        Normalizer("default", Transform(lowercase)),
+    ),
+    vocabularies=(
+        Vocabulary("medical", terms=["diabetes", "asthma"]),
+    ),
 )
 ```
 
