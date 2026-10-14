@@ -501,6 +501,15 @@ class TestDatasetFreeze:
             sample_dataset.metrics.wer(bogus=True)
         assert sample_dataset.is_frozen is False
 
+    def test_pipeline_typo_does_not_freeze(self, sample_dataset):
+        """A typo in a pipeline variant name raises and leaves the dataset unfrozen."""
+        with pytest.raises(ValueError, match="not found"):
+            sample_dataset.metrics.wer(normalizer="defualt")
+        assert sample_dataset.is_frozen is False
+        # Recovery: request with the correct name.
+        assert sample_dataset.metrics.wer(normalizer="default").value is not None
+        assert sample_dataset.is_frozen is True
+
 
 class TestDatasetClone:
     """Tests for Dataset.clone()."""
