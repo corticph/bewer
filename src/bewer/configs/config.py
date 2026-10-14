@@ -151,17 +151,12 @@ class BewerConfig:
         return self._frozen
 
     def freeze(self) -> None:
-        """Freeze the config — all dicts become read-only and ``__setattr__`` is blocked."""
+        """Freeze the config — all dict fields become read-only ``MappingProxyType`` views."""
         if self._frozen:
             return
         for name in self._FIELDS:
-            object.__setattr__(self, name, MappingProxyType(dict(self.__dict__[name])))
-        object.__setattr__(self, "_frozen", True)
-
-    def __setattr__(self, name, value):
-        if getattr(self, "_frozen", False):
-            raise TypeError(f"Cannot modify frozen BewerConfig (setting {name!r})")
-        super().__setattr__(name, value)
+            super().__setattr__(name, MappingProxyType(dict(self.__dict__[name])))
+        super().__setattr__("_frozen", True)
 
     def clone(self) -> BewerConfig:
         """Return a mutable copy of this config."""
