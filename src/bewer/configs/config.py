@@ -123,10 +123,10 @@ class BewerConfig:
         normalizers: Sequence[Normalizer] | dict[str, Normalizer] | None = None,
         vocabularies: Sequence[Vocabulary] | dict[str, Vocabulary] | None = None,
         *,
-        extends: str | None = None,
+        extends: BewerConfig | str | None = None,
     ):
         if extends is not None:
-            base = get_config(extends)
+            base = get_config(extends) if isinstance(extends, str) else extends
             self.standardizers = {**base.standardizers, **_to_dict(standardizers)}
             self.tokenizers = {**base.tokenizers, **_to_dict(tokenizers)}
             self.normalizers = {**base.normalizers, **_to_dict(normalizers)}
