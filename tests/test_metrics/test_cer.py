@@ -1,6 +1,6 @@
 """Tests for bewer.metrics.cer module."""
 
-from bewer.metrics.cer import CER, CER_
+from bewer.metrics.general.cer import CER, CER_
 
 
 class TestCERExampleMetric:

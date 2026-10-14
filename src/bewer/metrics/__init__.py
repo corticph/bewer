@@ -1,6 +1,5 @@
-from bewer.metrics import orthographically_complex_term as _orthographically_complex_term  # noqa: F401
-from bewer.metrics._kt_stats import _KTStats  # noqa: F401 (registers "_kt_stats")
-from bewer.metrics._rkt_stats import _RKTStats  # noqa: F401 (registers "_rkt_stats")
+from bewer.metrics.alignment.error_align import ErrorAlign
+from bewer.metrics.alignment.levenshtein import Levenshtein
 from bewer.metrics.base import (
     METRIC_REGISTRY,
     ExampleMetric,
@@ -10,23 +9,26 @@ from bewer.metrics.base import (
     list_registered_metrics,
     metric_value,
 )
-from bewer.metrics.cer import CER
 from bewer.metrics.confidence import ConfidenceInterval
-from bewer.metrics.error_align import ErrorAlign
-from bewer.metrics.insertion_rate import InsertionRate
-from bewer.metrics.ktcer import KTCER
-from bewer.metrics.kter import KTER
-from bewer.metrics.ktf import KTF
-from bewer.metrics.ktfpr import KTFPR
-from bewer.metrics.ktp import KTP
-from bewer.metrics.ktr import KTR
-from bewer.metrics.levenshtein import Levenshtein
-from bewer.metrics.per import PER
-from bewer.metrics.rktr import RKTR
-from bewer.metrics.summary import DatasetSummary
-
-# Metric implementations
-from bewer.metrics.wer import WER
+from bewer.metrics.general.cer import CER
+from bewer.metrics.general.per import PER
+from bewer.metrics.general.wer import WER
+from bewer.metrics.hallucination.insertion_rate import InsertionRate
+from bewer.metrics.key_term import _KTStats, _RKTStats  # noqa: F401 (registers "_kt_stats", "_rkt_stats")
+from bewer.metrics.key_term._keyterm_params import KeyTermParams
+from bewer.metrics.key_term.ktcer import KTCER
+from bewer.metrics.key_term.kter import KTER
+from bewer.metrics.key_term.ktf import KTF
+from bewer.metrics.key_term.ktfpr import KTFPR
+from bewer.metrics.key_term.ktp import KTP
+from bewer.metrics.key_term.ktr import KTR
+from bewer.metrics.key_term.orthographically_complex_term import (  # noqa: F401
+    OrthographicallyComplexTermFscore,
+    OrthographicallyComplexTermPrecision,
+    OrthographicallyComplexTermRecall,
+)
+from bewer.metrics.key_term.rktr import RKTR
+from bewer.metrics.summary.summary import DatasetSummary
 
 __all__ = [
     "METRIC_REGISTRY",
@@ -34,6 +36,7 @@ __all__ = [
     "Metric",
     "ExampleMetric",
     "MetricParams",
+    "KeyTermParams",
     "metric_value",
     "dependency",
     "ConfidenceInterval",

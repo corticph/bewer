@@ -3,7 +3,7 @@
 import pytest
 
 from bewer import Dataset
-from bewer.metrics.orthographically_complex_term import (
+from bewer.metrics.key_term.orthographically_complex_term import (
     OrthographicallyComplexTermFscore,
     OrthographicallyComplexTermPrecision,
     OrthographicallyComplexTermRecall,

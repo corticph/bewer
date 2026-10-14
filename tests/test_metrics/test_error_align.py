@@ -3,7 +3,7 @@
 import pytest
 
 from bewer.alignment import OpType
-from bewer.metrics.error_align import ErrorAlign, ErrorAlign_
+from bewer.metrics.alignment.error_align import ErrorAlign, ErrorAlign_
 
 
 class TestErrorAlignExampleMetric:
