@@ -176,9 +176,9 @@ class TestOrthographicallyComplexTermExtractor:
 
     def test_registers_as_function_vocabulary(self):
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(
-                Vocabulary("cts").add_extractor(OrthographicallyComplexTermExtractor())
-            )
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary("cts").add_extractor(OrthographicallyComplexTermExtractor()))
         )
         dataset.add("the MRI and CT-scan", "the MRI and CT-scan")
         vocab = dataset.config.vocabularies["cts"]

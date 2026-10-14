@@ -52,6 +52,8 @@ class Dataset(object):
         else:
             raise TypeError(f"config must be BewerConfig, str, or None, got {type(config)}")
 
+        self._config.freeze()
+
         self.config_path = None
 
         self._init_blank_state()

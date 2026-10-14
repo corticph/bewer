@@ -29,10 +29,13 @@ class ComponentRegistry:
     def register(self, name: str, component: Any) -> Any:
         """Register a component under ``name``.
 
+        If the component has a ``freeze`` method, it is called before registration.
         Raises ValueError if the name is already registered.
         """
         if name in self._components:
             raise ValueError(f"{self._kind} '{name}' is already registered")
+        if hasattr(component, "freeze"):
+            component.freeze()
         self._components[name] = component
         return component
 

@@ -12,7 +12,7 @@ class TestRKTRExampleMetric:
     @pytest.fixture
     def dataset_perfect_match(self):
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
         )
         dataset.add(
             ref="the patient has diabetes",
@@ -24,7 +24,7 @@ class TestRKTRExampleMetric:
     def dataset_one_char_error(self):
         # "diabetis" vs "diabetes": 1 edit, 8 ref chars → CER = 0.125
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
         )
         dataset.add(
             ref="the patient has diabetes",
@@ -70,9 +70,9 @@ class TestRKTRExampleMetric:
 
     def test_partial_matches_with_threshold(self):
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(
-                Vocabulary(name="key_terms").add_terms(["diabetes", "hypertension"])
-            )
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "hypertension"]))
         )
         dataset.add(
             ref="patient has diabetes and hypertension",
@@ -102,7 +102,9 @@ class TestRKTRDatasetMetric:
     @pytest.fixture
     def mixed_dataset(self):
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "asthma"]))
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "asthma"]))
         )
         dataset.add(
             ref="patient has diabetes",
@@ -141,20 +143,24 @@ class TestRKTRDatasetMetric:
             dataset.metrics.rktr(vocab="key_terms").value
 
     def test_threshold_above_one_raises(self):
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="k").add_terms(["diabetes"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["diabetes"]))
+        )
         dataset.add(ref="has diabetes", hyp="has diabetes")
         with pytest.raises(ValueError, match="threshold must be between 0.0 and 1.0"):
             dataset.metrics.rktr(vocab="k", threshold=1.1).value
 
     def test_threshold_below_zero_raises(self):
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="k").add_terms(["diabetes"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["diabetes"]))
+        )
         dataset.add(ref="has diabetes", hyp="has diabetes")
         with pytest.raises(ValueError, match="threshold must be between 0.0 and 1.0"):
             dataset.metrics.rktr(vocab="k", threshold=-0.1).value
 
     def test_all_correct(self):
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="k").add_terms(["diabetes", "asthma"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["diabetes", "asthma"]))
         )
         dataset.add(ref="diabetes mellitus", hyp="diabetes mellitus")
         dataset.add(ref="acute asthma", hyp="acute asthma")
@@ -167,7 +173,7 @@ class TestRKTRPartialPenalty:
     def test_hyp_right_partial_adds_penalty(self):
         # "blood" key term, hyp "bloodpressure": seg[-1].hyp_right_partial=True → +1 edit
         # Levenshtein("blood", "blood") = 0, total = 1, CER = 1/5 = 0.2
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="k").add_terms(["blood"])))
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["blood"])))
         dataset.add(
             ref="patient has blood pressure",
             hyp="patient has bloodpressure",
@@ -184,7 +190,9 @@ class TestRKTRPartialPenalty:
     def test_hyp_left_partial_adds_penalty(self):
         # "pressure" key term, hyp "bloodpressure": seg[0].hyp_left_partial=True → +1 edit
         # Levenshtein("pressure", "pressure") = 0, total = 1, CER = 1/8 = 0.125
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="k").add_terms(["pressure"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["pressure"]))
+        )
         dataset.add(
             ref="patient has blood pressure",
             hyp="patient has bloodpressure",
@@ -202,7 +210,9 @@ class TestRKTRPartialPenalty:
         # "blood pressure" key term, hyp "bloodpressure": partials are internal to the segment
         # (seg[0].hyp_right_partial and seg[-1].hyp_left_partial), not at the outer boundary.
         # Only Levenshtein contributes (1 edit for missing space), no extra penalty.
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="k").add_terms(["blood pressure"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["blood pressure"]))
+        )
         dataset.add(
             ref="patient has blood pressure",
             hyp="patient has bloodpressure",

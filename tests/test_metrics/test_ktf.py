@@ -12,7 +12,9 @@ class TestKTFExampleMetric:
     @pytest.fixture
     def dataset_perfect(self):
         """Dataset where key term is correctly transcribed (TP=1, FN=0, FP=0)."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
@@ -22,7 +24,9 @@ class TestKTFExampleMetric:
     @pytest.fixture
     def dataset_all_fn(self):
         """Dataset where key term is in ref but absent from hyp (TP=0, FN=1, FP=0)."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(
             ref="the fox jumps",
             hyp="the dog jumps",
@@ -33,7 +37,7 @@ class TestKTFExampleMetric:
     def dataset_partial_recall(self):
         """Dataset with two ref key terms, one correct (TP=1, FN=1, FP=0)."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         )
         dataset.add(
             ref="fox and rabbit",
@@ -44,7 +48,9 @@ class TestKTFExampleMetric:
     @pytest.fixture
     def dataset_partial_precision(self):
         """Dataset where ref has key term once but hyp has it twice (TP=1, FN=0, FP=1)."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(
             ref="the fox jumps",
             hyp="the fox fox jumps",
@@ -65,7 +71,9 @@ class TestKTFExampleMetric:
 
     def test_value_zero_denominator(self):
         """Test KTF = 0.0 when TP=FN=FP=0 (key term not found in ref or hyp)."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(
             ref="hello world",
             hyp="hello world",
@@ -121,7 +129,7 @@ class TestKTFDatasetMetric:
     def mixed_dataset(self):
         """Dataset with one correct example and one missed key term."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         )
         dataset.add(
             ref="the fox jumps",
@@ -136,7 +144,7 @@ class TestKTFDatasetMetric:
     def test_value_all_correct(self):
         """Test KTF = 1.0 when all key terms are correctly transcribed."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         )
         dataset.add(ref="the fox", hyp="the fox")
         dataset.add(ref="the rabbit", hyp="the rabbit")
@@ -186,7 +194,9 @@ class TestKTFMetricAttributes:
 
     def test_beta_in_short_name(self):
         """Test that beta parameter appears in the metric short name."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(ref="the fox", hyp="the fox")
         ktf = dataset.metrics.ktf(vocab="animals", beta=2.0)
         assert "beta=2.0" in ktf.short_name

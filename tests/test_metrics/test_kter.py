@@ -12,7 +12,9 @@ class TestKTERExampleMetric:
     @pytest.fixture
     def dataset_single_keyword_match(self):
         """Dataset where a single-token key term is correctly transcribed."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(
             ref="the quick brown fox",
             hyp="the quick brown fox",
@@ -22,7 +24,9 @@ class TestKTERExampleMetric:
     @pytest.fixture
     def dataset_single_keyword_error(self):
         """Dataset where a single-token key term is incorrectly transcribed."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(
             ref="the quick brown fox",
             hyp="the quick brown dog",
@@ -33,7 +37,7 @@ class TestKTERExampleMetric:
     def dataset_multi_token_keyword_match(self):
         """Dataset where a multi-token key term is correctly transcribed."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
         )
         dataset.add(
             ref="the quick brown fox",
@@ -45,7 +49,7 @@ class TestKTERExampleMetric:
     def dataset_multi_token_keyword_error(self):
         """Dataset where a multi-token key term is partially incorrectly transcribed."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
         )
         dataset.add(
             ref="the quick brown fox",
@@ -101,7 +105,9 @@ class TestKTERExampleMetric:
 
     def test_multiple_keyword_occurrences(self):
         """Test counting multiple occurrences of the same key term."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(
             ref="the fox met another fox",
             hyp="the fox met another dog",
@@ -114,7 +120,7 @@ class TestKTERExampleMetric:
     def test_multiple_different_keywords(self):
         """Test with multiple different key terms in the same vocabulary."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="terms").add_terms(["quick", "fox"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="terms").add_terms(["quick", "fox"]))
         )
         dataset.add(
             ref="the quick brown fox",
@@ -128,7 +134,9 @@ class TestKTERExampleMetric:
 
     def test_keyword_not_in_ref(self):
         """Test that key terms not found in reference are not counted."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="terms").add_terms(["missing"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="terms").add_terms(["missing"]))
+        )
         dataset.add(
             ref="hello world",
             hyp="hello world",
@@ -140,7 +148,9 @@ class TestKTERExampleMetric:
 
     def test_no_keywords_returns_zero(self):
         """Test value is 0 when there are no key terms to evaluate."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="terms").add_terms(["missing"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="terms").add_terms(["missing"]))
+        )
         dataset.add(
             ref="hello world",
             hyp="hello world",
@@ -155,7 +165,9 @@ class TestKTERNormalization:
 
     def test_unnormalized_casing_mismatch(self):
         """Test that differing casing causes an error when normalized=False."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["Fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["Fox"]))
+        )
         dataset.add(
             ref="the Fox jumps",
             hyp="the fox jumps",
@@ -165,7 +177,9 @@ class TestKTERNormalization:
 
     def test_unnormalized_casing_match(self):
         """Test that matching casing is fine when normalized=False."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["FOX"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["FOX"]))
+        )
         dataset.add(
             ref="the FOX jumps",
             hyp="the FOX jumps",
@@ -181,7 +195,7 @@ class TestKTERDatasetMetric:
     def keyword_dataset(self):
         """Create a dataset with key terms across multiple examples."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "dog"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "dog"]))
         )
         dataset.add(
             ref="the quick brown fox",
@@ -216,7 +230,7 @@ class TestKTERDatasetMetric:
     def test_value_all_correct(self):
         """Test KTER is 0.0 when all key terms match."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="terms").add_terms(["hello", "foo"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="terms").add_terms(["hello", "foo"]))
         )
         dataset.add(ref="hello world", hyp="hello world")
         dataset.add(ref="foo bar", hyp="foo bar")
@@ -235,21 +249,27 @@ class TestKTERParameterValidation:
 
     def test_missing_vocab_param_raises(self):
         """Test that omitting the required vocab parameter raises ValueError."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="terms").add_terms(["hello"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="terms").add_terms(["hello"]))
+        )
         dataset.add(ref="hello world", hyp="hello world")
         with pytest.raises(ValueError, match="Missing required parameters"):
             dataset.metrics.kter()
 
     def test_invalid_vocab_raises(self):
         """Test that using a non-existent vocabulary raises ValueError."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="terms").add_terms(["hello"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="terms").add_terms(["hello"]))
+        )
         dataset.add(ref="hello world", hyp="hello world")
         with pytest.raises(ValueError, match="not found"):
             dataset.metrics.kter(vocab="nonexistent").value
 
     def test_vocab_param_type_validation(self):
         """Test that vocab parameter must be a string."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="terms").add_terms(["hello"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="terms").add_terms(["hello"]))
+        )
         dataset.add(ref="hello world", hyp="hello world")
         with pytest.raises(TypeError, match="must be str"):
             dataset.metrics.kter(vocab=123)
@@ -281,14 +301,18 @@ class TestKTERMetricAttributes:
 
     def test_short_name_includes_params(self):
         """Test that short_name includes the vocab parameter."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="terms").add_terms(["hello"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="terms").add_terms(["hello"]))
+        )
         dataset.add(ref="hello", hyp="hello")
         kter = dataset.metrics.kter(vocab="terms")
         assert "vocab=terms" in kter.short_name
 
     def test_factory_caching(self):
         """Test that same parameters return cached instance."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="terms").add_terms(["hello"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="terms").add_terms(["hello"]))
+        )
         dataset.add(ref="hello", hyp="hello")
         kter1 = dataset.metrics.kter(vocab="terms")
         kter2 = dataset.metrics.kter(vocab="terms")
@@ -300,7 +324,9 @@ class TestKTERSharesKTStats:
 
     def test_kter_and_ktr_share_kt_stats(self):
         """Test that KTER and KTR with identical params use the same cached _KTStats instance."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(ref="the fox jumps", hyp="the fox jumps")
         kter = dataset.metrics.kter(vocab="animals")
         ktr = dataset.metrics.ktr(vocab="animals")

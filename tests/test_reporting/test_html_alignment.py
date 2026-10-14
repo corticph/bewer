@@ -543,7 +543,7 @@ class TestSurfaceFormRendering:
         from bewer import Vocabulary, get_config
         from bewer.core.dataset import Dataset
 
-        ds = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
         ds.add("the quick brown fox", "the quick brown dog")
         alignment = ds[0].metrics.levenshtein().alignment
         result = generate_alignment_html_lines(alignment, normalized=False)

@@ -65,7 +65,7 @@ class TestExamplePrepareAndValidateKeyTerms:
 
     def test_key_term_not_in_ref_no_matches(self):
         """Test that key term not in reference produces no matches."""
-        config = get_config("base").add_vocabulary(Vocabulary(name="missing").add_terms(["nonexistent"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="missing").add_terms(["nonexistent"]))
         dataset = Dataset(config=config)
         dataset.add("hello world", "hello world")
         example = dataset[-1]
@@ -76,7 +76,7 @@ class TestExamplePrepareAndValidateKeyTerms:
 
     def test_case_insensitive_key_term_matching(self):
         """Test that key term matching is case insensitive."""
-        config = get_config("base").add_vocabulary(Vocabulary(name="greetings").add_terms(["hello"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="greetings").add_terms(["hello"]))
         dataset = Dataset(config=config)
         dataset.add("Hello World", "hello world")
         example = dataset[-1]
@@ -88,7 +88,7 @@ class TestExamplePrepareAndValidateKeyTerms:
 
     def test_empty_key_term_list_resolves_without_error(self):
         """Test that an empty key term list does not cause key term match resolution to fail."""
-        config = get_config("base").add_vocabulary(Vocabulary(name="greetings").add_terms([]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="greetings").add_terms([]))
         dataset = Dataset(config=config)
         dataset.add("hello world", "hello world")
         example = dataset[-1]
@@ -108,7 +108,7 @@ class TestExampleVocabs:
 
     def test_vocabs_includes_global_dataset_vocabs(self):
         """Test that vocabs includes global key term vocabularies from the parent dataset."""
-        config = get_config("base").add_vocabulary(Vocabulary(name="global_terms").add_terms(["hello"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="global_terms").add_terms(["hello"]))
         dataset = Dataset(config=config)
         dataset.add("hello world", "hello world")
         example = dataset[0]
@@ -156,7 +156,7 @@ class TestTextGetKeyTermMatches:
 
     def test_global_key_terms_both_matched(self):
         """Global vocab (from config) produces all matches by default."""
-        config = get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "brown"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "brown"]))
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         example = dataset[-1]
@@ -169,7 +169,7 @@ class TestTextGetKeyTermMatches:
 
     def test_global_key_terms_match_count(self):
         """Global key terms produce the expected number of matches."""
-        config = get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         example = dataset[-1]
@@ -180,7 +180,7 @@ class TestTextGetKeyTermMatches:
 
     def test_allow_subset_matches_true_deduplicates_exact(self):
         """With allow_subset_matches=True, exact duplicate matches from global vocab are deduplicated."""
-        config = get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         example = dataset[-1]
@@ -191,7 +191,7 @@ class TestTextGetKeyTermMatches:
 
     def test_allow_subset_matches_false_deduplicates(self):
         """With allow_subset_matches=False, subset matches from global vocab are deduplicated."""
-        config = get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         example = dataset[-1]

@@ -67,7 +67,7 @@ class TestDatasetAdd:
 
     def test_add_with_key_terms(self):
         """Test registering a global key term vocabulary via the config."""
-        config = get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         assert "animals" in dataset[0].vocabs
@@ -173,7 +173,7 @@ class TestDatasetAddVocabularyFromFile:
             key_term_path = f.name
 
         try:
-            config = get_config("base").add_vocabulary(Vocabulary(name="animals").add_file(key_term_path))
+            config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_file(key_term_path))
             dataset = Dataset(config=config)
             assert "animals" in dataset.config.vocabularies
             assert isinstance(dataset.config.vocabularies["animals"], Vocabulary)
@@ -192,7 +192,7 @@ class TestDatasetAddVocabularyFromFile:
             key_term_path = f.name
 
         try:
-            config = get_config("base").add_vocabulary(Vocabulary(name="animals").add_file(key_term_path))
+            config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_file(key_term_path))
             dataset = Dataset(config=config)
             dataset.add("the quick brown fox", "the quick brown dog")
             assert "animals" in dataset.config.vocabularies
@@ -434,7 +434,7 @@ class TestDatasetFreeze:
 
     def test_building_before_freeze_works(self):
         """Data can be added freely before the dataset is frozen."""
-        config = get_config("base").add_vocabulary(Vocabulary(name="v").add_terms(["hello"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="v").add_terms(["hello"]))
         dataset = Dataset(config=config)
         dataset.add("hello", "hi")
         assert len(dataset) == 1
@@ -478,7 +478,7 @@ class TestDatasetFreeze:
 
     def test_failed_metric_request_does_not_freeze(self):
         """A metric request that raises (bad params) must leave the dataset modifiable."""
-        config = get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         with pytest.raises(ValueError):
@@ -524,7 +524,7 @@ class TestDatasetClone:
         assert len(clone) == 2
 
     def test_clone_copies_global_vocab(self):
-        config = get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         clone = dataset.clone()

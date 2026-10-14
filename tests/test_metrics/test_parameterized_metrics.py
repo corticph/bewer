@@ -15,7 +15,9 @@ class TestParameterizedMetrics:
     def sample_dataset(self):
         """Create a sample dataset for testing."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="medical_terms").add_terms(["hello", "foo"]))
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary(name="medical_terms").add_terms(["hello", "foo"]))
         )
         dataset.add(
             ref="hello world",
@@ -78,7 +80,7 @@ class TestDynamicNaming:
     def sample_dataset(self):
         """Create a sample dataset for testing."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="medical_terms").add_terms(["hello"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["hello"]))
         )
         dataset.add(ref="hello world", hyp="hello world")
         return dataset
@@ -120,7 +122,7 @@ class TestRKTRParameterization:
     def keyword_dataset(self):
         """Create a dataset with keywords for testing."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
         )
         dataset.add(
             ref="the patient has diabetes",
@@ -158,7 +160,7 @@ class TestExampleMetricParamsAccess:
     def keyword_dataset(self):
         """Create a dataset with keywords for testing."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
         )
         dataset.add(
             ref="the patient has diabetes",
@@ -266,7 +268,7 @@ class TestDeclarativeHyperparams:
         from bewer import Dataset, get_config
 
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
         )
         dataset.add(
             ref="the patient has diabetes",
@@ -282,7 +284,7 @@ class TestDeclarativeHyperparams:
         from bewer import Dataset, get_config
 
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
         )
         dataset.add(
             ref="the patient has diabetes",
@@ -298,7 +300,7 @@ class TestDeclarativeHyperparams:
         from bewer import Dataset, get_config
 
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
         )
         dataset.add(
             ref="the patient has diabetes",
@@ -318,7 +320,7 @@ class TestDeclarativeHyperparams:
         from bewer import Dataset, get_config
 
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
         )
         dataset.add(
             ref="the patient has diabetes",

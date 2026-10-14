@@ -30,7 +30,9 @@ def dataset_with_key_terms():
     """Dataset with a global key term vocabulary, mixing TPs and FNs across
     examples so KT-family metrics produce non-trivial bootstrap distributions.
     """
-    dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"])))
+    dataset = Dataset(
+        config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
+    )
     dataset.add(ref="the fox jumps", hyp="the fox jumps")
     dataset.add(ref="the fox runs", hyp="the dog runs")
     dataset.add(ref="a rabbit hops", hyp="a rabbit hops")

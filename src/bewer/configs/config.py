@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Callable
 
 from bewer.flags import NORMALIZERS, STANDARDIZERS, TOKENIZERS
@@ -113,7 +114,13 @@ class BewerConfig:
     - ``tokenizers``: sequence of Tokenizer
     - ``normalizers``: sequence of Normalizer
     - ``vocabularies``: sequence of Vocabulary
+
+    Configs are mutable until frozen. Freezing happens automatically when a
+    config is registered or handed to a Dataset. Use ``clone()`` to get a
+    mutable copy of a frozen config.
     """
+
+    _FIELDS = ("standardizers", "tokenizers", "normalizers", "vocabularies")
 
     def __init__(
         self,
@@ -135,18 +142,57 @@ class BewerConfig:
             self.tokenizers = _to_dict(tokenizers)
             self.normalizers = _to_dict(normalizers)
             self.vocabularies = _to_dict(vocabularies)
+        self._frozen = False
 
-    def add_vocabulary(self, vocab: "Vocabulary") -> BewerConfig:
-        """Return a new config with ``vocab`` added under its own name.
+    # -- freezing ----------------------------------------------------------
 
-        A different vocabulary under the same name overwrites the existing one.
-        """
-        return BewerConfig(
-            standardizers=self.standardizers,
-            tokenizers=self.tokenizers,
-            normalizers=self.normalizers,
-            vocabularies={**self.vocabularies, vocab.name: vocab},
-        )
+    @property
+    def is_frozen(self) -> bool:
+        return self._frozen
+
+    def freeze(self) -> None:
+        """Freeze the config — all dicts become read-only and ``__setattr__`` is blocked."""
+        if self._frozen:
+            return
+        for name in self._FIELDS:
+            object.__setattr__(self, name, MappingProxyType(dict(self.__dict__[name])))
+        object.__setattr__(self, "_frozen", True)
+
+    def __setattr__(self, name, value):
+        if getattr(self, "_frozen", False):
+            raise TypeError(f"Cannot modify frozen BewerConfig (setting {name!r})")
+        super().__setattr__(name, value)
+
+    def clone(self) -> BewerConfig:
+        """Return a mutable copy of this config."""
+        clone = BewerConfig()
+        for name in self._FIELDS:
+            dict.__setitem__(clone.__dict__, name, dict(self.__dict__[name]))
+        clone.__dict__["_frozen"] = False
+        return clone
+
+    # -- add methods -------------------------------------------------------
+
+    def _add(self, field: str, item, allow_override: bool = False) -> BewerConfig:
+        if self._frozen:
+            raise TypeError(f"Cannot modify frozen BewerConfig (adding to {field})")
+        items = getattr(self, field)
+        if not allow_override and item.name in items:
+            raise ValueError(f"{item.name!r} already exists in {field}")
+        items[item.name] = item
+        return self
+
+    def add_standardizer(self, standardizer: Standardizer, *, allow_override: bool = False) -> BewerConfig:
+        return self._add("standardizers", standardizer, allow_override=allow_override)
+
+    def add_tokenizer(self, tokenizer: Tokenizer, *, allow_override: bool = False) -> BewerConfig:
+        return self._add("tokenizers", tokenizer, allow_override=allow_override)
+
+    def add_normalizer(self, normalizer: Normalizer, *, allow_override: bool = False) -> BewerConfig:
+        return self._add("normalizers", normalizer, allow_override=allow_override)
+
+    def add_vocabulary(self, vocab: "Vocabulary", *, allow_override: bool = False) -> BewerConfig:
+        return self._add("vocabularies", vocab, allow_override=allow_override)
 
     def __repr__(self) -> str:
         parts = []
@@ -169,9 +215,9 @@ class BewerConfig:
 def resolve_config(config: BewerConfig) -> Pipelines:
     """Wrap a BewerConfig's pipeline dicts into a Pipelines object."""
     return Pipelines(
-        standardizers=config.standardizers,
-        tokenizers=config.tokenizers,
-        normalizers=config.normalizers,
+        standardizers=dict(config.standardizers),
+        tokenizers=dict(config.tokenizers),
+        normalizers=dict(config.normalizers),
     )
 
 

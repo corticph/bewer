@@ -7,7 +7,7 @@ from bewer.metrics.ktfpr import KTFPR
 
 
 def _dataset(ref: str, hyp: str, terms: list[str], name: str = "vocab") -> Dataset:
-    dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name=name).add_terms(terms)))
+    dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name=name).add_terms(terms)))
     dataset.add(ref=ref, hyp=hyp)
     return dataset
 
@@ -84,6 +84,7 @@ class TestKTFPRNumRefTokens:
     def test_ref_token_count_independent_of_vocab(self):
         ds = Dataset(
             config=get_config("base")
+            .clone()
             .add_vocabulary(Vocabulary(name="v1").add_terms(["fox"]))
             .add_vocabulary(Vocabulary(name="v2").add_terms(["quick", "brown", "fox", "jumps"]))
         )
@@ -95,7 +96,7 @@ class TestKTFPRDatasetLevel:
     """Dataset-level FPR aggregates across examples."""
 
     def test_dataset_aggregation(self):
-        ds = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="v").add_terms(["fox"])))
+        ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name="v").add_terms(["fox"])))
         ds.add(ref="the jumps", hyp="the fox jumps")  # FP=1, N_R=2
         ds.add(ref="the run", hyp="the run")  # FP=0, N_R=2
         fpr = ds.metrics.ktfpr(vocab="v")
@@ -104,7 +105,7 @@ class TestKTFPRDatasetLevel:
         assert fpr.value == pytest.approx(0.25)
 
     def test_zero_ref_tokens(self):
-        ds = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="v").add_terms(["fox"])))
+        ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name="v").add_terms(["fox"])))
         ds.add(ref="", hyp="")
         assert ds.metrics.ktfpr(vocab="v").value == pytest.approx(0.0)
 

@@ -59,20 +59,20 @@ class TestVocabularyMatching:
     """End-to-end matching through metrics with the new Vocabulary API."""
 
     def test_static_vocab_matches(self):
-        config = get_config("base").add_vocabulary(Vocabulary(name="m").add_terms(["diabetes"]))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="m").add_terms(["diabetes"]))
         dataset = Dataset(config=config)
         dataset.add("the patient has diabetes", "the patient has diabetes")
         assert dataset.metrics.ktr(vocab="m").value == 1.0
 
     def test_extractor_from_refs_matched_like_static(self):
         """A term produced by an extractor reading refs is matched exactly like a static term."""
-        static = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="m").add_terms(["diabetes"])))
+        static = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name="m").add_terms(["diabetes"])))
         static.add("the patient has diabetes", "the patient has diabetes")
 
         extracted = Dataset(
-            config=get_config("base").add_vocabulary(
-                Vocabulary(name="m").add_extractor(lambda ds: [e.ref.raw.split()[-1] for e in ds])
-            )
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary(name="m").add_extractor(lambda ds: [e.ref.raw.split()[-1] for e in ds]))
         )
         extracted.add("the patient has diabetes", "the patient has diabetes")
 
@@ -81,9 +81,9 @@ class TestVocabularyMatching:
     def test_extractor_can_read_hyps(self):
         """Extractors may pull terms from hypotheses; such terms match like any other."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(
-                Vocabulary(name="h").add_extractor(lambda ds: [ex.hyp.tokens.standardized[1] for ex in ds])
-            )
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary(name="h").add_extractor(lambda ds: [ex.hyp.tokens.standardized[1] for ex in ds]))
         )
         dataset.add("the cold weather today", "a cold morning")
         # "cold" is extracted from the hypothesis and also appears in the reference.
@@ -97,7 +97,7 @@ class TestVocabularyMatching:
             .add_terms(["diabetes"])
             .add_extractor(lambda ds: ["diabetes", "asthma"])  # "diabetes" dups the static term
         )
-        dataset = Dataset(config=get_config("base").add_vocabulary(vocab))
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         dataset.add("diabetes and asthma", "diabetes and asthma")
         # Two distinct ref terms (diabetes, asthma), not three.
         assert dataset.metrics._kt_stats(vocab="m").num_ref_terms == 2
@@ -109,10 +109,10 @@ class TestVocabularySharing:
     def test_extractor_resolves_per_dataset(self):
         vocab = Vocabulary(name="last").add_extractor(lambda ds: [e.ref.raw.split()[-1] for e in ds])
 
-        d1 = Dataset(config=get_config("base").add_vocabulary(vocab))
+        d1 = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         d1.add("the patient has diabetes", "the patient has diabetes")
 
-        d2 = Dataset(config=get_config("base").add_vocabulary(vocab))
+        d2 = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         d2.add("severe asthma", "severe asthma")
 
         # Same Vocabulary object, different resolved terms / matches per dataset.
@@ -127,22 +127,22 @@ class TestVocabularySharing:
     def test_add_vocabulary_same_name_overwrites(self):
         vocab_a = Vocabulary(name="m").add_terms(["a"])
         vocab_b = Vocabulary(name="m").add_terms(["b"])
-        config = get_config("base").add_vocabulary(vocab_a)
-        config = config.add_vocabulary(vocab_b)
+        config = get_config("base").clone().add_vocabulary(vocab_a)
+        config = config.add_vocabulary(vocab_b, allow_override=True)
         dataset = Dataset(config=config)
         dataset.add("a b", "a b")
         assert dataset.config.vocabularies["m"] is vocab_b
 
     def test_add_vocabulary_same_object_idempotent(self):
         vocab = Vocabulary(name="m").add_terms(["a"])
-        config = get_config("base").add_vocabulary(vocab)
-        config = config.add_vocabulary(vocab)  # no error
+        config = get_config("base").clone().add_vocabulary(vocab)
+        config = config.add_vocabulary(vocab, allow_override=True)  # no error
         dataset = Dataset(config=config)
         dataset.add("a b", "a b")
         assert dataset.config.vocabularies["m"] is vocab
 
     def test_add_vocabulary_rejects_non_vocabulary(self):
-        config = get_config("base")
+        config = get_config("base").clone()
         with pytest.raises(AttributeError):
             config.add_vocabulary("not a vocabulary")
 
@@ -152,7 +152,7 @@ class TestVocabularyFreezeOnRegistration:
 
     def test_add_terms_after_registration_raises(self):
         vocab = Vocabulary(name="m").add_terms(["a"])
-        dataset = Dataset(config=get_config("base").add_vocabulary(vocab))
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         dataset.add("a b", "a b")
         # Trigger matching, which freezes the vocabulary.
         dataset.config.vocabularies["m"].build_matcher(dataset)
@@ -161,7 +161,7 @@ class TestVocabularyFreezeOnRegistration:
 
     def test_add_extractor_after_registration_raises(self):
         vocab = Vocabulary(name="m").add_terms(["a"])
-        dataset = Dataset(config=get_config("base").add_vocabulary(vocab))
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         dataset.add("a b", "a b")
         dataset.config.vocabularies["m"].build_matcher(dataset)
         with pytest.raises(VocabularyFrozenError):
@@ -171,7 +171,7 @@ class TestVocabularyFreezeOnRegistration:
         path = tmp_path / "terms.txt"
         path.write_text("b\n")
         vocab = Vocabulary(name="m").add_terms(["a"])
-        dataset = Dataset(config=get_config("base").add_vocabulary(vocab))
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         dataset.add("a b", "a b")
         dataset.config.vocabularies["m"].build_matcher(dataset)
         with pytest.raises(VocabularyFrozenError):
@@ -180,9 +180,9 @@ class TestVocabularyFreezeOnRegistration:
     def test_can_be_attached_to_multiple_datasets_after_freeze(self):
         """Freezing blocks definition edits, not re-use: sharing still works."""
         vocab = Vocabulary(name="m").add_terms(["fox"])
-        d1 = Dataset(config=get_config("base").add_vocabulary(vocab))
+        d1 = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         d1.add("the quick brown fox", "the quick brown fox")
-        d2 = Dataset(config=get_config("base").add_vocabulary(vocab))
+        d2 = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         d2.add("a fox", "a fox")
         # Using the vocab with d1 triggers resolution, which freezes the definition.
         assert d1.metrics.ktr(vocab="m").value == 1.0
@@ -195,7 +195,9 @@ class TestVocabularyClone:
 
     def test_clone_shares_vocab_and_recomputes(self):
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="m").add_extractor(lambda ds: ["diabetes"]))
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary(name="m").add_extractor(lambda ds: ["diabetes"]))
         )
         dataset.add("the patient has diabetes", "the patient has diabetis")
         clone = dataset.clone()
@@ -209,7 +211,7 @@ class TestVocabularyFreezeAndCache:
     """Resolving a vocabulary freezes the dataset (closes the stale-cache issue)."""
 
     def test_matching_freezes_dataset(self):
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="a").add_terms(["fox"])))
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name="a").add_terms(["fox"])))
         dataset.add("the quick brown fox", "the quick brown fox")
         assert dataset.is_frozen is False
         # Direct matching triggers resolution, which freezes the dataset.
@@ -220,7 +222,7 @@ class TestVocabularyFreezeAndCache:
 
     def test_build_matcher_returns_trie(self):
         vocab = Vocabulary(name="a").add_terms(["fox"])
-        dataset = Dataset(config=get_config("base").add_vocabulary(vocab))
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         dataset.add("the quick brown fox", "the quick brown fox")
         matcher = vocab.build_matcher(dataset)
         assert matcher is not None
@@ -231,13 +233,17 @@ class TestVocabularyFreezeAndCache:
 
 class TestVocabularyEdgeCases:
     def test_empty_extractor_output(self):
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="e").add_extractor(lambda ds: [])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="e").add_extractor(lambda ds: []))
+        )
         dataset.add("a b c", "a b c")
         matcher = dataset.config.vocabularies["e"].build_matcher(dataset)
         assert matcher.find_matches(dataset[0].ref) == []
 
     def test_extractor_returning_none(self):
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="e").add_extractor(lambda ds: None)))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="e").add_extractor(lambda ds: None))
+        )
         dataset.add("a b c", "a b c")
         matcher = dataset.config.vocabularies["e"].build_matcher(dataset)
         assert matcher.find_matches(dataset[0].ref) == []
@@ -246,21 +252,21 @@ class TestVocabularyEdgeCases:
         def boom(ds):
             raise RuntimeError("nope")
 
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="e").add_extractor(boom)))
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name="e").add_extractor(boom)))
         dataset.add("a b c", "a b c")
         with pytest.raises(VocabularyExtractorError):
             dataset.metrics.ktr(vocab="e").value
 
     def test_extractor_non_string_output_raises(self):
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="e").add_extractor(lambda ds: [1, 2]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="e").add_extractor(lambda ds: [1, 2]))
         )
         dataset.add("a b c", "a b c")
         with pytest.raises(TypeError):
             dataset.metrics.ktr(vocab="e").value
 
     def test_source_less_vocab_yields_no_matches(self):
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="empty")))
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name="empty")))
         dataset.add("a b c", "a b c")
         matcher = dataset.config.vocabularies["empty"].build_matcher(dataset)
         assert matcher.find_matches(dataset[0].ref) == []

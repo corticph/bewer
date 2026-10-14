@@ -13,7 +13,9 @@ class TestKTStatsExampleMetric:
     @pytest.fixture
     def dataset_correct(self):
         """Dataset where key term is correctly transcribed (TP=1, FN=0, FP=0)."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
@@ -23,7 +25,9 @@ class TestKTStatsExampleMetric:
     @pytest.fixture
     def dataset_error(self):
         """Dataset where key term is in ref but absent from hyp (TP=0, FN=1, FP=0)."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(
             ref="the fox jumps",
             hyp="the dog jumps",
@@ -33,7 +37,9 @@ class TestKTStatsExampleMetric:
     @pytest.fixture
     def dataset_fp(self):
         """Dataset where ref has key term once but hyp has it twice (TP=1, FN=0, FP=1)."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(
             ref="the fox jumps",
             hyp="the fox fox jumps",
@@ -102,19 +108,25 @@ class TestKTStatsAlignmentAttributes:
 
     @pytest.fixture
     def dataset_correct(self):
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(ref="the fox jumps", hyp="the fox jumps")
         return dataset
 
     @pytest.fixture
     def dataset_error(self):
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(ref="the fox jumps", hyp="the dog jumps")
         return dataset
 
     @pytest.fixture
     def dataset_fp(self):
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(ref="the fox jumps", hyp="the fox fox jumps")
         return dataset
 
@@ -182,7 +194,9 @@ class TestKTStatsAlignmentAttributes:
     def test_fp_subset_match_excluded(self):
         """Correctly transcribed subset hyp match is neither TP nor FP when allow_subset_matches=False."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="vocab").add_terms(["hello world", "world"]))
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary(name="vocab").add_terms(["hello world", "world"]))
         )
         dataset.add(
             ref="hello world",
@@ -196,7 +210,7 @@ class TestKTStatsAlignmentAttributes:
     def test_fp_simultaneous_fn_and_fp(self):
         """A key term substituted for another key term produces both an FN and an FP."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="vocab").add_terms(["world", "wall"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="vocab").add_terms(["world", "wall"]))
         )
         dataset.add(
             ref="world",
@@ -215,7 +229,7 @@ class TestKTStatsDatasetMetric:
     def mixed_dataset(self):
         """Dataset with one correct example and one missed key term."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         )
         dataset.add(
             ref="the fox jumps",
@@ -284,6 +298,7 @@ class TestKTStatsSharing:
     def dataset(self):
         dataset = Dataset(
             config=get_config("base")
+            .clone()
             .add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
             .add_vocabulary(Vocabulary(name="verbs").add_terms(["jumps"]))
         )

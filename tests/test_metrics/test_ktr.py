@@ -13,7 +13,7 @@ class TestKTRExampleMetric:
     def dataset_keyword_match(self):
         """Dataset where a key term is correctly transcribed."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
         )
         dataset.add(
             ref="the patient has diabetes",
@@ -25,7 +25,7 @@ class TestKTRExampleMetric:
     def dataset_keyword_error(self):
         """Dataset where a key term is incorrectly transcribed."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
         )
         dataset.add(
             ref="the patient has diabetes",
@@ -73,9 +73,9 @@ class TestKTRExampleMetric:
     def test_partial_matches(self):
         """Test KTR with some key terms matching and some not."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(
-                Vocabulary(name="key_terms").add_terms(["diabetes", "hypertension"])
-            )
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "hypertension"]))
         )
         dataset.add(
             ref="patient has diabetes and hypertension",
@@ -89,7 +89,9 @@ class TestKTRExampleMetric:
 
     def test_works_with_any_vocab(self):
         """Test KTR is domain-agnostic and works with any vocabulary name."""
-        dataset = Dataset(config=get_config("base").add_vocabulary(Vocabulary(name="animals").add_terms(["fox"])))
+        dataset = Dataset(
+            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
+        )
         dataset.add(
             ref="the quick brown fox",
             hyp="the quick brown fox",
@@ -107,7 +109,9 @@ class TestKTRDatasetMetric:
     def key_terms_dataset(self):
         """Create a dataset with key terms across multiple examples."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "asthma"]))
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "asthma"]))
         )
         dataset.add(
             ref="patient has diabetes",
@@ -154,7 +158,9 @@ class TestKTRDatasetMetric:
     def test_all_correct(self):
         """Test KTR is 1.0 when all key terms are correct."""
         dataset = Dataset(
-            config=get_config("base").add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "asthma"]))
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "asthma"]))
         )
         dataset.add(ref="diabetes mellitus", hyp="diabetes mellitus")
         dataset.add(ref="acute asthma", hyp="acute asthma")
