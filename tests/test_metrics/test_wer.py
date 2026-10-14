@@ -1,6 +1,6 @@
 """Tests for bewer.metrics.wer module."""
 
-from bewer.metrics.wer import WER, WER_
+from bewer.metrics.general.wer import WER, WER_
 
 
 class TestWERExampleMetric:

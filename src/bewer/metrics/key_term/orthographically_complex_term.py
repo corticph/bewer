@@ -26,9 +26,10 @@ from dataclasses import dataclass
 from bewer.core.vocabulary import Vocabulary
 from bewer.extractors.orthographically_complex_term import OrthographicallyComplexTermExtractor
 from bewer.metrics.base import METRIC_REGISTRY
-from bewer.metrics.ktf import KTF
-from bewer.metrics.ktp import KTP
-from bewer.metrics.ktr import KTR
+
+from .ktf import KTF
+from .ktp import KTP
+from .ktr import KTR
 
 __all__ = [
     "OrthographicallyComplexTermRecall",

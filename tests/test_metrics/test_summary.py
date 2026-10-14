@@ -1,6 +1,6 @@
 """Tests for bewer.metrics.summary module."""
 
-from bewer.metrics.summary import DatasetSummary, DatasetSummary_
+from bewer.metrics.summary.summary import DatasetSummary, DatasetSummary_
 
 
 class TestDatasetSummaryExample:
