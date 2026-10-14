@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
 
 __all__ = ["KTF"]
 
 
 class KTF_(ExampleMetric):
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level key term F-score."""
         stats = self.parent_metric._kt_stats[self.example.index]
@@ -61,7 +61,7 @@ class KTF(Metric):
             if self.vocab not in self.metric.dataset._vocabularies:
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
-    @dependency
+    @metric_property(is_dependency=True)
     def _kt_stats(self):
         """Get the shared _KTStats metric instance."""
         return self.dataset.metrics._kt_stats(
@@ -74,7 +74,7 @@ class KTF(Metric):
             normalizer=self.normalizer,
         )
 
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the key term F-score."""
         beta_sq = self.params.beta**2

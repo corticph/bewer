@@ -1,27 +1,27 @@
 from __future__ import annotations
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 __all__ = ["DatasetSummary"]
 
 
 class DatasetSummary_(ExampleMetric):
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_words(self) -> int:
         """The number of tokens in the reference text."""
         return len(self.example.ref.tokens)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_chars(self) -> int:
         """The number of characters in the reference text."""
         return len(self.example.ref.standardized)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_hyp_words(self) -> int:
         """The number of tokens in the hypothesis text."""
         return len(self.example.hyp.tokens)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_hyp_chars(self) -> int:
         """The number of characters in the hypothesis text."""
         return len(self.example.hyp.standardized)
@@ -37,27 +37,27 @@ class DatasetSummary(Metric):
     )
     example_cls = DatasetSummary_
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_examples(self) -> int:
         """The total number of examples in the dataset."""
         return len(self._src)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_words(self) -> int:
         """The total number of tokens in the reference texts."""
         return sum(em.num_ref_words for em in self)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_chars(self) -> int:
         """The total number of characters in the reference texts."""
         return sum(em.num_ref_chars for em in self)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_hyp_words(self) -> int:
         """The total number of tokens in the hypothesis texts."""
         return sum(em.num_hyp_words for em in self)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_hyp_chars(self) -> int:
         """The total number of characters in the hypothesis texts."""
         return sum(em.num_hyp_chars for em in self)

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from bewer.alignment import Alignment, OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
 
 if TYPE_CHECKING:
     from bewer.core.key_term import KeyTermMatch
@@ -36,7 +36,7 @@ class _KTStats_(ExampleMetric):
             allow_subset_matches=self.params.allow_subset_matches,
         )
 
-    @metric_value
+    @metric_property(is_value=True)
     def _exact_match_alignments(self) -> dict[str, list[Alignment]]:
         """Exact-match TP/FN/FP as full-span alignment segments.
 
@@ -73,17 +73,17 @@ class _KTStats_(ExampleMetric):
 
         return {"tp": tp, "fn": fn, "fp": fp}
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
         return len(self._get_ref_matches())
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_hyp_terms(self) -> int:
         """Get the number of key terms in the hypothesis text."""
         return len(self._get_hyp_matches())
 
-    @metric_value
+    @metric_property(is_value=True)
     def _partial_credit_alignments(self) -> dict[str, list[Alignment]]:
         """Partial-credit TP/FN/FP as single-op alignment slices.
 
@@ -123,7 +123,7 @@ class _KTStats_(ExampleMetric):
                 fp.append(alignment[i : i + 1])
         return {"tp": tp, "fn": fn, "fp": fp}
 
-    @metric_value
+    @metric_property(is_value=True)
     def tp_alignments(self) -> list[Alignment]:
         """Alignment segments for each TP unit.
 
@@ -134,7 +134,7 @@ class _KTStats_(ExampleMetric):
         source = self._partial_credit_alignments if self.params.partial_credit else self._exact_match_alignments
         return source["tp"]
 
-    @metric_value
+    @metric_property(is_value=True)
     def fn_alignments(self) -> list[Alignment]:
         """Alignment segments for each FN unit.
 
@@ -145,7 +145,7 @@ class _KTStats_(ExampleMetric):
         source = self._partial_credit_alignments if self.params.partial_credit else self._exact_match_alignments
         return source["fn"]
 
-    @metric_value
+    @metric_property(is_value=True)
     def fp_alignments(self) -> list[Alignment]:
         """Alignment segments for each FP unit.
 
@@ -157,17 +157,17 @@ class _KTStats_(ExampleMetric):
         source = self._partial_credit_alignments if self.params.partial_credit else self._exact_match_alignments
         return source["fp"]
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_tp(self) -> int:
         """Get the number of TP units (occurrences in exact-match mode, token positions in partial-credit mode)."""
         return len(self.tp_alignments)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_fn(self) -> int:
         """Get the number of FN units (occurrences in exact-match mode, token positions in partial-credit mode)."""
         return len(self.fn_alignments)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_fp(self) -> int:
         """Get the number of FP units (occurrences in exact-match mode, token positions in partial-credit mode)."""
         return len(self.fp_alignments)
@@ -211,27 +211,27 @@ class _KTStats(Metric):
             if self.vocab not in self.metric.dataset._vocabularies:
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the total number of key terms in the reference texts."""
         return sum(em.num_ref_terms for em in self)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_hyp_terms(self) -> int:
         """Get the total number of key terms in the hypothesis texts."""
         return sum(em.num_hyp_terms for em in self)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_tp(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis texts."""
         return sum(em.num_tp for em in self)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_fn(self) -> int:
         """Get the number of key terms missed in the hypothesis texts."""
         return sum(em.num_fn for em in self)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_fp(self) -> int:
         """Get the number of key terms in the hypothesis texts that are not in the reference texts."""
         return sum(em.num_fp for em in self)

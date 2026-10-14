@@ -111,7 +111,7 @@ class TestBasics:
         ci = wer.compute_confidence_interval(seed=0, n_resamples=500)
         assert ci.low <= ci.point <= ci.high
 
-    def test_point_matches_metric_value(self, dataset_with_more_variation):
+    def test_point_matches_metric_property(self, dataset_with_more_variation):
         wer = dataset_with_more_variation.metrics.wer()
         ci = wer.compute_confidence_interval(seed=0, n_resamples=200)
         assert ci.point == wer.value
@@ -217,7 +217,7 @@ class TestEdgeCases:
 
 
 class TestMetricsWithoutMainValueRaise:
-    """Dataset-level metrics with no @metric_value(main=True) cannot have a CI."""
+    """Dataset-level metrics with no @metric_property(is_main=True) cannot have a CI."""
 
     def test_error_align_raises(self, sample_dataset):
         with pytest.raises(ValueError, match="no main metric value"):

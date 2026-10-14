@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from rapidfuzz.distance import Levenshtein
 
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
 
 if TYPE_CHECKING:
     from bewer.core.key_term import KeyTermMatch
@@ -77,7 +77,7 @@ class _RKTStats_(ExampleMetric):
             allow_subset_matches=self.params.allow_subset_matches,
         )
 
-    @metric_value
+    @metric_property(is_value=True)
     def term_stats(self) -> list[TermStat]:
         """Compute TermStat for each ref key term match.
 
@@ -100,7 +100,7 @@ class _RKTStats_(ExampleMetric):
             stats.append(TermStat(char_edits=char_edits, ref_chars=len(ref_text), segment=segment))
         return stats
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
         return len(self._get_ref_matches())
@@ -136,7 +136,7 @@ class _RKTStats(Metric):
             if self.vocab not in self.metric.dataset._vocabularies:
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the total number of key terms in the reference texts."""
         return sum(em.num_ref_terms for em in self)

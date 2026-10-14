@@ -2,23 +2,23 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
 
 __all__ = ["KTR"]
 
 
 class KTR_(ExampleMetric):
-    @metric_value
+    @metric_property(is_value=True)
     def num_matches(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis text."""
         return self.parent_metric._kt_stats[self.example.index].num_tp
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
         return self.parent_metric._kt_stats[self.example.index].num_ref_terms
 
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level key term recall."""
         stats = self.parent_metric._kt_stats[self.example.index]
@@ -64,7 +64,7 @@ class KTR(Metric):
             if self.vocab not in self.metric.dataset._vocabularies:
                 raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
-    @dependency
+    @metric_property(is_dependency=True)
     def _kt_stats(self):
         """Get the shared _KTStats metric instance."""
         return self.dataset.metrics._kt_stats(
@@ -77,17 +77,17 @@ class KTR(Metric):
             normalizer=self.normalizer,
         )
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_matches(self) -> int:
         """Get the number of correctly transcribed key term units (occurrences or token positions)."""
         return self._kt_stats.num_tp
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference texts."""
         return self._kt_stats.num_ref_terms
 
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the key term recall."""
         if (self._kt_stats.num_tp + self._kt_stats.num_fn) == 0:

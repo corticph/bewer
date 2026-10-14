@@ -6,9 +6,8 @@ from bewer.metrics.base import (
     ExampleMetric,
     Metric,
     MetricParams,
-    dependency,
     list_registered_metrics,
-    metric_value,
+    metric_property,
 )
 from bewer.metrics.cer import CER
 from bewer.metrics.confidence import ConfidenceInterval
@@ -34,8 +33,7 @@ __all__ = [
     "Metric",
     "ExampleMetric",
     "MetricParams",
-    "metric_value",
-    "dependency",
+    "metric_property",
     "ConfidenceInterval",
     "WER",
     "CER",
