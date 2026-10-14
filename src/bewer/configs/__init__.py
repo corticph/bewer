@@ -11,6 +11,7 @@ from bewer.configs import en as en  # noqa: F401
 from bewer.configs import fr as fr  # noqa: F401
 from bewer.configs.config import (
     BewerConfig,
+    ConfigFrozenError,
     Pipelines,
     Transform,
     get_config,
@@ -19,6 +20,7 @@ from bewer.configs.config import (
 
 __all__ = [
     "BewerConfig",
+    "ConfigFrozenError",
     "Transform",
     "Pipelines",
     "resolve_config",

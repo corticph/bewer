@@ -6,7 +6,7 @@ from bewer import extractors as extractors
 from bewer import metrics as metrics
 from bewer import preprocessing as preprocessing
 from bewer import reporting as reporting
-from bewer.configs.config import BewerConfig, Transform, get_config
+from bewer.configs.config import BewerConfig, ConfigFrozenError, Transform, get_config
 from bewer.core.dataset import Dataset, DatasetFrozenError
 from bewer.core.vocabulary import ExtractorFn, Vocabulary, VocabularyExtractorError, VocabularyFrozenError
 from bewer.preprocessing.context import set_pipeline
@@ -20,6 +20,7 @@ except PackageNotFoundError:
 __all__ = [
     "Dataset",
     "DatasetFrozenError",
+    "ConfigFrozenError",
     "Vocabulary",
     "VocabularyExtractorError",
     "VocabularyFrozenError",

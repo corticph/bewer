@@ -14,8 +14,13 @@ from bewer.registry import REGISTRY
 if TYPE_CHECKING:
     from bewer.core.vocabulary import Vocabulary
 
+
+class ConfigFrozenError(RuntimeError):
+    """Raised when attempting to modify a frozen BewerConfig."""
+
 __all__ = [
     "BewerConfig",
+    "ConfigFrozenError",
     "Transform",
     "Pipelines",
     "resolve_config",
@@ -167,7 +172,7 @@ class BewerConfig:
 
     def _add(self, field: str, item, allow_override: bool = False) -> BewerConfig:
         if self._frozen:
-            raise TypeError(f"Cannot modify frozen BewerConfig (adding to {field})")
+            raise ConfigFrozenError(f"Cannot modify frozen BewerConfig (adding to {field})")
         items = getattr(self, field)
         if not allow_override and item.name in items:
             raise ValueError(f"{item.name!r} already exists in {field}")
