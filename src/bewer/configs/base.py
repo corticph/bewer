@@ -25,6 +25,7 @@ from bewer.registry import REGISTRY
 
 __all__: list[str] = []
 
+WITH_PUNCTUATION_PATTERN = keep_symbols_and_punctuation_pattern(punct_chars='.,!?:;"-/()“”«»„¡¿', keep_newlines=True)
 
 BASE_CONFIG = BewerConfig(
     standardizers=(
@@ -40,7 +41,7 @@ BASE_CONFIG = BewerConfig(
         Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/")),
         Tokenizer(
             "with_punctuation",
-            keep_symbols_and_punctuation_pattern(punct_chars='.,!?:;"-/()“”«»„¡¿', keep_newlines=True),
+            WITH_PUNCTUATION_PATTERN,
         ),
         Tokenizer("key_term", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'")),
         Tokenizer("orthographically_complex_term", strip_punctuation_keep_symbols_pattern(split_on_escaped="/'")),

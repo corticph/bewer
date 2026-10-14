@@ -7,7 +7,7 @@ exposed as ``REGISTRY.metrics``.
 Registration API
 ----------------
 
-    REGISTRY.configs.register("da", merge_configs(base, delta))
+    REGISTRY.configs.register("da", da_config)
 
 Preprocessing functions (transforms, tokenizers) and vocabularies are NOT
 registered — they are passed directly in ``BewerConfig``.

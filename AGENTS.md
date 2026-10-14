@@ -117,7 +117,7 @@ Library of pre-defined `ExtractorFn` callables — `Dataset -> Iterable[str]` fu
 
 Configuration is managed through `BewerConfig` (a frozen dataclass) and Python configs:
 
-- Config dataclass: `src/bewer/config.py` — `BewerConfig`, `Transform`, `merge_configs()`, `resolve_config()`, `get_config()`
+- Config dataclass: `src/bewer/configs/config.py` — `BewerConfig`, `Transform`, `resolve_config()`, `get_config()`
 - Configs: `src/bewer/defaults.py` — built-in config presets (`base`, `en`, `da`, `de`, `fr`) registered via `@REGISTRY.configs.register`
 - Registry: `src/bewer/registry.py` — unified registry for configs and metrics
 - Extensible: users can provide custom `BewerConfig` instances or register custom configs

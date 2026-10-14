@@ -17,7 +17,6 @@ __all__ = [
     "BewerConfig",
     "Transform",
     "Pipelines",
-    "merge_configs",
     "resolve_config",
     "get_config",
 ]
@@ -160,25 +159,6 @@ class BewerConfig:
             if value:
                 parts.append(f"{name}={value!r}")
         return f"BewerConfig({', '.join(parts)})"
-
-
-# ============================================================
-# Merge
-# ============================================================
-
-
-def merge_configs(base: BewerConfig, delta: BewerConfig) -> BewerConfig:
-    """Merge ``delta`` onto ``base`` at variant granularity.
-
-    A variant in ``delta`` replaces the same-named variant in ``base`` entirely.
-    Variants not mentioned in ``delta`` are inherited from ``base``.
-    """
-    return BewerConfig(
-        standardizers={**base.standardizers, **delta.standardizers},
-        tokenizers={**base.tokenizers, **delta.tokenizers},
-        normalizers={**base.normalizers, **delta.normalizers},
-        vocabularies={**base.vocabularies, **delta.vocabularies},
-    )
 
 
 # ============================================================

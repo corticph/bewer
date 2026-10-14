@@ -14,7 +14,6 @@ from bewer.configs.config import (
     Pipelines,
     Transform,
     get_config,
-    merge_configs,
     resolve_config,
 )
 
@@ -22,7 +21,6 @@ __all__ = [
     "BewerConfig",
     "Transform",
     "Pipelines",
-    "merge_configs",
     "resolve_config",
     "get_config",
 ]

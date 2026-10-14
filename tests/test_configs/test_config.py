@@ -1,4 +1,4 @@
-"""Tests for bewer.configs module — BewerConfig, configs, merge, resolution."""
+"""Tests for bewer.configs module — BewerConfig, configs, resolution."""
 
 import pytest
 
@@ -7,7 +7,6 @@ from bewer.configs import (
     Pipelines,
     Transform,
     get_config,
-    merge_configs,
     resolve_config,
 )
 from bewer.preprocessing.normalization import (
@@ -30,8 +29,8 @@ class TestBewerConfig:
         assert b.standardizers == {}
 
 
-class TestMergeConfigs:
-    """Tests for merge_configs()."""
+class TestExtends:
+    """Tests for BewerConfig extends."""
 
     def test_variant_level_merge(self):
         """Delta variant replaces base variant entirely."""
@@ -42,19 +41,19 @@ class TestMergeConfigs:
             ),
         )
         delta = BewerConfig(
+            extends=base,
             normalizers=(Normalizer("default", Transform(transliterate_latin_letters)),),
         )
-        merged = merge_configs(base, delta)
-        assert merged.normalizers["default"] == Normalizer("default", Transform(transliterate_latin_letters))
-        assert merged.normalizers["cased"] == Normalizer("cased", Transform(transliterate_symbols))
+        assert delta.normalizers["default"] == Normalizer("default", Transform(transliterate_latin_letters))
+        assert delta.normalizers["cased"] == Normalizer("cased", Transform(transliterate_symbols))
 
     def test_empty_delta_inherits_all(self):
         """An empty delta inherits everything from the base."""
         base = BewerConfig(
             standardizers=(Normalizer("default", Transform(nfc)),),
         )
-        merged = merge_configs(base, BewerConfig())
-        assert merged.standardizers == base.standardizers
+        delta = BewerConfig(extends=base)
+        assert delta.standardizers == base.standardizers
 
 
 class TestResolveConfig:
