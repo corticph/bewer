@@ -26,7 +26,7 @@ from bewer.registry import REGISTRY
 __all__: list[str] = []
 
 
-base_config = BewerConfig(
+BASE_CONFIG = BewerConfig(
     standardizers=(
         Standardizer(
             "default",
@@ -61,4 +61,4 @@ base_config = BewerConfig(
     vocabularies=(Vocabulary("orthographically_complex_terms").add_extractor(OrthographicallyComplexTermExtractor()),),
 )
 
-REGISTRY.configs.register("base", base_config)
+REGISTRY.configs.register("base", BASE_CONFIG)

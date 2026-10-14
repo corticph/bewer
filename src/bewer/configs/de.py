@@ -9,7 +9,7 @@ from bewer.registry import REGISTRY
 __all__: list[str] = []
 
 
-de_config = BewerConfig(
+DE_CONFIG = BewerConfig(
     extends="base",
     normalizers=(
         Normalizer(
@@ -21,4 +21,4 @@ de_config = BewerConfig(
     ),
 )
 
-REGISTRY.configs.register("de", de_config)
+REGISTRY.configs.register("de", DE_CONFIG)

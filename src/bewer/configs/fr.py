@@ -10,7 +10,7 @@ from bewer.registry import REGISTRY
 __all__: list[str] = []
 
 
-fr_config = BewerConfig(
+FR_CONFIG = BewerConfig(
     extends="base",
     tokenizers=(Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/'")),),
     normalizers=(
@@ -23,4 +23,4 @@ fr_config = BewerConfig(
     ),
 )
 
-REGISTRY.configs.register("fr", fr_config)
+REGISTRY.configs.register("fr", FR_CONFIG)
