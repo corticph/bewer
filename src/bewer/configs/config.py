@@ -155,15 +155,14 @@ class BewerConfig:
         if self._frozen:
             return
         for name in self._FIELDS:
-            super().__setattr__(name, MappingProxyType(dict(self.__dict__[name])))
-        super().__setattr__("_frozen", True)
+            setattr(self, name, MappingProxyType(dict(self.__dict__[name])))
+        self._frozen = True
 
     def clone(self) -> BewerConfig:
         """Return a mutable copy of this config."""
         clone = BewerConfig()
         for name in self._FIELDS:
-            dict.__setitem__(clone.__dict__, name, dict(self.__dict__[name]))
-        clone.__dict__["_frozen"] = False
+            setattr(clone, name, dict(self.__dict__[name]))
         return clone
 
     # -- add methods -------------------------------------------------------
