@@ -83,14 +83,12 @@ class Transform:
 
 
 def _to_dict(items) -> dict:
-    """Convert a sequence of named objects or a dict into a dict keyed by ``.name``.
+    """Convert a sequence of named objects into a dict keyed by ``.name``.
 
     Raises ``ValueError`` on duplicate names.
     """
     if items is None:
         return {}
-    if isinstance(items, dict):
-        return dict(items)
     result = {}
     for item in items:
         if item.name in result:
@@ -108,7 +106,7 @@ class BewerConfig:
     """A preprocessing configuration.
 
     Each field accepts a sequence of pipeline objects (each carrying its own
-    ``.name``) or a pre-built dict. Internally stored as ``{name: object}`` dicts:
+    ``.name``). Internally stored as ``{name: object}`` dicts:
 
     - ``standardizers``: sequence of Standardizer
     - ``tokenizers``: sequence of Tokenizer
@@ -124,10 +122,10 @@ class BewerConfig:
 
     def __init__(
         self,
-        standardizers: Sequence[Standardizer] | dict[str, Standardizer] | None = None,
-        tokenizers: Sequence[Tokenizer] | dict[str, Tokenizer] | None = None,
-        normalizers: Sequence[Normalizer] | dict[str, Normalizer] | None = None,
-        vocabularies: Sequence[Vocabulary] | dict[str, Vocabulary] | None = None,
+        standardizers: Sequence[Standardizer] | None = None,
+        tokenizers: Sequence[Tokenizer] | None = None,
+        normalizers: Sequence[Normalizer] | None = None,
+        vocabularies: Sequence[Vocabulary] | None = None,
         *,
         extends: BewerConfig | str | None = None,
     ):
