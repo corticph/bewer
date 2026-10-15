@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from bewer.alignment import Alignment
 from bewer.alignment.op_type import OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.hallucination._insertion_params import InsertionParams
 
 __all__ = ["InsertionRate"]
 
@@ -66,17 +65,7 @@ class InsertionRate(Metric):
     )
     example_cls = InsertionRate_
 
-    @dataclass
-    class param_schema(MetricParams):
-        min_run_length: int = 1
-        normalized: bool = True
-        alignment: str = "levenshtein"
-
-        def validate(self) -> None:
-            if self.min_run_length < 1:
-                raise ValueError(f"min_run_length must be >= 1, got {self.min_run_length}.")
-            if self.alignment not in ("levenshtein", "error_align"):
-                raise ValueError(f"alignment must be 'levenshtein' or 'error_align', got '{self.alignment}'.")
+    param_schema = InsertionParams
 
     @metric_property(is_dependency=True)
     def _alignment(self):

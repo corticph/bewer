@@ -12,6 +12,8 @@ from bewer.metrics.confidence import ConfidenceInterval
 from bewer.metrics.general.cer import CER
 from bewer.metrics.general.per import PER
 from bewer.metrics.general.wer import WER
+from bewer.metrics.hallucination._insertion_params import InsertionParams
+from bewer.metrics.hallucination.example_insertion_rate import ExampleInsertionRate
 from bewer.metrics.hallucination.insertion_rate import InsertionRate
 from bewer.metrics.key_term import _KTStats, _RKTStats  # noqa: F401 (registers "_kt_stats", "_rkt_stats")
 from bewer.metrics.key_term._keyterm_params import KeyTermParams
@@ -36,6 +38,7 @@ __all__ = [
     "ExampleMetric",
     "MetricParams",
     "KeyTermParams",
+    "InsertionParams",
     "metric_property",
 
     "ConfidenceInterval",
@@ -51,6 +54,7 @@ __all__ = [
     "Levenshtein",
     "PER",
     "ErrorAlign",
+    "ExampleInsertionRate",
     "InsertionRate",
     "DatasetSummary",
 ]
