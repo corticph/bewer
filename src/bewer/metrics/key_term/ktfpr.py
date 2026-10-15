@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+
+from ._keyterm_params import KeyTermParams
 
 __all__ = ["KTFPR"]
 
@@ -46,7 +48,7 @@ class KTFPR(Metric):
     example_cls = KTFPR_
 
     @dataclass
-    class param_schema(MetricParams):
+    class param_schema(KeyTermParams):
         """Parameters for the KTFPR metric.
 
         Attributes:
@@ -56,9 +58,6 @@ class KTFPR(Metric):
             partial_credit: Must be True. KTFPR is only defined for the partial-credit view.
         """
 
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
         partial_credit: bool = True
 
         def validate(self) -> None:
@@ -69,8 +68,7 @@ class KTFPR(Metric):
                     "The exact-match view counts false positives at the occurrence level, not the token-position "
                     "level, so dividing by the reference token count N_R has no principled interpretation."
                 )
-            if self.vocab not in self.metric.dataset._vocabularies:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
+            super().validate()
 
     @metric_property(is_dependency=True)
     def _kt_stats(self):

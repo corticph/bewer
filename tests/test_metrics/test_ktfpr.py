@@ -3,7 +3,7 @@
 import pytest
 
 from bewer import Dataset, Vocabulary
-from bewer.metrics.ktfpr import KTFPR
+from bewer.metrics.key_term.ktfpr import KTFPR
 
 
 def _dataset(ref: str, hyp: str, terms: list[str], name: str = "vocab") -> Dataset:

@@ -3,7 +3,7 @@
 import pytest
 
 from bewer import Dataset, Vocabulary
-from bewer.metrics.ktf import KTF, KTF_
+from bewer.metrics.key_term.ktf import KTF, KTF_
 
 
 class TestKTFExampleMetric:

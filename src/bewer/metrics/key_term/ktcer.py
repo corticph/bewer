@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+
+from ._keyterm_params import KeyTermParams
 
 __all__ = ["KTCER"]
 
@@ -39,7 +41,7 @@ class KTCER(Metric):
     example_cls = KTCER_
 
     @dataclass
-    class param_schema(MetricParams):
+    class param_schema(KeyTermParams):
         """Parameters for the KTCER metric.
 
         Attributes:
@@ -47,14 +49,6 @@ class KTCER(Metric):
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
         """
-
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
-
-        def validate(self) -> None:
-            if self.vocab not in self.metric.dataset._vocabularies:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
 
     @metric_property(is_dependency=True)
     def _rkt_stats(self):

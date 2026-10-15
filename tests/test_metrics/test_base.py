@@ -26,14 +26,14 @@ class TestMetricPropertyDecorator:
     def test_metric_property_main_flag(self):
         """Test that main flag is correctly set."""
         # The WER class should have value as main
-        from bewer.metrics.wer import WER
+        from bewer.metrics.general.wer import WER
 
         metric_values = WER.metric_values()
         assert metric_values["main"] == "value"
 
     def test_metric_property_other_values(self):
         """Test that other metric values are tracked."""
-        from bewer.metrics.wer import WER
+        from bewer.metrics.general.wer import WER
 
         metric_values = WER.metric_values()
         assert "num_edits" in metric_values["other"]
@@ -226,7 +226,7 @@ class TestDependencyDecorator:
 
     def test_ktp_has_kt_stats_dependency(self):
         """Test that KTP registers _kt_stats as a dependency."""
-        from bewer.metrics.ktp import KTP
+        from bewer.metrics.key_term.ktp import KTP
 
         assert "_kt_stats" in KTP.dependencies()
 
@@ -415,28 +415,28 @@ class TestMetricClass:
 
     def test_src_set_at_construction(self, sample_dataset):
         """Test that the src passed at construction is stored."""
-        from bewer.metrics.wer import WER
+        from bewer.metrics.general.wer import WER
 
         metric = WER(name="test_wer", src=sample_dataset)
         assert metric.src is sample_dataset
 
     def test_init_standardizer(self, sample_dataset):
         """Test that standardizer can be set via __init__."""
-        from bewer.metrics.wer import WER
+        from bewer.metrics.general.wer import WER
 
         wer = WER(name="test", src=sample_dataset, standardizer="custom")
         assert wer._standardizer == "custom"
 
     def test_init_tokenizer(self, sample_dataset):
         """Test that tokenizer can be set via __init__."""
-        from bewer.metrics.wer import WER
+        from bewer.metrics.general.wer import WER
 
         wer = WER(name="test", src=sample_dataset, tokenizer="custom")
         assert wer._tokenizer == "custom"
 
     def test_init_normalizer(self, sample_dataset):
         """Test that normalizer can be set via __init__."""
-        from bewer.metrics.wer import WER
+        from bewer.metrics.general.wer import WER
 
         wer = WER(name="test", src=sample_dataset, normalizer="custom")
         assert wer._normalizer == "custom"
@@ -452,7 +452,7 @@ class TestMetricSequenceProtocol:
 
     def test_getitem_returns_example_metric(self, sample_dataset):
         """Indexing returns the ExampleMetric for that positional example."""
-        from bewer.metrics.wer import WER_
+        from bewer.metrics.general.wer import WER_
 
         wer = sample_dataset.metrics.wer()
         em = wer[0]
