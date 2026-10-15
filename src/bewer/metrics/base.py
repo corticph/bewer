@@ -19,8 +19,7 @@ __all__ = [
     "Metric",
     "ExampleMetric",
     "MetricParams",
-    "metric_value",
-    "dependency",
+    "metric_property",
     "METRIC_REGISTRY",
     "MetricRegistry",
     "list_registered_metrics",
@@ -30,10 +29,46 @@ __all__ = [
 ]
 
 
-class metric_value(cached_property):
-    def __init__(self, func=None, *, main: bool = False, private: bool | None = None):
-        self.main = main
+class metric_property(cached_property):
+    """Unified decorator for metric properties.
+
+    Combines caching, pipeline context, value classification, and dependency
+    registration into a single decorator with expressive arguments.
+
+    Common usage patterns::
+
+        @metric_property(is_main=True)          # the metric's main value
+        @metric_property(is_value=True)          # a regular metric value
+        @metric_property                        # internal computed property (caching + pipeline only)
+        @metric_property(is_dependency=True)    # borrowed metric dependency
+
+    Args:
+        is_main: Mark this as the metric's main value (at most one per class).
+            Implies ``is_value=True``.
+        private: Explicitly control privacy. If None, inferred from leading underscore.
+        set_pipeline: Wrap computation in ``set_pipeline(*obj.pipeline)``. Default True.
+        is_value: Register in ``_metric_values`` for introspection. Default False.
+        is_dependency: Register in ``_dependencies`` as a borrowed metric dependency.
+            Implies ``set_pipeline=False`` and ``is_value=False``.
+    """
+
+    def __init__(
+        self,
+        func=None,
+        *,
+        is_main: bool = False,
+        private: bool | None = None,
+        set_pipeline: bool = True,
+        is_value: bool = False,
+        is_dependency: bool = False,
+    ):
+        self._is_main = is_main
         self._private = private
+        # Dependencies don't need pipeline context — the borrowed metric sets its own.
+        self._set_pipeline = set_pipeline and not is_dependency
+        # A main value is a value; dependencies are not values.
+        self._is_value = (is_value or is_main) and not is_dependency
+        self._is_dependency = is_dependency
         if func is not None:
             super().__init__(func)
             update_wrapper(self, func)
@@ -46,59 +81,48 @@ class metric_value(cached_property):
     def __set_name__(self, owner: type, name: str):
         super().__set_name__(owner, name)
 
-        # Determine privacy: explicit flag takes precedence, otherwise infer from leading underscore.
-        private = self._private if self._private is not None else name.startswith("_")
+        if self._is_dependency:
+            deps = owner.__dict__.get("_dependencies")
+            if deps is None:
+                deps = []
+                owner._dependencies = deps
+            deps.append(name)
+            return  # Dependencies are not values
 
-        # Create or get the _metric_values dict on the owner class
-        metric_values = owner.__dict__.get("_metric_values")
-        if metric_values is None:
-            metric_values = {"other": [], "main": None, "private": []}
-            owner._metric_values = metric_values
-        elif "private" not in metric_values:
-            metric_values["private"] = []
+        if self._is_value:
+            # Determine privacy: explicit flag takes precedence, otherwise infer from leading underscore.
+            private = self._private if self._private is not None else name.startswith("_")
 
-        # Update the metric values
-        if self.main:
-            if metric_values["main"] is not None:
-                raise ValueError(f"Multiple main metric values defined in {owner.__name__}.")
-            metric_values["main"] = name
-        elif private:
-            metric_values["private"].append(name)
-        else:
-            metric_values["other"].append(name)
+            metric_values = owner.__dict__.get("_metric_values")
+            if metric_values is None:
+                metric_values = {"other": [], "main": None, "private": []}
+                owner._metric_values = metric_values
+
+            if self._is_main:
+                if metric_values["main"] is not None:
+                    raise ValueError(f"Multiple main metric values defined in {owner.__name__}.")
+                metric_values["main"] = name
+            elif private:
+                metric_values["private"].append(name)
+            else:
+                metric_values["other"].append(name)
 
     def __get__(self, obj: Optional[Any], objtype: Optional[type] = None) -> Any:
         if obj is None:
             return self
 
-        # TODO: Figure out if this is necessary given cached_property behavior
         name = self.attrname
         if name in obj.__dict__:
             return obj.__dict__[name]
 
-        with set_pipeline(*obj.pipeline):
+        if self._set_pipeline:
+            with set_pipeline(*obj.pipeline):
+                value = self.func(obj)
+        else:
             value = self.func(obj)
 
         obj.__dict__[name] = value
         return value
-
-
-class dependency(cached_property):
-    """Cached property that marks a borrowed metric dependency.
-
-    Use in place of @cached_property when the property retrieves another
-    metric instance from the dataset's metric collection. Behaves identically
-    to cached_property at runtime, but registers the property name in
-    _dependencies on the class for introspection.
-    """
-
-    def __set_name__(self, owner: type, name: str):
-        super().__set_name__(owner, name)
-        deps = owner.__dict__.get("_dependencies")
-        if deps is None:
-            owner._dependencies = []
-            deps = owner._dependencies
-        deps.append(name)
 
 
 def _get_dependencies(cls) -> list[str]:

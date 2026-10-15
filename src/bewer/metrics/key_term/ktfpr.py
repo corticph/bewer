@@ -2,18 +2,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+
+from ._keyterm_params import KeyTermParams
 
 __all__ = ["KTFPR"]
 
 
 class KTFPR_(ExampleMetric):
-    @metric_value
+    @metric_property(is_value=True)
     def num_fp(self) -> int:
         """Get the number of spurious key term token positions in the hypothesis text."""
         return self.parent_metric._kt_stats[self.example.index].num_fp
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_tokens(self) -> int:
         """Get the number of reference tokens (N_R) for this example."""
         alignment = self.example.metrics.levenshtein(
@@ -24,7 +26,7 @@ class KTFPR_(ExampleMetric):
         ).alignment
         return alignment.num_matches + alignment.num_substitutions + alignment.num_deletions
 
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level key term false-positive rate."""
         if self.num_ref_tokens == 0:
@@ -46,7 +48,7 @@ class KTFPR(Metric):
     example_cls = KTFPR_
 
     @dataclass
-    class param_schema(MetricParams):
+    class param_schema(KeyTermParams):
         """Parameters for the KTFPR metric.
 
         Attributes:
@@ -56,9 +58,6 @@ class KTFPR(Metric):
             partial_credit: Must be True. KTFPR is only defined for the partial-credit view.
         """
 
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
         partial_credit: bool = True
 
         def validate(self) -> None:
@@ -69,10 +68,9 @@ class KTFPR(Metric):
                     "The exact-match view counts false positives at the occurrence level, not the token-position "
                     "level, so dividing by the reference token count N_R has no principled interpretation."
                 )
-            if self.vocab not in self.metric.dataset._vocabularies:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
+            super().validate()
 
-    @dependency
+    @metric_property(is_dependency=True)
     def _kt_stats(self):
         """Get the shared _KTStats metric instance."""
         return self.dataset.metrics._kt_stats(
@@ -85,17 +83,17 @@ class KTFPR(Metric):
             normalizer=self.normalizer,
         )
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_fp(self) -> int:
         """Get the total number of spurious key term token positions across all hypothesis texts."""
         return sum(em.num_fp for em in self)
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_ref_tokens(self) -> int:
         """Get the total number of reference tokens (N_R) across the dataset."""
         return sum(em.num_ref_tokens for em in self)
 
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the key term false-positive rate."""
         if self.num_ref_tokens == 0:

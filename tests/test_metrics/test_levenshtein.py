@@ -1,7 +1,7 @@
 """Tests for bewer.metrics.levenshtein module."""
 
 from bewer.alignment import OpType
-from bewer.metrics.levenshtein import Levenshtein, Levenshtein_
+from bewer.metrics.alignment.levenshtein import Levenshtein, Levenshtein_
 
 
 class TestLevenshteinAlignment:

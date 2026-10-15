@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+
+from ._keyterm_params import KeyTermParams
 
 __all__ = ["KTF"]
 
 
 class KTF_(ExampleMetric):
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level key term F-score."""
         stats = self.parent_metric._kt_stats[self.example.index]
@@ -34,7 +36,7 @@ class KTF(Metric):
     example_cls = KTF_
 
     @dataclass
-    class param_schema(MetricParams):
+    class param_schema(KeyTermParams):
         """Parameters for the KTF metric.
 
         Attributes:
@@ -48,9 +50,6 @@ class KTF(Metric):
                 beta>1 weights recall more heavily; beta<1 weights precision more heavily.
         """
 
-        vocab: str
-        normalized: bool = True
-        allow_subset_matches: bool = False
         partial_credit: bool = False
         beta: float = 1.0
 
@@ -58,10 +57,9 @@ class KTF(Metric):
             """Validate that the metric can be computed with the given parameters and source data."""
             if self.beta <= 0:
                 raise ValueError(f"beta must be positive, got {self.beta}.")
-            if self.vocab not in self.metric.dataset._vocabularies:
-                raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
+            super().validate()
 
-    @dependency
+    @metric_property(is_dependency=True)
     def _kt_stats(self):
         """Get the shared _KTStats metric instance."""
         return self.dataset.metrics._kt_stats(
@@ -74,7 +72,7 @@ class KTF(Metric):
             normalizer=self.normalizer,
         )
 
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the key term F-score."""
         beta_sq = self.params.beta**2

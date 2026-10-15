@@ -4,13 +4,13 @@ from dataclasses import dataclass
 
 from bewer.alignment import Alignment
 from bewer.alignment.op_type import OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
 
 __all__ = ["InsertionRate"]
 
 
 class InsertionRate_(ExampleMetric):
-    @property
+    @metric_property
     def _alignment(self) -> Alignment:
         return self.parent_metric._alignment[self.example.index].alignment
 
@@ -28,21 +28,21 @@ class InsertionRate_(ExampleMetric):
             runs.append(current)
         return runs
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_insertions(self) -> int:
         """Get the number of insertions in runs of length >= min_run_length."""
         if self.params.min_run_length == 1:
             return self._alignment.num_insertions
         return sum(length for length in self._insertion_runs() if length >= self.params.min_run_length)
 
-    @metric_value
+    @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Get the number of tokens in the reference text."""
         if self.params.normalized:
             return len(self.example.ref.tokens.normalized)
         return len(self.example.ref.tokens.standardized)
 
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level insertion rate."""
         if self.ref_length == 0:
@@ -78,7 +78,7 @@ class InsertionRate(Metric):
             if self.alignment not in ("levenshtein", "error_align"):
                 raise ValueError(f"alignment must be 'levenshtein' or 'error_align', got '{self.alignment}'.")
 
-    @dependency
+    @metric_property(is_dependency=True)
     def _alignment(self):
         if self.params.alignment == "error_align":
             return self.dataset.metrics.error_align(
@@ -94,17 +94,17 @@ class InsertionRate(Metric):
             normalizer=self.normalizer,
         )
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_insertions(self) -> int:
         """Get the total number of insertions across all examples."""
         return sum(em.num_insertions for em in self)
 
-    @metric_value
+    @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Get the number of tokens in the reference texts."""
         return sum(em.ref_length for em in self)
 
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the insertion rate."""
         if self.ref_length == 0:
