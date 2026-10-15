@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_value
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 from ._keyterm_params import KeyTermParams
 
@@ -10,17 +10,17 @@ __all__ = ["KTP"]
 
 
 class KTP_(ExampleMetric):
-    @metric_value
+    @metric_property(is_value=True)
     def num_matches(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis text."""
         return self.parent_metric._kt_stats[self.example.index].num_tp
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_fp(self) -> int:
         """Get the number of spurious key term occurrences in the hypothesis text."""
         return self.parent_metric._kt_stats[self.example.index].num_fp
 
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level key term precision."""
         stats = self.parent_metric._kt_stats[self.example.index]
@@ -57,7 +57,7 @@ class KTP(Metric):
 
         partial_credit: bool = False
 
-    @dependency
+    @metric_property(is_dependency=True)
     def _kt_stats(self):
         """Get the shared _KTStats metric instance."""
         return self.dataset.metrics._kt_stats(
@@ -70,17 +70,17 @@ class KTP(Metric):
             normalizer=self.normalizer,
         )
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_matches(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis texts."""
         return self._kt_stats.num_tp
 
-    @metric_value
+    @metric_property(is_value=True)
     def num_fp(self) -> int:
         """Get the number of spurious key term occurrences in the hypothesis texts."""
         return self._kt_stats.num_fp
 
-    @metric_value(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the key term precision."""
         if (self._kt_stats.num_tp + self._kt_stats.num_fp) == 0:

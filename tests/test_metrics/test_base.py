@@ -7,24 +7,23 @@ from bewer.metrics.base import (
     ExampleMetric,
     Metric,
     MetricRegistry,
-    dependency,
     list_registered_metrics,
-    metric_value,
+    metric_property,
 )
 
 
-class TestMetricValueDecorator:
-    """Tests for the metric_value decorator."""
+class TestMetricPropertyDecorator:
+    """Tests for the metric_property decorator."""
 
-    def test_metric_value_caches_result(self, sample_dataset):
-        """Test that metric_value caches computed values."""
+    def test_metric_property_caches_result(self, sample_dataset):
+        """Test that metric_property caches computed values."""
         # Access WER metric multiple times
         wer = sample_dataset.metrics.wer()
         value1 = wer.value
         value2 = wer.value
         assert value1 == value2
 
-    def test_metric_value_main_flag(self):
+    def test_metric_property_main_flag(self):
         """Test that main flag is correctly set."""
         # The WER class should have value as main
         from bewer.metrics.general.wer import WER
@@ -32,7 +31,7 @@ class TestMetricValueDecorator:
         metric_values = WER.metric_values()
         assert metric_values["main"] == "value"
 
-    def test_metric_value_other_values(self):
+    def test_metric_property_other_values(self):
         """Test that other metric values are tracked."""
         from bewer.metrics.general.wer import WER
 
@@ -41,14 +40,14 @@ class TestMetricValueDecorator:
         assert "ref_length" in metric_values["other"]
 
     def test_underscore_name_excluded_by_default(self):
-        """Underscore-named metric_value is excluded from metric_values()['other'] by default."""
+        """Underscore-named metric_property is excluded from metric_values()['other'] by default."""
 
         class DummyMetric(ExampleMetric):
-            @metric_value
+            @metric_property(is_value=True)
             def public_val(self):
                 return 1
 
-            @metric_value
+            @metric_property(is_value=True)
             def _private_val(self):
                 return 2
 
@@ -58,14 +57,14 @@ class TestMetricValueDecorator:
         assert "_private_val" not in (mv.get("private") or [])
 
     def test_underscore_name_appears_with_include_private(self):
-        """Underscore-named metric_value is included when include_private=True."""
+        """Underscore-named metric_property is included when include_private=True."""
 
         class DummyMetric(ExampleMetric):
-            @metric_value
+            @metric_property(is_value=True)
             def public_val(self):
                 return 1
 
-            @metric_value
+            @metric_property(is_value=True)
             def _private_val(self):
                 return 2
 
@@ -74,10 +73,10 @@ class TestMetricValueDecorator:
         assert "public_val" in mv["other"]
 
     def test_explicit_private_false_overrides_underscore(self):
-        """@metric_value(private=False) on an underscore name forces it into 'other'."""
+        """@metric_property(is_value=True, private=False) on an underscore name forces it into 'other'."""
 
         class DummyMetric(ExampleMetric):
-            @metric_value(private=False)
+            @metric_property(is_value=True, private=False)
             def _not_actually_private(self):
                 return 1
 
@@ -85,10 +84,10 @@ class TestMetricValueDecorator:
         assert "_not_actually_private" in mv["other"]
 
     def test_explicit_private_true_on_public_name(self):
-        """@metric_value(private=True) on a public name routes it to 'private'."""
+        """@metric_property(is_value=True, private=True) on a public name routes it to 'private'."""
 
         class DummyMetric(ExampleMetric):
-            @metric_value(private=True)
+            @metric_property(is_value=True, private=True)
             def hidden_val(self):
                 return 1
 
@@ -101,7 +100,7 @@ class TestMetricValueDecorator:
         """Private metric values are deduplicated when inherited across multiple bases."""
 
         class Base(ExampleMetric):
-            @metric_value
+            @metric_property(is_value=True)
             def _shared(self):
                 return 1
 
@@ -113,21 +112,21 @@ class TestMetricValueDecorator:
 
 
 class TestDependencyDecorator:
-    """Tests for the dependency decorator."""
+    """Tests for the dependency flag on metric_property."""
 
     def test_dependency_registered_on_class(self):
-        """Test that @dependency registers the property name in _dependencies."""
+        """Test that is_dependency=True registers the property name in _dependencies."""
 
         class DummyMetric(Metric):
             short_name_base = "TEST"
             long_name_base = "Test Metric"
             description = "Test"
 
-            @dependency
+            @metric_property(is_dependency=True)
             def _dep_a(self):
                 pass
 
-            @dependency
+            @metric_property(is_dependency=True)
             def _dep_b(self):
                 pass
 
@@ -141,15 +140,15 @@ class TestDependencyDecorator:
             long_name_base = "Test Metric"
             description = "Test"
 
-            @dependency
+            @metric_property(is_dependency=True)
             def _z(self):
                 pass
 
-            @dependency
+            @metric_property(is_dependency=True)
             def _a(self):
                 pass
 
-            @dependency
+            @metric_property(is_dependency=True)
             def _m(self):
                 pass
 
@@ -163,7 +162,7 @@ class TestDependencyDecorator:
             long_name_base = "Base Metric"
             description = "Base"
 
-            @dependency
+            @metric_property(is_dependency=True)
             def _base_dep(self):
                 pass
 
@@ -172,7 +171,7 @@ class TestDependencyDecorator:
             long_name_base = "Child Metric"
             description = "Child"
 
-            @dependency
+            @metric_property(is_dependency=True)
             def _child_dep(self):
                 pass
 
@@ -187,7 +186,7 @@ class TestDependencyDecorator:
             long_name_base = "Mixin"
             description = "Mixin"
 
-            @dependency
+            @metric_property(is_dependency=True)
             def _shared(self):
                 pass
 
@@ -196,7 +195,7 @@ class TestDependencyDecorator:
             long_name_base = "Child"
             description = "Child"
 
-            @dependency
+            @metric_property(is_dependency=True)
             def _shared(self):
                 pass
 
@@ -204,7 +203,7 @@ class TestDependencyDecorator:
         assert deps.count("_shared") == 1
 
     def test_dependency_caches_result(self):
-        """Test that @dependency caches like cached_property."""
+        """Test that @metric_property(is_dependency=True) caches like cached_property."""
         call_count = 0
 
         class DummyMetric(Metric):
@@ -212,7 +211,7 @@ class TestDependencyDecorator:
             long_name_base = "Test Metric"
             description = "Test"
 
-            @dependency
+            @metric_property(is_dependency=True)
             def _dep(self):
                 nonlocal call_count
                 call_count += 1
@@ -603,11 +602,11 @@ class TestParamFormattingEdgeCases:
             Metric,
             MetricParams,
             _format_registered_params,
-            metric_value,
+            metric_property,
         )
 
         class _FactoryProbe_(ExampleMetric):
-            @metric_value(main=True)
+            @metric_property(is_main=True)
             def value(self) -> float:
                 return 0.0
 
