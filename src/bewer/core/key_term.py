@@ -9,7 +9,7 @@ import ahocorasick
 from bewer.core.text import Text, TextType, TokenList
 
 if TYPE_CHECKING:
-    from bewer.configs import Pipelines
+    from bewer.configs.config import BewerConfig
 
 __all__ = ["KeyTerm", "KeyTermMatch", "KeyTermTrie"]
 
@@ -25,9 +25,9 @@ class KeyTerm(Text):
         self,
         raw: str,
         *,
-        pipelines: "Pipelines",
+        config: "BewerConfig",
     ):
-        super().__init__(raw=raw, pipelines=pipelines, src=None, text_type=TextType.KEY_TERM)
+        super().__init__(raw=raw, config=config, src=None, text_type=TextType.KEY_TERM)
 
     def __repr__(self):
         text = self.raw if len(self.raw) <= 46 else self.raw[:46] + "..."

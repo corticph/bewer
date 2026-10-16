@@ -9,7 +9,7 @@ from bewer.core.token import Token
 from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
-    from bewer.configs import Pipelines
+    from bewer.configs.config import BewerConfig
     from bewer.core.example import Example
 
 __all__ = ["Text", "TextType", "TokenList"]
@@ -56,7 +56,7 @@ class Text:
         self,
         raw: str | None,
         *,
-        pipelines: "Pipelines",
+        config: "BewerConfig",
         src: Optional["Example"] = None,
         text_type: Optional[TextType] = None,
     ):
@@ -64,7 +64,7 @@ class Text:
 
         Args:
             raw: The original text string (reference, hypothesis, or key term).
-            pipelines: The resolved pipeline registry used for lazy standardization/tokenization (required).
+            config: The BewerConfig used for lazy standardization/tokenization (required).
             src: Optional parent Example object.
             text_type: The type of the text (REF, HYP, or KEY_TERM).
         """
@@ -75,7 +75,7 @@ class Text:
         self._cache_tokens = {}
 
         self._src = src
-        self._pipelines = pipelines
+        self._config = config
 
     @property
     def raw(self) -> str:
@@ -93,8 +93,8 @@ class Text:
         return self._text_type
 
     @property
-    def pipelines(self):
-        return self._pipelines
+    def config(self):
+        return self._config
 
     @pipeline_cached_property(STANDARDIZER_NAME)
     def standardized(self, standardizer) -> str:
@@ -104,7 +104,7 @@ class Text:
     @pipeline_cached_property(TOKENIZER_NAME)
     def tokens(self, tokenizer) -> "TokenList":
         """The list of Token objects produced by the active tokenizer."""
-        return TokenList.from_matches(tokenizer(self.standardized), pipelines=self._pipelines, src=self)
+        return TokenList.from_matches(tokenizer(self.standardized), config=self._config, src=self)
 
     def joined(self, normalized: bool = True) -> str:
         """Get the joined text from tokens.
@@ -137,20 +137,20 @@ class TokenList(tuple["Token", ...]):
         cls,
         matches: "Iterable[re.Match]",
         *,
-        pipelines: "Pipelines",
+        config: "BewerConfig",
         src: Optional["Text"] = None,
     ) -> "TokenList":
         """Create a TokenList from an iterable of regex match objects.
 
         Args:
             matches: An iterable of regex Match objects.
-            pipelines: The resolved pipeline registry, threaded to each Token (required).
+            config: The BewerConfig, threaded to each Token (required).
             src: The source Text object, threaded to each Token for ``inctx`` context, if available.
 
         Returns:
             TokenList: A list of Token objects created from the matches.
         """
-        return cls(Token.from_match(match, index=i, pipelines=pipelines, src=src) for i, match in enumerate(matches))
+        return cls(Token.from_match(match, index=i, config=config, src=src) for i, match in enumerate(matches))
 
     @property
     def standardized(self) -> list[str]:

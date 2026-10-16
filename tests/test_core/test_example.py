@@ -10,20 +10,20 @@ from bewer.core.text import Text, TextType
 class TestExampleStandalone:
     """Tests for an Example constructed without a parent Dataset (src=None)."""
 
-    def test_constructs_without_dataset(self, pipelines):
-        """A standalone Example can be built given only a Pipelines registry."""
-        example = Example("a b c", "a x c", pipelines=pipelines)
+    def test_constructs_without_dataset(self, config):
+        """A standalone Example can be built given only a BewerConfig."""
+        example = Example("a b c", "a x c", config=config)
         assert example.src is None
         assert example.ref.tokens.standardized == ["a", "b", "c"]
 
-    def test_vocabs_empty_without_dataset(self, pipelines):
+    def test_vocabs_empty_without_dataset(self, config):
         """vocabs is empty for an Example with no parent Dataset."""
-        example = Example("a b c", "a x c", pipelines=pipelines)
+        example = Example("a b c", "a x c", config=config)
         assert example.vocabs == set()
 
-    def test_metrics_raise_clear_error(self, pipelines):
+    def test_metrics_raise_clear_error(self, config):
         """Dataset-backed metrics are unavailable for a parentless Example."""
-        example = Example("a b c", "a x c", pipelines=pipelines)
+        example = Example("a b c", "a x c", config=config)
         with pytest.raises(ValueError, match="without a parent Dataset"):
             example.metrics.wer()
 

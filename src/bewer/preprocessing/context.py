@@ -39,14 +39,14 @@ def set_pipeline(standardizer=DEFAULT, tokenizer=DEFAULT, normalizer=DEFAULT):
 
 def get_standardizer(dataset: "Dataset") -> Optional["Normalizer"]:
     """Get the standardizer for the dataset in the current context."""
-    return dataset.pipelines.standardizers.get(STANDARDIZER_NAME.get(), None)
+    return dataset.config.standardizers.get(STANDARDIZER_NAME.get(), None)
 
 
 def get_tokenizer(dataset: "Dataset") -> Optional["Tokenizer"]:
     """Get the tokenizer for the dataset in the current context."""
-    return dataset.pipelines.tokenizers.get(TOKENIZER_NAME.get(), None)
+    return dataset.config.tokenizers.get(TOKENIZER_NAME.get(), None)
 
 
 def get_normalizer(dataset: "Dataset") -> Optional["Normalizer"]:
     """Get the normalizer for the dataset in the current context."""
-    return dataset.pipelines.normalizers.get(NORMALIZER_NAME.get(), None)
+    return dataset.config.normalizers.get(NORMALIZER_NAME.get(), None)

@@ -4,10 +4,8 @@ import pytest
 
 from bewer.configs import (
     BewerConfig,
-    Pipelines,
     Transform,
     get_config,
-    resolve_config,
 )
 from bewer.preprocessing.normalization import (
     Normalizer,
@@ -106,14 +104,8 @@ class TestResolveConfig:
             get_config("xx")
 
 
-class TestResolveConfigToPipelines:
-    """Tests for resolve_config()."""
-
-    def test_resolves_to_pipelines(self):
-        """resolve_config returns a Pipelines object."""
-        config = get_config("base")
-        pipelines = resolve_config(config)
-        assert isinstance(pipelines, Pipelines)
+class TestDirectCallable:
+    """Tests for direct callable acceptance."""
 
     def test_direct_callable_accepted(self):
         """A direct callable in a Transform is used as-is."""
@@ -124,5 +116,4 @@ class TestResolveConfigToPipelines:
         config = BewerConfig(
             normalizers=(Normalizer("default", Transform(my_upper)),),
         )
-        pipelines = resolve_config(config)
-        assert "default" in pipelines.normalizers
+        assert "default" in config.normalizers

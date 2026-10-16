@@ -18,7 +18,7 @@ class TestDatasetInit:
         """Test Dataset initialization with default config."""
         dataset = Dataset()
         assert dataset.config is not None
-        assert dataset.pipelines is not None
+        assert dataset.config is not None
 
     def test_empty_examples_list(self):
         """Test that examples list is initially empty."""

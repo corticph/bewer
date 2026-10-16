@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer.configs import Pipelines
+from bewer.configs import BewerConfig
 from bewer.core.text import Text, TextType, TokenList
 
 
@@ -13,9 +13,9 @@ class TestTextRaw:
         """Test that raw property returns the original text."""
         assert sample_text.raw == "hello world"
 
-    def test_raw_raises_when_none(self, pipelines):
+    def test_raw_raises_when_none(self, config):
         """Test that raw raises ValueError when _raw is None."""
-        text = Text(raw=None, pipelines=pipelines)
+        text = Text(raw=None, config=config)
         with pytest.raises(ValueError, match="Raw text is None"):
             _ = text.raw
 
@@ -31,7 +31,7 @@ class TestTextStandardized:
 
     def test_standardized_raises_without_pipeline(self):
         """Test that standardized raises when the active standardizer is missing."""
-        text = Text(raw="hello", pipelines=Pipelines(standardizers={}, tokenizers={}, normalizers={}))
+        text = Text(raw="hello", config=BewerConfig())
         with pytest.raises(ValueError, match="'default' not found in standardizers"):
             _ = text.standardized
 
@@ -51,7 +51,7 @@ class TestTextTokens:
 
     def test_tokens_raises_without_pipeline(self):
         """Test that tokens raises when the active pipeline is missing."""
-        text = Text(raw="hello world", pipelines=Pipelines(standardizers={}, tokenizers={}, normalizers={}))
+        text = Text(raw="hello world", config=BewerConfig())
         with pytest.raises(ValueError):
             _ = text.tokens
 

@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Sequence
-from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Callable
 
-from bewer.flags import NORMALIZERS, STANDARDIZERS, TOKENIZERS
 from bewer.preprocessing.normalization import Normalizer, Standardizer
 from bewer.preprocessing.tokenization import Tokenizer
 from bewer.registry import REGISTRY
@@ -23,33 +21,8 @@ __all__ = [
     "BewerConfig",
     "ConfigFrozenError",
     "Transform",
-    "Pipelines",
-    "resolve_config",
     "get_config",
 ]
-
-
-# ============================================================
-# Pipelines
-# ============================================================
-
-
-@dataclass(frozen=True)
-class Pipelines:
-    """The preprocessing variants resolved from a configuration, grouped by stage.
-
-    Three ``{name: pipeline}`` dicts: standardizers, tokenizers, normalizers.
-    """
-
-    standardizers: dict[str, Normalizer] = field(default_factory=dict)
-    tokenizers: dict[str, Tokenizer] = field(default_factory=dict)
-    normalizers: dict[str, Normalizer] = field(default_factory=dict)
-
-    def __repr__(self) -> str:
-        stages = ((STANDARDIZERS, self.standardizers), (TOKENIZERS, self.tokenizers), (NORMALIZERS, self.normalizers))
-        width = max(len(name) for name, _ in stages) + 1
-        rows = "\n".join(f"    {name + ':':<{width}} {', '.join(entries) or '-'}" for name, entries in stages)
-        return f"Pipelines(\n{rows}\n)"
 
 
 # ============================================================
@@ -210,15 +183,6 @@ class BewerConfig:
 # ============================================================
 # Resolution
 # ============================================================
-
-
-def resolve_config(config: BewerConfig) -> Pipelines:
-    """Wrap a BewerConfig's pipeline dicts into a Pipelines object."""
-    return Pipelines(
-        standardizers=dict(config.standardizers),
-        tokenizers=dict(config.tokenizers),
-        normalizers=dict(config.normalizers),
-    )
 
 
 def _validate_params(fn: Callable, params: dict[str, Any], *, skip_first: bool = False) -> None:

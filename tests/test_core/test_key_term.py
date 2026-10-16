@@ -14,12 +14,12 @@ class TestKeyTermInit:
 
     def test_text_type_is_key_term(self, sample_dataset):
         """Test that KeyTerm always has TextType.KEY_TERM."""
-        kt = KeyTerm("hello", pipelines=sample_dataset.pipelines)
+        kt = KeyTerm("hello", config=sample_dataset.config)
         assert kt.text_type == TextType.KEY_TERM
 
     def test_isinstance_text(self, sample_dataset):
         """Test that KeyTerm instances are also Text instances."""
-        kt = KeyTerm("hello", pipelines=sample_dataset.pipelines)
+        kt = KeyTerm("hello", config=sample_dataset.config)
         assert isinstance(kt, Text)
         assert isinstance(kt, KeyTerm)
 
@@ -29,12 +29,12 @@ class TestKeyTermProperties:
 
     def test_standardized(self, sample_dataset):
         """Test that standardized property works on KeyTerm."""
-        kt = KeyTerm("hello", pipelines=sample_dataset.pipelines)
+        kt = KeyTerm("hello", config=sample_dataset.config)
         assert isinstance(kt.standardized, str)
 
     def test_tokens(self, sample_dataset):
         """Test that tokens property works on KeyTerm."""
-        kt = KeyTerm("hello", pipelines=sample_dataset.pipelines)
+        kt = KeyTerm("hello", config=sample_dataset.config)
         assert isinstance(kt.tokens, TokenList)
         assert len(kt.tokens) == 1
 
@@ -46,7 +46,7 @@ class TestKeyTermTrieFindInTokens:
         """Test finding a single-token key term in a token list."""
         sample_dataset.add("the quick brown fox", "the quick brown dog")
         example = sample_dataset[-1]
-        trie = KeyTermTrie({KeyTerm("fox", pipelines=sample_dataset.pipelines)})
+        trie = KeyTermTrie({KeyTerm("fox", config=sample_dataset.config)})
         ref_tokens = example.ref.tokens
         matches, _ = trie.find_in_tokens(ref_tokens)
         assert len(matches) == 1
@@ -56,7 +56,7 @@ class TestKeyTermTrieFindInTokens:
         """Test finding a token that appears multiple times."""
         sample_dataset.add("the fox and the fox", "the fox")
         example = sample_dataset[-1]
-        trie = KeyTermTrie({KeyTerm("fox", pipelines=sample_dataset.pipelines)})
+        trie = KeyTermTrie({KeyTerm("fox", config=sample_dataset.config)})
         matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert len(matches) == 2
 
@@ -64,7 +64,7 @@ class TestKeyTermTrieFindInTokens:
         """Test finding a multi-token key term contiguously."""
         sample_dataset.add("the quick brown fox", "the quick dog")
         example = sample_dataset[-1]
-        trie = KeyTermTrie({KeyTerm("quick brown", pipelines=sample_dataset.pipelines)})
+        trie = KeyTermTrie({KeyTerm("quick brown", config=sample_dataset.config)})
         ref_tokens = example.ref.tokens
         matches, _ = trie.find_in_tokens(ref_tokens)
         assert len(matches) == 1
@@ -75,7 +75,7 @@ class TestKeyTermTrieFindInTokens:
     def test_no_match(self, sample_dataset):
         """Test that non-matching key term returns empty list."""
         sample_dataset.add("hello world", "hello world")
-        trie = KeyTermTrie({KeyTerm("hello", pipelines=sample_dataset.pipelines)})
+        trie = KeyTermTrie({KeyTerm("hello", config=sample_dataset.config)})
         # Search in a different example's tokens where "hello" doesn't appear
         other_tokens = sample_dataset[1].ref.tokens  # "the quick brown fox"
         matches, _ = trie.find_in_tokens(other_tokens)
@@ -85,7 +85,7 @@ class TestKeyTermTrieFindInTokens:
         """Test that matches are slice instances."""
         sample_dataset.add("the quick brown fox", "the quick")
         example = sample_dataset[-1]
-        trie = KeyTermTrie({KeyTerm("brown", pipelines=sample_dataset.pipelines)})
+        trie = KeyTermTrie({KeyTerm("brown", config=sample_dataset.config)})
         matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert all(isinstance(m, slice) for m in matches)
 
@@ -93,7 +93,7 @@ class TestKeyTermTrieFindInTokens:
         """find_in_tokens returns the KeyTerm object that produced each match."""
         sample_dataset.add("hello world", "hello world")
         example = sample_dataset[-1]
-        kt = KeyTerm("hello", pipelines=sample_dataset.pipelines)
+        kt = KeyTerm("hello", config=sample_dataset.config)
         trie = KeyTermTrie({kt})
         _, key_terms = trie.find_in_tokens(example.ref.tokens)
         assert key_terms == [kt]
@@ -102,7 +102,7 @@ class TestKeyTermTrieFindInTokens:
         """find_in_tokens returns no key terms when nothing matches."""
         sample_dataset.add("hello world", "hello world")
         example = sample_dataset[-1]
-        kt = KeyTerm("nonexistent", pipelines=sample_dataset.pipelines)
+        kt = KeyTerm("nonexistent", config=sample_dataset.config)
         trie = KeyTermTrie({kt})
         _, key_terms = trie.find_in_tokens(example.ref.tokens)
         assert key_terms == []
@@ -113,7 +113,7 @@ class TestKeyTermRepr:
 
     def test_repr(self, sample_dataset):
         """Test that repr shows KeyTerm prefix."""
-        kt = KeyTerm("hello", pipelines=sample_dataset.pipelines)
+        kt = KeyTerm("hello", config=sample_dataset.config)
         assert "KeyTerm" in repr(kt)
         assert "hello" in repr(kt)
 
@@ -223,7 +223,7 @@ class TestKeyTermTrieAddCapitalized:
         """With normalized=False and add_capitalized=True, matches capitalized variant."""
         sample_dataset.add("Hello world", "Hello world")
         example = sample_dataset[-1]
-        kt = KeyTerm("hello", pipelines=sample_dataset.pipelines)
+        kt = KeyTerm("hello", config=sample_dataset.config)
         trie = KeyTermTrie({kt}, normalized=False, add_capitalized=True)
         matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert len(matches) == 1
@@ -232,7 +232,7 @@ class TestKeyTermTrieAddCapitalized:
         """With normalized=False and add_capitalized=False, does not match capitalized text."""
         sample_dataset.add("Hello world", "Hello world")
         example = sample_dataset[-1]
-        kt = KeyTerm("hello", pipelines=sample_dataset.pipelines)
+        kt = KeyTerm("hello", config=sample_dataset.config)
         trie = KeyTermTrie({kt}, normalized=False, add_capitalized=False)
         matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert len(matches) == 0

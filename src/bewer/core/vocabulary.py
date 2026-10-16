@@ -147,7 +147,7 @@ class Vocabulary:
                 raw.add(term)
         # KeyTerm hashes by (raw, text_type), so the set dedups extracted terms against
         # static ones by raw string — extracted terms become indistinguishable from static.
-        return {KeyTerm(term, pipelines=dataset.pipelines) for term in raw}
+        return {KeyTerm(term, config=dataset.config) for term in raw}
 
     def build_matcher(
         self,

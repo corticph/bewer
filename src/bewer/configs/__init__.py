@@ -12,17 +12,13 @@ from bewer.configs import fr as fr  # noqa: F401
 from bewer.configs.config import (
     BewerConfig,
     ConfigFrozenError,
-    Pipelines,
     Transform,
     get_config,
-    resolve_config,
 )
 
 __all__ = [
     "BewerConfig",
     "ConfigFrozenError",
     "Transform",
-    "Pipelines",
-    "resolve_config",
     "get_config",
 ]

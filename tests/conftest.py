@@ -26,9 +26,9 @@ def stub_parent():
 
 
 @pytest.fixture
-def pipelines():
-    """The resolved default pipeline registry, for constructing core objects standalone."""
-    return Dataset().pipelines
+def config():
+    """The default BewerConfig, for constructing core objects standalone."""
+    return Dataset().config
 
 
 @pytest.fixture

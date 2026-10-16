@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Union
 
 import pandas as pd
 
-from bewer.configs.config import BewerConfig, get_config, resolve_config
+from bewer.configs.config import BewerConfig, get_config
 from bewer.core.example import Example
 from bewer.core.text import TokenList
 from bewer.metrics.base import MetricCollection
@@ -24,7 +24,6 @@ class Dataset(object):
 
     Attributes:
         config (BewerConfig): The resolved configuration object.
-        pipelines: The resolved preprocessing pipelines.
         examples (list[Example]): A list of Example objects.
         metrics (MetricCollection): A metrics collection for the dataset.
         refs (TextList): The reference texts in the dataset.
@@ -57,22 +56,17 @@ class Dataset(object):
         self.config_path = None
 
         self._init_blank_state()
-        self._pipelines = resolve_config(self._config)
 
     def _init_blank_state(self) -> None:
         """Initialize the mutable, modifiable state of the dataset.
 
-        Shared by __init__ and clone(). Assumes config and _pipelines are already
-        set (or will be set immediately after). Leaves the dataset unfrozen with
-        empty data and clean caches.
+        Shared by __init__ and clone(). Assumes config is already set (or will
+        be set immediately after). Leaves the dataset unfrozen with empty data
+        and clean caches.
         """
         self.examples = []
         self.metrics = MetricCollection(self)
         self._frozen = False
-
-    @property
-    def pipelines(self):
-        return self._pipelines
 
     @property
     def is_frozen(self) -> bool:
@@ -98,10 +92,10 @@ class Dataset(object):
     def clone(self) -> "Dataset":
         """Return a fresh, unfrozen copy of the dataset with clean caches.
 
-        The copy shares the resolved configuration and preprocessing pipelines (both
-        read-only at runtime) but rebuilds all examples, vocabularies and caches from
-        scratch, so it carries none of the original's cached metric results. Works
-        regardless of whether the original is frozen.
+        The copy shares the resolved configuration (read-only at runtime) but rebuilds
+        all examples, vocabularies and caches from scratch, so it carries none of the
+        original's cached metric results. Works regardless of whether the original is
+        frozen.
 
         Returns:
             Dataset: A modifiable copy containing the same examples and key term vocabularies.
@@ -109,7 +103,6 @@ class Dataset(object):
         new = object.__new__(Dataset)
         new._config = self._config
         new.config_path = self.config_path
-        new._pipelines = self._pipelines
         new._init_blank_state()
         for example in self.examples:
             new.add(example.ref.raw, example.hyp.raw)
@@ -136,7 +129,7 @@ class Dataset(object):
     def add(self, ref: str, hyp: str) -> None:
         """Add an example to the dataset."""
         self._check_not_frozen()
-        example = Example(ref, hyp, pipelines=self._pipelines, src=self, index=len(self))
+        example = Example(ref, hyp, config=self._config, src=self, index=len(self))
         self.examples.append(example)
         # Invalidate cached refs/hyps so they stay fresh while the dataset is still being built.
         self.__dict__.pop("refs", None)
