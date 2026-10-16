@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 class ConfigFrozenError(RuntimeError):
     """Raised when attempting to modify a frozen BewerConfig."""
 
+
 __all__ = [
     "BewerConfig",
     "ConfigFrozenError",

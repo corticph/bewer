@@ -2,23 +2,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, KeyTermParams, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+
+from ._keyterm_params import KeyTermParams
 
 __all__ = ["KTER"]
 
 
 class KTER_(ExampleMetric):
-    @metric_property
+    @metric_property(is_value=True)
     def num_errors(self) -> int:
         """Get the number of key terms incorrectly transcribed in the hypothesis text."""
         return self.parent_metric._kt_stats[self.example.index].num_fn
 
-    @metric_property
+    @metric_property(is_value=True)
     def num_key_terms(self) -> int:
         """Get the number of key terms in the reference text."""
         return self.parent_metric._kt_stats[self.example.index].num_ref_terms
 
-    @metric_property(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level key term error rate."""
         stats = self.parent_metric._kt_stats[self.example.index]
@@ -59,7 +61,7 @@ class KTER(Metric):
 
         partial_credit: bool = False
 
-    @metric_property(set_pipeline=False, is_dependency=True)
+    @metric_property(is_dependency=True)
     def _kt_stats(self):
         """Get the shared _KTStats metric instance."""
         return self.dataset.metrics._kt_stats(
@@ -72,17 +74,17 @@ class KTER(Metric):
             normalizer=self.normalizer,
         )
 
-    @metric_property
+    @metric_property(is_value=True)
     def num_errors(self) -> int:
         """Get the number of key terms incorrectly transcribed in the hypothesis texts."""
         return self._kt_stats.num_fn
 
-    @metric_property
+    @metric_property(is_value=True)
     def num_key_terms(self) -> int:
         """Get the number of key terms in the reference texts."""
         return self._kt_stats.num_ref_terms
 
-    @metric_property(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the key term error rate."""
         denom = self._kt_stats.num_tp + self._kt_stats.num_fn

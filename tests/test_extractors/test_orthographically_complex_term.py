@@ -178,7 +178,7 @@ class TestOrthographicallyComplexTermExtractor:
         dataset = Dataset(
             config=get_config("base")
             .clone()
-            .add_vocabulary(Vocabulary("cts").add_extractor(OrthographicallyComplexTermExtractor()))
+            .add_vocabulary(Vocabulary("cts", extractors=[OrthographicallyComplexTermExtractor()]))
         )
         dataset.add("the MRI and CT-scan", "the MRI and CT-scan")
         vocab = dataset.config.vocabularies["cts"]

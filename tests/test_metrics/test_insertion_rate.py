@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer.metrics.insertion_rate import InsertionRate, InsertionRate_
+from bewer.metrics.hallucination.insertion_rate import InsertionRate, InsertionRate_
 
 
 @pytest.fixture

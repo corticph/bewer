@@ -1,6 +1,6 @@
 """Tests for bewer.metrics.per module."""
 
-from bewer.metrics.per import PER, PER_
+from bewer.metrics.general.per import PER, PER_
 
 
 class TestPERExampleMetric:

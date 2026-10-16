@@ -10,7 +10,7 @@ __all__ = ["WER"]
 
 
 class WER_(ExampleMetric):
-    @metric_property
+    @metric_property(is_value=True)
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference text."""
         if self.params.normalized:
@@ -23,14 +23,14 @@ class WER_(ExampleMetric):
             self.example.hyp.tokens.standardized,
         )
 
-    @metric_property
+    @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Get the number of tokens in the reference text."""
         if self.params.normalized:
             return len(self.example.ref.tokens.normalized)
         return len(self.example.ref.tokens.standardized)
 
-    @metric_property(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level word error rate."""
         if self.ref_length == 0:
@@ -52,17 +52,17 @@ class WER(Metric):
     class param_schema(MetricParams):
         normalized: bool = True
 
-    @metric_property
+    @metric_property(is_value=True)
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference texts."""
         return sum(em.num_edits for em in self)
 
-    @metric_property
+    @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Get the number of tokens in the reference texts."""
         return sum(em.ref_length for em in self)
 
-    @metric_property(main=True)
+    @metric_property(is_main=True)
     def value(self) -> float:
         """Get the word error rate."""
         if self.ref_length == 0:

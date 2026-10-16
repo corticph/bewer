@@ -19,7 +19,6 @@ __all__ = [
     "Metric",
     "ExampleMetric",
     "MetricParams",
-    "KeyTermParams",
     "metric_property",
     "METRIC_REGISTRY",
     "MetricRegistry",
@@ -38,16 +37,17 @@ class metric_property(cached_property):
 
     Common usage patterns::
 
-        @metric_property(main=True)                               # the metric's main value
-        @metric_property()                                        # a regular metric value
-        @metric_property(is_value=False)                          # internal computed property (e.g. _matcher)
-        @metric_property(set_pipeline=False, is_dependency=True)  # borrowed metric dependency
+        @metric_property(is_main=True)          # the metric's main value
+        @metric_property(is_value=True)          # a regular metric value
+        @metric_property                        # internal computed property (caching + pipeline only)
+        @metric_property(is_dependency=True)    # borrowed metric dependency
 
     Args:
-        main: Mark this as the metric's main value (at most one per class).
+        is_main: Mark this as the metric's main value (at most one per class).
+            Implies ``is_value=True``.
         private: Explicitly control privacy. If None, inferred from leading underscore.
         set_pipeline: Wrap computation in ``set_pipeline(*obj.pipeline)``. Default True.
-        is_value: Register in ``_metric_values`` for introspection. Default True.
+        is_value: Register in ``_metric_values`` for introspection. Default False.
         is_dependency: Register in ``_dependencies`` as a borrowed metric dependency.
             Implies ``set_pipeline=False`` and ``is_value=False``.
     """
@@ -56,18 +56,18 @@ class metric_property(cached_property):
         self,
         func=None,
         *,
-        main: bool = False,
+        is_main: bool = False,
         private: bool | None = None,
         set_pipeline: bool = True,
-        is_value: bool = True,
+        is_value: bool = False,
         is_dependency: bool = False,
     ):
-        self._main = main
+        self._is_main = is_main
         self._private = private
         # Dependencies don't need pipeline context — the borrowed metric sets its own.
         self._set_pipeline = set_pipeline and not is_dependency
-        # Dependencies are not values.
-        self._is_value = is_value and not is_dependency
+        # A main value is a value; dependencies are not values.
+        self._is_value = (is_value or is_main) and not is_dependency
         self._is_dependency = is_dependency
         if func is not None:
             super().__init__(func)
@@ -97,10 +97,8 @@ class metric_property(cached_property):
             if metric_values is None:
                 metric_values = {"other": [], "main": None, "private": []}
                 owner._metric_values = metric_values
-            elif "private" not in metric_values:
-                metric_values["private"] = []
 
-            if self._main:
+            if self._is_main:
                 if metric_values["main"] is not None:
                     raise ValueError(f"Multiple main metric values defined in {owner.__name__}.")
                 metric_values["main"] = name
@@ -236,27 +234,6 @@ class MetricParams:
         Called from Metric.__init__ after src is set, so self.metric.src is the Dataset.
         """
         pass
-
-
-@dataclass
-class KeyTermParams(MetricParams):
-    """Base class for key-term metric parameter dataclasses.
-
-    Subclass this with @dataclass to define key-term metric parameters.
-    Provides the common ``vocab``, ``normalized``, and ``allow_subset_matches``
-    fields and validates that the vocabulary exists on the dataset.
-    """
-
-    vocab: str
-    normalized: bool = True
-    allow_subset_matches: bool = False
-
-    def validate(self) -> None:
-        """Validate that the vocabulary exists in the dataset's config."""
-        if self.vocab not in self.metric.dataset.config.vocabularies:
-            raise ValueError(
-                f"Vocabulary '{self.vocab}' not found. Available: {sorted(self.metric.dataset.config.vocabularies)}"
-            )
 
 
 class Metric(ABC):
@@ -733,6 +710,9 @@ class MetricRegistry:
         self.metric_metadata = {}  # name -> metadata dict
         self.metric_classes = {}  # name -> class (kept for compatibility)
 
+    def __contains__(self, name: str) -> bool:
+        return name in self.metric_metadata
+
     @property
     def metric_factories(self):
         """Backwards compatibility - returns dict of names."""
@@ -907,13 +887,6 @@ class MetricRegistry:
             return metric_cls
 
         return decorator
-
-    def list(self) -> list[str]:
-        """Return sorted names of all registered metrics."""
-        return sorted(self.metric_factories)
-
-    def __contains__(self, name: str) -> bool:
-        return name in self.metric_factories
 
 
 METRIC_REGISTRY = MetricRegistry()

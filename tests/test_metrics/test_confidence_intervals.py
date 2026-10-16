@@ -30,9 +30,8 @@ def dataset_with_key_terms():
     """Dataset with a global key term vocabulary, mixing TPs and FNs across
     examples so KT-family metrics produce non-trivial bootstrap distributions.
     """
-    dataset = Dataset(
-        config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
-    )
+    config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["fox", "rabbit"]))
+    dataset = Dataset(config=config)
     dataset.add(ref="the fox jumps", hyp="the fox jumps")
     dataset.add(ref="the fox runs", hyp="the dog runs")
     dataset.add(ref="a rabbit hops", hyp="a rabbit hops")
@@ -218,7 +217,7 @@ class TestEdgeCases:
 
 
 class TestMetricsWithoutMainValueRaise:
-    """Dataset-level metrics with no @metric_property(main=True) cannot have a CI."""
+    """Dataset-level metrics with no @metric_property(is_main=True) cannot have a CI."""
 
     def test_error_align_raises(self, sample_dataset):
         with pytest.raises(ValueError, match="no main metric value"):

@@ -14,11 +14,8 @@ class TestParameterizedMetrics:
     @pytest.fixture
     def sample_dataset(self):
         """Create a sample dataset for testing."""
-        dataset = Dataset(
-            config=get_config("base")
-            .clone()
-            .add_vocabulary(Vocabulary(name="medical_terms").add_terms(["hello", "foo"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["hello", "foo"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="hello world",
             hyp="hello world",
@@ -79,9 +76,8 @@ class TestDynamicNaming:
     @pytest.fixture
     def sample_dataset(self):
         """Create a sample dataset for testing."""
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["hello"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["hello"]))
+        dataset = Dataset(config=config)
         dataset.add(ref="hello world", hyp="hello world")
         return dataset
 
@@ -121,9 +117,8 @@ class TestRKTRParameterization:
     @pytest.fixture
     def keyword_dataset(self):
         """Create a dataset with keywords for testing."""
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
@@ -159,9 +154,8 @@ class TestExampleMetricParamsAccess:
     @pytest.fixture
     def keyword_dataset(self):
         """Create a dataset with keywords for testing."""
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
@@ -265,11 +259,10 @@ class TestDeclarativeHyperparams:
 
     def test_metric_with_optional_hyperparam_uses_default(self):
         """Test that optional hyperparams use defaults when not provided."""
-        from bewer import Dataset, get_config
+        from bewer import Dataset
 
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
@@ -281,11 +274,10 @@ class TestDeclarativeHyperparams:
 
     def test_metric_with_optional_hyperparam_can_override(self):
         """Test that optional hyperparams can be overridden."""
-        from bewer import Dataset, get_config
+        from bewer import Dataset
 
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
@@ -297,11 +289,10 @@ class TestDeclarativeHyperparams:
 
     def test_metric_rejects_unknown_hyperparam(self):
         """Test that unknown hyperparams are rejected with helpful message."""
-        from bewer import Dataset, get_config
+        from bewer import Dataset
 
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
@@ -317,11 +308,10 @@ class TestDeclarativeHyperparams:
 
     def test_metric_validates_hyperparam_type(self):
         """Test that hyperparam types are validated."""
-        from bewer import Dataset, get_config
+        from bewer import Dataset
 
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
@@ -350,7 +340,7 @@ class TestRequiredHyperparams:
         from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample(ExampleMetric):
-            @metric_property(main=True)
+            @metric_property(is_main=True)
             def value(self) -> float:
                 return 0.5
 
@@ -365,7 +355,7 @@ class TestRequiredHyperparams:
             class param_schema(MetricParams):
                 threshold: float
 
-            @metric_property(main=True)
+            @metric_property(is_main=True)
             def value(self) -> float:
                 threshold = self.params.threshold
                 return sum(em.value for em in self if em.value >= threshold)
@@ -381,7 +371,7 @@ class TestRequiredHyperparams:
         from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample2(ExampleMetric):
-            @metric_property(main=True)
+            @metric_property(is_main=True)
             def value(self) -> float:
                 return 0.5
 
@@ -396,7 +386,7 @@ class TestRequiredHyperparams:
             class param_schema(MetricParams):
                 threshold: float
 
-            @metric_property(main=True)
+            @metric_property(is_main=True)
             def value(self) -> float:
                 threshold = self.params.threshold
                 return threshold * 2
@@ -410,7 +400,7 @@ class TestRequiredHyperparams:
         from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample3(ExampleMetric):
-            @metric_property(main=True)
+            @metric_property(is_main=True)
             def value(self) -> float:
                 return 0.5
 
@@ -426,7 +416,7 @@ class TestRequiredHyperparams:
                 threshold: float
                 min_length: int = 1
 
-            @metric_property(main=True)
+            @metric_property(is_main=True)
             def value(self) -> float:
                 threshold = self.params.threshold
                 min_length = self.params.min_length
@@ -450,7 +440,7 @@ class TestRequiredHyperparams:
         from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample4(ExampleMetric):
-            @metric_property(main=True)
+            @metric_property(is_main=True)
             def value(self) -> float:
                 return 0.5
 
@@ -467,7 +457,7 @@ class TestRequiredHyperparams:
                 beta: int = 2
                 gamma: float = 3.0
 
-            @metric_property(main=True)
+            @metric_property(is_main=True)
             def value(self) -> float:
                 return 1.0
 

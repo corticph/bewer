@@ -3,25 +3,23 @@
 import pytest
 
 from bewer import Dataset, Vocabulary, get_config
-from bewer.metrics.ktcer import KTCER, KTCER_
+from bewer.metrics.key_term.ktcer import KTCER, KTCER_
 
 
 class TestKTCERExampleMetric:
     """Tests for KTCER_ (ExampleMetric) class."""
 
     def test_perfect_match(self):
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["diabetes"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(ref="the patient has diabetes", hyp="the patient has diabetes")
         example = dataset[0]
         assert example.metrics.ktcer(vocab="k").value == 0.0
 
     def test_single_char_error(self):
         # "diabetis" vs "diabetes": 1 edit, 8 ref chars → CER = 1/8
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["diabetes"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(ref="the patient has diabetes", hyp="the patient has diabetis")
         example = dataset[0]
         ktcer = example.metrics.ktcer(vocab="k")
@@ -30,9 +28,8 @@ class TestKTCERExampleMetric:
         assert ktcer.value == pytest.approx(1 / 8)
 
     def test_num_char_edits_and_ref_chars(self):
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["diabetes", "asthma"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["diabetes", "asthma"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="patient has diabetes and asthma",
             hyp="patient has diabetis and astma",
@@ -45,9 +42,8 @@ class TestKTCERExampleMetric:
 
     def test_complete_deletion(self):
         # key term fully absent from hypothesis
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["diabetes"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(ref="patient has diabetes", hyp="patient has")
         example = dataset[0]
         ktcer = example.metrics.ktcer(vocab="k")
@@ -57,9 +53,8 @@ class TestKTCERExampleMetric:
 
     def test_normalized_false_uses_raw_tokens(self):
         # With normalized=False, casing is preserved; a case mismatch counts as an edit.
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["Diabetes"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["Diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(ref="patient has Diabetes", hyp="patient has diabetes")
         example = dataset[0]
         ktcer_normalized = example.metrics.ktcer(vocab="k", normalized=True)
@@ -69,7 +64,8 @@ class TestKTCERExampleMetric:
 
     def test_partial_boundary_penalty_flows_through(self):
         # "blood" key term, hyp "bloodpressure": +1 from hyp_right_partial
-        dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["blood"])))
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["blood"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="patient has blood pressure",
             hyp="patient has bloodpressure",
@@ -85,9 +81,8 @@ class TestKTCERDatasetMetric:
 
     @pytest.fixture
     def mixed_dataset(self):
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["diabetes", "asthma"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["diabetes", "asthma"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="patient has diabetes",
             hyp="patient has diabetes",
@@ -114,16 +109,15 @@ class TestKTCERDatasetMetric:
         assert ktcer.value == pytest.approx(1 / 14)
 
     def test_all_correct(self):
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="k").add_terms(["diabetes", "asthma"]))
-        )
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["diabetes", "asthma"]))
+        dataset = Dataset(config=config)
         dataset.add(ref="has diabetes", hyp="has diabetes")
         dataset.add(ref="has asthma", hyp="has asthma")
         assert dataset.metrics.ktcer(vocab="k").value == 0.0
 
     def test_empty_vocab_raises(self):
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found"):
+        with pytest.raises(ValueError, match="not found in dataset config vocabularies"):
             dataset.metrics.ktcer(vocab="k").value
 
 

@@ -13,9 +13,10 @@ surface form is scored strictly.
 from __future__ import annotations
 
 from bewer.metrics.base import METRIC_REGISTRY
-from bewer.metrics.ktf import KTF
-from bewer.metrics.ktp import KTP
-from bewer.metrics.ktr import KTR
+
+from .ktf import KTF
+from .ktp import KTP
+from .ktr import KTR
 
 DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB = "orthographically_complex_terms"
 

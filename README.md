@@ -253,25 +253,26 @@ assert wer is dataset.metrics.wer(normalizer="default")
 | | Type | Accessor | |
 |--------|------|----------|---:|
 | **General purpose** | | | |
-| Word Error Rate | General | `wer` | [`>`](src/bewer/metrics/wer.py) |
-| Character Error Rate | General | `cer` | [`>`](src/bewer/metrics/cer.py) |
-| Punctuation Error Rate | General | `per` | [`>`](src/bewer/metrics/per.py) |
+| Word Error Rate | General | `wer` | [`>`](src/bewer/metrics/general/wer.py) |
+| Character Error Rate | General | `cer` | [`>`](src/bewer/metrics/general/cer.py) |
+| Punctuation Error Rate | General | `per` | [`>`](src/bewer/metrics/general/per.py) |
 | **Hallucination metrics** | | | |
-| Insertion Rate | Hallucination | `insertion_rate` | [`>`](src/bewer/metrics/insertion_rate.py) |
+| Insertion Rate | Hallucination | `insertion_rate` | [`>`](src/bewer/metrics/hallucination/insertion_rate.py) |
+| Example Insertion Rate | Hallucination | `example_insertion_rate` | [`>`](src/bewer/metrics/hallucination/example_insertion_rate.py) |
 | **Key-term metrics** | | | |
-| Key-Term Recall | Key-term | `ktr` | [`>`](src/bewer/metrics/ktr.py) |
-| Key-Term Precision | Key-term | `ktp` | [`>`](src/bewer/metrics/ktp.py) |
-| Key-Term F-Score | Key-term | `ktf` | [`>`](src/bewer/metrics/ktf.py) |
-| Key-Term Error Rate | Key-term | `kter` | [`>`](src/bewer/metrics/kter.py) |
-| Key-Term False-Positive Rate | Key-term | `ktfpr` | [`>`](src/bewer/metrics/ktfpr.py) |
-| Key-Term Character Error Rate | Key-term | `ktcer` | [`>`](src/bewer/metrics/ktcer.py) |
-| Relaxed Key-Term Recall | Key-term | `rktr` | [`>`](src/bewer/metrics/rktr.py) |
+| Key-Term Recall | Key-term | `ktr` | [`>`](src/bewer/metrics/key_term/ktr.py) |
+| Key-Term Precision | Key-term | `ktp` | [`>`](src/bewer/metrics/key_term/ktp.py) |
+| Key-Term F-Score | Key-term | `ktf` | [`>`](src/bewer/metrics/key_term/ktf.py) |
+| Key-Term Error Rate | Key-term | `kter` | [`>`](src/bewer/metrics/key_term/kter.py) |
+| Key-Term False-Positive Rate | Key-term | `ktfpr` | [`>`](src/bewer/metrics/key_term/ktfpr.py) |
+| Key-Term Character Error Rate | Key-term | `ktcer` | [`>`](src/bewer/metrics/key_term/ktcer.py) |
+| Relaxed Key-Term Recall | Key-term | `rktr` | [`>`](src/bewer/metrics/key_term/rktr.py) |
 | **Orthographically complex terms** | | | |
-| Orthographically Complex Term Recall | Key-term | `orthographically_complex_term_recall` | [`>`](src/bewer/metrics/orthographically_complex_term.py) |
-| Orthographically Complex Term Precision | Key-term | `orthographically_complex_term_precision` | [`>`](src/bewer/metrics/orthographically_complex_term.py) |
-| Orthographically Complex Term F-Score | Key-term | `orthographically_complex_term_fscore` | [`>`](src/bewer/metrics/orthographically_complex_term.py) |
+| Orthographically Complex Term Recall | Key-term | `orthographically_complex_term_recall` | [`>`](src/bewer/metrics/key_term/orthographically_complex_term.py) |
+| Orthographically Complex Term Precision | Key-term | `orthographically_complex_term_precision` | [`>`](src/bewer/metrics/key_term/orthographically_complex_term.py) |
+| Orthographically Complex Term F-Score | Key-term | `orthographically_complex_term_fscore` | [`>`](src/bewer/metrics/key_term/orthographically_complex_term.py) |
 | **Alignments** | | | |
-| Levenshtein Alignment | Alignment | `levenshtein` | [`>`](src/bewer/metrics/levenshtein.py) |
-| Error Alignment | Alignment | `error_align` | [`>`](src/bewer/metrics/error_align.py) |
+| Levenshtein Alignment | Alignment | `levenshtein` | [`>`](src/bewer/metrics/alignment/levenshtein.py) |
+| Error Alignment | Alignment | `error_align` | [`>`](src/bewer/metrics/alignment/error_align.py) |
 | **Dataset statistics** | | | |
-| Dataset Summary | Summary | `summary` | [`>`](src/bewer/metrics/summary.py) |
+| Dataset Summary | Summary | `summary` | [`>`](src/bewer/metrics/summary/summary.py) |

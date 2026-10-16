@@ -4,20 +4,11 @@ import pytest
 
 from bewer import Dataset
 
-
-class TestAutoVocabulary:
-    """The vocabulary is declared in the base config and attached at init."""
-
-    def test_vocabulary_attached_at_init(self):
-        dataset = Dataset()
-        assert "orthographically_complex_terms" in dataset.config.vocabularies
-
-    def test_works_after_dataset_already_frozen(self):
-        dataset = Dataset()
-        dataset.add("an MRI scan", "an MRI scan")
-        dataset.metrics.wer().value  # freezes the dataset
-        assert dataset.is_frozen
-        assert dataset.metrics.orthographically_complex_term_recall().value == 1.0
+METRICS = (
+    "orthographically_complex_term_recall",
+    "orthographically_complex_term_precision",
+    "orthographically_complex_term_fscore",
+)
 
 
 class TestRecall:
@@ -57,6 +48,13 @@ class TestRecall:
         dataset.add("an MRI scan", "an mri scan")
         assert dataset.metrics.orthographically_complex_term_recall().value == 0.0
 
+    def test_works_after_dataset_already_frozen(self):
+        dataset = Dataset()
+        dataset.add("an MRI scan", "an MRI scan")
+        dataset.metrics.wer().value  # freezes the dataset
+        assert dataset.is_frozen
+        assert dataset.metrics.orthographically_complex_term_recall().value == 1.0
+
 
 class TestPrecision:
     def test_perfect_precision(self):
@@ -93,26 +91,25 @@ class TestFScore:
 class TestMetricAttributes:
     """Generated metric metadata."""
 
-    @pytest.mark.parametrize(
-        "name",
-        [
-            "orthographically_complex_term_recall",
-            "orthographically_complex_term_precision",
-            "orthographically_complex_term_fscore",
-        ],
-    )
+    @pytest.mark.parametrize("name", METRICS)
+    def test_registered(self, name):
+        from bewer.metrics.base import METRIC_REGISTRY
+
+        assert name in METRIC_REGISTRY.metric_metadata
+
+    @pytest.mark.parametrize("name", METRICS)
     def test_main_value(self, name):
         from bewer.metrics.base import METRIC_REGISTRY
 
-        cls = METRIC_REGISTRY.metric_classes[name]
-        assert cls.metric_values()["main"] == "value"
+        metric_cls = METRIC_REGISTRY.metric_metadata[name]["metric_cls"]
+        assert metric_cls.metric_values()["main"] == "value"
 
     def test_default_vocab(self):
-        from bewer.metrics.base import METRIC_REGISTRY
+        from bewer.metrics.key_term.orthographically_complex_term import DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB
 
-        for name in ["orthographically_complex_term_recall", "orthographically_complex_term_fscore"]:
-            meta = METRIC_REGISTRY.metric_metadata[name]
-            assert meta["param_defaults"]["vocab"] == "orthographically_complex_terms"
+        dataset = Dataset()
+        recall = dataset.metrics.orthographically_complex_term_recall()
+        assert recall.params.vocab == DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB
 
     def test_runs_under_complex_term_pipeline(self):
         dataset = Dataset()

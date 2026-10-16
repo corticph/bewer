@@ -25,32 +25,32 @@ class ErrorAlign_(ExampleMetric):
         EAOpType.DELETE: OpType.DELETE,
     }
 
-    @metric_property
+    @metric_property(is_value=True)
     def num_substitutions(self) -> int:
         """Get the number of substitutions."""
         return self.alignment.num_substitutions
 
-    @metric_property
+    @metric_property(is_value=True)
     def num_insertions(self) -> int:
         """Get the number of insertions."""
         return self.alignment.num_insertions
 
-    @metric_property
+    @metric_property(is_value=True)
     def num_deletions(self) -> int:
         """Get the number of deletions."""
         return self.alignment.num_deletions
 
-    @metric_property
+    @metric_property(is_value=True)
     def num_edits(self) -> int:
         """Get the number of edits."""
         return self.alignment.num_edits
 
-    @metric_property
+    @metric_property(is_value=True)
     def num_matches(self) -> int:
         """Get the number of matches."""
         return self.alignment.num_matches
 
-    @metric_property(main=True)
+    @metric_property(is_main=True)
     def alignment(self) -> Alignment:
         """Get the error alignment operations between the hypothesis and reference text."""
         return self._get_ops()
