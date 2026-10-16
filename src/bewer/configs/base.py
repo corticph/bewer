@@ -21,7 +21,7 @@ from bewer.preprocessing.tokenization import (
     keep_symbols_and_punctuation_pattern,
     strip_punctuation_keep_symbols_pattern,
 )
-from bewer.registry import REGISTRY
+from bewer.registry import CONFIG_REGISTRY
 
 __all__: list[str] = []
 
@@ -62,4 +62,4 @@ BASE_CONFIG = BewerConfig(
     vocabularies=(Vocabulary("orthographically_complex_terms").add_extractor(OrthographicallyComplexTermExtractor()),),
 )
 
-REGISTRY.configs.register("base", BASE_CONFIG)
+CONFIG_REGISTRY.register("base", BASE_CONFIG)

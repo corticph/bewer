@@ -1,13 +1,13 @@
-"""Unified registry for BeWER pluggable components.
+"""Config registry for BeWER.
 
-This module provides a single ``REGISTRY`` singleton with typed namespaces
-for configs.  Metrics continue to use the existing ``MetricRegistry`` class,
-exposed as ``REGISTRY.metrics``.
+Provides ``CONFIG_REGISTRY``, a singleton ``ComponentRegistry`` for config
+presets. Metrics use the separate ``MetricRegistry`` class in
+``bewer.metrics.base``, exposed as ``METRIC_REGISTRY``.
 
 Registration API
 ----------------
 
-    REGISTRY.configs.register("da", da_config)
+    CONFIG_REGISTRY.register("da", da_config)
 
 Preprocessing functions (transforms, tokenizers) and vocabularies are NOT
 registered — they are passed directly in ``BewerConfig``.
@@ -56,35 +56,18 @@ class ComponentRegistry:
     def __repr__(self) -> str:
         return f"ComponentRegistry({self._kind!r}, {list(self._components)})"
 
-
-class Registry:
-    """Top-level registry holding all typed namespaces."""
-
-    def __init__(self):
-        self.configs = ComponentRegistry("config")
-        self._metrics = None
-
-    @property
-    def metrics(self):
-        if self._metrics is None:
-            from bewer.metrics.base import METRIC_REGISTRY
-
-            self._metrics = METRIC_REGISTRY
-        return self._metrics
-
     @contextmanager
     def isolated(self):
-        """Snapshot and restore all non-metric namespaces.
+        """Snapshot and restore all registered components.
 
         Useful for tests that register temporary components.
         """
-        snapshots = {ns: dict(getattr(self, ns)._components) for ns in ("configs",)}
+        snapshot = dict(self._components)
         try:
-            yield
+            yield self
         finally:
-            for ns, snap in snapshots.items():
-                getattr(self, ns)._components.clear()
-                getattr(self, ns)._components.update(snap)
+            self._components.clear()
+            self._components.update(snapshot)
 
 
-REGISTRY = Registry()
+CONFIG_REGISTRY = ComponentRegistry("config")

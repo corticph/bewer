@@ -10,7 +10,7 @@ from bewer.configs.config import BewerConfig, ConfigFrozenError, Transform, get_
 from bewer.core.dataset import Dataset, DatasetFrozenError
 from bewer.core.vocabulary import ExtractorFn, Vocabulary, VocabularyExtractorError, VocabularyFrozenError
 from bewer.preprocessing.context import set_pipeline
-from bewer.registry import REGISTRY
+from bewer.registry import CONFIG_REGISTRY
 
 try:
     __version__ = version("bewer")
@@ -28,7 +28,7 @@ __all__ = [
     "BewerConfig",
     "Transform",
     "get_config",
-    "REGISTRY",
+    "CONFIG_REGISTRY",
     "set_pipeline",
     "core",
     "extractors",

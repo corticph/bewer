@@ -6,7 +6,7 @@ from bewer.configs.base import BASE_CONFIG
 from bewer.configs.config import BewerConfig, Transform
 from bewer.preprocessing.normalization import Normalizer, lowercase, transliterate_latin_letters, transliterate_symbols
 from bewer.preprocessing.tokenization import Tokenizer, strip_punctuation_keep_symbols_pattern
-from bewer.registry import REGISTRY
+from bewer.registry import CONFIG_REGISTRY
 
 __all__: list[str] = []
 
@@ -25,4 +25,4 @@ FR_CONFIG = BewerConfig(
     ),
 )
 
-REGISTRY.configs.register("fr", FR_CONFIG)
+CONFIG_REGISTRY.register("fr", FR_CONFIG)

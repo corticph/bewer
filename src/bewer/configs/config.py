@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from bewer.preprocessing.normalization import Normalizer, Standardizer
 from bewer.preprocessing.tokenization import Tokenizer
-from bewer.registry import REGISTRY
+from bewer.registry import CONFIG_REGISTRY
 
 if TYPE_CHECKING:
     from bewer.core.vocabulary import Vocabulary
@@ -214,4 +214,4 @@ def _validate_params(fn: Callable, params: dict[str, Any], *, skip_first: bool =
 
 def get_config(name: str) -> BewerConfig:
     """Retrieve a registered config by name."""
-    return REGISTRY.configs.get(name)
+    return CONFIG_REGISTRY.get(name)

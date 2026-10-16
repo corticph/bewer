@@ -1,9 +1,9 @@
-"""Tests for the unified registry (bewer.registry)."""
+"""Tests for the config registry (bewer.registry)."""
 
 import pytest
 
 from bewer.configs import BewerConfig
-from bewer.registry import REGISTRY, ComponentRegistry
+from bewer.registry import CONFIG_REGISTRY, ComponentRegistry
 
 
 class TestComponentRegistry:
@@ -54,32 +54,27 @@ class TestComponentRegistry:
         assert "bar" not in reg
 
 
-class TestRegistry:
-    """Tests for the top-level Registry singleton."""
+class TestConfigRegistry:
+    """Tests for the CONFIG_REGISTRY singleton."""
 
-    def test_configs_has_preregistered(self):
-        """The REGISTRY singleton has pre-registered configs."""
-        assert "base" in REGISTRY.configs
-        assert "en" in REGISTRY.configs
-        assert "da" in REGISTRY.configs
-
-    def test_metrics_has_preregistered(self):
-        """The REGISTRY singleton exposes the metric registry."""
-        assert "wer" in REGISTRY.metrics
-        assert "cer" in REGISTRY.metrics
+    def test_has_preregistered(self):
+        """The CONFIG_REGISTRY singleton has pre-registered configs."""
+        assert "base" in CONFIG_REGISTRY
+        assert "en" in CONFIG_REGISTRY
+        assert "da" in CONFIG_REGISTRY
 
     def test_isolated_restores_state(self, isolated_registry):
         """isolated() restores the registry state after exit."""
-        before = set(isolated_registry.configs.list())
-        with REGISTRY.isolated():
-            REGISTRY.configs.register("temp", BewerConfig())
-            assert "temp" in REGISTRY.configs
-        assert "temp" not in REGISTRY.configs
-        assert set(REGISTRY.configs.list()) == before
+        before = set(isolated_registry.list())
+        with CONFIG_REGISTRY.isolated():
+            CONFIG_REGISTRY.register("temp", BewerConfig())
+            assert "temp" in CONFIG_REGISTRY
+        assert "temp" not in CONFIG_REGISTRY
+        assert set(CONFIG_REGISTRY.list()) == before
 
     def test_isolated_preserves_preregistered(self, isolated_registry):
         """Pre-registered components are still accessible inside isolated()."""
-        assert "base" in isolated_registry.configs
-        with REGISTRY.isolated():
-            assert "base" in REGISTRY.configs
-        assert "base" in REGISTRY.configs
+        assert "base" in isolated_registry
+        with CONFIG_REGISTRY.isolated():
+            assert "base" in CONFIG_REGISTRY
+        assert "base" in CONFIG_REGISTRY
