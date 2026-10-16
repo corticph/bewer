@@ -59,7 +59,7 @@ BASE_CONFIG = BewerConfig(
             Transform(transliterate_symbols),
         ),
     ),
-    vocabularies=(Vocabulary("orthographically_complex_terms").add_extractor(OrthographicallyComplexTermExtractor()),),
+    vocabularies=(Vocabulary("orthographically_complex_terms", extractors=[OrthographicallyComplexTermExtractor()]),),
 )
 
 CONFIG_REGISTRY.register("base", BASE_CONFIG)

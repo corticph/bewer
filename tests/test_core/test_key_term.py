@@ -183,9 +183,7 @@ class TestTextGetKeyTermMatchesAllowSubsets:
     def test_allow_subset_matches_true_returns_all(self, sample_dataset):
         """With allow_subset_matches=True (default), overlapping key terms both match."""
         dataset = Dataset(
-            config=get_config("base")
-            .clone()
-            .add_vocabulary(Vocabulary(name="phrases").add_terms(["quick", "quick brown"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary("phrases", terms=["quick", "quick brown"]))
         )
         dataset.add(
             "the quick brown fox",
@@ -200,9 +198,7 @@ class TestTextGetKeyTermMatchesAllowSubsets:
     def test_allow_subset_matches_false_keeps_longer(self, sample_dataset):
         """With allow_subset_matches=False, the shorter overlapping match is removed."""
         dataset = Dataset(
-            config=get_config("base")
-            .clone()
-            .add_vocabulary(Vocabulary(name="phrases").add_terms(["quick", "quick brown"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary("phrases", terms=["quick", "quick brown"]))
         )
         dataset.add(
             "the quick brown fox",
@@ -243,9 +239,7 @@ class TestKeyTermMatch:
 
     def test_returns_key_term_match_instances(self, sample_dataset):
         """find_matches returns KeyTermMatch objects, not raw slices."""
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="med").add_terms(["diabetes"]))
-        )
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("med", terms=["diabetes"])))
         dataset.add("the patient has diabetes", "the patient has diabetes")
         example = dataset[-1]
         vocab = dataset.config.vocabularies["med"]
@@ -257,7 +251,7 @@ class TestKeyTermMatch:
     def test_span_and_token_slice(self, sample_dataset):
         """start/stop are token indices and token_slice indexes the parent TokenList."""
         dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary("phrases", terms=["quick brown"]))
         )
         dataset.add("the quick brown fox", "the quick brown fox")
         example = dataset[-1]
@@ -271,7 +265,7 @@ class TestKeyTermMatch:
     def test_references_and_derived_fields(self, sample_dataset):
         """src/key_term references and the derived tokens are correct."""
         dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="phrases").add_terms(["quick brown"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary("phrases", terms=["quick brown"]))
         )
         dataset.add("the quick brown fox", "the quick brown fox")
         example = dataset[-1]
@@ -285,9 +279,7 @@ class TestKeyTermMatch:
 
     def test_side_reflects_ref_vs_hyp(self, sample_dataset):
         """side mirrors the parent text's TextType for both ref and hyp matches."""
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["brown"]))
-        )
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["brown"])))
         dataset.add("the brown fox", "the brown dog")
         example = dataset[-1]
         vocab = dataset.config.vocabularies["animals"]
@@ -299,9 +291,7 @@ class TestKeyTermMatch:
 
     def test_matched_tokens_preserve_original_casing(self, sample_dataset):
         """The matched tokens are the standardized text even when matching is case-insensitive."""
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="greetings").add_terms(["hello"]))
-        )
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("greetings", terms=["hello"])))
         dataset.add("Hello World", "hello world")
         example = dataset[-1]
         vocab = dataset.config.vocabularies["greetings"]
@@ -313,9 +303,7 @@ class TestKeyTermMatch:
     def test_subset_removal_keeps_richer_object(self, sample_dataset):
         """With allow_subset_matches=False the surviving longer match is a KeyTermMatch."""
         dataset = Dataset(
-            config=get_config("base")
-            .clone()
-            .add_vocabulary(Vocabulary(name="phrases").add_terms(["quick", "quick brown"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary("phrases", terms=["quick", "quick brown"]))
         )
         dataset.add("the quick brown fox", "the quick brown fox")
         example = dataset[-1]
@@ -329,7 +317,7 @@ class TestKeyTermMatch:
         """When distinct raw terms collapse to the same token pattern, the reported key term
         is deterministic: the lexicographically smallest raw wins (here "Diabetes" < "diabetes")."""
         dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="med").add_terms(["diabetes", "Diabetes"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary("med", terms=["diabetes", "Diabetes"]))
         )
         dataset.add("the patient has diabetes", "the patient has diabetes")
         example = dataset[-1]

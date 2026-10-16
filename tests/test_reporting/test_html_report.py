@@ -317,9 +317,7 @@ class TestKeyTermIndicators:
         from bewer import Vocabulary, get_config
         from bewer.core.dataset import Dataset
 
-        dataset = Dataset(
-            config=get_config("base").clone().add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
-        )
+        dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
         dataset.add("the quick brown fox", "the quick brown dog")
         return dataset
 
@@ -342,9 +340,7 @@ class TestKeyTermIndicators:
         from bewer.reporting.html.alignment import _get_key_term_indicators
 
         dataset = Dataset(
-            config=get_config("base")
-            .clone()
-            .add_vocabulary(Vocabulary(name="overlapping").add_terms(["brown fox", "brown"]))
+            config=get_config("base").clone().add_vocabulary(Vocabulary("overlapping", terms=["brown fox", "brown"]))
         )
         # "brown fox" and "brown" overlap — their union covers "brown" and "fox"
         dataset.add(

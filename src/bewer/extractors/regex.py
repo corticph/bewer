@@ -13,7 +13,7 @@ with a ``pattern`` directly, or subclass it and override :attr:`default_pattern`
         default_pattern = r"\\p{Greek}+"
 
 Either form can be registered as a vocabulary via
-``Vocabulary(name).add_extractor(extractor)`` and then referenced from a key-term metric.
+``Vocabulary(name, extractors=[extractor])`` and then referenced from a key-term metric.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ class RegexExtractor:
 
     Instances are :data:`~bewer.core.vocabulary.ExtractorFn` callables: ``extractor(dataset)``
     returns the set of distinct reference terms whose tokens fully match the pattern, ready to
-    register via ``Vocabulary(name).add_extractor(extractor)``.
+    register via ``Vocabulary(name, extractors=[extractor])``.
 
     Each example's reference is read under the active tokenizer, so the surface form of a term
     depends on the pipeline the owning metric runs with (e.g. the ``orthographically_complex_term`` tokenizer

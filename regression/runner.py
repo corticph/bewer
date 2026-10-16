@@ -143,7 +143,7 @@ def build_dataset(dataset_spec: dict) -> Dataset:
     vocab_spec = dataset_spec.get("vocab")
     if vocab_spec:
         config = config.clone().add_vocabulary(
-            Vocabulary(name=vocab_spec["name"]).add_file(_resolve(vocab_spec["file"]))
+            Vocabulary(name=vocab_spec["name"], files=[_resolve(vocab_spec["file"])])
         )
     ds = Dataset(config=config)
     ds.load_jsonl(str(_resolve(dataset_spec["path"])), ref_col="ref", hyp_col="hyp")
