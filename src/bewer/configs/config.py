@@ -40,50 +40,48 @@ class ConfigRegistry:
     """
 
     def __init__(self):
-        self._components: dict[str, Any] = {}
+        self._configs: dict[str, BewerConfig] = {}
 
-    def register(self, name: str, component: Any) -> Any:
-        """Register a component under ``name``.
+    def register(self, name: str, config: BewerConfig) -> BewerConfig:
+        """Register a config under ``name``, freezing it first.
 
-        If the component has a ``freeze`` method, it is called before registration.
         Raises ValueError if the name is already registered.
         """
-        if name in self._components:
+        if name in self._configs:
             raise ValueError(f"Config '{name}' is already registered")
-        if hasattr(component, "freeze"):
-            component.freeze()
-        self._components[name] = component
-        return component
+        config.freeze()
+        self._configs[name] = config
+        return config
 
-    def get(self, name: str) -> Any:
-        """Retrieve a component by name. Raises KeyError if missing."""
-        if name not in self._components:
-            available = sorted(self._components)
+    def get(self, name: str) -> BewerConfig:
+        """Retrieve a config by name. Raises KeyError if missing."""
+        if name not in self._configs:
+            available = sorted(self._configs)
             raise KeyError(f"Config '{name}' not found. Available: {available}")
-        return self._components[name]
+        return self._configs[name]
 
     def list(self) -> list[str]:
-        """Return sorted names of all registered components."""
-        return sorted(self._components)
+        """Return sorted names of all registered configs."""
+        return sorted(self._configs)
 
     def __contains__(self, name: str) -> bool:
-        return name in self._components
+        return name in self._configs
 
     def __repr__(self) -> str:
-        return f"ConfigRegistry({list(self._components)})"
+        return f"ConfigRegistry({list(self._configs)})"
 
     @contextmanager
     def isolated(self):
-        """Snapshot and restore all registered components.
+        """Snapshot and restore all registered configs.
 
-        Useful for tests that register temporary components.
+        Useful for tests that register temporary configs.
         """
-        snapshot = dict(self._components)
+        snapshot = dict(self._configs)
         try:
             yield self
         finally:
-            self._components.clear()
-            self._components.update(snapshot)
+            self._configs.clear()
+            self._configs.update(snapshot)
 
 
 CONFIG_REGISTRY = ConfigRegistry()
