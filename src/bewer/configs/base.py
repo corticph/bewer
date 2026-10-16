@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bewer.configs.config import BewerConfig, Transform
+from bewer.configs.config import CONFIG_REGISTRY, BewerConfig, Transform
 from bewer.core.vocabulary import Vocabulary
 from bewer.extractors.orthographically_complex_term import OrthographicallyComplexTermExtractor
 from bewer.preprocessing.normalization import (
@@ -21,7 +21,6 @@ from bewer.preprocessing.tokenization import (
     keep_symbols_and_punctuation_pattern,
     strip_punctuation_keep_symbols_pattern,
 )
-from bewer.registry import CONFIG_REGISTRY
 
 __all__: list[str] = []
 

@@ -2,8 +2,8 @@
 
 import pytest
 
+from bewer.configs import CONFIG_REGISTRY
 from bewer.core.dataset import Dataset
-from bewer.registry import CONFIG_REGISTRY
 
 
 class StubParent:

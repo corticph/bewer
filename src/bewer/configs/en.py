@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from bewer.configs.config import get_config
-from bewer.registry import CONFIG_REGISTRY
+from bewer.configs.config import CONFIG_REGISTRY, get_config
 
 __all__: list[str] = []
 

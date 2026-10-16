@@ -10,15 +10,19 @@ from bewer.configs import de as de  # noqa: F401
 from bewer.configs import en as en  # noqa: F401
 from bewer.configs import fr as fr  # noqa: F401
 from bewer.configs.config import (
+    CONFIG_REGISTRY,
     BewerConfig,
     ConfigFrozenError,
+    ConfigRegistry,
     Transform,
     get_config,
 )
 
 __all__ = [
     "BewerConfig",
+    "CONFIG_REGISTRY",
     "ConfigFrozenError",
+    "ConfigRegistry",
     "Transform",
     "get_config",
 ]

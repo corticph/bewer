@@ -100,7 +100,7 @@ class TestResolveConfig:
 
     def test_unknown_config_raises(self):
         """An unknown config raises KeyError."""
-        with pytest.raises(KeyError, match="config 'xx' not found"):
+        with pytest.raises(KeyError, match="Config 'xx' not found"):
             get_config("xx")
 
 

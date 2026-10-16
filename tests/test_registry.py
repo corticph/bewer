@@ -1,38 +1,38 @@
-"""Tests for the config registry (bewer.registry)."""
+"""Tests for the config registry (bewer.configs.config)."""
 
 import pytest
 
 from bewer.configs import BewerConfig
-from bewer.registry import CONFIG_REGISTRY, ComponentRegistry
+from bewer.configs.config import CONFIG_REGISTRY, ConfigRegistry
 
 
-class TestComponentRegistry:
-    """Tests for the ComponentRegistry class."""
+class TestConfigRegistry:
+    """Tests for the ConfigRegistry class."""
 
     def test_register_direct_call(self):
         """Direct registration stores the component under the given name."""
-        reg = ComponentRegistry("test")
+        reg = ConfigRegistry()
         reg.register("foo", lambda x: x)
         assert "foo" in reg
         assert reg.get("foo")(42) == 42
 
     def test_register_duplicate_raises(self):
         """Registering a duplicate name raises ValueError."""
-        reg = ComponentRegistry("test")
+        reg = ConfigRegistry()
         reg.register("foo", lambda: 1)
         with pytest.raises(ValueError, match="already registered"):
             reg.register("foo", lambda: 2)
 
     def test_get_missing_raises(self):
         """get() raises KeyError for unknown names."""
-        reg = ComponentRegistry("test")
+        reg = ConfigRegistry()
         reg.register("alpha", lambda: 1)
-        with pytest.raises(KeyError, match="test 'beta' not found"):
+        with pytest.raises(KeyError, match="Config 'beta' not found"):
             reg.get("beta")
 
     def test_get_missing_lists_available(self):
         """The error message lists available names."""
-        reg = ComponentRegistry("test")
+        reg = ConfigRegistry()
         reg.register("alpha", lambda: 1)
         reg.register("bravo", lambda: 2)
         with pytest.raises(KeyError, match="alpha"):
@@ -40,7 +40,7 @@ class TestComponentRegistry:
 
     def test_list_returns_sorted(self):
         """list() returns sorted component names."""
-        reg = ComponentRegistry("test")
+        reg = ConfigRegistry()
         reg.register("charlie", lambda: 1)
         reg.register("alpha", lambda: 2)
         reg.register("bravo", lambda: 3)
@@ -48,13 +48,13 @@ class TestComponentRegistry:
 
     def test_contains(self):
         """__contains__ checks membership."""
-        reg = ComponentRegistry("test")
+        reg = ConfigRegistry()
         reg.register("foo", lambda: 1)
         assert "foo" in reg
         assert "bar" not in reg
 
 
-class TestConfigRegistry:
+class TestConfigRegistrySingleton:
     """Tests for the CONFIG_REGISTRY singleton."""
 
     def test_has_preregistered(self):

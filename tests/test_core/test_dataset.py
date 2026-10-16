@@ -358,7 +358,7 @@ class TestDatasetLanguage:
 
     def test_unknown_language_raises(self):
         """Test that an unknown language raises an error."""
-        with pytest.raises(KeyError, match="config 'xx' not found"):
+        with pytest.raises(KeyError, match="Config 'xx' not found"):
             Dataset("xx")
 
     def test_language_does_not_affect_non_language_pipeline(self):
