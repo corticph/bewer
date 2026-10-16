@@ -28,7 +28,7 @@ pip install bewer
 from bewer import Dataset
 
 # Create an evaluation dataset
-dataset = Dataset(language="en")
+dataset = Dataset(config="en")
 
 # Load data
 dataset.load_csv(
@@ -53,7 +53,7 @@ WER: 12.34%
 In `bewer`, evaluation is centered around the `Dataset` object, which implements a hierarchical structure, from a collection of reference-hypothesis pairs to individual tokens.
 
 ```python
-dataset = Dataset(language="en")            # Create a dataset ...
+dataset = Dataset(config="en")            # Create a dataset ...
 dataset.add(ref="one two", hyp="want to")   # ... and populate it
 
 # Climb down the hierarchy:
@@ -103,7 +103,7 @@ Pipelines(
 )
 ```
 
-Each component is named and defined as part of the dataset's configuration. Typically, it is sufficient to just choose the language, and the configuration for that language is applied automatically, but you can adapt and extend the pipeline as needed.
+Each component is named and defined as part of the dataset's configuration. Typically, it is sufficient to just pass a registered config name (e.g. `"en"`, `"da"`, `"de"`, `"fr"`) to the `Dataset`, and the configuration for that language is applied automatically, but you can adapt and extend the pipeline as needed.
 
 ```python
 # TODO: Example of customizing the pipeline for a dataset
@@ -114,7 +114,7 @@ Any component can be switched with the `set_pipeline` context manager. The Engli
 ```python
 from bewer import set_pipeline
 
-dataset = Dataset(language="en")
+dataset = Dataset(config="en")
 dataset.add(ref="Jane Doe's", hyp="Jane Doe's")
 text = dataset[0].ref
 
@@ -190,18 +190,18 @@ assert wer.num_edits == sum(ex_wer.num_edits for ex_wer in wer)
 Key-term metrics measure performance on a pre-defined subset of terms (medical, financial, acronyms, etc.). To use them, build a [`Vocabulary`](src/bewer/core/vocabulary.py) and attach it to the dataset.
 
 ```python
-from bewer import Vocabulary
+from bewer import Dataset, Vocabulary, get_config
 
-dataset = Dataset(language="en")
+config = get_config("en")
+vocab = Vocabulary(name="medical")
+vocab.add_terms(["diabetes", "blood sugar"])
+config = config.add_vocabulary(vocab)
+
+dataset = Dataset(config=config)
 dataset.add(
     ref="the patient has diabetes and high blood sugar",
     hyp="the patient has diabetis and high blood sugar",
 )
-
-# Add key terms from a Python list
-vocab = Vocabulary(name="medical")
-vocab.add_terms(["diabetes", "blood sugar"])
-dataset.add_vocabulary(vocab)
 
 # Compute key-term recall by referencing the vocabulary name
 ktr = dataset.metrics.ktr(vocab="medical")
@@ -219,7 +219,7 @@ You can also load line-separated key terms directly from a file (`add_file`) or 
 Alignments produce an example-level text-to-text alignment as their primary output, rather than a dataset-level numeric score. An [`Alignment`](src/bewer/alignment/alignment.py) is a sequence of [`Op`](src/bewer/alignment/op.py) objects, each representing a match, substitution, insertion, or deletion between hypothesis and reference. Edit counts are available as supportive values.
 
 ```python
-dataset = Dataset(language="en")
+dataset = Dataset(config="en")
 dataset.add(
     ref="an example with different types of errors",
     hyp="an odd example with diff types errors",

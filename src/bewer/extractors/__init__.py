@@ -2,7 +2,7 @@
 
 Each extractor here is a :data:`~bewer.core.vocabulary.ExtractorFn` — a callable
 ``(dataset) -> Iterable[str]`` that derives key terms from a dataset on demand and can be
-registered with ``Vocabulary(name).add_extractor(extractor)`` (then referenced from a
+registered with ``Vocabulary(name, extractors=[extractor])`` (then referenced from a
 key-term metric). :class:`RegexExtractor` is the generic, reusable base for deriving terms
 by full-matching tokens against a regular expression.
 """

@@ -7,7 +7,7 @@ from bewer.preprocessing.context import NORMALIZER_NAME
 from bewer.reporting.python.utils import highlight_span
 
 if TYPE_CHECKING:
-    from bewer.configs.resolve import Pipelines
+    from bewer.configs.config import BewerConfig
     from bewer.core.text import Text
 
 __all__ = ["Token"]
@@ -32,7 +32,7 @@ class Token:
         end: int,
         index: Optional[int] = None,
         *,
-        pipelines: "Pipelines",
+        config: "BewerConfig",
         src: Optional["Text"] = None,
     ):
         """Initialize Token.
@@ -42,7 +42,7 @@ class Token:
             start: Starting character index in the source text.
             end: Ending character index in the source text.
             index: Token index in the token list.
-            pipelines: The resolved pipeline registry used for lazy normalization (required).
+            config: The BewerConfig used for lazy normalization (required).
             src: Optional parent Text object. Used only by ``inctx`` to show surrounding context.
         """
         self._standardized = standardized
@@ -54,7 +54,7 @@ class Token:
         self._cache_normalized = {}
 
         self._src = src
-        self._pipelines = pipelines
+        self._config = config
 
     @property
     def src(self) -> Optional["Text"]:
@@ -106,7 +106,7 @@ class Token:
         match: re.Match,
         index: int,
         *,
-        pipelines: "Pipelines",
+        config: "BewerConfig",
         src: Optional["Text"] = None,
     ) -> "Token":
         """
@@ -115,7 +115,7 @@ class Token:
         Args:
             match (re.Match): The regex match object.
             index (int): Token index in the token list.
-            pipelines: The resolved pipeline registry used for lazy normalization (required).
+            config: The BewerConfig used for lazy normalization (required).
             src (Text): Optional parent Text object.
 
         Returns:
@@ -126,7 +126,7 @@ class Token:
             start=match.start(),
             end=match.end(),
             index=index,
-            pipelines=pipelines,
+            config=config,
             src=src,
         )
 

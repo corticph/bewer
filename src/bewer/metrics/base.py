@@ -604,7 +604,7 @@ class MetricCollection(object):
             # Create new metric instance. This may raise on invalid/missing params; in that
             # case no metric was obtained, so the dataset must be left modifiable.
             # Validate pipeline variant names before creation so a typo doesn't freeze.
-            _validate_pipeline_variants(resolved, self._src.pipelines)
+            _validate_pipeline_variants(resolved, self._src.config)
             metric_instance = METRIC_REGISTRY.create_metric(name, src=self._src, **kwargs)
 
             # A metric was successfully requested: freeze the dataset so its contents (and the
@@ -709,6 +709,9 @@ class MetricRegistry:
     def __init__(self) -> None:
         self.metric_metadata = {}  # name -> metadata dict
         self.metric_classes = {}  # name -> class (kept for compatibility)
+
+    def __contains__(self, name: str) -> bool:
+        return name in self.metric_metadata
 
     @property
     def metric_factories(self):

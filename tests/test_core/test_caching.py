@@ -4,12 +4,16 @@ from contextvars import ContextVar
 
 import pytest
 
+from bewer.configs.config import BewerConfig
 from bewer.core.caching import _STAGE_INDEX, PipelineCachedProperty, pipeline_cached_property
+from bewer.core.text import Text
 from bewer.preprocessing.context import (
     PIPELINE_STAGES,
     STANDARDIZER_NAME,
     set_pipeline,
 )
+from bewer.preprocessing.normalization import Normalizer, Standardizer, Transform, lowercase, nfc
+from bewer.preprocessing.tokenization import Tokenizer, strip_punctuation_keep_symbols_pattern
 
 
 class TestStageIndex:
@@ -46,7 +50,7 @@ class TestPipelineCachedPropertyDescriptor:
 
         class Dummy:
             _cache_value = {}
-            _pipelines = None
+            _config = None
 
             @pipeline_cached_property(STAGE)
             def value(self, func):
@@ -76,14 +80,17 @@ class TestPipelineCachedPropertyIntegration:
         std2 = sample_text.standardized
         assert std1 is std2
 
-    def test_different_pipeline_produces_different_result(self, sample_dataset):
+    def test_different_pipeline_produces_different_result(self):
         """Switching the pipeline context var produces a fresh computation."""
-        text = sample_dataset[0].ref  # "hello world"
+        config = BewerConfig(
+            standardizers=(Standardizer("default", Transform(nfc)),),
+        )
+        text = Text(raw="hello world", config=config)
 
         std_default = text.standardized
 
         # Register an uppercase standardizer under a new name
-        text._pipelines.standardizers["upper"] = str.upper
+        config.standardizers["upper"] = str.upper
 
         with set_pipeline(standardizer="upper"):
             std_upper = text.standardized
@@ -99,11 +106,9 @@ class TestPipelineCachedPropertyIntegration:
         _ = text_b.standardized
         assert text_a._cache_standardized is not text_b._cache_standardized
 
-    def test_raises_when_pipelines_is_none(self):
-        """Raises ValueError when _pipelines is None."""
-        from bewer.core.text import Text
-
-        text = Text(raw="hello", pipelines=None)
+    def test_raises_when_config_is_none(self):
+        """Raises ValueError when _config is None."""
+        text = Text(raw="hello", config=None)
         with pytest.raises(ValueError, match="No standardizers found"):
             _ = text.standardized
 
@@ -122,14 +127,20 @@ class TestPipelineCachedPropertyIntegration:
         normalized = token.normalized
         assert isinstance(normalized, str)
 
-    def test_token_normalized_different_normalizers(self, sample_dataset):
+    def test_token_normalized_different_normalizers(self):
         """Switching normalizer context produces different normalized values."""
-        text = sample_dataset[0].ref
+        config = BewerConfig(
+            standardizers=(Standardizer("default", Transform(nfc)),),
+            tokenizers=(Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/")),),
+            normalizers=(Normalizer("default", Transform(lowercase)),),
+        )
+        text = Text(raw="hello world", config=config)
         token = text.tokens[0]
 
         norm_default = token.normalized
 
-        token._pipelines.normalizers["shout"] = lambda s: s.upper() + "!"
+        # Register a shout normalizer under a new name
+        config.normalizers["shout"] = lambda s: s.upper() + "!"
 
         with set_pipeline(normalizer="shout"):
             norm_shout = token.normalized

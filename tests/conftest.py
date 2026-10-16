@@ -2,6 +2,7 @@
 
 import pytest
 
+from bewer.configs import CONFIG_REGISTRY
 from bewer.core.dataset import Dataset
 
 
@@ -25,9 +26,9 @@ def stub_parent():
 
 
 @pytest.fixture
-def pipelines():
-    """The resolved default pipeline registry, for constructing core objects standalone."""
-    return Dataset().pipelines
+def config():
+    """The default BewerConfig, for constructing core objects standalone."""
+    return Dataset().config
 
 
 @pytest.fixture
@@ -80,3 +81,10 @@ def dataset_perfect_match():
     dataset.add("hello world", "hello world")
     dataset.add("test phrase", "test phrase")
     return dataset
+
+
+@pytest.fixture
+def isolated_registry():
+    """Provide an isolated CONFIG_REGISTRY where temporary registrations are cleaned up."""
+    with CONFIG_REGISTRY.isolated():
+        yield CONFIG_REGISTRY

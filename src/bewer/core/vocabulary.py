@@ -1,22 +1,15 @@
 from __future__ import annotations
 
-import threading
-import weakref
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable, Optional
+from typing import TYPE_CHECKING, Callable, Iterable
 
 from bewer.core.key_term import (
     KeyTerm,
-    KeyTermMatch,
     KeyTermTrie,
-    _remove_duplicate_matches,
-    _remove_subset_matches,
 )
-from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
-    from bewer.core.text import Text
 
 __all__ = ["Vocabulary", "VocabularyExtractorError", "VocabularyFrozenError", "ExtractorFn"]
 
@@ -30,71 +23,76 @@ class VocabularyExtractorError(RuntimeError):
 
 
 class VocabularyFrozenError(RuntimeError):
-    """Raised when attempting to modify a Vocabulary after it has been attached to a dataset."""
-
-
-class _Resolved:
-    """Cached resolution of a vocabulary against a single dataset + pipeline context."""
-
-    __slots__ = ("terms", "trie")
-
-    def __init__(self, terms: set[KeyTerm], trie: Optional[KeyTermTrie]):
-        self.terms = terms
-        self.trie = trie
+    """Raised when attempting to modify a Vocabulary after it has been used for matching."""
 
 
 class Vocabulary:
     """A named collection of key terms, defined by any mix of static lists, files, and
-    extractor functions, that also performs key term matching.
+    extractor functions.
 
     A vocabulary holds only its *definition*; the concrete key terms are resolved lazily
     per dataset (extractor functions read the dataset's examples, and static terms are
-    tokenized with the dataset's pipelines). Resolution and the resulting trie are cached
-    per dataset, so a single Vocabulary can be attached to and shared across multiple
-    datasets via :meth:`Dataset.add_vocabulary`.
+    tokenized with the dataset's pipelines). The resolved :class:`KeyTermTrie` is returned
+    by :meth:`build_matcher` and cached by the caller (e.g. a metric), not by the
+    Vocabulary itself.
+
+    Args:
+        name: The vocabulary name, used to reference it from metrics
+            (``metrics.ktr(vocab=name)``) and label it in reports.
+        terms: Optional static key terms.
+        files: Optional paths to plain-text files (one term per line).
+        extractors: Optional extractor functions ``Callable[[Dataset], Iterable[str]]``.
     """
 
-    def __init__(self, name: str):
-        """Initialize an empty vocabulary.
-
-        Args:
-            name: The vocabulary name, used to attach it to a dataset, reference it from
-                metrics (``metrics.ktr(vocab=name)``), and label it in reports.
-        """
+    def __init__(
+        self,
+        name: str,
+        *,
+        terms: Iterable[str] | None = None,
+        files: Iterable[str | Path] | None = None,
+        extractors: Iterable[ExtractorFn] | None = None,
+    ):
         if not isinstance(name, str):
             raise TypeError(f"Vocabulary name must be a string, got {type(name)}.")
         self._name = name
         self._static_terms: set[str] = set()
         self._extractors: list[ExtractorFn] = []
-        # Frozen once attached to a dataset (see Dataset.add_vocabulary). A frozen
-        # vocabulary's definition cannot change, so its resolved terms / trie can never
-        # go stale for any dataset it is registered to.
         self._frozen = False
-        # Per-dataset resolution cache. Weak keys so an attached-but-discarded dataset's
-        # resolution (and trie) is collected with it — a shared vocabulary never leaks.
-        self._cache: "weakref.WeakKeyDictionary[Dataset, dict[tuple, _Resolved]]" = weakref.WeakKeyDictionary()
-        self._lock = threading.Lock()
+        if terms is not None:
+            self.add_terms(terms)
+        if files is not None:
+            for path in files:
+                self.add_file(path)
+        if extractors is not None:
+            for fn in extractors:
+                self.add_extractor(fn)
 
-    def _freeze(self) -> None:
-        """Mark the vocabulary's definition as immutable. Idempotent. Called by Dataset.add_vocabulary."""
+    @property
+    def is_frozen(self) -> bool:
+        return self._frozen
+
+    def freeze(self) -> None:
+        """Freeze the vocabulary's definition. Idempotent."""
         self._frozen = True
+
+    def clone(self) -> "Vocabulary":
+        """Return a mutable copy of this vocabulary."""
+        clone = Vocabulary(self._name)
+        clone._static_terms = set(self._static_terms)
+        clone._extractors = list(self._extractors)
+        return clone
 
     def _check_not_frozen(self) -> None:
         if self._frozen:
             raise VocabularyFrozenError(
-                f"Cannot modify vocabulary '{self._name}' after it has been attached to a dataset. "
-                "Build it fully before calling Dataset.add_vocabulary(), or create a new Vocabulary."
+                f"Cannot modify vocabulary '{self._name}' after it has been used for matching. "
+                "Build it fully before using it in a metric, or create a new Vocabulary."
             )
 
     @property
     def name(self) -> str:
         """The vocabulary name."""
         return self._name
-
-    @property
-    def has_sources(self) -> bool:
-        """Whether the vocabulary has any term source (static terms or extractors)."""
-        return bool(self._static_terms or self._extractors)
 
     # ---- builder ---------------------------------------------------------------------
 
@@ -128,7 +126,7 @@ class Vocabulary:
         self._extractors.append(fn)
         return self
 
-    # ---- resolution / matching -------------------------------------------------------
+    # ---- resolution ------------------------------------------------------------------
 
     def _resolve_terms(self, dataset: "Dataset") -> set[KeyTerm]:
         """Resolve all sources to a deduplicated set of KeyTerm objects for ``dataset``."""
@@ -149,63 +147,28 @@ class Vocabulary:
                 raw.add(term)
         # KeyTerm hashes by (raw, text_type), so the set dedups extracted terms against
         # static ones by raw string — extracted terms become indistinguishable from static.
-        return {KeyTerm(term, pipelines=dataset.pipelines) for term in raw}
+        return {KeyTerm(term, config=dataset.config) for term in raw}
 
-    def _ctx_key(self, normalized: bool, add_capitalized: bool) -> tuple:
-        return (
-            STANDARDIZER_NAME.get(),
-            TOKENIZER_NAME.get(),
-            NORMALIZER_NAME.get() if normalized else None,
-            add_capitalized,
-        )
-
-    def _get_trie(self, dataset: "Dataset", normalized: bool, add_capitalized: bool) -> Optional[KeyTermTrie]:
-        """Get (or lazily build and cache) the trie for ``dataset`` under the active pipeline context."""
-        # Freezing here guarantees extractors see the complete dataset and that the
-        # resolved term set / trie can never go stale afterwards.
-        dataset.freeze()
-        key = self._ctx_key(normalized, add_capitalized)
-        ds_cache = self._cache.get(dataset)
-        if ds_cache is not None and key in ds_cache:
-            return ds_cache[key].trie
-        with self._lock:
-            ds_cache = self._cache.setdefault(dataset, {})
-            if key in ds_cache:
-                return ds_cache[key].trie
-            terms = self._resolve_terms(dataset)
-            trie = KeyTermTrie(terms, normalized=normalized, add_capitalized=add_capitalized) if terms else None
-            ds_cache[key] = _Resolved(terms, trie)
-            return trie
-
-    def find_matches(
+    def build_matcher(
         self,
-        text: "Text",
+        dataset: "Dataset",
         *,
         normalized: bool = True,
         add_capitalized: bool = False,
-        allow_subset_matches: bool = False,
-    ) -> list[KeyTermMatch]:
-        """Find key term matches for this vocabulary in ``text``'s tokens.
+    ) -> KeyTermTrie:
+        """Resolve the vocabulary against ``dataset`` and return a :class:`KeyTermTrie`.
 
-        Returns a list of :class:`KeyTermMatch` objects, each carrying the matched token
-        span together with the parent ``text`` and the ``KeyTerm`` it was identified as.
-        Returns ``[]`` if the text has no parent dataset or the vocabulary resolves to no terms.
+        Freezes the vocabulary (so its definition cannot change afterwards) and the
+        dataset (so extractors see a stable snapshot). A vocabulary with no terms
+        returns a trie that matches nothing — ``find_matches`` on it yields ``[]``.
+
+        The caller owns the returned trie — the Vocabulary does not cache it. Metrics
+        should cache the trie via ``@metric_property``.
         """
-        example = text.src
-        dataset = example.src if example is not None else None
-        if dataset is None:
-            return []
-        trie = self._get_trie(dataset, normalized, add_capitalized)
-        if trie is None:
-            return []
-        spans, key_terms = trie.find_in_tokens(text.tokens)
-        if not spans:
-            return []
-        matches = [
-            KeyTermMatch(start=span.start, stop=span.stop, src=text, key_term=key_term)
-            for span, key_term in zip(spans, key_terms)
-        ]
-        return _remove_duplicate_matches(matches) if allow_subset_matches else _remove_subset_matches(matches)
+        self.freeze()
+        dataset.freeze()
+        terms = self._resolve_terms(dataset)
+        return KeyTermTrie(terms, normalized=normalized, add_capitalized=add_capitalized)
 
     def __repr__(self):
         return f"Vocabulary({self._name!r})"

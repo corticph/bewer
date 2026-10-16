@@ -9,9 +9,9 @@ import ahocorasick
 from bewer.core.text import Text, TextType, TokenList
 
 if TYPE_CHECKING:
-    from bewer.configs.resolve import Pipelines
+    from bewer.configs.config import BewerConfig
 
-__all__ = ["KeyTerm", "KeyTermMatch"]
+__all__ = ["KeyTerm", "KeyTermMatch", "KeyTermTrie"]
 
 
 class KeyTerm(Text):
@@ -25,9 +25,9 @@ class KeyTerm(Text):
         self,
         raw: str,
         *,
-        pipelines: "Pipelines",
+        config: "BewerConfig",
     ):
-        super().__init__(raw=raw, pipelines=pipelines, src=None, text_type=TextType.KEY_TERM)
+        super().__init__(raw=raw, config=config, src=None, text_type=TextType.KEY_TERM)
 
     def __repr__(self):
         text = self.raw if len(self.raw) <= 46 else self.raw[:46] + "..."
@@ -130,6 +130,8 @@ class KeyTermTrie:
 
     def find_in_tokens(self, tokens: TokenList) -> tuple[list[slice], list[KeyTerm]]:
         """Find all key term matches, returning token spans and the matched key terms."""
+        if not self._vocab:
+            return [], []
         int_text = self.encode(tokens)
         matches: list[slice] = []
         key_terms: list[KeyTerm] = []
@@ -138,6 +140,31 @@ class KeyTermTrie:
             matches.append(slice(start, end_idx + 1))
             key_terms.append(key_term)
         return matches, key_terms
+
+    def find_matches(
+        self,
+        text: "Text",
+        *,
+        allow_subset_matches: bool = False,
+    ) -> list[KeyTermMatch]:
+        """Find key term matches in ``text``'s tokens and wrap them as ``KeyTermMatch`` objects.
+
+        Args:
+            text: The :class:`~bewer.core.text.Text` to search.
+            allow_subset_matches: If False (default), discard matches that are subsets
+                of longer matches. If True, keep all matches but deduplicate exact overlaps.
+
+        Returns:
+            A list of :class:`KeyTermMatch` objects.
+        """
+        spans, key_terms = self.find_in_tokens(text.tokens)
+        if not spans:
+            return []
+        matches = [
+            KeyTermMatch(start=span.start, stop=span.stop, src=text, key_term=key_term)
+            for span, key_term in zip(spans, key_terms)
+        ]
+        return _remove_duplicate_matches(matches) if allow_subset_matches else _remove_subset_matches(matches)
 
 
 def _remove_duplicate_matches(matches: list[KeyTermMatch]) -> list[KeyTermMatch]:

@@ -540,12 +540,11 @@ class TestSurfaceFormRendering:
 
     def test_surface_key_term_highlighting(self):
         """Key term highlighting works in surface mode."""
-        from bewer import Vocabulary
+        from bewer import Vocabulary, get_config
         from bewer.core.dataset import Dataset
 
-        ds = Dataset()
+        ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
         ds.add("the quick brown fox", "the quick brown dog")
-        ds.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         alignment = ds[0].metrics.levenshtein().alignment
         result = generate_alignment_html_lines(alignment, normalized=False)
         ref_text = " ".join(ref for ref, _ in result)

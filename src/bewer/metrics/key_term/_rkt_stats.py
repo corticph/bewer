@@ -64,18 +64,11 @@ def _join_op_hyps(ops: Alignment) -> str:
 
 
 class _RKTStats_(ExampleMetric):
-    def _get_alignment(self) -> Alignment:
-        return self.example.metrics.error_align(
-            normalized=self.params.normalized,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        ).alignment
-
-    def _get_ref_matches(self) -> list[KeyTermMatch]:
-        return self.example.ref.get_key_term_matches(
-            vocab=self.params.vocab,
-            normalized=self.params.normalized,
+    @metric_property(is_value=True)
+    def ref_matches(self) -> list[KeyTermMatch]:
+        """Key term matches found in the reference text."""
+        return self.parent_metric._matcher.find_matches(
+            self.example.ref,
             allow_subset_matches=self.params.allow_subset_matches,
         )
 
@@ -86,10 +79,10 @@ class _RKTStats_(ExampleMetric):
         Alignment is derived from error_align. Results are threshold-agnostic so
         this metric can be shared across RKTR instances with different thresholds.
         """
-        key_term_matches = self._get_ref_matches()
+        key_term_matches = self.ref_matches
         if not key_term_matches:
             return []
-        alignment = self._get_alignment()
+        alignment = self.parent_metric._error_align[self.example.index].alignment
         stats: list[TermStat] = []
         for kt_match in key_term_matches:
             op_start = alignment.ref_index_mapping.get(kt_match.start)
@@ -105,7 +98,7 @@ class _RKTStats_(ExampleMetric):
     @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
-        return len(self._get_ref_matches())
+        return len(self.ref_matches)
 
 
 @METRIC_REGISTRY.register("_rkt_stats", tokenizer="key_term")
@@ -129,6 +122,25 @@ class _RKTStats(Metric):
             normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
         """
+
+    @metric_property(is_value=False)
+    def _matcher(self):
+        """Build (and cache) the key-term matcher for this metric's vocabulary + pipeline."""
+        vocab = self.dataset.config.vocabularies[self.params.vocab]
+        return vocab.build_matcher(
+            self.dataset,
+            normalized=self.params.normalized,
+        )
+
+    @metric_property(is_dependency=True)
+    def _error_align(self):
+        """The shared error_align metric instance."""
+        return self.dataset.metrics.error_align(
+            normalized=self.params.normalized,
+            standardizer=self.standardizer,
+            tokenizer=self.tokenizer,
+            normalizer=self.normalizer,
+        )
 
     @metric_property(is_value=True)
     def num_ref_terms(self) -> int:

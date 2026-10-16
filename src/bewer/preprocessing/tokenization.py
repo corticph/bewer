@@ -92,10 +92,10 @@ def keep_symbols_and_punctuation_pattern(
 class Tokenizer(object):
     def __init__(
         self,
+        name: str,
         pattern: Union[str, re.Pattern],
-        name: str = "__no_name__",
     ):
-        """Initialize a tokenizer with a regex pattern.
+        """Initialize a tokenizer with a name and a regex pattern.
 
         Args:
             name (str): The config name of the tokenizer.
@@ -103,6 +103,10 @@ class Tokenizer(object):
         """
         self._pattern = re.compile(pattern) if isinstance(pattern, str) else pattern
         self._name = name
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     @property
     def pattern(self) -> re.Pattern:
@@ -122,6 +126,12 @@ class Tokenizer(object):
 
     def __repr__(self):
         """Return a string representation of the Tokenizer object."""
-        if self._name is None:
-            return f"Tokenizer({self._pattern.pattern})"
         return f"Tokenizer({self._name}: {self._pattern.pattern})"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Tokenizer):
+            return NotImplemented
+        return self._name == other._name and self._pattern.pattern == other._pattern.pattern
+
+    def __hash__(self) -> int:
+        return hash((self._name, self._pattern.pattern))

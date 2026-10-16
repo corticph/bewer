@@ -198,13 +198,18 @@ def _get_key_term_indicators(
     example = alignment.src
     if example is None:
         return set(), set(), set()
+    dataset = example.src
+    if dataset is None:
+        return set(), set(), set()
     vocabs = example.vocabs
     if not vocabs:
         return set(), set(), set()
 
     start_indices, stop_indices, open_indices = set(), set(), set()
-    for vocab in vocabs:
-        matches = example.ref.get_key_term_matches(vocab=vocab, allow_subset_matches=allow_subset_matches)
+    for vocab_name in vocabs:
+        vocab = dataset.config.vocabularies[vocab_name]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref, allow_subset_matches=allow_subset_matches)
         for match in matches:
             start_op_idx = alignment.ref_index_mapping.get(match.start)
             end_op_idx = alignment.ref_index_mapping.get(match.stop - 1)

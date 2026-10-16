@@ -2,13 +2,12 @@
 
 import pytest
 
-from bewer import Dataset, Vocabulary
+from bewer import Dataset, Vocabulary, get_config
 
 
 def _dataset(ref: str, hyp: str, terms: list[str], name: str = "vocab") -> Dataset:
-    dataset = Dataset()
+    dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name, terms=terms)))
     dataset.add(ref=ref, hyp=hyp)
-    dataset.add_vocabulary(Vocabulary(name=name).add_terms(terms))
     return dataset
 
 
@@ -115,9 +114,8 @@ class TestPartialCreditPublicMetrics:
     def ds_one_wrong(self):
         # ref="blood sugar", hyp="blood sweet"
         # partial-credit: TP=1, FN=1, FP=0
-        ds = Dataset()
+        ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("terms", terms=["blood sugar"])))
         ds.add(ref="blood sugar", hyp="blood sweet")
-        ds.add_vocabulary(Vocabulary(name="terms").add_terms(["blood sugar"]))
         return ds
 
     def test_ktr_partial_credit(self, ds_one_wrong):
@@ -155,17 +153,15 @@ class TestPartialCreditKterDenominator:
 
     def test_kter_denominator_unchanged_for_exact_match(self):
         # exact-match: TP+FN == num_ref_terms always, so the formula change is invisible
-        ds = Dataset()
+        ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("v", terms=["fox"])))
         ds.add(ref="the fox jumps", hyp="the dog jumps")
-        ds.add_vocabulary(Vocabulary(name="v").add_terms(["fox"]))
         kter = ds.metrics.kter(vocab="v")
         # TP=0, FN=1 → KTER = 1/(0+1) = 1.0
         assert kter.value == pytest.approx(1.0)
 
     def test_kter_zero_ref_terms(self):
-        ds = Dataset()
+        ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("v", terms=["fox"])))
         ds.add(ref="the jumps", hyp="the jumps")
-        ds.add_vocabulary(Vocabulary(name="v").add_terms(["fox"]))
         kter = ds.metrics.kter(vocab="v")
         assert kter.value == pytest.approx(0.0)
 
@@ -174,10 +170,9 @@ class TestPartialCreditDatasetLevel:
     """Dataset-level aggregation works correctly for partial_credit=True."""
 
     def test_dataset_aggregation(self):
-        ds = Dataset()
+        ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("terms", terms=["blood sugar"])))
         ds.add(ref="blood sugar levels", hyp="blood sugar levels")  # partial-credit: TP=2
         ds.add(ref="blood sugar levels", hyp="blood sweet levels")  # partial-credit: TP=1, FN=1
-        ds.add_vocabulary(Vocabulary(name="terms").add_terms(["blood sugar"]))
 
         stats = ds.metrics._kt_stats(vocab="terms", partial_credit=True)
         assert stats.num_tp == 3
@@ -185,10 +180,9 @@ class TestPartialCreditDatasetLevel:
         assert stats.num_fp == 0
 
     def test_ktr_dataset_aggregation(self):
-        ds = Dataset()
+        ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("terms", terms=["blood sugar"])))
         ds.add(ref="blood sugar levels", hyp="blood sugar levels")  # TP=2, FN=0
         ds.add(ref="blood sugar levels", hyp="blood sweet levels")  # TP=1, FN=1
-        ds.add_vocabulary(Vocabulary(name="terms").add_terms(["blood sugar"]))
 
         ktr = ds.metrics.ktr(vocab="terms", partial_credit=True)
         # total TP=3, total FN=1 → recall = 3/4

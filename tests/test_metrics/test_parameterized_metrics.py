@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from bewer import Dataset, Vocabulary
+from bewer import Dataset, Vocabulary, get_config
 from bewer.metrics.base import MetricParams
 
 
@@ -14,7 +14,8 @@ class TestParameterizedMetrics:
     @pytest.fixture
     def sample_dataset(self):
         """Create a sample dataset for testing."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["hello", "foo"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="hello world",
             hyp="hello world",
@@ -23,7 +24,6 @@ class TestParameterizedMetrics:
             ref="foo bar",
             hyp="foo baz",
         )
-        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["hello", "foo"]))
         return dataset
 
     def test_basic_metric_has_no_params(self, sample_dataset):
@@ -76,9 +76,9 @@ class TestDynamicNaming:
     @pytest.fixture
     def sample_dataset(self):
         """Create a sample dataset for testing."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["hello"]))
+        dataset = Dataset(config=config)
         dataset.add(ref="hello world", hyp="hello world")
-        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["hello"]))
         return dataset
 
     def test_base_metric_short_name_no_params(self, sample_dataset):
@@ -117,12 +117,12 @@ class TestRKTRParameterization:
     @pytest.fixture
     def keyword_dataset(self):
         """Create a dataset with keywords for testing."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
         return dataset
 
     def test_default_threshold(self, keyword_dataset):
@@ -154,12 +154,12 @@ class TestExampleMetricParamsAccess:
     @pytest.fixture
     def keyword_dataset(self):
         """Create a dataset with keywords for testing."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
         return dataset
 
     def test_example_metric_has_params_property(self, keyword_dataset):
@@ -261,12 +261,12 @@ class TestDeclarativeHyperparams:
         """Test that optional hyperparams use defaults when not provided."""
         from bewer import Dataset
 
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
 
         # RKTR has threshold with default 0.0
         rktr = dataset.metrics.rktr(vocab="medical_terms")
@@ -276,12 +276,12 @@ class TestDeclarativeHyperparams:
         """Test that optional hyperparams can be overridden."""
         from bewer import Dataset
 
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
 
         # Override threshold
         rktr = dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
@@ -291,12 +291,12 @@ class TestDeclarativeHyperparams:
         """Test that unknown hyperparams are rejected with helpful message."""
         from bewer import Dataset
 
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
 
         # Try to set unknown param
         with pytest.raises(ValueError) as exc_info:
@@ -310,12 +310,12 @@ class TestDeclarativeHyperparams:
         """Test that hyperparam types are validated."""
         from bewer import Dataset
 
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_vocabulary(Vocabulary(name="medical_terms").add_terms(["diabetes"]))
 
         # Try to set wrong type
         with pytest.raises(TypeError) as exc_info:

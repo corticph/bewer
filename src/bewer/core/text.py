@@ -9,9 +9,8 @@ from bewer.core.token import Token
 from bewer.preprocessing.context import NORMALIZER_NAME, STANDARDIZER_NAME, TOKENIZER_NAME
 
 if TYPE_CHECKING:
-    from bewer.configs.resolve import Pipelines
+    from bewer.configs.config import BewerConfig
     from bewer.core.example import Example
-    from bewer.core.key_term import KeyTermMatch
 
 __all__ = ["Text", "TextType", "TokenList"]
 
@@ -57,7 +56,7 @@ class Text:
         self,
         raw: str | None,
         *,
-        pipelines: "Pipelines",
+        config: "BewerConfig",
         src: Optional["Example"] = None,
         text_type: Optional[TextType] = None,
     ):
@@ -65,8 +64,8 @@ class Text:
 
         Args:
             raw: The original text string (reference, hypothesis, or key term).
-            pipelines: The resolved pipeline registry used for lazy standardization/tokenization (required).
-            src: Optional parent Example object. Used by ``get_key_term_matches`` for vocabulary lookup.
+            config: The BewerConfig used for lazy standardization/tokenization (required).
+            src: Optional parent Example object.
             text_type: The type of the text (REF, HYP, or KEY_TERM).
         """
         self._raw = raw
@@ -74,10 +73,9 @@ class Text:
 
         self._cache_standardized = {}
         self._cache_tokens = {}
-        self._cache_key_term_matches = {}
 
         self._src = src
-        self._pipelines = pipelines
+        self._config = config
 
     @property
     def raw(self) -> str:
@@ -95,8 +93,8 @@ class Text:
         return self._text_type
 
     @property
-    def pipelines(self):
-        return self._pipelines
+    def config(self):
+        return self._config
 
     @pipeline_cached_property(STANDARDIZER_NAME)
     def standardized(self, standardizer) -> str:
@@ -106,7 +104,7 @@ class Text:
     @pipeline_cached_property(TOKENIZER_NAME)
     def tokens(self, tokenizer) -> "TokenList":
         """The list of Token objects produced by the active tokenizer."""
-        return TokenList.from_matches(tokenizer(self.standardized), pipelines=self._pipelines, src=self)
+        return TokenList.from_matches(tokenizer(self.standardized), config=self._config, src=self)
 
     def joined(self, normalized: bool = True) -> str:
         """Get the joined text from tokens.
@@ -115,58 +113,6 @@ class Text:
             normalized (bool): Whether to use normalized tokens.
         """
         return _join_tokens(self.tokens, normalized=normalized)
-
-    def get_key_term_matches(
-        self,
-        vocab: str,
-        normalized: bool = True,
-        add_capitalized: bool = False,
-        allow_subset_matches: bool = False,
-    ) -> "list[KeyTermMatch]":
-        """Find key term matches in this text's tokens.
-
-        Matches against the dataset-wide global vocabulary.
-
-        Args:
-            vocab: Vocabulary name to match against.
-            normalized: Use normalized tokens for matching.
-            add_capitalized: Add capitalized first-token variants (only when ``normalized`` is False).
-            allow_subset_matches: If False, discard matches that are subsets of longer matches.
-
-        Returns:
-            List of :class:`~bewer.core.key_term.KeyTermMatch` objects for the matched token spans.
-        """
-        example = self._src
-        if example is None:
-            return []
-        dataset = example.src
-        if dataset is None:
-            return []
-
-        vocabulary = dataset._vocabularies.get(vocab)
-        if vocabulary is None:
-            return []
-
-        cache_key = (
-            STANDARDIZER_NAME.get(),
-            TOKENIZER_NAME.get(),
-            NORMALIZER_NAME.get() if normalized else None,
-            add_capitalized,
-            allow_subset_matches,
-            vocab,
-        )
-        if cache_key in self._cache_key_term_matches:
-            return self._cache_key_term_matches[cache_key]
-
-        matches = vocabulary.find_matches(
-            self,
-            normalized=normalized,
-            add_capitalized=add_capitalized,
-            allow_subset_matches=allow_subset_matches,
-        )
-
-        self._cache_key_term_matches[cache_key] = matches
-        return matches
 
     def __hash__(self):
         return hash((self.raw, self._text_type))
@@ -191,20 +137,20 @@ class TokenList(tuple["Token", ...]):
         cls,
         matches: "Iterable[re.Match]",
         *,
-        pipelines: "Pipelines",
+        config: "BewerConfig",
         src: Optional["Text"] = None,
     ) -> "TokenList":
         """Create a TokenList from an iterable of regex match objects.
 
         Args:
             matches: An iterable of regex Match objects.
-            pipelines: The resolved pipeline registry, threaded to each Token (required).
+            config: The BewerConfig, threaded to each Token (required).
             src: The source Text object, threaded to each Token for ``inctx`` context, if available.
 
         Returns:
             TokenList: A list of Token objects created from the matches.
         """
-        return cls(Token.from_match(match, index=i, pipelines=pipelines, src=src) for i, match in enumerate(matches))
+        return cls(Token.from_match(match, index=i, config=config, src=src) for i, match in enumerate(matches))
 
     @property
     def standardized(self) -> list[str]:

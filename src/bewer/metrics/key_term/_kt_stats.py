@@ -15,28 +15,27 @@ __all__: list[str] = []
 
 
 class _KTStats_(ExampleMetric):
-    def _get_alignment(self):
-        """Get the alignment for the example."""
-        return self.example.metrics.levenshtein(
-            normalized=self.params.normalized,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        ).alignment
-
-    def _get_ref_matches(self) -> list[KeyTermMatch]:
-        return self.example.ref.get_key_term_matches(
-            vocab=self.params.vocab,
-            normalized=self.params.normalized,
+    @metric_property(is_value=True)
+    def ref_matches(self) -> list[KeyTermMatch]:
+        """Key term matches found in the reference text."""
+        return self.parent_metric._matcher.find_matches(
+            self.example.ref,
             allow_subset_matches=self.params.allow_subset_matches,
         )
 
-    def _get_hyp_matches(self) -> list[KeyTermMatch]:
-        return self.example.hyp.get_key_term_matches(
-            vocab=self.params.vocab,
-            normalized=self.params.normalized,
+    @metric_property(is_value=True)
+    def hyp_matches(self) -> list[KeyTermMatch]:
+        """Key term matches found in the hypothesis text."""
+        return self.parent_metric._matcher.find_matches(
+            self.example.hyp,
             allow_subset_matches=self.params.allow_subset_matches,
         )
+
+    @metric_property(is_value=True)
+    def num_ref_tokens(self) -> int:
+        """Number of tokens in the reference text."""
+        alignment = self.parent_metric._levenshtein[self.example.index].alignment
+        return alignment.num_matches + alignment.num_substitutions + alignment.num_deletions
 
     @metric_property(is_value=True)
     def _exact_match_alignments(self) -> dict[str, list[Alignment]]:
@@ -47,13 +46,13 @@ class _KTStats_(ExampleMetric):
         All-MATCH hyp occurrences are excluded from FP regardless of whether they correspond
         to a ref key term.
         """
-        ref_matches = self._get_ref_matches()
-        hyp_matches = self._get_hyp_matches()
+        ref_matches = self.ref_matches
+        hyp_matches = self.hyp_matches
 
         if not ref_matches and not hyp_matches:
             return {"tp": [], "fn": [], "fp": []}
 
-        alignment = self._get_alignment()
+        alignment = self.parent_metric._levenshtein[self.example.index].alignment
         tp: list[Alignment] = []
         fn: list[Alignment] = []
         for kt_match in ref_matches:
@@ -78,12 +77,12 @@ class _KTStats_(ExampleMetric):
     @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
-        return len(self._get_ref_matches())
+        return len(self.ref_matches)
 
     @metric_property(is_value=True)
     def num_hyp_terms(self) -> int:
         """Get the number of key terms in the hypothesis text."""
-        return len(self._get_hyp_matches())
+        return len(self.hyp_matches)
 
     @metric_property(is_value=True)
     def _partial_credit_alignments(self) -> dict[str, list[Alignment]]:
@@ -96,8 +95,8 @@ class _KTStats_(ExampleMetric):
           - hyp position in I_H + non-MATCH → FP (one single-op slice)
         Positions shared by overlapping or nested terms are counted only once.
         """
-        ref_matches = self._get_ref_matches()
-        hyp_matches = self._get_hyp_matches()
+        ref_matches = self.ref_matches
+        hyp_matches = self.hyp_matches
 
         I_R: set[int] = set()
         for m in ref_matches:
@@ -110,7 +109,7 @@ class _KTStats_(ExampleMetric):
         if not I_R and not I_H:
             return {"tp": [], "fn": [], "fp": []}
 
-        alignment = self._get_alignment()
+        alignment = self.parent_metric._levenshtein[self.example.index].alignment
         tp: list[Alignment] = []
         fn: list[Alignment] = []
         fp: list[Alignment] = []
@@ -204,6 +203,30 @@ class _KTStats(Metric):
         """
 
         partial_credit: bool = False
+
+    @metric_property(is_value=False)
+    def _matcher(self):
+        """Build (and cache) the key-term matcher for this metric's vocabulary + pipeline."""
+        vocab = self.dataset.config.vocabularies[self.params.vocab]
+        return vocab.build_matcher(
+            self.dataset,
+            normalized=self.params.normalized,
+        )
+
+    @metric_property(is_dependency=True)
+    def _levenshtein(self):
+        """The shared Levenshtein metric instance."""
+        return self.dataset.metrics.levenshtein(
+            normalized=self.params.normalized,
+            standardizer=self.standardizer,
+            tokenizer=self.tokenizer,
+            normalizer=self.normalizer,
+        )
+
+    @metric_property(is_value=True)
+    def num_ref_tokens(self) -> int:
+        """Get the total number of reference tokens across all examples."""
+        return sum(em.num_ref_tokens for em in self)
 
     @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
