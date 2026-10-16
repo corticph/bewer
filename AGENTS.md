@@ -79,13 +79,12 @@ poetry run twine check dist/*  # Validate built packages
 - Supports both dataset-level and example-level metrics
 
 **Built-in Metrics** (`src/bewer/metrics/`)
-- WER (Word Error Rate): `wer.py`
-- CER (Character Error Rate): `cer.py`
-- Levenshtein distance: `levenshtein.py`
-- Error alignment metrics: `error_align.py` (uses external error-align package)
-- Insertion rate: `insertion_rate.py` — counts insertions that are part of contiguous insertion runs of length >= `min_run_length` (default 1), normalized by the number of reference tokens. When `min_run_length=1`, all insertions are counted. When `min_run_length>=2`, only burst insertion runs are counted — a hallucination signal. The `alignment` parameter (default `'levenshtein'`) selects the alignment backend; `'error_align'` is also available. Depends on the Levenshtein or ErrorAlign metric for alignment.
-- Key term metrics (recall, precision, F-score, CER, etc.): `ktr.py`, `ktp.py`, `ktf.py`, `ktcer.py`, `rktr.py`, `kter.py`
-- Orthographically-complex term metrics: `orthographically_complex_term.py` — registers KTR/KTP/KTF with a different tokenizer, normalizer, and vocab. The `orthographically_complex_terms` vocabulary is auto-extracted from the references (terms selected by orthography: acronyms, alphanumerics, hyphen compounds; e.g. `MRI`, `HbA1c`, `CT-scan`). Run under the `orthographically_complex_term` tokenizer (no hyphen split) and `cased` normalizer (no lowercasing).
+- `general/`: WER (`wer.py`), CER (`cer.py`), PER (`per.py`)
+- `alignment/`: Levenshtein distance (`levenshtein.py`), error alignment (`error_align.py`, uses external error-align package)
+- `key_term/`: Key term recall/precision/F-score/CER/etc. (`ktr.py`, `ktp.py`, `ktf.py`, `ktfpr.py`, `ktcer.py`, `rktr.py`, `kter.py`); shared stats (`_kt_stats.py`, `_rkt_stats.py`); orthographically-complex term metrics (`orthographically_complex_term.py`)
+- `hallucination/`: Insertion rate (`insertion_rate.py`) — counts insertions in contiguous runs of length >= `min_run_length` (default 1), normalized by reference token count. `min_run_length>=2` counts only burst runs (hallucination signal). `alignment` parameter selects backend (`'levenshtein'` or `'error_align'`). Example insertion rate (`example_insertion_rate.py`) — per-example variant.
+- `summary/`: Summary metric (`summary.py`)
+- Orthographically-complex term metrics register KTR/KTP/KTF/KTFPR with a different tokenizer (`orthographically_complex_term`, no hyphen split), `cased` normalizer (no lowercasing), and an `orthographically_complex_terms` vocabulary auto-extracted from references (acronyms, alphanumerics, hyphen compounds; e.g. `MRI`, `HbA1c`, `CT-scan`), defined in the base config.
 
 ### Vocabulary Extractors (`src/bewer/extractors/`)
 
@@ -123,6 +122,7 @@ Configuration is managed through `BewerConfig` (a regular class, frozen on regis
 - Extensible: users can provide custom `BewerConfig` instances or register custom configs
 - Language configs extend `BASE_CONFIG` via the `extends` keyword argument
 - Vocabularies are attached to configs via `config.add_vocabulary(vocab)` (requires `.clone()` first if the config is frozen)
+- `ConfigFrozenError` raised on mutation of a frozen config; `DatasetFrozenError` and `VocabularyFrozenError` for the other freezable objects
 
 Example config structure:
 ```python
