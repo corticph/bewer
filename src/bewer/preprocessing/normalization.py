@@ -1,18 +1,17 @@
 from __future__ import annotations
 
+import inspect
 import unicodedata
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import Any, Callable
 
 import regex as re
 from unidecode import unidecode
 
 from bewer.preprocessing._unicode_normalization_tables import APOSTROPHE_TABLE, HYPHEN_TABLE, SLASH_TABLE
 
-if TYPE_CHECKING:
-    from bewer.configs.config import Transform
-
 __all__ = [
+    "Transform",
     "TransformPipeline",
     "Normalizer",
     "Standardizer",
@@ -49,6 +48,64 @@ def _set_attrs(**attrs):
         return func
 
     return decorator
+
+
+# ============================================================
+# Transform — a callable with bound params
+# ============================================================
+
+
+def _validate_params(fn: Callable, params: dict[str, Any], *, skip_first: bool = False) -> None:
+    """Validate config params against a function's signature."""
+    sig = inspect.signature(fn)
+    func_params = sig.parameters
+    param_iter = iter(func_params.items())
+
+    if skip_first:
+        first_param = next(param_iter)[0]
+        if first_param in params:
+            raise ValueError(f"First positional argument '{first_param}' should not be passed in params")
+
+    for param, value in param_iter:
+        if value.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+            continue
+        if value.default is inspect.Parameter.empty and param not in params:
+            raise ValueError(f"Parameter '{param}' not found in function '{fn.__name__}'")
+
+    for param in params:
+        if param not in func_params:
+            raise ValueError(f"Unexpected parameter '{param}' for function '{fn.__name__}'")
+
+
+class Transform:
+    """A transform function bound with parameters.
+
+    Calls ``fn(text, **params)`` when invoked.
+    """
+
+    __slots__ = ("fn", "params")
+
+    def __init__(self, fn: Callable[..., Any], **params: Any):
+        self.fn = fn
+        self.params = params
+        _validate_params(fn, params, skip_first=True)
+
+    def __call__(self, text: str) -> str:
+        return self.fn(text, **self.params)
+
+    def __repr__(self) -> str:
+        if self.params:
+            param_str = ", ".join(f"{k}={v!r}" for k, v in self.params.items())
+            return f"Transform({self.fn.__name__}, {param_str})"
+        return f"Transform({self.fn.__name__})"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Transform):
+            return NotImplemented
+        return self.fn is other.fn and self.params == other.params
+
+    def __hash__(self) -> int:
+        return hash((self.fn, tuple(sorted(self.params.items()))))
 
 
 # ============================================================

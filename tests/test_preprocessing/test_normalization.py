@@ -1,8 +1,8 @@
 """Tests for bewer.preprocessing.normalization module."""
 
-from bewer.configs.config import Transform
 from bewer.preprocessing.normalization import (
     Normalizer,
+    Transform,
     lowercase,
     nfc,
     normalize_apostrophe_variants,

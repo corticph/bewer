@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import inspect
 from collections.abc import Sequence
 from contextlib import contextmanager
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING
 
 from bewer.preprocessing.normalization import Normalizer, Standardizer
 from bewer.preprocessing.tokenization import Tokenizer
@@ -12,19 +11,17 @@ from bewer.preprocessing.tokenization import Tokenizer
 if TYPE_CHECKING:
     from bewer.core.vocabulary import Vocabulary
 
-
-class ConfigFrozenError(RuntimeError):
-    """Raised when attempting to modify a frozen BewerConfig."""
-
-
 __all__ = [
     "BewerConfig",
     "ConfigFrozenError",
     "ConfigRegistry",
     "CONFIG_REGISTRY",
-    "Transform",
     "get_config",
 ]
+
+
+class ConfigFrozenError(RuntimeError):
+    """Raised when attempting to modify a frozen BewerConfig."""
 
 
 # ============================================================
@@ -88,39 +85,8 @@ CONFIG_REGISTRY = ConfigRegistry()
 
 
 # ============================================================
-# Transform — a callable with bound params
+# BewerConfig
 # ============================================================
-
-
-class Transform:
-    """A transform function bound with parameters.
-
-    Calls ``component(text, **params)`` when invoked.
-    """
-
-    __slots__ = ("fn", "params")
-
-    def __init__(self, fn: Callable[..., Any], **params: Any):
-        self.fn = fn
-        self.params = params
-        _validate_params(fn, params, skip_first=True)
-
-    def __call__(self, text: str) -> str:
-        return self.fn(text, **self.params)
-
-    def __repr__(self) -> str:
-        if self.params:
-            param_str = ", ".join(f"{k}={v!r}" for k, v in self.params.items())
-            return f"Transform({self.fn.__name__}, {param_str})"
-        return f"Transform({self.fn.__name__})"
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Transform):
-            return NotImplemented
-        return self.fn is other.fn and self.params == other.params
-
-    def __hash__(self) -> int:
-        return hash((self.fn, tuple(sorted(self.params.items()))))
 
 
 def _to_dict(items) -> dict:
@@ -136,11 +102,6 @@ def _to_dict(items) -> dict:
             raise ValueError(f"Duplicate name: {item.name!r}")
         result[item.name] = item
     return result
-
-
-# ============================================================
-# BewerConfig
-# ============================================================
 
 
 class BewerConfig:
@@ -240,33 +201,6 @@ class BewerConfig:
             if value:
                 parts.append(f"{name}={value!r}")
         return f"BewerConfig({', '.join(parts)})"
-
-
-# ============================================================
-# Resolution
-# ============================================================
-
-
-def _validate_params(fn: Callable, params: dict[str, Any], *, skip_first: bool = False) -> None:
-    """Validate config params against a function's signature."""
-    sig = inspect.signature(fn)
-    func_params = sig.parameters
-    param_iter = iter(func_params.items())
-
-    if skip_first:
-        first_param = next(param_iter)[0]
-        if first_param in params:
-            raise ValueError(f"First positional argument '{first_param}' should not be passed in params")
-
-    for param, value in param_iter:
-        if value.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
-            continue
-        if value.default is inspect.Parameter.empty and param not in params:
-            raise ValueError(f"Parameter '{param}' not found in function '{fn.__name__}'")
-
-    for param in params:
-        if param not in func_params:
-            raise ValueError(f"Unexpected parameter '{param}' for function '{fn.__name__}'")
 
 
 # ============================================================

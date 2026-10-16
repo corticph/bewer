@@ -4,7 +4,7 @@ from contextvars import ContextVar
 
 import pytest
 
-from bewer.configs.config import BewerConfig, Transform
+from bewer.configs.config import BewerConfig
 from bewer.core.caching import _STAGE_INDEX, PipelineCachedProperty, pipeline_cached_property
 from bewer.core.text import Text
 from bewer.preprocessing.context import (
@@ -12,7 +12,7 @@ from bewer.preprocessing.context import (
     STANDARDIZER_NAME,
     set_pipeline,
 )
-from bewer.preprocessing.normalization import Normalizer, Standardizer, lowercase, nfc
+from bewer.preprocessing.normalization import Normalizer, Standardizer, Transform, lowercase, nfc
 from bewer.preprocessing.tokenization import Tokenizer, strip_punctuation_keep_symbols_pattern
 
 

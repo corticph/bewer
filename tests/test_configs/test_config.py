@@ -4,11 +4,11 @@ import pytest
 
 from bewer.configs import (
     BewerConfig,
-    Transform,
     get_config,
 )
 from bewer.preprocessing.normalization import (
     Normalizer,
+    Transform,
     lowercase,
     nfc,
     transliterate_latin_letters,

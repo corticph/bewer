@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from bewer.configs.config import CONFIG_REGISTRY, BewerConfig, Transform
+from bewer.configs.config import CONFIG_REGISTRY, BewerConfig
 from bewer.core.vocabulary import Vocabulary
 from bewer.extractors.orthographically_complex_term import OrthographicallyComplexTermExtractor
 from bewer.preprocessing.normalization import (
     Normalizer,
     Standardizer,
+    Transform,
     lowercase,
     nfc,
     normalize_apostrophe_variants,
