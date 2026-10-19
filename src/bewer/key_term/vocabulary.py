@@ -3,10 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Iterable
 
-from bewer.core.key_term import (
-    KeyTerm,
-    KeyTermTrie,
-)
+from bewer.key_term.key_term import KeyTerm
+from bewer.key_term.trie import KeyTermTrie
 
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset

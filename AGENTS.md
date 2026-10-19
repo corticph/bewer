@@ -86,13 +86,16 @@ poetry run twine check dist/*  # Validate built packages
 - `summary/`: Summary metric (`summary.py`)
 - Orthographically-complex term metrics register KTR/KTP/KTF/KTFPR with a different tokenizer (`orthographically_complex_term`, no hyphen split), `cased` normalizer (no lowercasing), and an `orthographically_complex_terms` vocabulary auto-extracted from references (acronyms, alphanumerics, hyphen compounds; e.g. `MRI`, `HbA1c`, `CT-scan`), defined in the base config.
 
-### Vocabulary Extractors (`src/bewer/extractors/`)
+### Key Term Package (`src/bewer/key_term/`)
 
-Library of pre-defined `ExtractorFn` callables — `Dataset -> Iterable[str]` functions that derive key terms from a dataset and are registered via `Vocabulary(name, extractors=[fn])`. An extractor receives the whole dataset, so it may read the references, the hypotheses, or neither.
+Groups all key-term machinery:
 
-- **`RegexExtractor`** (`extractors/regex.py`): generic base that full-matches each reference token against a compiled pattern and returns the matching surface forms. Subclass it (override `default_pattern`) or instantiate it with a `pattern` to define a new regex-based term family. Its matching primitive `match_token_regex` returns unit token slices.
-- **`OrthographicallyComplexTermExtractor`** (`extractors/orthographically_complex_term.py`): a `RegexExtractor` with `ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`, backing the orthographically-complex term metrics. Expects the `orthographically_complex_term` tokenizer (no hyphen split) so `CT-scan` is a single token.
-- Exposed at the package top level as `bewer.extractors`.
+- **`key_term.py`**: `KeyTerm` (a `Text` subclass for key terms) and `KeyTermMatch` (a match result — token span, source text, matched key term).
+- **`trie.py`**: `KeyTermTrie` — the Aho-Corasick matching engine. `build_matcher` produces one; `find_matches(text)` returns `KeyTermMatch` objects.
+- **`vocabulary.py`**: `Vocabulary` — a named collection of key terms (static lists, files, extractor functions). `ExtractorFn` protocol, `VocabularyFrozenError`, `VocabularyExtractorError`.
+- **`regex_extractor.py`**: `RegexExtractor` — generic base that full-matches each reference token against a compiled pattern. Subclass it (override `default_pattern`) or instantiate with a `pattern` to define a new regex-based term family. Its matching primitive `match_token_regex` returns unit token slices.
+- **`orthographically_complex_term_extractor.py`**: `OrthographicallyComplexTermExtractor` — a `RegexExtractor` with `ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`, backing the orthographically-complex term metrics. Expects the `orthographically_complex_term` tokenizer (no hyphen split) so `CT-scan` is a single token.
+- Exposed at the package top level as `bewer.key_term`.
 
 ### Alignment System (`src/bewer/alignment/`)
 

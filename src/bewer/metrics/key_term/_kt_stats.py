@@ -9,7 +9,7 @@ from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_pr
 from ._keyterm_params import KeyTermParams
 
 if TYPE_CHECKING:
-    from bewer.core.key_term import KeyTermMatch
+    from bewer.key_term.key_term import KeyTermMatch
 
 __all__: list[str] = []
 

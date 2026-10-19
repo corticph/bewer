@@ -9,7 +9,7 @@ from bewer.preprocessing.normalization import Normalizer, Standardizer
 from bewer.preprocessing.tokenization import Tokenizer
 
 if TYPE_CHECKING:
-    from bewer.core.vocabulary import Vocabulary
+    from bewer.key_term.vocabulary import Vocabulary
 
 __all__ = [
     "BewerConfig",

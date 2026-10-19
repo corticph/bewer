@@ -1,10 +1,10 @@
-"""Tests for bewer.extractors.orthographically_complex_term and the generic regex extractor."""
+"""Tests for bewer.key_term.orthographically_complex_term_extractor and the generic regex extractor."""
 
 import pytest
 import regex
 
 from bewer import Dataset, Vocabulary, get_config
-from bewer.extractors import (
+from bewer.key_term import (
     ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN,
     OrthographicallyComplexTermExtractor,
     RegexExtractor,

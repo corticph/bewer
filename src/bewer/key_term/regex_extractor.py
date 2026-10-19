@@ -1,10 +1,10 @@
 """Regex-based vocabulary extractors.
 
-A :class:`RegexExtractor` is a reusable :data:`~bewer.core.vocabulary.ExtractorFn`: a
+A :class:`RegexExtractor` is a reusable :data:`~bewer.key_term.vocabulary.ExtractorFn`: a
 callable ``(dataset) -> Iterable[str]`` that scans each example's *reference* and returns
 every token whose surface form fully matches a configured regular expression. It is the
 generic building block behind metric-specific extractors such as
-:data:`~bewer.extractors.orthographically_complex_term.ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`.
+:data:`~bewer.key_term.orthographically_complex_term_extractor.ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`.
 
 To define a new family of regex-extracted terms, either instantiate ``RegexExtractor``
 with a ``pattern`` directly, or subclass it and override :attr:`default_pattern`::
@@ -47,7 +47,7 @@ def match_token_regex(tokens: "TokenList", pattern: "regex.Pattern") -> list[sli
 class RegexExtractor:
     """Extract terms from a dataset's reference texts by full-matching tokens against a regex.
 
-    Instances are :data:`~bewer.core.vocabulary.ExtractorFn` callables: ``extractor(dataset)``
+    Instances are :data:`~bewer.key_term.vocabulary.ExtractorFn` callables: ``extractor(dataset)``
     returns the set of distinct reference terms whose tokens fully match the pattern, ready to
     register via ``Vocabulary(name, extractors=[extractor])``.
 

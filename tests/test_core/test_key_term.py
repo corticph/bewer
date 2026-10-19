@@ -1,8 +1,9 @@
-"""Tests for bewer.core.key_term module."""
+"""Tests for bewer.key_term module."""
 
 from bewer import Dataset, Vocabulary, get_config
-from bewer.core.key_term import KeyTerm, KeyTermMatch, KeyTermTrie, _remove_subset_matches
 from bewer.core.text import Text, TextType, TokenList
+from bewer.key_term import KeyTerm, KeyTermMatch, KeyTermTrie
+from bewer.key_term.trie import _remove_subset_matches
 
 
 class TestKeyTermInit:

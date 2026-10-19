@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from bewer.configs.config import CONFIG_REGISTRY, BewerConfig
-from bewer.core.vocabulary import Vocabulary
-from bewer.extractors.orthographically_complex_term import OrthographicallyComplexTermExtractor
+from bewer.key_term.orthographically_complex_term_extractor import OrthographicallyComplexTermExtractor
+from bewer.key_term.vocabulary import Vocabulary
 from bewer.preprocessing.normalization import (
     Normalizer,
     Standardizer,
@@ -59,7 +59,12 @@ BASE_CONFIG = BewerConfig(
             Transform(transliterate_symbols),
         ),
     ),
-    vocabularies=(Vocabulary("orthographically_complex_terms", extractors=[OrthographicallyComplexTermExtractor()]),),
+    vocabularies=(
+        Vocabulary(
+            "orthographically_complex_terms",
+            extractors=[OrthographicallyComplexTermExtractor()],
+        ),
+    ),
 )
 
 CONFIG_REGISTRY.register("base", BASE_CONFIG)
