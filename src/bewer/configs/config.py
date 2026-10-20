@@ -197,12 +197,12 @@ class BewerConfig:
             ("normalizers", self.normalizers),
             ("vocabularies", self.vocabularies),
         )
-        width = max(len(name) for name, _ in stages) + 1
-        rows = "\n".join(
-            f"    {name + ':':<{width}} {', '.join(entries) or '-'}"
-            for name, entries in stages
-        )
-        return f"BewerConfig(\n{rows}\n)"
+        rows = []
+        for name, entries in stages:
+            if entries:
+                rows.append(f"  {name}:")
+                rows.extend(f"    - {entry}" for entry in entries)
+        return f"BewerConfig(\n{chr(10).join(rows)}\n)"
 
 
 # ============================================================
