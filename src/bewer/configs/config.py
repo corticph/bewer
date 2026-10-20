@@ -191,16 +191,18 @@ class BewerConfig:
         return self
 
     def __repr__(self) -> str:
-        parts = []
-        for name, value in (
+        stages = (
             ("standardizers", self.standardizers),
             ("tokenizers", self.tokenizers),
             ("normalizers", self.normalizers),
             ("vocabularies", self.vocabularies),
-        ):
-            if value:
-                parts.append(f"{name}={value!r}")
-        return f"BewerConfig({', '.join(parts)})"
+        )
+        width = max(len(name) for name, _ in stages) + 1
+        rows = "\n".join(
+            f"    {name + ':':<{width}} {', '.join(entries) or '-'}"
+            for name, entries in stages
+        )
+        return f"BewerConfig(\n{rows}\n)"
 
 
 # ============================================================
