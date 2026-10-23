@@ -3,6 +3,7 @@
 import pytest
 
 from bewer import (
+    BewerConfig,
     Dataset,
     DatasetFrozenError,
     Vocabulary,
@@ -174,6 +175,22 @@ class TestVocabularyFreezeOnRegistration:
         get_config("base").clone().add_vocabulary(vocab)
         with pytest.raises(VocabularyFrozenError):
             vocab.add_terms(["b"])
+
+    def test_add_terms_after_constructor_raises(self):
+        vocab = Vocabulary(name="m", terms=["a"])
+        BewerConfig(vocabularies=(vocab,))
+        with pytest.raises(VocabularyFrozenError):
+            vocab.add_terms(["b"])
+
+    def test_constructor_freezes_extends_entries(self):
+        parent_vocab = Vocabulary(name="m", terms=["a"])
+        base = BewerConfig(vocabularies=(parent_vocab,))
+        new_vocab = Vocabulary(name="n", terms=["b"])
+        BewerConfig(extends=base, vocabularies=(new_vocab,))
+        # Entries entering via either branch (inherited or new) freeze on attach.
+        assert parent_vocab.is_frozen
+        with pytest.raises(VocabularyFrozenError):
+            new_vocab.add_terms(["c"])
 
     def test_add_extractor_after_registration_raises(self):
         vocab = Vocabulary(name="m", terms=["a"])

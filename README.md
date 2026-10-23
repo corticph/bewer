@@ -187,15 +187,14 @@ assert wer.num_edits == sum(ex_wer.num_edits for ex_wer in wer)
 
 #### Vocabularies
 
-Key-term metrics measure performance on a pre-defined subset of terms (medical, financial, acronyms, etc.). To use them, build a [`Vocabulary`](src/bewer/core/vocabulary.py) and attach it to the dataset.
+Key-term metrics measure performance on a pre-defined subset of terms (medical, financial, acronyms, etc.). To use them, build a [`Vocabulary`](src/bewer/key_term/vocabulary.py) and attach it to a config.
 
 ```python
 from bewer import Dataset, Vocabulary, get_config
 
-config = get_config("en")
-vocab = Vocabulary(name="medical")
-vocab.add_terms(["diabetes", "blood sugar"])
-config = config.add_vocabulary(vocab)
+config = get_config("en").clone()
+vocab = Vocabulary("medical", terms=["diabetes", "blood sugar"])
+config.add_vocabulary(vocab)
 
 dataset = Dataset(config=config)
 dataset.add(

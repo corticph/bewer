@@ -142,6 +142,9 @@ class BewerConfig:
             self.tokenizers = _to_dict(tokenizers)
             self.normalizers = _to_dict(normalizers)
             self.vocabularies = _to_dict(vocabularies)
+        # Match ``add_vocabulary``: vocabularies freeze when they enter a config.
+        for vocab in self.vocabularies.values():
+            vocab.freeze()
         self._frozen = False
 
     # -- freezing ----------------------------------------------------------
