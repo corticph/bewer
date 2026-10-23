@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer import Dataset, Vocabulary
+from bewer import Dataset, Vocabulary, get_config
 from bewer.metrics.key_term.ktp import KTP, KTP_
 
 
@@ -12,34 +12,34 @@ class TestKTPExampleMetric:
     @pytest.fixture
     def dataset_keyword_match(self):
         """Dataset where a key term is correctly transcribed (TP=1, FP=0)."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["fox"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
         )
-        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
     def dataset_keyword_error(self):
         """Dataset where a key term is in ref but absent from hyp (TP=0, FP=0)."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["fox"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the fox jumps",
             hyp="the dog jumps",
         )
-        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     @pytest.fixture
     def dataset_keyword_fp(self):
         """Dataset where ref has a key term once but hyp has it twice (TP=1, FP=1)."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["fox"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the fox jumps",
             hyp="the fox fox jumps",
         )
-        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         return dataset
 
     def test_value_perfect_match(self, dataset_keyword_match):
@@ -86,12 +86,12 @@ class TestKTPExampleMetric:
 
     def test_works_with_any_vocab(self):
         """Test KTP is domain-agnostic and works with any vocabulary name."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="medical", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="patient has diabetes",
             hyp="patient has diabetes",
         )
-        dataset.add_vocabulary(Vocabulary(name="medical").add_terms(["diabetes"]))
         ktp = dataset[0].metrics.ktp(vocab="medical")
         assert ktp.value == 1.0
         assert ktp.num_matches == 1
@@ -103,7 +103,8 @@ class TestKTPDatasetMetric:
     @pytest.fixture
     def ktp_dataset(self):
         """Dataset with mixed precision: one exact match, one FP."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["fox", "rabbit"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the fox jumps",
             hyp="the fox jumps",
@@ -112,7 +113,6 @@ class TestKTPDatasetMetric:
             ref="the rabbit runs",
             hyp="the rabbit rabbit runs",
         )
-        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         return dataset
 
     def test_num_fp_aggregates(self, ktp_dataset):
@@ -137,17 +137,17 @@ class TestKTPDatasetMetric:
 
     def test_all_correct(self):
         """Test KTP = 1.0 when all transcriptions are correct."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["fox", "rabbit"]))
+        dataset = Dataset(config=config)
         dataset.add(ref="the fox", hyp="the fox")
         dataset.add(ref="the rabbit", hyp="the rabbit")
-        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "rabbit"]))
         ktp = dataset.metrics.ktp(vocab="animals")
         assert ktp.value == 1.0
 
     def test_empty_dataset(self):
         """Test KTP raises ValueError for unknown vocab."""
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
+        with pytest.raises(ValueError, match="not found in dataset config vocabularies"):
             dataset.metrics.ktp(vocab="animals").value
 
 

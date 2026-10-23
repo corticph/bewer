@@ -28,7 +28,7 @@ pip install bewer
 from bewer import Dataset
 
 # Create an evaluation dataset
-dataset = Dataset(language="en")
+dataset = Dataset(config="en")
 
 # Load data
 dataset.load_csv(
@@ -53,7 +53,7 @@ WER: 12.34%
 In `bewer`, evaluation is centered around the `Dataset` object, which implements a hierarchical structure, from a collection of reference-hypothesis pairs to individual tokens.
 
 ```python
-dataset = Dataset(language="en")            # Create a dataset ...
+dataset = Dataset(config="en")            # Create a dataset ...
 dataset.add(ref="one two", hyp="want to")   # ... and populate it
 
 # Climb down the hierarchy:
@@ -89,24 +89,55 @@ text.tokens.standardized      # list[str]: the tokens after standardization
 text.tokens.normalized        # list[str]: the tokens after normalization
 ```
 
-Pre-defined pipeline components can be found under `dataset.pipelines`.
+Pre-defined pipeline components can be found under `dataset.config`.
 
 ```python
-print(dataset.pipelines)
+print(dataset.config)
 ```
 
 ```text
-Pipelines(
-    standardizers: default
-    tokenizers:    default, with_punctuation, key_term, orthographically_complex_term
-    normalizers:   default, cased
+BewerConfig(
+  standardizers:
+    - default
+  tokenizers:
+    - default
+    - with_punctuation
+    - key_term
+    - orthographically_complex_term
+  normalizers:
+    - default
+    - cased
+  vocabularies:
+    - orthographically_complex_terms
 )
 ```
 
-Each component is named and defined as part of the dataset's configuration. Typically, it is sufficient to just choose the language, and the configuration for that language is applied automatically, but you can adapt and extend the pipeline as needed.
+Each component is named and defined as part of the dataset's configuration. Typically, it is sufficient to just pass a pre-registered language-config name (e.g. `"en"`, `"de"`, `"fr"`) to the `Dataset`, and the configuration is applied automatically.
+
+You can adapt and extend the pipeline as needed. If you're using a pre-registered config, note that configs are frozen upon registration, so you'll need to make a clone before extending it.
 
 ```python
-# TODO: Example of customizing the pipeline for a dataset
+from bewer import Dataset, get_config
+from bewer.preprocessing.normalization import Normalizer, Transform
+
+# Start from a registered config, then extend it with a custom normalizer
+def americanize(token):
+    replacements = {"colour": "color", "centre": "center"}
+    return replacements.get(token, token)
+
+config = get_config("en").clone()
+config.add_normalizer(Normalizer("en-us", Transform(americanize)))
+
+dataset = Dataset(config=config)
+dataset.add(ref="the colour code", hyp="the color code")
+
+# Any metric can now run under the new normalizer by name
+wer = dataset.metrics.wer(normalizer="en-us")
+print(f"{wer.value:.2%}")
+```
+
+```text
+0.00%
 ```
 
 Any component can be switched with the `set_pipeline` context manager. The English `key_term` tokenizer, for instance, splits on apostrophes as well as hyphens and slashes, so that a term is still matched when it appears in the possessive form. In contrast, the `default` tokenizer does not.
@@ -114,7 +145,7 @@ Any component can be switched with the `set_pipeline` context manager. The Engli
 ```python
 from bewer import set_pipeline
 
-dataset = Dataset(language="en")
+dataset = Dataset(config="en")
 dataset.add(ref="Jane Doe's", hyp="Jane Doe's")
 text = dataset[0].ref
 
@@ -187,21 +218,20 @@ assert wer.num_edits == sum(ex_wer.num_edits for ex_wer in wer)
 
 #### Vocabularies
 
-Key-term metrics measure performance on a pre-defined subset of terms (medical, financial, acronyms, etc.). To use them, build a [`Vocabulary`](src/bewer/core/vocabulary.py) and attach it to the dataset.
+Key-term metrics measure performance on a pre-defined subset of terms (medical, financial, acronyms, etc.). To use them, build a [`Vocabulary`](src/bewer/key_term/vocabulary.py) and attach it to a config.
 
 ```python
-from bewer import Vocabulary
+from bewer import Dataset, Vocabulary, get_config
 
-dataset = Dataset(language="en")
+config = get_config("en").clone()
+vocab = Vocabulary("medical", terms=["diabetes", "blood sugar"])
+config.add_vocabulary(vocab)
+
+dataset = Dataset(config=config)
 dataset.add(
     ref="the patient has diabetes and high blood sugar",
     hyp="the patient has diabetis and high blood sugar",
 )
-
-# Add key terms from a Python list
-vocab = Vocabulary(name="medical")
-vocab.add_terms(["diabetes", "blood sugar"])
-dataset.add_vocabulary(vocab)
 
 # Compute key-term recall by referencing the vocabulary name
 ktr = dataset.metrics.ktr(vocab="medical")
@@ -212,14 +242,14 @@ print(f"{ktr.long_name_base}: {ktr.value:.2%}")
 Key-Term Recall: 50.00%
 ```
 
-You can also load line-separated key terms directly from a file (`add_file`) or write a custom function (`Dataset -> Iterable[str]`) to extract key terms from the dataset (`add_extractor`).
+You can also load line-separated key terms directly from a file (`files=["terms.txt"]`) or provide a custom extractor function (`Dataset -> Iterable[str]`) to derive key terms from the dataset (`extractors=[extract_fn]`).
 
 #### Alignments
 
 Alignments produce an example-level text-to-text alignment as their primary output, rather than a dataset-level numeric score. An [`Alignment`](src/bewer/alignment/alignment.py) is a sequence of [`Op`](src/bewer/alignment/op.py) objects, each representing a match, substitution, insertion, or deletion between hypothesis and reference. Edit counts are available as supportive values.
 
 ```python
-dataset = Dataset(language="en")
+dataset = Dataset(config="en")
 dataset.add(
     ref="an example with different types of errors",
     hyp="an odd example with diff types errors",

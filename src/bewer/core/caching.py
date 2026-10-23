@@ -17,7 +17,7 @@ class PipelineCachedProperty:
     """Descriptor that implements context-sensitive lazy caching for pipeline properties.
 
     Reads one or more ContextVars to form a cache key, looks up the pipeline function
-    from ``instance._pipelines``, calls it on cache miss, and stores the result in a
+    from ``instance._config``, calls it on cache miss, and stores the result in a
     per-instance dict whose name is auto-derived as ``_cache_{property_name}``.
 
     Use via the :func:`pipeline_cached_property` decorator factory.
@@ -53,12 +53,12 @@ class PipelineCachedProperty:
             return cache[cache_key]
 
         # Resolve pipeline function (last context var names the pipeline entry)
-        pipelines = instance._pipelines
-        if pipelines is None:
-            raise ValueError(f"No {self._pipeline} found in pipelines.")
+        config = instance._config
+        if config is None:
+            raise ValueError(f"No {self._pipeline} found in config.")
 
         pipeline_name = key_parts[-1]
-        registry = getattr(pipelines, self._pipeline)
+        registry = getattr(config, self._pipeline)
         func = registry.get(pipeline_name, None)
         if func is None:
             raise ValueError(f"'{pipeline_name}' not found in {self._pipeline}.")

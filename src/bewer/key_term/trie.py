@@ -1,73 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from functools import cached_property
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import ahocorasick
 
-from bewer.core.text import Text, TextType, TokenList
+from bewer.core.text import TokenList
+from bewer.key_term.key_term import KeyTerm, KeyTermMatch
 
 if TYPE_CHECKING:
-    from bewer.configs.resolve import Pipelines
+    from bewer.core.text import Text
 
-__all__ = ["KeyTerm", "KeyTermMatch"]
-
-
-class KeyTerm(Text):
-    """A key term that can locate itself within reference text tokens.
-
-    Inherits standardized, tokens, and pipeline caching from Text.
-    Adds contiguous token matching against a reference TokenList.
-    """
-
-    def __init__(
-        self,
-        raw: str,
-        *,
-        pipelines: "Pipelines",
-    ):
-        super().__init__(raw=raw, pipelines=pipelines, src=None, text_type=TextType.KEY_TERM)
-
-    def __repr__(self):
-        text = self.raw if len(self.raw) <= 46 else self.raw[:46] + "..."
-        return f'KeyTerm("{text}")'
-
-
-@dataclass(frozen=True)
-class KeyTermMatch:
-    """A structured key term match: a token span in a ``Text`` identified as a ``KeyTerm``.
-
-    Carries the matched token span (``start``/``stop`` token indices, mirroring the raw
-    ``slice`` previously returned so existing consumers that read ``.start``/``.stop`` keep
-    working) together with the source ``Text`` it was found in (``src``, mirroring
-    ``Token.src``) and the ``key_term`` it was identified as. Richer details — the side it
-    was found on and the matched tokens — are derived from those two references.
-    """
-
-    start: int
-    stop: int
-    src: "Text"
-    key_term: "KeyTerm"
-
-    @cached_property
-    def token_slice(self) -> slice:
-        """The matched span as a ``slice`` for indexing the source text's ``TokenList``."""
-        return slice(self.start, self.stop)
-
-    @property
-    def side(self) -> Optional[TextType]:
-        """Which side the match was found on (``REF`` / ``HYP`` / ``KEY_TERM``), or ``None``
-        if the source text has no type set."""
-        return self.src.text_type
-
-    @cached_property
-    def tokens(self) -> TokenList:
-        """The matched ``Token`` objects from the source text."""
-        return self.src.tokens[self.token_slice]
-
-    def __repr__(self):
-        return f"KeyTermMatch(term={self.key_term.raw!r}, span=({self.start}, {self.stop}))"
+__all__ = ["KeyTermTrie"]
 
 
 class KeyTermTrie:
@@ -130,6 +73,8 @@ class KeyTermTrie:
 
     def find_in_tokens(self, tokens: TokenList) -> tuple[list[slice], list[KeyTerm]]:
         """Find all key term matches, returning token spans and the matched key terms."""
+        if not self._vocab:
+            return [], []
         int_text = self.encode(tokens)
         matches: list[slice] = []
         key_terms: list[KeyTerm] = []
@@ -138,6 +83,31 @@ class KeyTermTrie:
             matches.append(slice(start, end_idx + 1))
             key_terms.append(key_term)
         return matches, key_terms
+
+    def find_matches(
+        self,
+        text: "Text",
+        *,
+        allow_subset_matches: bool = False,
+    ) -> list[KeyTermMatch]:
+        """Find key term matches in ``text``'s tokens and wrap them as ``KeyTermMatch`` objects.
+
+        Args:
+            text: The :class:`~bewer.core.text.Text` to search.
+            allow_subset_matches: If False (default), discard matches that are subsets
+                of longer matches. If True, keep all matches but deduplicate exact overlaps.
+
+        Returns:
+            A list of :class:`KeyTermMatch` objects.
+        """
+        spans, key_terms = self.find_in_tokens(text.tokens)
+        if not spans:
+            return []
+        matches = [
+            KeyTermMatch(start=span.start, stop=span.stop, src=text, key_term=key_term)
+            for span, key_term in zip(spans, key_terms)
+        ]
+        return _remove_duplicate_matches(matches) if allow_subset_matches else _remove_subset_matches(matches)
 
 
 def _remove_duplicate_matches(matches: list[KeyTermMatch]) -> list[KeyTermMatch]:

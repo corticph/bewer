@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer import Vocabulary
+from bewer import Dataset, Vocabulary, get_config
 from bewer.core.example import Example
 from bewer.core.text import Text, TextType
 
@@ -10,25 +10,20 @@ from bewer.core.text import Text, TextType
 class TestExampleStandalone:
     """Tests for an Example constructed without a parent Dataset (src=None)."""
 
-    def test_constructs_without_dataset(self, pipelines):
-        """A standalone Example can be built given only a Pipelines registry."""
-        example = Example("a b c", "a x c", pipelines=pipelines)
+    def test_constructs_without_dataset(self, config):
+        """A standalone Example can be built given only a BewerConfig."""
+        example = Example("a b c", "a x c", config=config)
         assert example.src is None
         assert example.ref.tokens.standardized == ["a", "b", "c"]
 
-    def test_get_key_term_matches_returns_empty(self, pipelines):
-        """Key term matching needs the dataset trie; without a Dataset it yields no matches."""
-        example = Example("a b c", "a x c", pipelines=pipelines)
-        assert example.ref.get_key_term_matches("v") == []
-
-    def test_vocabs_empty_without_dataset(self, pipelines):
+    def test_vocabs_empty_without_dataset(self, config):
         """vocabs is empty for an Example with no parent Dataset."""
-        example = Example("a b c", "a x c", pipelines=pipelines)
+        example = Example("a b c", "a x c", config=config)
         assert example.vocabs == set()
 
-    def test_metrics_raise_clear_error(self, pipelines):
+    def test_metrics_raise_clear_error(self, config):
         """Dataset-backed metrics are unavailable for a parentless Example."""
-        example = Example("a b c", "a x c", pipelines=pipelines)
+        example = Example("a b c", "a x c", config=config)
         with pytest.raises(ValueError, match="without a parent Dataset"):
             example.metrics.wer()
 
@@ -68,44 +63,55 @@ class TestExampleInit:
 class TestExamplePrepareAndValidateKeyTerms:
     """Tests for Example key term preparation and validation."""
 
-    def test_key_term_not_in_ref_no_matches(self, sample_dataset):
+    def test_key_term_not_in_ref_no_matches(self):
         """Test that key term not in reference produces no matches."""
-        sample_dataset.add("hello world", "hello world")
-        sample_dataset.add_vocabulary(Vocabulary(name="missing").add_terms(["nonexistent"]))
-        example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="missing")
+        config = get_config("base").clone().add_vocabulary(Vocabulary("missing", terms=["nonexistent"]))
+        dataset = Dataset(config=config)
+        dataset.add("hello world", "hello world")
+        example = dataset[-1]
+        vocab = dataset.config.vocabularies["missing"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref)
         assert len(matches) == 0
 
-    def test_case_insensitive_key_term_matching(self, sample_dataset):
+    def test_case_insensitive_key_term_matching(self):
         """Test that key term matching is case insensitive."""
-        sample_dataset.add("Hello World", "hello world")
-        sample_dataset.add_vocabulary(Vocabulary(name="greetings").add_terms(["hello"]))
-        example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="greetings")
+        config = get_config("base").clone().add_vocabulary(Vocabulary("greetings", terms=["hello"]))
+        dataset = Dataset(config=config)
+        dataset.add("Hello World", "hello world")
+        example = dataset[-1]
+        vocab = dataset.config.vocabularies["greetings"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref)
         assert len(matches) == 1
         assert matches[0].tokens.standardized == ["Hello"]
 
-    def test_empty_key_term_list_resolves_without_error(self, sample_dataset):
+    def test_empty_key_term_list_resolves_without_error(self):
         """Test that an empty key term list does not cause key term match resolution to fail."""
-        sample_dataset.add("hello world", "hello world")
-        sample_dataset.add_vocabulary(Vocabulary(name="greetings").add_terms([]))
-        example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="greetings")
+        config = get_config("base").clone().add_vocabulary(Vocabulary("greetings", terms=[]))
+        dataset = Dataset(config=config)
+        dataset.add("hello world", "hello world")
+        example = dataset[-1]
+        vocab = dataset.config.vocabularies["greetings"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref)
         assert matches == []
 
 
 class TestExampleVocabs:
     """Tests for Example.vocabs property."""
 
-    def test_vocabs_empty_when_no_key_terms(self, sample_dataset):
-        """Test that vocabs is empty when no key terms are set."""
+    def test_vocabs_includes_config_vocabularies(self, sample_dataset):
+        """Test that vocabs includes vocabularies declared in the config."""
         example = sample_dataset[0]
-        assert example.vocabs == set()
+        assert "orthographically_complex_terms" in example.vocabs
 
-    def test_vocabs_includes_global_dataset_vocabs(self, sample_dataset):
+    def test_vocabs_includes_global_dataset_vocabs(self):
         """Test that vocabs includes global key term vocabularies from the parent dataset."""
-        sample_dataset.add_vocabulary(Vocabulary(name="global_terms").add_terms(["hello"]))
-        example = sample_dataset[0]
+        config = get_config("base").clone().add_vocabulary(Vocabulary("global_terms", terms=["hello"]))
+        dataset = Dataset(config=config)
+        dataset.add("hello world", "hello world")
+        example = dataset[0]
         assert "global_terms" in example.vocabs
 
 
@@ -146,40 +152,52 @@ class TestExampleHash:
 
 
 class TestTextGetKeyTermMatches:
-    """Tests for Text.get_key_term_matches() using global and local key terms."""
+    """Tests for key-term matching using global and local key terms."""
 
-    def test_global_key_terms_both_matched(self, sample_dataset):
-        """Global vocab (from add_vocabulary) produces all matches by default."""
-        sample_dataset.add("the quick brown fox", "the quick brown dog")
-        sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox", "brown"]))
-        example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals")
+    def test_global_key_terms_both_matched(self):
+        """Global vocab (from config) produces all matches by default."""
+        config = get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox", "brown"]))
+        dataset = Dataset(config=config)
+        dataset.add("the quick brown fox", "the quick brown dog")
+        example = dataset[-1]
+        vocab = dataset.config.vocabularies["animals"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref)
         matched_standardized = sorted(m.tokens.standardized for m in matches)
         assert ["brown"] in matched_standardized
         assert ["fox"] in matched_standardized
 
-    def test_global_key_terms_match_count(self, sample_dataset):
+    def test_global_key_terms_match_count(self):
         """Global key terms produce the expected number of matches."""
-        sample_dataset.add("the quick brown fox", "the quick brown dog")
-        sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
-        example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals")
+        config = get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"]))
+        dataset = Dataset(config=config)
+        dataset.add("the quick brown fox", "the quick brown dog")
+        example = dataset[-1]
+        vocab = dataset.config.vocabularies["animals"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref)
         assert len(matches) == 1
 
-    def test_allow_subset_matches_true_deduplicates_exact(self, sample_dataset):
+    def test_allow_subset_matches_true_deduplicates_exact(self):
         """With allow_subset_matches=True, exact duplicate matches from global vocab are deduplicated."""
-        sample_dataset.add("the quick brown fox", "the quick brown dog")
-        sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
-        example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals", allow_subset_matches=True)
+        config = get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"]))
+        dataset = Dataset(config=config)
+        dataset.add("the quick brown fox", "the quick brown dog")
+        example = dataset[-1]
+        vocab = dataset.config.vocabularies["animals"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref, allow_subset_matches=True)
         assert len(matches) == 1
 
-    def test_allow_subset_matches_false_deduplicates(self, sample_dataset):
+    def test_allow_subset_matches_false_deduplicates(self):
         """With allow_subset_matches=False, subset matches from global vocab are deduplicated."""
-        sample_dataset.add("the quick brown fox", "the quick brown dog")
-        sample_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
-        example = sample_dataset[-1]
-        matches = example.ref.get_key_term_matches(vocab="animals", allow_subset_matches=False)
+        config = get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"]))
+        dataset = Dataset(config=config)
+        dataset.add("the quick brown fox", "the quick brown dog")
+        example = dataset[-1]
+        vocab = dataset.config.vocabularies["animals"]
+        matcher = vocab.build_matcher(dataset)
+        matches = matcher.find_matches(example.ref, allow_subset_matches=False)
         assert len(matches) == 1
 
 

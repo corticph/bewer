@@ -1,16 +1,12 @@
 from functools import cached_property
-from importlib import resources
 from itertools import chain
-from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
 import pandas as pd
-from omegaconf import OmegaConf
 
-from bewer.configs.resolve import resolve_pipelines
+from bewer.configs.config import BewerConfig, get_config
 from bewer.core.example import Example
 from bewer.core.text import TokenList
-from bewer.core.vocabulary import Vocabulary
 from bewer.metrics.base import MetricCollection
 
 __all__ = ["Dataset", "DatasetFrozenError", "TextList", "TextTokenList"]
@@ -27,47 +23,48 @@ class Dataset(object):
     """BeWER dataset.
 
     Attributes:
-        config (OmegaConf): The resolved configuration object.
-        pipelines: The resolved preprocessing pipelines.
+        config (BewerConfig): The resolved configuration object.
         examples (list[Example]): A list of Example objects.
         metrics (MetricCollection): A metrics collection for the dataset.
         refs (TextList): The reference texts in the dataset.
         hyps (TextList): The hypothesis texts in the dataset.
     """
 
-    def __init__(self, config: str | None = None, language: str | None = None):
+    def __init__(
+        self,
+        config: BewerConfig | str | None = None,
+    ):
         """Initialize the Dataset.
 
         The dataset must be populated using one of the load_* methods or manually using the add() method.
 
         Args:
-            config (str | None): Path to the configuration file. If None, uses the default configuration.
-            language (str | None): Language code to apply language-specific pipeline settings (e.g. "da",
-                "de", "fr"). If None, uses the default configuration. Supported languages are determined
-                by the files in bewer/configs/languages/.
+            config (BewerConfig | str | None): A BewerConfig, a registered config
+                name (e.g. "base", "en", "da"), or None for the base config.
         """
-        self.config_path = self.get_config_path(config)
-        self.config = OmegaConf.load(self.config_path)
-        if language is not None:
-            lang_cfg = OmegaConf.load(self._get_language_config_path(language))
-            self.config = OmegaConf.merge(self.config, lang_cfg)
-        self._pipelines = resolve_pipelines(self.config)
+        if isinstance(config, BewerConfig):
+            self._config = config
+        elif isinstance(config, str):
+            self._config = get_config(config)
+        elif config is None:
+            self._config = get_config("base")
+        else:
+            raise TypeError(f"config must be BewerConfig, str, or None, got {type(config)}")
+
+        self._config.freeze()
+
         self._init_blank_state()
 
     def _init_blank_state(self) -> None:
         """Initialize the mutable, modifiable state of the dataset.
 
-        Shared by __init__ and clone(). Assumes config_path, config and _pipelines
-        are already set. Leaves the dataset unfrozen with empty data and clean caches.
+        Shared by __init__ and clone(). Assumes config is already set (or will
+        be set immediately after). Leaves the dataset unfrozen with empty data
+        and clean caches.
         """
         self.examples = []
-        self._vocabularies: dict[str, "Vocabulary"] = {}
         self.metrics = MetricCollection(self)
         self._frozen = False
-
-    @property
-    def pipelines(self):
-        return self._pipelines
 
     @property
     def is_frozen(self) -> bool:
@@ -93,25 +90,19 @@ class Dataset(object):
     def clone(self) -> "Dataset":
         """Return a fresh, unfrozen copy of the dataset with clean caches.
 
-        The copy shares the resolved configuration and preprocessing pipelines (both
-        read-only at runtime) but rebuilds all examples, vocabularies and caches from
-        scratch, so it carries none of the original's cached metric results. Works
-        regardless of whether the original is frozen.
+        The copy shares the resolved configuration (read-only at runtime) but rebuilds
+        all examples, vocabularies and caches from scratch, so it carries none of the
+        original's cached metric results. Works regardless of whether the original is
+        frozen.
 
         Returns:
             Dataset: A modifiable copy containing the same examples and key term vocabularies.
         """
         new = object.__new__(Dataset)
-        new.config_path = self.config_path
-        new.config = self.config.copy()
-        new._pipelines = self._pipelines
+        new._config = self._config
         new._init_blank_state()
         for example in self.examples:
             new.add(example.ref.raw, example.hyp.raw)
-        # Share the same Vocabulary objects; the clone re-resolves them against itself
-        # (so extractor-defined vocabularies reflect the clone's own examples).
-        for vocab in self._vocabularies.values():
-            new.add_vocabulary(vocab)
         return new
 
     @cached_property
@@ -135,7 +126,7 @@ class Dataset(object):
     def add(self, ref: str, hyp: str) -> None:
         """Add an example to the dataset."""
         self._check_not_frozen()
-        example = Example(ref, hyp, pipelines=self._pipelines, src=self, index=len(self))
+        example = Example(ref, hyp, config=self._config, src=self, index=len(self))
         self.examples.append(example)
         # Invalidate cached refs/hyps so they stay fresh while the dataset is still being built.
         self.__dict__.pop("refs", None)
@@ -170,81 +161,9 @@ class Dataset(object):
         df = pd.read_json(jsonl_file, lines=True, **kwargs)
         self.load_pandas(df, ref_col, hyp_col)
 
-    def add_vocabulary(self, vocab: "Vocabulary") -> None:
-        """Attach a key term vocabulary to the dataset.
-
-        The vocabulary is registered under its own ``name`` and can be referenced by key
-        term metrics via ``metrics.ktr(vocab=name)``. The same Vocabulary object may be
-        attached to multiple datasets; it resolves its terms against each one independently.
-
-        Attaching freezes the vocabulary's definition: it can no longer be modified via
-        ``add_terms``/``add_file``/``add_extractor``, so its resolved terms stay fixed for
-        every dataset it is attached to.
-
-        Args:
-            vocab (Vocabulary): The vocabulary to attach.
-
-        Raises:
-            TypeError: If ``vocab`` is not a Vocabulary.
-            ValueError: If a different vocabulary is already registered under the same name.
-        """
-        self._check_not_frozen()
-        if not isinstance(vocab, Vocabulary):
-            raise TypeError(f"add_vocabulary() expects a Vocabulary, got {type(vocab)}.")
-        existing = self._vocabularies.get(vocab.name)
-        if existing is not None and existing is not vocab:
-            raise ValueError(f"A different vocabulary named '{vocab.name}' is already attached to this dataset.")
-        self._vocabularies[vocab.name] = vocab
-        vocab._freeze()
-
-    def _register_derived_vocabulary(self, vocab: "Vocabulary") -> "Vocabulary":
-        """Register a metric-derived vocabulary, returning the one now bound to its name.
-
-        Metric-derived vocabularies (e.g. the auto-extracted ``orthographically_complex_terms``
-        backing the orthographically-complex-term metrics) are attached lazily the first time such a
-        metric is requested,
-        which may happen after the dataset has frozen on an earlier metric. Because the
-        vocabulary introduces a brand-new name, it cannot change a term set any prior metric
-        already resolved, so registering it on a frozen dataset cannot stale a cached result.
-        This therefore bypasses the frozen guard that :meth:`add_vocabulary` enforces.
-
-        If a vocabulary is already registered under the name it is returned unchanged.
-
-        Args:
-            vocab (Vocabulary): The derived vocabulary to register.
-
-        Returns:
-            Vocabulary: The vocabulary now registered under ``vocab.name``.
-
-        Raises:
-            TypeError: If ``vocab`` is not a Vocabulary.
-        """
-        if not isinstance(vocab, Vocabulary):
-            raise TypeError(f"_register_derived_vocabulary() expects a Vocabulary, got {type(vocab)}.")
-        existing = self._vocabularies.get(vocab.name)
-        if existing is not None:
-            return existing
-        self._vocabularies[vocab.name] = vocab
-        vocab._freeze()
-        return vocab
-
-    @staticmethod
-    def _get_language_config_path(language: str):
-        """Resolve the overlay config path for the given language code."""
-        languages_dir = resources.files("bewer.configs").joinpath("languages")
-        path = languages_dir.joinpath(f"{language}.yml")
-        if not path.is_file():
-            supported = [p.name[:-4] for p in languages_dir.iterdir() if p.name.endswith(".yml")]
-            raise ValueError(f"Unknown language '{language}'. Supported languages: {sorted(supported)}.")
-        return path
-
-    @staticmethod
-    def get_config_path(config_path: str | None) -> str:
-        """Get the configuration path."""
-        if config_path is None or not Path(config_path).is_file():
-            config_path = "base" if config_path is None else config_path
-            return resources.files("bewer.configs").joinpath(f"{config_path}.yml")
-        return Path(config_path).resolve()
+    @property
+    def config(self) -> BewerConfig:
+        return self._config
 
     def __len__(self) -> int:
         """Get the number of examples in the dataset."""

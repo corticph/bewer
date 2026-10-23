@@ -3,29 +3,12 @@
 import pytest
 
 from bewer import Dataset
-from bewer.metrics.key_term.orthographically_complex_term import (
-    OrthographicallyComplexTermFscore,
-    OrthographicallyComplexTermPrecision,
-    OrthographicallyComplexTermRecall,
+
+METRICS = (
+    "orthographically_complex_term_recall",
+    "orthographically_complex_term_precision",
+    "orthographically_complex_term_fscore",
 )
-
-
-class TestAutoVocabulary:
-    """The vocabulary is registered on first use, out of the box."""
-
-    def test_first_use_registers_vocabulary(self):
-        dataset = Dataset()
-        dataset.add("an MRI scan", "an MRI scan")
-        assert "orthographically_complex_terms" not in dataset._vocabularies
-        dataset.metrics.orthographically_complex_term_recall().value
-        assert "orthographically_complex_terms" in dataset._vocabularies
-
-    def test_works_after_dataset_already_frozen(self):
-        dataset = Dataset()
-        dataset.add("an MRI scan", "an MRI scan")
-        dataset.metrics.wer().value  # freezes the dataset
-        assert dataset.is_frozen
-        assert dataset.metrics.orthographically_complex_term_recall().value == 1.0
 
 
 class TestRecall:
@@ -65,6 +48,13 @@ class TestRecall:
         dataset.add("an MRI scan", "an mri scan")
         assert dataset.metrics.orthographically_complex_term_recall().value == 0.0
 
+    def test_works_after_dataset_already_frozen(self):
+        dataset = Dataset()
+        dataset.add("an MRI scan", "an MRI scan")
+        dataset.metrics.wer().value  # freezes the dataset
+        assert dataset.is_frozen
+        assert dataset.metrics.orthographically_complex_term_recall().value == 1.0
+
 
 class TestPrecision:
     def test_perfect_precision(self):
@@ -99,43 +89,27 @@ class TestFScore:
 
 
 class TestMetricAttributes:
-    """Generated metric metadata — a flat regex metric like the quantity ones."""
+    """Generated metric metadata."""
 
-    @pytest.mark.parametrize(
-        "cls, short, long",
-        [
-            (
-                OrthographicallyComplexTermRecall,
-                "orthographically_complex_term_recall",
-                "Orthographically Complex Term Recall",
-            ),
-            (
-                OrthographicallyComplexTermPrecision,
-                "orthographically_complex_term_precision",
-                "Orthographically Complex Term Precision",
-            ),
-            (
-                OrthographicallyComplexTermFscore,
-                "orthographically_complex_term_fscore",
-                "Orthographically Complex Term F-Score",
-            ),
-        ],
-    )
-    def test_names(self, cls, short, long):
-        assert cls.short_name_base == short
-        assert cls.long_name_base == long
-        assert len(cls.description) > 0
+    @pytest.mark.parametrize("name", METRICS)
+    def test_registered(self, name):
+        from bewer.metrics.base import METRIC_REGISTRY
 
-    @pytest.mark.parametrize(
-        "cls",
-        [OrthographicallyComplexTermRecall, OrthographicallyComplexTermPrecision, OrthographicallyComplexTermFscore],
-    )
-    def test_main_value(self, cls):
-        assert cls.metric_values()["main"] == "value"
+        assert name in METRIC_REGISTRY.metric_metadata
+
+    @pytest.mark.parametrize("name", METRICS)
+    def test_main_value(self, name):
+        from bewer.metrics.base import METRIC_REGISTRY
+
+        metric_cls = METRIC_REGISTRY.metric_metadata[name]["metric_cls"]
+        assert metric_cls.metric_values()["main"] == "value"
 
     def test_default_vocab(self):
-        assert OrthographicallyComplexTermRecall.param_schema().vocab == "orthographically_complex_terms"
-        assert OrthographicallyComplexTermFscore.param_schema().vocab == "orthographically_complex_terms"
+        from bewer.metrics.key_term.orthographically_complex_term import DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB
+
+        dataset = Dataset()
+        recall = dataset.metrics.orthographically_complex_term_recall()
+        assert recall.params.vocab == DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB
 
     def test_runs_under_complex_term_pipeline(self):
         dataset = Dataset()

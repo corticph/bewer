@@ -4,7 +4,7 @@ import re
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Union
 
 from jinja2 import Environment, PackageLoader
 
@@ -13,6 +13,7 @@ from bewer.reporting.html.labels import HTMLAlignmentLabels
 
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
+    from bewer.metrics.base import Metric
 
 __all__ = [
     "generate_report",
@@ -95,6 +96,48 @@ def _refs_match(datasets: list["Dataset"]) -> bool:
             if ex.ref.raw != first_refs[i]:
                 return False
     return True
+
+
+def _kt_match_overrides(alignment_metric: "Metric") -> dict[str, Any]:
+    """Pipeline fields of the displayed alignment, for the ``_kt_stats`` request.
+
+    Match indices only map into the rendered alignment when both live in the same
+    token view, so the key-term metric inherits the alignment's pipeline rather
+    than using its own defaults.
+    """
+    overrides: dict[str, Any] = {
+        "standardizer": alignment_metric.standardizer,
+        "tokenizer": alignment_metric.tokenizer,
+        "normalizer": alignment_metric.normalizer,
+    }
+    params = alignment_metric.params
+    if params is not None and hasattr(params, "normalized"):
+        overrides["normalized"] = params.normalized
+    return overrides
+
+
+def _resolve_matches(dataset: "Dataset", report_alignment: ReportAlignment) -> list[Any]:
+    """Reference-side key term matches per example, for alignment highlighting.
+
+    Collected from the dataset's ``_kt_stats`` metric — the primary key-term
+    matcher — so each vocabulary's matcher is built once per dataset and the
+    result is cached on the dataset's metric collection. With no vocabularies
+    configured, all examples get empty matches.
+    """
+    vocabularies = list(dataset.config.vocabularies)
+    if not vocabularies:
+        return [[] for _ in dataset]
+
+    overrides = None
+    merged: list[list[Any]] = [[] for _ in dataset]
+    for vocab_name in vocabularies:
+        if overrides is None:
+            alignment_metric = dataset.metrics.get(report_alignment.name)(**report_alignment.metric_kwargs)
+            overrides = _kt_match_overrides(alignment_metric)
+        kt_stats = dataset.metrics.get("_kt_stats")(vocab=vocab_name, **overrides)
+        for ex_idx in range(len(dataset)):
+            merged[ex_idx].extend(kt_stats[ex_idx].ref_matches)
+    return merged
 
 
 def render_report_html(
@@ -207,12 +250,23 @@ def render_report_html(
                 else:
                     ex_alignments.append(None)
             resolved_alignments.append(ex_alignments)
+        # Key term matches per dataset (one matcher build per vocabulary per dataset),
+        # then transposed to mirror ex_alignments: datasets without the example get None.
+        ds_matches = [_resolve_matches(ds, report_alignment) for ds in dataset_list]
+        resolved_kt = [
+            [
+                None if ex_idx >= len(dataset_list[ds_idx]) else ds_matches[ds_idx][ex_idx]
+                for ds_idx in range(len(dataset_list))
+            ]
+            for ex_idx in range(n_examples)
+        ]
     else:
         ds = dataset_list[0]
         resolved_alignments = []
         for example in ds:
             alignment = example.metrics.get(report_alignment.name)(**report_alignment.metric_kwargs).alignment
             resolved_alignments.append(alignment)
+        resolved_kt = _resolve_matches(ds, report_alignment)
 
     env = Environment(loader=PackageLoader("bewer", "templates"), autoescape=True)
     env.filters["indent_tabs"] = indent_tabs
@@ -232,6 +286,7 @@ def render_report_html(
         metrics=resolved_metrics,
         summary=resolved_summary,
         alignments=resolved_alignments,
+        key_term_matches=resolved_kt,
         alignment_color_scheme=alignment_color_scheme,
         alignment_labels=alignment_labels,
         metadata=metadata,

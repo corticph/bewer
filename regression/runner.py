@@ -34,7 +34,7 @@ from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn
 from rich.table import Table
 
 import bewer
-from bewer import Dataset, Vocabulary
+from bewer import Dataset, Vocabulary, get_config
 
 # runner.py lives in <repo>/regression/, so the repo root is its parent's parent.
 REGRESSION_DIR = Path(__file__).resolve().parent
@@ -139,13 +139,14 @@ def build_dataset(dataset_spec: dict) -> Dataset:
     format), so there is nothing to configure per dataset beyond the path and language.
     """
     language = dataset_spec.get("language")
-    ds = Dataset(language=language) if language else Dataset()
-    ds.load_jsonl(str(_resolve(dataset_spec["path"])), ref_col="ref", hyp_col="hyp")
-
+    config = get_config(language) if language else get_config("base")
     vocab_spec = dataset_spec.get("vocab")
     if vocab_spec:
-        vocab = Vocabulary(name=vocab_spec["name"]).add_file(_resolve(vocab_spec["file"]))
-        ds.add_vocabulary(vocab)
+        config = config.clone().add_vocabulary(
+            Vocabulary(name=vocab_spec["name"], files=[_resolve(vocab_spec["file"])])
+        )
+    ds = Dataset(config=config)
+    ds.load_jsonl(str(_resolve(dataset_spec["path"])), ref_col="ref", hyp_col="hyp")
     return ds
 
 

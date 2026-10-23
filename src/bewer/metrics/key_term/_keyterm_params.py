@@ -27,5 +27,5 @@ class KeyTermParams(MetricParams):
 
     def validate(self) -> None:
         """Validate that the vocabulary exists on the dataset."""
-        if self.vocab not in self.metric.dataset._vocabularies:
-            raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset key term vocabularies.")
+        if self.vocab not in self.metric.dataset.config.vocabularies:
+            raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset config vocabularies.")

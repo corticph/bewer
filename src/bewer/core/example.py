@@ -4,7 +4,7 @@ from bewer.core.text import Text, TextType
 from bewer.metrics.base import ExampleMetricCollection
 
 if TYPE_CHECKING:
-    from bewer.configs.resolve import Pipelines
+    from bewer.configs.config import BewerConfig
     from bewer.core.dataset import Dataset
 
 __all__ = ["Example"]
@@ -25,7 +25,7 @@ class Example:
         ref: str,
         hyp: str,
         *,
-        pipelines: "Pipelines",
+        config: "BewerConfig",
         src: Optional["Dataset"] = None,
         index: Optional[int] = None,
     ):
@@ -35,18 +35,18 @@ class Example:
         Args:
             ref: Reference text.
             hyp: Hypothesis text.
-            pipelines: The resolved pipeline registry, forwarded to the Text objects (required).
+            config: The BewerConfig, forwarded to the Text objects (required).
             src: Optional parent Dataset object. Read by the metrics layer and key term vocabulary lookup.
             index: The index of the example in the dataset.
         """
         self._index = index
 
         self._src = src
-        self._pipelines = pipelines
+        self._config = config
 
         self.metrics = ExampleMetricCollection(self)
-        self.ref = Text(ref, pipelines=self._pipelines, src=self, text_type=TextType.REF)
-        self.hyp = Text(hyp, pipelines=self._pipelines, src=self, text_type=TextType.HYP)
+        self.ref = Text(ref, config=self._config, src=self, text_type=TextType.REF)
+        self.hyp = Text(hyp, config=self._config, src=self, text_type=TextType.HYP)
 
     @property
     def index(self) -> Optional[int]:
@@ -59,15 +59,15 @@ class Example:
         return self._src
 
     @property
-    def pipelines(self):
-        return self._pipelines
+    def config(self):
+        return self._config
 
     @property
     def vocabs(self) -> set[str]:
         """Get the set of all key term vocabularies associated with this example."""
         if self._src is None:
             return set()
-        return set(self._src._vocabularies.keys())
+        return set(self._src.config.vocabularies.keys())
 
     def __hash__(self):
         return hash((self.ref, self.hyp, self._index))

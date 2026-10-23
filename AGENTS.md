@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ## Project Overview
 
-BeWER (Beyond Word Error Rate) is an evaluation and analysis framework for automatic speech recognition (ASR) in Python. It provides a YAML-based configuration system for evaluation pipelines with metrics computation, preprocessing, and web-based reporting.
+BeWER (Beyond Word Error Rate) is an evaluation and analysis framework for automatic speech recognition (ASR) in Python. It provides a Python-based configuration system for evaluation pipelines with metrics computation, preprocessing, and web-based reporting.
 
 **Status**: Early development, not production-ready. Breaking changes may occur between alpha versions.
 
@@ -49,7 +49,7 @@ poetry run twine check dist/*  # Validate built packages
 - Main entry point for the framework
 - Manages collections of Examples and provides lazy metric computation
 - Supports loading data from CSV, pandas DataFrames (with planned HuggingFace support)
-- Configuration system based on OmegaConf with YAML config files
+- Configuration system based on BewerConfig (regular class, frozen on registration or dataset construction) with Python configs
 
 **Example** (`src/bewer/core/example.py`)
 - Represents a single reference-hypothesis pair
@@ -64,8 +64,8 @@ poetry run twine check dist/*  # Validate built packages
 
 **Preprocessing Pipeline** (`src/bewer/preprocessing/`)
 - Three-stage pipeline: standardization → tokenization → token-level normalization
-- Configured via YAML (`src/bewer/configs/base.yml`)
-- Each stage is a series of function applications
+- Configured via Python configs (`src/bewer/configs/`)
+- Each stage is a series of function applications (Transforms) wrapped in pipeline objects (Standardizer, Tokenizer, Normalizer)
 - Standardizers: Unicode normalization (NFC)
 - Tokenizers: Whitespace-based with customizable symbol handling
 - Normalizers: Lowercase, transliteration, symbol removal/translation (applied to tokens)
@@ -79,21 +79,23 @@ poetry run twine check dist/*  # Validate built packages
 - Supports both dataset-level and example-level metrics
 
 **Built-in Metrics** (`src/bewer/metrics/`)
-- WER (Word Error Rate): `wer.py`
-- CER (Character Error Rate): `cer.py`
-- Levenshtein distance: `levenshtein.py`
-- Error alignment metrics: `error_align.py` (uses external error-align package)
-- Insertion rate: `insertion_rate.py` — counts insertions that are part of contiguous insertion runs of length >= `min_run_length` (default 1), normalized by the number of reference tokens. When `min_run_length=1`, all insertions are counted. When `min_run_length>=2`, only burst insertion runs are counted — a hallucination signal. The `alignment` parameter (default `'levenshtein'`) selects the alignment backend; `'error_align'` is also available. Depends on the Levenshtein or ErrorAlign metric for alignment.
-- Key term metrics (recall, precision, F-score, CER, etc.): `ktr.py`, `ktp.py`, `ktf.py`, `ktcer.py`, `rktr.py`, `kter.py`
-- Orthographically-complex term metrics: `orthographically_complex_term.py` — subclass the key-term metrics over an `orthographically_complex_terms` vocabulary auto-extracted from the references (terms selected by orthography: acronyms, alphanumerics, hyphen compounds, Greek-bearing tokens; e.g. `MRI`, `HbA1c`, `CT-scan`). Auto-registered on first use, so `dataset.metrics.orthographically_complex_term_recall().value` works out of the box. Run under the `orthographically_complex_term` tokenizer (no hyphen split) and `cased` normalizer (no lowercasing), so a term's surface form is scored strictly. The name marks the orthographic dimension of "term complexity".
+- `general/`: WER (`wer.py`), CER (`cer.py`), PER (`per.py`)
+- `alignment/`: Levenshtein distance (`levenshtein.py`), error alignment (`error_align.py`, uses external error-align package)
+- `key_term/`: Key term recall/precision/F-score/CER/etc. (`ktr.py`, `ktp.py`, `ktf.py`, `ktfpr.py`, `ktcer.py`, `rktr.py`, `kter.py`); shared stats (`_kt_stats.py`, `_rkt_stats.py`); orthographically-complex term metrics (`orthographically_complex_term.py`)
+- `hallucination/`: Insertion rate (`insertion_rate.py`) — counts insertions in contiguous runs of length >= `min_run_length` (default 1), normalized by reference token count. `min_run_length>=2` counts only burst runs (hallucination signal). `alignment` parameter selects backend (`'levenshtein'` or `'error_align'`). Example insertion rate (`example_insertion_rate.py`) — per-example variant.
+- `summary/`: Summary metric (`summary.py`)
+- Orthographically-complex term metrics register KTR/KTP/KTF/KTFPR with a different tokenizer (`orthographically_complex_term`, no hyphen split), `cased` normalizer (no lowercasing), and an `orthographically_complex_terms` vocabulary auto-extracted from references (acronyms, alphanumerics, hyphen compounds; e.g. `MRI`, `HbA1c`, `CT-scan`), defined in the base config.
 
-### Vocabulary Extractors (`src/bewer/extractors/`)
+### Key Term Package (`src/bewer/key_term/`)
 
-Library of pre-defined `ExtractorFn` callables — `Dataset -> Iterable[str]` functions that derive key terms from a dataset and are registered via `Vocabulary(name).add_extractor(fn)`. An extractor receives the whole dataset, so it may read the references, the hypotheses, or neither.
+Groups all key-term machinery:
 
-- **`RegexExtractor`** (`extractors/regex.py`): generic base that full-matches each reference token against a compiled pattern and returns the matching surface forms. Subclass it (override `default_pattern`) or instantiate it with a `pattern` to define a new regex-based term family. Its matching primitive `match_token_regex` returns unit token slices.
-- **`OrthographicallyComplexTermExtractor`** (`extractors/orthographically_complex_term.py`): a `RegexExtractor` with `ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`, backing the orthographically-complex term metrics. Expects the `orthographically_complex_term` tokenizer (no hyphen split) so `CT-scan` is a single token.
-- Exposed at the package top level as `bewer.extractors`.
+- **`key_term.py`**: `KeyTerm` (a `Text` subclass for key terms) and `KeyTermMatch` (a match result — token span, source text, matched key term).
+- **`trie.py`**: `KeyTermTrie` — the Aho-Corasick matching engine. `build_matcher` produces one; `find_matches(text)` returns `KeyTermMatch` objects.
+- **`vocabulary.py`**: `Vocabulary` — a named collection of key terms (static lists, files, extractor functions). `ExtractorFn` protocol, `VocabularyFrozenError`, `VocabularyExtractorError`.
+- **`regex_extractor.py`**: `RegexExtractor` — generic base that full-matches each reference token against a compiled pattern. Subclass it (override `default_pattern`) or instantiate with a `pattern` to define a new regex-based term family. Its matching primitive `match_token_regex` returns unit token slices.
+- **`orthographically_complex_term_extractor.py`**: `OrthographicallyComplexTermExtractor` — a `RegexExtractor` with `ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`, backing the orthographically-complex term metrics. Expects the `orthographically_complex_term` tokenizer (no hyphen split) so `CT-scan` is a single token.
+- Exposed at the package top level as `bewer.key_term`.
 
 ### Alignment System (`src/bewer/alignment/`)
 
@@ -115,28 +117,37 @@ Library of pre-defined `ExtractorFn` callables — `Dataset -> Iterable[str]` fu
 
 ## Configuration System
 
-Configuration is managed through YAML files with OmegaConf:
+Configuration is managed through `BewerConfig` (a regular class, frozen on registration or dataset construction) and Python configs:
 
-- Default config: `src/bewer/configs/base.yml`
-- Defines preprocessing pipelines (standardizers, tokenizers, normalizers)
-- Extensible: users can provide custom configs
-- Pipeline resolution happens in `configs/resolve.py`
+- Config class: `src/bewer/configs/config.py` — `BewerConfig`, `get_config()`
+- Configs: `src/bewer/configs/{base,en,da,de,fr}.py` — built-in config presets, each defined as a module-level constant and registered via `CONFIG_REGISTRY.register(name, config)`
+- Registry: `src/bewer/configs/config.py` — `ConfigRegistry` / `CONFIG_REGISTRY` for config presets; metrics use `METRIC_REGISTRY` in `bewer.metrics.base`
+- Extensible: users can provide custom `BewerConfig` instances or register custom configs
+- Language configs extend `BASE_CONFIG` via the `extends` keyword argument
+- Vocabularies are attached to configs via `config.add_vocabulary(vocab)` (requires `.clone()` first if the config is frozen)
+- `ConfigFrozenError` raised on mutation of a frozen config; `DatasetFrozenError` and `VocabularyFrozenError` for the other freezable objects
 
 Example config structure:
-```yaml
-standardizers:
-  default:
-    bewer.preprocessing.normalization.nfc:
+```python
+from bewer import BewerConfig, Transform
+from bewer.core.vocabulary import Vocabulary
+from bewer.preprocessing.normalization import Normalizer, Standardizer, lowercase, nfc
+from bewer.preprocessing.tokenization import Tokenizer, strip_punctuation_keep_symbols_pattern
 
-tokenizers:
-  default:
-    bewer.preprocessing.tokenization.whitespace_strip_symbols_and_custom:
-      split_on: "-/"
-
-normalizers:
-  default:
-    bewer.preprocessing.normalization.lowercase:
-    bewer.preprocessing.normalization.transliterate_latin_letters:
+config = BewerConfig(
+    standardizers=(
+        Standardizer("default", Transform(nfc)),
+    ),
+    tokenizers=(
+        Tokenizer("default", strip_punctuation_keep_symbols_pattern(split_on_escaped="-/")),
+    ),
+    normalizers=(
+        Normalizer("default", Transform(lowercase)),
+    ),
+    vocabularies=(
+        Vocabulary("medical", terms=["diabetes", "asthma"]),
+    ),
+)
 ```
 
 ## Testing Conventions
@@ -158,7 +169,6 @@ normalizers:
 **Core Dependencies**:
 - pandas: Data handling
 - regex, rapidfuzz: Text processing and matching
-- pyyaml, omegaconf: Configuration management
 - error-align: External alignment library (Corti package)
 - jinja2: HTML template rendering
 - rich: CLI output formatting

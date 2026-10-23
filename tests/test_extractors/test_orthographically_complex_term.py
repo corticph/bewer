@@ -1,10 +1,10 @@
-"""Tests for bewer.extractors.orthographically_complex_term and the generic regex extractor."""
+"""Tests for bewer.key_term.orthographically_complex_term_extractor and the generic regex extractor."""
 
 import pytest
 import regex
 
-from bewer import Dataset, Vocabulary
-from bewer.extractors import (
+from bewer import Dataset, Vocabulary, get_config
+from bewer.key_term import (
     ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN,
     OrthographicallyComplexTermExtractor,
     RegexExtractor,
@@ -175,10 +175,15 @@ class TestOrthographicallyComplexTermExtractor:
         assert extractor(dataset) == {"MRI"}
 
     def test_registers_as_function_vocabulary(self):
-        dataset = Dataset()
+        dataset = Dataset(
+            config=get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary("cts", extractors=[OrthographicallyComplexTermExtractor()]))
+        )
         dataset.add("the MRI and CT-scan", "the MRI and CT-scan")
-        dataset.add_vocabulary(Vocabulary("cts").add_extractor(OrthographicallyComplexTermExtractor()))
-        matches = dataset[0].ref.get_key_term_matches(vocab="cts", normalized=True)
+        vocab = dataset.config.vocabularies["cts"]
+        matcher = vocab.build_matcher(dataset, normalized=True)
+        matches = matcher.find_matches(dataset[0].ref)
         # Resolved under the default key-term-ish context; just assert the vocab resolves.
         assert isinstance(matches, list)
 

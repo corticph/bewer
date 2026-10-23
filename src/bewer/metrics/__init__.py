@@ -24,9 +24,7 @@ from bewer.metrics.key_term.ktfpr import KTFPR
 from bewer.metrics.key_term.ktp import KTP
 from bewer.metrics.key_term.ktr import KTR
 from bewer.metrics.key_term.orthographically_complex_term import (  # noqa: F401
-    OrthographicallyComplexTermFscore,
-    OrthographicallyComplexTermPrecision,
-    OrthographicallyComplexTermRecall,
+    DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB,
 )
 from bewer.metrics.key_term.rktr import RKTR
 from bewer.metrics.summary.summary import DatasetSummary
@@ -40,7 +38,6 @@ __all__ = [
     "KeyTermParams",
     "InsertionParams",
     "metric_property",
-
     "ConfidenceInterval",
     "WER",
     "CER",

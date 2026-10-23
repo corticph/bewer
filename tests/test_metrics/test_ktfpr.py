@@ -2,14 +2,14 @@
 
 import pytest
 
-from bewer import Dataset, Vocabulary
+from bewer import Dataset, Vocabulary, get_config
 from bewer.metrics.key_term.ktfpr import KTFPR
 
 
 def _dataset(ref: str, hyp: str, terms: list[str], name: str = "vocab") -> Dataset:
-    dataset = Dataset()
+    config = get_config("base").clone().add_vocabulary(Vocabulary(name=name, terms=terms))
+    dataset = Dataset(config=config)
     dataset.add(ref=ref, hyp=hyp)
-    dataset.add_vocabulary(Vocabulary(name=name).add_terms(terms))
     return dataset
 
 
@@ -24,7 +24,7 @@ class TestKTFPRValidation:
     def test_unknown_vocab_raises(self):
         ds = Dataset()
         ds.add(ref="hello", hyp="hello")
-        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
+        with pytest.raises(ValueError, match="not found in dataset config vocabularies"):
             ds.metrics.ktfpr(vocab="missing").value
 
     def test_default_partial_credit_is_true(self):
@@ -83,10 +83,14 @@ class TestKTFPRNumRefTokens:
         assert ds.metrics.ktfpr(vocab="vocab").num_ref_tokens == 5
 
     def test_ref_token_count_independent_of_vocab(self):
-        ds = Dataset()
+        config = (
+            get_config("base")
+            .clone()
+            .add_vocabulary(Vocabulary(name="v1", terms=["fox"]))
+            .add_vocabulary(Vocabulary(name="v2", terms=["quick", "brown", "fox", "jumps"]))
+        )
+        ds = Dataset(config=config)
         ds.add(ref="the quick brown fox jumps", hyp="the quick brown fox jumps")
-        ds.add_vocabulary(Vocabulary(name="v1").add_terms(["fox"]))
-        ds.add_vocabulary(Vocabulary(name="v2").add_terms(["quick", "brown", "fox", "jumps"]))
         assert ds.metrics.ktfpr(vocab="v1").num_ref_tokens == ds.metrics.ktfpr(vocab="v2").num_ref_tokens
 
 
@@ -94,19 +98,19 @@ class TestKTFPRDatasetLevel:
     """Dataset-level FPR aggregates across examples."""
 
     def test_dataset_aggregation(self):
-        ds = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="v", terms=["fox"]))
+        ds = Dataset(config=config)
         ds.add(ref="the jumps", hyp="the fox jumps")  # FP=1, N_R=2
         ds.add(ref="the run", hyp="the run")  # FP=0, N_R=2
-        ds.add_vocabulary(Vocabulary(name="v").add_terms(["fox"]))
         fpr = ds.metrics.ktfpr(vocab="v")
         assert fpr.num_fp == 1
         assert fpr.num_ref_tokens == 4
         assert fpr.value == pytest.approx(0.25)
 
     def test_zero_ref_tokens(self):
-        ds = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="v", terms=["fox"]))
+        ds = Dataset(config=config)
         ds.add(ref="", hyp="")
-        ds.add_vocabulary(Vocabulary(name="v").add_terms(["fox"]))
         assert ds.metrics.ktfpr(vocab="v").value == pytest.approx(0.0)
 
 

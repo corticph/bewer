@@ -6,7 +6,7 @@ import tempfile
 import pandas as pd
 import pytest
 
-from bewer import Vocabulary
+from bewer import Vocabulary, get_config
 from bewer.core.dataset import Dataset, DatasetFrozenError, TextList, TextTokenList
 from bewer.core.example import Example
 
@@ -18,7 +18,7 @@ class TestDatasetInit:
         """Test Dataset initialization with default config."""
         dataset = Dataset()
         assert dataset.config is not None
-        assert dataset.pipelines is not None
+        assert dataset.config is not None
 
     def test_empty_examples_list(self):
         """Test that examples list is initially empty."""
@@ -65,13 +65,14 @@ class TestDatasetAdd:
         assert empty_dataset[0].index == 0
         assert empty_dataset[1].index == 1
 
-    def test_add_with_key_terms(self, empty_dataset):
-        """Test registering a global key term vocabulary on the dataset."""
-        empty_dataset.add("the quick brown fox", "the quick brown dog")
-        empty_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
-        assert "animals" in empty_dataset[0].vocabs
-        assert "animals" in empty_dataset._vocabularies
-        assert isinstance(empty_dataset._vocabularies["animals"], Vocabulary)
+    def test_add_with_key_terms(self):
+        """Test registering a global key term vocabulary via the config."""
+        config = get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"]))
+        dataset = Dataset(config=config)
+        dataset.add("the quick brown fox", "the quick brown dog")
+        assert "animals" in dataset[0].vocabs
+        assert "animals" in dataset.config.vocabularies
+        assert isinstance(dataset.config.vocabularies["animals"], Vocabulary)
 
 
 class TestDatasetLoadPandas:
@@ -165,16 +166,17 @@ class TestDatasetLoadJsonl:
 class TestDatasetAddVocabularyFromFile:
     """Tests for attaching a Vocabulary built from a file via add_file()."""
 
-    def test_add_key_term_file(self, empty_dataset):
+    def test_add_key_term_file(self):
         """Test loading key terms from a file."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("fox\nbrown\n")
             key_term_path = f.name
 
         try:
-            empty_dataset.add_vocabulary(Vocabulary(name="animals").add_file(key_term_path))
-            assert "animals" in empty_dataset._vocabularies
-            assert isinstance(empty_dataset._vocabularies["animals"], Vocabulary)
+            config = get_config("base").clone().add_vocabulary(Vocabulary("animals", files=[key_term_path]))
+            dataset = Dataset(config=config)
+            assert "animals" in dataset.config.vocabularies
+            assert isinstance(dataset.config.vocabularies["animals"], Vocabulary)
         finally:
             os.unlink(key_term_path)
 
@@ -183,18 +185,20 @@ class TestDatasetAddVocabularyFromFile:
         with pytest.raises(FileNotFoundError, match="not found"):
             Vocabulary(name="animals").add_file("/nonexistent/path/key_terms.txt")
 
-    def test_add_key_term_file_matches_existing_examples(self, empty_dataset):
+    def test_add_key_term_file_matches_existing_examples(self):
         """Test that key terms from file are matched against existing examples."""
-        empty_dataset.add("the quick brown fox", "the quick brown dog")
-
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("fox\n")
             key_term_path = f.name
 
         try:
-            empty_dataset.add_vocabulary(Vocabulary(name="animals").add_file(key_term_path))
-            assert "animals" in empty_dataset._vocabularies
-            matches = empty_dataset[0].ref.get_key_term_matches(vocab="animals")
+            config = get_config("base").clone().add_vocabulary(Vocabulary("animals", files=[key_term_path]))
+            dataset = Dataset(config=config)
+            dataset.add("the quick brown fox", "the quick brown dog")
+            assert "animals" in dataset.config.vocabularies
+            vocab = dataset.config.vocabularies["animals"]
+            matcher = vocab.build_matcher(dataset)
+            matches = matcher.find_matches(dataset[0].ref)
             assert len(matches) == 1
         finally:
             os.unlink(key_term_path)
@@ -325,21 +329,21 @@ class TestDatasetLanguage:
 
     def test_danish_language_preserves_chars(self):
         """Test that language='da' retains æ/ø/å in normalization."""
-        ds = Dataset(language="da")
+        ds = Dataset("da")
         ds.add("patienten har høj blodtryk", "patienten har hoj blodtryk")
         normalized = ds[0].ref.tokens.normalized
         assert "høj" in normalized
 
     def test_german_language_preserves_chars(self):
         """Test that language='de' retains ä/ö/ü/ß in normalization."""
-        ds = Dataset(language="de")
+        ds = Dataset("de")
         ds.add("straße", "strasse")
         normalized = ds[0].ref.tokens.normalized
         assert "straße" in normalized
 
     def test_french_language_preserves_chars(self):
         """Test that language='fr' retains accented chars in normalization."""
-        ds = Dataset(language="fr")
+        ds = Dataset("fr")
         ds.add("café", "cafe")
         normalized = ds[0].ref.tokens.normalized
         assert "café" in normalized
@@ -347,20 +351,20 @@ class TestDatasetLanguage:
     def test_english_language_same_as_default(self):
         """Test that language='en' behaves the same as no language arg."""
         ds_default = Dataset()
-        ds_en = Dataset(language="en")
+        ds_en = Dataset("en")
         ds_default.add("café", "cafe")
         ds_en.add("café", "cafe")
         assert ds_default[0].ref.tokens.normalized == ds_en[0].ref.tokens.normalized
 
     def test_unknown_language_raises(self):
-        """Test that an unknown language raises ValueError."""
-        with pytest.raises(ValueError, match="Unknown language"):
-            Dataset(language="xx")
+        """Test that an unknown language raises an error."""
+        with pytest.raises(KeyError, match="Config 'xx' not found"):
+            Dataset("xx")
 
     def test_language_does_not_affect_non_language_pipeline(self):
         """Test that language overlay only changes normalizer, not other pipeline steps."""
         ds_default = Dataset()
-        ds_da = Dataset(language="da")
+        ds_da = Dataset("da")
         ds_default.add("Hello World", "hello world")
         ds_da.add("Hello World", "hello world")
         # Standardization should be the same
@@ -428,22 +432,18 @@ class TestDatasetFreeze:
         empty_dataset.freeze()  # idempotent, no error
         assert empty_dataset.is_frozen is True
 
-    def test_building_before_freeze_works(self, empty_dataset):
+    def test_building_before_freeze_works(self):
         """Data can be added freely before the dataset is frozen."""
-        empty_dataset.add("hello", "hi")
-        empty_dataset.add_vocabulary(Vocabulary(name="v").add_terms(["hello"]))
-        assert len(empty_dataset) == 1
+        config = get_config("base").clone().add_vocabulary(Vocabulary("v", terms=["hello"]))
+        dataset = Dataset(config=config)
+        dataset.add("hello", "hi")
+        assert len(dataset) == 1
 
     def test_add_after_freeze_raises(self, sample_dataset):
         """add() raises once the dataset is frozen."""
         sample_dataset.freeze()
         with pytest.raises(DatasetFrozenError, match="frozen Dataset"):
             sample_dataset.add("foo", "bar")
-
-    def test_add_vocabulary_after_freeze_raises(self, sample_dataset):
-        sample_dataset.freeze()
-        with pytest.raises(DatasetFrozenError):
-            sample_dataset.add_vocabulary(Vocabulary(name="v").add_terms(["hello"]))
 
     def test_load_pandas_after_freeze_raises(self, sample_dataset):
         sample_dataset.freeze()
@@ -470,30 +470,20 @@ class TestDatasetFreeze:
         with pytest.raises(DatasetFrozenError):
             sample_dataset.load_dataset(None)
 
-    def test_add_vocabulary_from_file_after_freeze_raises(self, sample_dataset, tmp_path):
-        sample_dataset.freeze()
-        kt_path = tmp_path / "kt.txt"
-        kt_path.write_text("fox\n")
-        vocab = Vocabulary(name="v").add_file(str(kt_path))
-        with pytest.raises(DatasetFrozenError):
-            sample_dataset.add_vocabulary(vocab)
-
     def test_add_after_metric_computation_raises(self, sample_dataset):
         """End-to-end: computing a metric value then adding data raises."""
         sample_dataset.metrics.wer().value
         with pytest.raises(DatasetFrozenError):
             sample_dataset.add("foo", "bar")
 
-    def test_failed_metric_request_does_not_freeze(self, empty_dataset):
+    def test_failed_metric_request_does_not_freeze(self):
         """A metric request that raises (bad params) must leave the dataset modifiable."""
-        empty_dataset.add("the quick brown fox", "the quick brown dog")
+        config = get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"]))
+        dataset = Dataset(config=config)
+        dataset.add("the quick brown fox", "the quick brown dog")
         with pytest.raises(ValueError):
-            empty_dataset.metrics.ktr(vocab="missing")  # vocab not in dataset
-        assert empty_dataset.is_frozen is False
-        # Recovery works: add the vocab and successfully request the metric.
-        empty_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
-        assert empty_dataset.metrics.ktr(vocab="animals").value is not None
-        assert empty_dataset.is_frozen is True
+            dataset.metrics.ktr(vocab="missing")  # vocab not in dataset
+        assert dataset.is_frozen is False
 
     def test_unknown_param_request_does_not_freeze(self, sample_dataset):
         """An unknown parameter raises and leaves the dataset unfrozen."""
@@ -533,14 +523,17 @@ class TestDatasetClone:
         assert len(empty_dataset) == 1
         assert len(clone) == 2
 
-    def test_clone_copies_global_vocab(self, empty_dataset):
-        empty_dataset.add("the quick brown fox", "the quick brown dog")
-        empty_dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
-        clone = empty_dataset.clone()
-        assert "animals" in clone._vocabularies
-        assert isinstance(clone._vocabularies["animals"], Vocabulary)
+    def test_clone_copies_global_vocab(self):
+        config = get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"]))
+        dataset = Dataset(config=config)
+        dataset.add("the quick brown fox", "the quick brown dog")
+        clone = dataset.clone()
+        assert "animals" in clone.config.vocabularies
+        assert isinstance(clone.config.vocabularies["animals"], Vocabulary)
         # Matching still works against the cloned vocab.
-        assert len(clone[0].ref.get_key_term_matches(vocab="animals")) == 1
+        vocab = clone.config.vocabularies["animals"]
+        matcher = vocab.build_matcher(clone)
+        assert len(matcher.find_matches(clone[0].ref)) == 1
 
     def test_clone_metric_values_match(self, dataset_with_errors):
         original_value = dataset_with_errors.metrics.wer().value

@@ -4,7 +4,7 @@ An *orthographically-complex term* is a token whose written surface form carries
 case-distinctive or alphanumeric evidence that it is an abbreviation, acronym, alphanumeric
 code or hyphen compound rather than an ordinary word — e.g. ``MRI``, ``mmHg``, ``HbA1c``,
 ``CO2``, ``CT-scan`` or ``α-helix``. :class:`OrthographicallyComplexTermExtractor` is a
-:class:`~bewer.extractors.regex.RegexExtractor` that harvests such terms from a dataset's
+:class:`~bewer.key_term.regex_extractor.RegexExtractor` that harvests such terms from a dataset's
 references; :data:`ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN` backs the predefined
 ``orthographically_complex_term_recall`` / ``_precision`` / ``_fscore`` metrics.
 
@@ -26,7 +26,7 @@ ordinals (``1st``) and plain numbers (``2024``) are rejected.
 
 from __future__ import annotations
 
-from bewer.extractors.regex import RegexExtractor
+from bewer.key_term.regex_extractor import RegexExtractor
 
 __all__ = ["ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN", "OrthographicallyComplexTermExtractor"]
 

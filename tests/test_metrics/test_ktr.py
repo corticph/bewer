@@ -2,7 +2,7 @@
 
 import pytest
 
-from bewer import Dataset, Vocabulary
+from bewer import Dataset, Vocabulary, get_config
 from bewer.metrics.key_term.ktr import KTR, KTR_
 
 
@@ -12,23 +12,23 @@ class TestKTRExampleMetric:
     @pytest.fixture
     def dataset_keyword_match(self):
         """Dataset where a key term is correctly transcribed."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="key_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetes",
         )
-        dataset.add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
         return dataset
 
     @pytest.fixture
     def dataset_keyword_error(self):
         """Dataset where a key term is incorrectly transcribed."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="key_terms", terms=["diabetes"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the patient has diabetes",
             hyp="the patient has diabetis",
         )
-        dataset.add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes"]))
         return dataset
 
     def test_value_perfect_match(self, dataset_keyword_match):
@@ -70,12 +70,14 @@ class TestKTRExampleMetric:
 
     def test_partial_matches(self):
         """Test KTR with some key terms matching and some not."""
-        dataset = Dataset()
+        config = (
+            get_config("base").clone().add_vocabulary(Vocabulary(name="key_terms", terms=["diabetes", "hypertension"]))
+        )
+        dataset = Dataset(config=config)
         dataset.add(
             ref="patient has diabetes and hypertension",
             hyp="patient has diabetes and hypotension",
         )
-        dataset.add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "hypertension"]))
         example = dataset[0]
         ktr = example.metrics.ktr(vocab="key_terms")
         assert ktr.num_ref_terms == 2
@@ -84,12 +86,12 @@ class TestKTRExampleMetric:
 
     def test_works_with_any_vocab(self):
         """Test KTR is domain-agnostic and works with any vocabulary name."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["fox"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="the quick brown fox",
             hyp="the quick brown fox",
         )
-        dataset.add_vocabulary(Vocabulary(name="animals").add_terms(["fox"]))
         example = dataset[0]
         ktr = example.metrics.ktr(vocab="animals")
         assert ktr.value == 1.0
@@ -102,7 +104,8 @@ class TestKTRDatasetMetric:
     @pytest.fixture
     def key_terms_dataset(self):
         """Create a dataset with key terms across multiple examples."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="key_terms", terms=["diabetes", "asthma"]))
+        dataset = Dataset(config=config)
         dataset.add(
             ref="patient has diabetes",
             hyp="patient has diabetes",
@@ -111,7 +114,6 @@ class TestKTRDatasetMetric:
             ref="patient has asthma",
             hyp="patient has astma",
         )
-        dataset.add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "asthma"]))
         return dataset
 
     def test_num_ref_terms_aggregates(self, key_terms_dataset):
@@ -143,15 +145,15 @@ class TestKTRDatasetMetric:
     def test_empty_dataset(self):
         """Test KTR on empty dataset raises when vocab is not registered."""
         dataset = Dataset()
-        with pytest.raises(ValueError, match="not found in dataset key term vocabularies"):
+        with pytest.raises(ValueError, match="not found in dataset config vocabularies"):
             dataset.metrics.ktr(vocab="key_terms").value
 
     def test_all_correct(self):
         """Test KTR is 1.0 when all key terms are correct."""
-        dataset = Dataset()
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="key_terms", terms=["diabetes", "asthma"]))
+        dataset = Dataset(config=config)
         dataset.add(ref="diabetes mellitus", hyp="diabetes mellitus")
         dataset.add(ref="acute asthma", hyp="acute asthma")
-        dataset.add_vocabulary(Vocabulary(name="key_terms").add_terms(["diabetes", "asthma"]))
         ktr = dataset.metrics.ktr(vocab="key_terms")
         assert ktr.value == 1.0
 
