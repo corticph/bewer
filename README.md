@@ -89,24 +89,55 @@ text.tokens.standardized      # list[str]: the tokens after standardization
 text.tokens.normalized        # list[str]: the tokens after normalization
 ```
 
-Pre-defined pipeline components can be found under `dataset.pipelines`.
+Pre-defined pipeline components can be found under `dataset.config`.
 
 ```python
-print(dataset.pipelines)
+print(dataset.config)
 ```
 
 ```text
-Pipelines(
-    standardizers: default
-    tokenizers:    default, with_punctuation, key_term, orthographically_complex_term
-    normalizers:   default, cased
+BewerConfig(
+  standardizers:
+    - default
+  tokenizers:
+    - default
+    - with_punctuation
+    - key_term
+    - orthographically_complex_term
+  normalizers:
+    - default
+    - cased
+  vocabularies:
+    - orthographically_complex_terms
 )
 ```
 
-Each component is named and defined as part of the dataset's configuration. Typically, it is sufficient to just pass a registered config name (e.g. `"en"`, `"da"`, `"de"`, `"fr"`) to the `Dataset`, and the configuration for that language is applied automatically, but you can adapt and extend the pipeline as needed.
+Each component is named and defined as part of the dataset's configuration. Typically, it is sufficient to just pass a pre-registered language-config name (e.g. `"en"`, `"de"`, `"fr"`) to the `Dataset`, and the configuration is applied automatically.
+
+You can adapt and extend the pipeline as needed. If you're using a pre-registered config, note that configs are frozen upon registration, so you'll need to make a clone before extending it.
 
 ```python
-# TODO: Example of customizing the pipeline for a dataset
+from bewer import Dataset, get_config
+from bewer.preprocessing.normalization import Normalizer, Transform
+
+# Start from a registered config, then extend it with a custom normalizer
+def americanize(token):
+    replacements = {"colour": "color", "centre": "center"}
+    return replacements.get(token, token)
+
+config = get_config("en").clone()
+config.add_normalizer(Normalizer("en-us", Transform(americanize)))
+
+dataset = Dataset(config=config)
+dataset.add(ref="the colour code", hyp="the color code")
+
+# Any metric can now run under the new normalizer by name
+wer = dataset.metrics.wer(normalizer="en-us")
+print(f"{wer.value:.2%}")
+```
+
+```text
+0.00%
 ```
 
 Any component can be switched with the `set_pipeline` context manager. The English `key_term` tokenizer, for instance, splits on apostrophes as well as hyphens and slashes, so that a term is still matched when it appears in the possessive form. In contrast, the `default` tokenizer does not.
@@ -211,7 +242,7 @@ print(f"{ktr.long_name_base}: {ktr.value:.2%}")
 Key-Term Recall: 50.00%
 ```
 
-You can also load line-separated key terms directly from a file (`add_file`) or write a custom function (`Dataset -> Iterable[str]`) to extract key terms from the dataset (`add_extractor`).
+You can also load line-separated key terms directly from a file (`files=["terms.txt"]`) or provide a custom extractor function (`Dataset -> Iterable[str]`) to derive key terms from the dataset (`extractors=[extract_fn]`).
 
 #### Alignments
 
