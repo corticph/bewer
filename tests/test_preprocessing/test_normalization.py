@@ -1,5 +1,7 @@
 """Tests for bewer.preprocessing.normalization module."""
 
+import pytest
+
 from bewer.preprocessing.normalization import (
     Normalizer,
     Transform,
@@ -353,3 +355,37 @@ class TestNormalizer:
         """Test that pipeline functions are applied in order."""
         normalizer = Normalizer("nfc_then_lower", Transform(nfc), Transform(lowercase))
         assert normalizer("CAFÉ") == "café"
+
+
+class TestUnhashableTransformParams:
+    """Regression: unhashable param values (dicts, lists) must not break pipelines.
+
+    The per-instance ``_apply`` cache is keyed by pipeline identity, so param
+    values are never hashed; Transforms themselves are deliberately unhashable
+    (like ``list``/``dict``) because their params may hold unhashable values.
+    """
+
+    def test_dict_param_transform_in_pipeline(self):
+        calls = {"n": 0}
+
+        def replace_chars(text, mapping=None):
+            calls["n"] += 1
+            return "".join(mapping.get(char, char) for char in text)
+
+        normalizer = Normalizer("custom", Transform(replace_chars, mapping={"ä": "a", "ö": "o"}))
+        assert normalizer("räkö") == "rako"
+        # Second call with the same text is served from the pipeline cache.
+        assert normalizer("räkö") == "rako"
+        assert calls["n"] == 1
+
+    def test_transforms_are_unhashable(self):
+        with pytest.raises(TypeError):
+            hash(Transform(lowercase))
+
+    def test_transform_value_equality_holds_for_dict_params(self):
+        def replace_chars(text, mapping=None):
+            return "".join(mapping.get(char, char) for char in text)
+
+        t1 = Transform(replace_chars, mapping={"ä": "a"})
+        t2 = Transform(replace_chars, mapping={"ä": "a"})
+        assert t1 == t2

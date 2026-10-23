@@ -104,8 +104,9 @@ class Transform:
             return NotImplemented
         return self.fn is other.fn and self.params == other.params
 
-    def __hash__(self) -> int:
-        return hash((self.fn, tuple(sorted(self.params.items()))))
+    # Deliberately unhashable: params may hold unhashable values (dicts, lists),
+    # so Transforms compare by value but, like list and dict, cannot serve as
+    # dict keys or set members.
 
 
 # ============================================================
@@ -335,7 +336,9 @@ class TransformPipeline:
         return self._name == other._name and self._transforms == other._transforms
 
     def __hash__(self) -> int:
-        return hash((self._name, self._transforms))
+        # Identity hash: the only consumer is the per-instance ``_apply`` lru_cache,
+        # whose key is the pipeline itself. Equality stays value-based.
+        return id(self)
 
 
 class Normalizer(TransformPipeline):
