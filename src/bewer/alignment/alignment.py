@@ -4,7 +4,7 @@ import json
 from collections import Counter
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Iterable, Optional, Sequence, Union
 
 from bewer.alignment.op_type import OpType
 from bewer.reporting.html.alignment import (
@@ -22,6 +22,7 @@ from bewer.reporting.python.alignment import DefaultColorScheme, display_basic_a
 if TYPE_CHECKING:
     from bewer.alignment.op import Op
     from bewer.core.example import Example
+    from bewer.key_term.key_term import KeyTermMatch
     from bewer.reporting.html.color_schemes import HTMLAlignmentColors
     from bewer.reporting.python.alignment import ColorScheme
 
@@ -232,14 +233,15 @@ class Alignment(tuple["Op", ...]):
     def _to_html_lines(
         self,
         color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
-        allow_subset_matches: bool = False,
+        key_term_matches: Sequence[KeyTermMatch] | None = None,
         normalized: bool = True,
     ) -> list[tuple[str, str]]:
         """Render the alignment as an HTML string.
 
         Args:
             color_scheme (type[HTMLAlignmentColors]): Color scheme for display.
-            allow_subset_matches: If True, allow subset key term matches when computing key term indicators.
+            key_term_matches: Reference-side key term matches to highlight.
+                ``None`` (default) renders without key term highlighting.
             normalized: If True (default), render the normalized form. If False, render the
                 surface (standardized) form with inter-token content.
 
@@ -247,45 +249,48 @@ class Alignment(tuple["Op", ...]):
             list[tuple[str, str]]: List of tuples containing HTML strings representing the alignment visualization.
         """
         return _generate_alignment_html_lines(
-            self, color_scheme=color_scheme, allow_subset_matches=allow_subset_matches, normalized=normalized
+            self, color_scheme=color_scheme, key_term_matches=key_term_matches, normalized=normalized
         )
 
     def _to_html_lines_dual(
         self,
         color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
-        allow_subset_matches: bool = False,
+        key_term_matches: Sequence[KeyTermMatch] | None = None,
     ) -> list[tuple[tuple[str, str], tuple[str, str]]]:
         """Render the alignment as both normalized and surface HTML views with synchronized line breaks.
 
         Args:
             color_scheme (type[HTMLAlignmentColors]): Color scheme for display.
-            allow_subset_matches: If True, allow subset key term matches when computing key term indicators.
+            key_term_matches: Reference-side key term matches to highlight.
+                ``None`` (default) renders without key term highlighting.
 
         Returns:
             A list of tuples ``((norm_ref, norm_hyp), (surf_ref, surf_hyp))`` per line.
         """
         return _generate_alignment_html_lines_dual(
-            self, color_scheme=color_scheme, allow_subset_matches=allow_subset_matches
+            self, color_scheme=color_scheme, key_term_matches=key_term_matches
         )
 
     @staticmethod
     def _to_html_lines_multi(
         alignments: list["Alignment"],
         color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
-        allow_subset_matches: bool = False,
+        key_term_matches: Sequence[Sequence[KeyTermMatch] | None] | None = None,
     ) -> list[list[tuple[tuple[str, str], tuple[str, str]]]]:
         """Render multiple alignments with synchronized line breaks.
 
         Args:
             alignments: List of alignments (one per dataset) for the same example.
             color_scheme (type[HTMLAlignmentColors]): Color scheme for display.
-            allow_subset_matches: If True, allow subset key term matches.
+            key_term_matches: Per-alignment reference-side key term matches to
+                highlight (entry ``i`` parallels ``alignments[i]``). ``None``
+                (default) disables highlighting for all alignments.
 
         Returns:
             Per line, per alignment, ``((norm_ref, norm_hyp), (surf_ref, surf_hyp))``.
         """
         return _generate_alignment_html_lines_multi(
-            alignments, color_scheme=color_scheme, allow_subset_matches=allow_subset_matches
+            alignments, color_scheme=color_scheme, key_term_matches=key_term_matches
         )
 
     def __getitem__(self, index: int | slice) -> Union[Op, "Alignment"]:

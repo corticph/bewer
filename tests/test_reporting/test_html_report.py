@@ -334,10 +334,11 @@ class TestKeyTermIndicators:
         assert result.count("kw kw-start") == 1
 
     def test_overlapping_key_terms_merge_into_run(self):
-        """Test that overlapping key terms merge into a single contiguous run when allow_subset_matches=True."""
+        """Test that overlapping key term matches merge into a single contiguous run when subset matches are allowed."""
         from bewer import Vocabulary, get_config
         from bewer.core.dataset import Dataset
-        from bewer.reporting.html.alignment import _get_key_term_indicators
+        from bewer.reporting.html.alignment import _key_term_indicator_sets
+        from bewer.reporting.html.report import _kt_match_overrides
 
         dataset = Dataset(
             config=get_config("base").clone().add_vocabulary(Vocabulary("overlapping", terms=["brown fox", "brown"]))
@@ -349,7 +350,14 @@ class TestKeyTermIndicators:
         )
         example = dataset[0]
         alignment = example.metrics.levenshtein().alignment
-        start_indices, stop_indices, _ = _get_key_term_indicators(alignment, allow_subset_matches=True)
+        # Matches come from the dataset's _kt_stats metric, following the displayed
+        # alignment's pipeline (mirrors render_report_html's wiring).
+        alignment_metric = dataset.metrics.get("levenshtein")()
+        kt_stats = dataset.metrics.get("_kt_stats")(
+            vocab="overlapping", allow_subset_matches=True, **_kt_match_overrides(alignment_metric)
+        )
+        matches = kt_stats[0].ref_matches
+        start_indices, stop_indices, _ = _key_term_indicator_sets(alignment, matches)
         # "brown" ends at its own op and "brown fox" ends at fox's op — two distinct stop indices
         assert len(stop_indices) > len(start_indices)
 

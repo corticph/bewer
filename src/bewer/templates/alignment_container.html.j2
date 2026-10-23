@@ -1,6 +1,6 @@
 <div class="alignment-container">
 {%- if multi_dataset and refs_match %}
-    {%- set multi_lines = alignments[0]._to_html_lines_multi(alignments, color_scheme=color_scheme) %}
+    {%- set multi_lines = alignments[0]._to_html_lines_multi(alignments, color_scheme=color_scheme, key_term_matches=key_term_matches) %}
     {%- for ds_idx in range(dataset_names|length) %}
     {%- set ds_name = dataset_names[ds_idx] %}
     {%- set css_name = dataset_css_names[ds_idx] %}
@@ -56,7 +56,7 @@
     {%- set ds_name = dataset_names[ds_idx] %}
     {%- set css_name = dataset_css_names[ds_idx] %}
     {%- if alignments[ds_idx] is not none %}
-    {%- set dual_lines = alignments[ds_idx]._to_html_lines_dual(color_scheme=color_scheme) %}
+    {%- set dual_lines = alignments[ds_idx]._to_html_lines_dual(color_scheme=color_scheme, key_term_matches=key_term_matches[ds_idx]) %}
     <table class="alignment-table alignment-normalized alignment-dataset-{{ css_name }}">
         <colgroup>
             <col style="width: 3ch;">
@@ -107,7 +107,7 @@
     {%- endif %}
     {%- endfor %}
 {%- else %}
-    {%- set dual_lines = alignment._to_html_lines_dual(color_scheme=color_scheme) %}
+    {%- set dual_lines = alignment._to_html_lines_dual(color_scheme=color_scheme, key_term_matches=key_term) %}
     <table class="alignment-table alignment-normalized">
         <colgroup>
             <col style="width: 3ch;">

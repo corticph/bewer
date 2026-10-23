@@ -5,7 +5,7 @@ The generated HTML can be saved to a file and viewed in a browser.
 """
 
 from html import escape
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 from bewer.alignment.op_type import OpType
 from bewer.reporting.html.color_schemes import (
@@ -16,6 +16,7 @@ from bewer.reporting.html.color_schemes import (
 if TYPE_CHECKING:
     from bewer.alignment.alignment import Alignment
     from bewer.alignment.op import Op
+    from bewer.key_term.key_term import KeyTermMatch
 
 __all__ = ["generate_alignment_html_lines", "generate_alignment_html_lines_dual", "generate_alignment_html_lines_multi"]
 
@@ -176,13 +177,16 @@ def format_key_term(text: str, start: bool = False, end: bool = False) -> str:
     return f'<span class="{kw_class}">{text}</span>'
 
 
-def _get_key_term_indicators(
-    alignment: "Alignment", allow_subset_matches: bool = False
+def _key_term_indicator_sets(
+    alignment: "Alignment", key_term_matches: "Sequence[KeyTermMatch]" = ()
 ) -> tuple[set[int], set[int], set[int]]:
     """Compute key term span indicators for the given alignment.
 
     Args:
-        alignment: The alignment whose reference side is inspected for key term spans.
+        alignment: The alignment whose reference side is inspected.
+        key_term_matches: Reference-side key term matches to highlight. Omitting
+            them (or passing an empty sequence) renders without highlighting —
+            no matching is performed here.
 
     Returns:
         A tuple of three sets of operation indices:
@@ -195,30 +199,18 @@ def _get_key_term_indicators(
           span (including the start index but excluding the stop index), i.e. where a
           key term span is considered "open"/ongoing.
     """
-    example = alignment.src
-    if example is None:
-        return set(), set(), set()
-    dataset = example.src
-    if dataset is None:
-        return set(), set(), set()
-    vocabs = example.vocabs
-    if not vocabs:
-        return set(), set(), set()
-
-    start_indices, stop_indices, open_indices = set(), set(), set()
-    for vocab_name in vocabs:
-        vocab = dataset.config.vocabularies[vocab_name]
-        matcher = vocab.build_matcher(dataset)
-        matches = matcher.find_matches(example.ref, allow_subset_matches=allow_subset_matches)
-        for match in matches:
-            start_op_idx = alignment.ref_index_mapping.get(match.start)
-            end_op_idx = alignment.ref_index_mapping.get(match.stop - 1)
-            if start_op_idx is None or end_op_idx is None:
-                continue
-            start_indices.add(start_op_idx)
-            stop_indices.add(end_op_idx)
-            for idx in range(start_op_idx, end_op_idx):
-                open_indices.add(idx)
+    start_indices: set[int] = set()
+    stop_indices: set[int] = set()
+    open_indices: set[int] = set()
+    for match in key_term_matches:
+        start_op_idx = alignment.ref_index_mapping.get(match.start)
+        end_op_idx = alignment.ref_index_mapping.get(match.stop - 1)
+        if start_op_idx is None or end_op_idx is None:
+            continue
+        start_indices.add(start_op_idx)
+        stop_indices.add(end_op_idx)
+        for idx in range(start_op_idx, end_op_idx):
+            open_indices.add(idx)
 
     return start_indices, stop_indices, open_indices
 
@@ -227,7 +219,7 @@ def generate_alignment_html_lines(
     alignment: "Alignment",
     max_line_length: int = 100,
     color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
-    allow_subset_matches: bool = False,
+    key_term_matches: "Sequence[KeyTermMatch] | None" = None,
     normalized: bool = True,
 ) -> list[tuple[str, str]]:
     """Render the alignment as an HTML table.
@@ -240,6 +232,8 @@ def generate_alignment_html_lines(
         alignment: The alignment to render.
         max_line_length: The maximum character length per line for wrapping.
         color_scheme: The color scheme to use for display.
+        key_term_matches: Reference-side key term matches to highlight.
+            ``None`` (default) renders without key term highlighting.
         normalized: If True (default), render the normalized form of tokens.
             If False, render the surface (standardized) form and include
             inter-token content (punctuation, whitespace) between ops.
@@ -257,8 +251,8 @@ def generate_alignment_html_lines(
         ref_std = None
         hyp_std = None
 
-    start_indices, stop_indices, open_indices = _get_key_term_indicators(
-        alignment, allow_subset_matches=allow_subset_matches
+    start_indices, stop_indices, open_indices = _key_term_indicator_sets(
+        alignment, key_term_matches if key_term_matches is not None else ()
     )
 
     n_ops = len(alignment)
@@ -444,7 +438,7 @@ def generate_alignment_html_lines_dual(
     alignment: "Alignment",
     max_line_length: int = 100,
     color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
-    allow_subset_matches: bool = False,
+    key_term_matches: "Sequence[KeyTermMatch] | None" = None,
 ) -> list[tuple[tuple[str, str], tuple[str, str]]]:
     """Render the alignment as both normalized and surface HTML views with synchronized line breaks.
 
@@ -455,7 +449,8 @@ def generate_alignment_html_lines_dual(
         alignment: The alignment to render.
         max_line_length: The maximum character length per line for wrapping.
         color_scheme: The color scheme to use for display.
-        allow_subset_matches: If True, allow subset key term matches.
+        key_term_matches: Reference-side key term matches to highlight.
+            ``None`` (default) renders without key term highlighting.
 
     Returns:
         A list of tuples ``((norm_ref, norm_hyp), (surf_ref, surf_hyp))`` per line.
@@ -468,8 +463,8 @@ def generate_alignment_html_lines_dual(
         ref_std = None
         hyp_std = None
 
-    start_indices, stop_indices, open_indices = _get_key_term_indicators(
-        alignment, allow_subset_matches=allow_subset_matches
+    start_indices, stop_indices, open_indices = _key_term_indicator_sets(
+        alignment, key_term_matches if key_term_matches is not None else ()
     )
 
     n_ops = len(alignment)
@@ -665,7 +660,7 @@ def generate_alignment_html_lines_dual(
 def _precompute_alignment_units(
     alignment: "Alignment",
     color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
-    allow_subset_matches: bool = False,
+    key_term_matches: "Sequence[KeyTermMatch] | None" = None,
 ) -> list[list[tuple[tuple[str, str, int, str, str, int], tuple[str, str, int, str, str, int]]]]:
     """Pre-compute render units for an alignment, grouped by ref token index.
 
@@ -685,8 +680,8 @@ def _precompute_alignment_units(
         ref_std = None
         hyp_std = None
 
-    start_indices, stop_indices, open_indices = _get_key_term_indicators(
-        alignment, allow_subset_matches=allow_subset_matches
+    start_indices, stop_indices, open_indices = _key_term_indicator_sets(
+        alignment, key_term_matches if key_term_matches is not None else ()
     )
 
     n_ops = len(alignment)
@@ -857,7 +852,7 @@ def generate_alignment_html_lines_multi(
     alignments: list["Alignment"],
     max_line_length: int = 100,
     color_scheme: type[HTMLAlignmentColors] = HTMLDefaultAlignmentColors,
-    allow_subset_matches: bool = False,
+    key_term_matches: "Sequence[Sequence[KeyTermMatch] | None] | None" = None,
 ) -> list[list[tuple[tuple[str, str], tuple[str, str]]]]:
     """Render multiple alignments with synchronized line breaks.
 
@@ -870,7 +865,10 @@ def generate_alignment_html_lines_multi(
         alignments: List of alignments (one per dataset) for the same example.
         max_line_length: The maximum character length per line for wrapping.
         color_scheme: The color scheme to use for display.
-        allow_subset_matches: If True, allow subset key term matches.
+        key_term_matches: Per-alignment reference-side key term matches to
+            highlight (entry ``i`` parallels ``alignments[i]``; ``None`` disables
+            highlighting for that alignment). ``None`` (default) disables
+            highlighting for all of them.
 
     Returns:
         Per line, per alignment, ``((norm_ref, norm_hyp), (surf_ref, surf_hyp))``.
@@ -883,11 +881,18 @@ def generate_alignment_html_lines_multi(
             alignments[0],
             max_line_length=max_line_length,
             color_scheme=color_scheme,
-            allow_subset_matches=allow_subset_matches,
+            key_term_matches=key_term_matches[0] if key_term_matches is not None else None,
         )
         return [[line] for line in dual]
 
-    all_units = [_precompute_alignment_units(a, color_scheme, allow_subset_matches) for a in alignments]
+    all_units = [
+        _precompute_alignment_units(
+            a,
+            color_scheme,
+            key_term_matches[i] if key_term_matches is not None else None,
+        )
+        for i, a in enumerate(alignments)
+    ]
     max_ref_tokens = max(len(u) for u in all_units) if all_units else 0
     if max_ref_tokens == 0:
         return [[(("", ""), ("", "")) for _ in range(n_alignments)]]
