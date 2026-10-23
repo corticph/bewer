@@ -53,8 +53,6 @@ class Dataset(object):
 
         self._config.freeze()
 
-        self.config_path = None
-
         self._init_blank_state()
 
     def _init_blank_state(self) -> None:
@@ -102,7 +100,6 @@ class Dataset(object):
         """
         new = object.__new__(Dataset)
         new._config = self._config
-        new.config_path = self.config_path
         new._init_blank_state()
         for example in self.examples:
             new.add(example.ref.raw, example.hyp.raw)
