@@ -3,7 +3,7 @@
 import pytest
 
 from bewer import Dataset, Vocabulary, get_config
-from bewer.metrics.general.b_wer import BWER, BWER_
+from bewer.metrics.key_term.b_wer import BWER, BWER_
 
 
 def _medical_dataset():

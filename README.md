@@ -305,8 +305,6 @@ assert wer is dataset.metrics.wer(normalizer="default")
 | Word Error Rate | General | `wer` | [`>`](src/bewer/metrics/general/wer.py) |
 | Character Error Rate | General | `cer` | [`>`](src/bewer/metrics/general/cer.py) |
 | Punctuation Error Rate | General | `per` | [`>`](src/bewer/metrics/general/per.py) |
-| Biased WER | General | `b_wer` | [`>`](src/bewer/metrics/general/b_wer.py) |
-| Unbiased WER | General | `u_wer` | [`>`](src/bewer/metrics/general/u_wer.py) |
 | **Hallucination metrics** | | | |
 | Insertion Rate | Hallucination | `insertion_rate` | [`>`](src/bewer/metrics/hallucination/insertion_rate.py) |
 | Example Insertion Rate | Hallucination | `example_insertion_rate` | [`>`](src/bewer/metrics/hallucination/example_insertion_rate.py) |
@@ -318,6 +316,8 @@ assert wer is dataset.metrics.wer(normalizer="default")
 | Key-Term False-Positive Rate | Key-term | `ktfpr` | [`>`](src/bewer/metrics/key_term/ktfpr.py) |
 | Key-Term Character Error Rate | Key-term | `ktcer` | [`>`](src/bewer/metrics/key_term/ktcer.py) |
 | Relaxed Key-Term Recall | Key-term | `rktr` | [`>`](src/bewer/metrics/key_term/rktr.py) |
+| Biased WER | Key-term | `b_wer` | [`>`](src/bewer/metrics/key_term/b_wer.py) |
+| Unbiased WER | Key-term | `u_wer` | [`>`](src/bewer/metrics/key_term/u_wer.py) |
 | **Orthographically complex terms** | | | |
 | Orthographically Complex Term Recall | Key-term | `orthographically_complex_term_recall` | [`>`](src/bewer/metrics/key_term/orthographically_complex_term.py) |
 | Orthographically Complex Term Precision | Key-term | `orthographically_complex_term_precision` | [`>`](src/bewer/metrics/key_term/orthographically_complex_term.py) |

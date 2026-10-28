@@ -79,9 +79,9 @@ poetry run twine check dist/*  # Validate built packages
 - Supports both dataset-level and example-level metrics
 
 **Built-in Metrics** (`src/bewer/metrics/`)
-- `general/`: WER (`wer.py`), CER (`cer.py`), PER (`per.py`); B-WER (`b_wer.py`) and U-WER (`u_wer.py`) — WER on words in/out of a `Vocabulary` (Le et al., 2021 contextual-biasing protocol), both delegating to the shared hidden `_bu_wer_outcomes` (`_bu_wer_outcomes.py`); `multi_token` param selects occurrence/flag/split semantics for multi-token terms
+- `general/`: WER (`wer.py`), CER (`cer.py`), PER (`per.py`)
 - `alignment/`: Levenshtein distance (`levenshtein.py`), error alignment (`error_align.py`, uses external error-align package)
-- `key_term/`: Key term recall/precision/F-score/CER/etc. (`ktr.py`, `ktp.py`, `ktf.py`, `ktfpr.py`, `ktcer.py`, `rktr.py`, `kter.py`); shared stats (`_kt_stats.py`, `_rkt_stats.py`); orthographically-complex term metrics (`orthographically_complex_term.py`)
+- `key_term/`: Key term recall/precision/F-score/CER/etc. (`ktr.py`, `ktp.py`, `ktf.py`, `ktfpr.py`, `ktcer.py`, `rktr.py`, `kter.py`); B-WER (`b_wer.py`) and U-WER (`u_wer.py`) — WER on words in/out of a `Vocabulary` (Le et al., 2021 contextual-biasing protocol), both delegating to the shared hidden `_bu_wer_outcomes` (`_bu_wer_outcomes.py`); `multi_token` param selects occurrence/flag/split semantics for multi-token terms; shared stats (`_kt_stats.py`, `_rkt_stats.py`); orthographically-complex term metrics (`orthographically_complex_term.py`)
 - `hallucination/`: Insertion rate (`insertion_rate.py`) — counts insertions in contiguous runs of length >= `min_run_length` (default 1), normalized by reference token count. `min_run_length>=2` counts only burst runs (hallucination signal). `alignment` parameter selects backend (`'levenshtein'` or `'error_align'`). Example insertion rate (`example_insertion_rate.py`) — per-example variant.
 - `summary/`: Summary metric (`summary.py`)
 - Orthographically-complex term metrics register KTR/KTP/KTF/KTFPR with a different tokenizer (`orthographically_complex_term`, no hyphen split), `cased` normalizer (no lowercasing), and an `orthographically_complex_terms` vocabulary auto-extracted from references (acronyms, alphanumerics, hyphen compounds; e.g. `MRI`, `HbA1c`, `CT-scan`), defined in the base config.
