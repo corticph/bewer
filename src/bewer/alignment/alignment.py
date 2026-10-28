@@ -267,9 +267,7 @@ class Alignment(tuple["Op", ...]):
         Returns:
             A list of tuples ``((norm_ref, norm_hyp), (surf_ref, surf_hyp))`` per line.
         """
-        return _generate_alignment_html_lines_dual(
-            self, color_scheme=color_scheme, key_term_matches=key_term_matches
-        )
+        return _generate_alignment_html_lines_dual(self, color_scheme=color_scheme, key_term_matches=key_term_matches)
 
     @staticmethod
     def _to_html_lines_multi(
