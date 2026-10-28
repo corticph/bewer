@@ -244,6 +244,25 @@ Key-Term Recall: 50.00%
 
 You can also load line-separated key terms directly from a file (`files=["terms.txt"]`) or provide a custom extractor function (`Dataset -> Iterable[str]`) to derive key terms from the dataset (`extractors=[extract_fn]`).
 
+#### Biased and Unbiased WER
+
+B-WER and U-WER come from contextual-biasing evaluation (Le et al., 2021): B-WER is the word error rate on words *in* a biasing list, U-WER the word error rate on words *outside* it. In `bewer`, a `Vocabulary` plays the role of the biasing list, and B-WER/U-WER split plain WER exactly: every reference token lands in exactly one of the two denominators, and every error is attributed to exactly one side (insertions by the inserted word).
+
+```python
+# Continuing the vocabulary example above:
+b_wer = dataset.metrics.b_wer(vocab="medical")
+u_wer = dataset.metrics.u_wer(vocab="medical")
+print(f"{b_wer.short_name_base}: {b_wer.value:.2%}")
+print(f"{u_wer.short_name_base}: {u_wer.value:.2%}")
+```
+
+```text
+B-WER: 33.33%
+U-WER: 0.00%
+```
+
+Both metrics share one hidden `_wer_stats` computation, so requesting both costs little more than either alone. By default (`multi_token="occurrence"`), the words of a multi-token term such as `"blood sugar"` only count as biased when they are part of a matched term occurrence. Use `multi_token="split"` for word-list semantics, where every term token counts as in-vocabulary word on its own; `multi_token="flag"` behaves like `"occurrence"` but warns when the vocabulary contains multi-token terms. Both metrics also accept the `alignment` and `normalized` arguments familiar from WER.
+
 #### Alignments
 
 Alignments produce an example-level text-to-text alignment as their primary output, rather than a dataset-level numeric score. An [`Alignment`](src/bewer/alignment/alignment.py) is a sequence of [`Op`](src/bewer/alignment/op.py) objects, each representing a match, substitution, insertion, or deletion between hypothesis and reference. Edit counts are available as supportive values.
@@ -286,6 +305,8 @@ assert wer is dataset.metrics.wer(normalizer="default")
 | Word Error Rate | General | `wer` | [`>`](src/bewer/metrics/general/wer.py) |
 | Character Error Rate | General | `cer` | [`>`](src/bewer/metrics/general/cer.py) |
 | Punctuation Error Rate | General | `per` | [`>`](src/bewer/metrics/general/per.py) |
+| Biased WER | General | `b_wer` | [`>`](src/bewer/metrics/general/b_wer.py) |
+| Unbiased WER | General | `u_wer` | [`>`](src/bewer/metrics/general/u_wer.py) |
 | **Hallucination metrics** | | | |
 | Insertion Rate | Hallucination | `insertion_rate` | [`>`](src/bewer/metrics/hallucination/insertion_rate.py) |
 | Example Insertion Rate | Hallucination | `example_insertion_rate` | [`>`](src/bewer/metrics/hallucination/example_insertion_rate.py) |

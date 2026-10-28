@@ -9,8 +9,12 @@ from bewer.metrics.base import (
     metric_property,
 )
 from bewer.metrics.confidence import ConfidenceInterval
+from bewer.metrics.general._wer_stats import _WERStats  # noqa: F401 (registers "_wer_stats")
+from bewer.metrics.general._wer_stats_params import WERStatsParams
+from bewer.metrics.general.b_wer import BWER
 from bewer.metrics.general.cer import CER
 from bewer.metrics.general.per import PER
+from bewer.metrics.general.u_wer import UWER
 from bewer.metrics.general.wer import WER
 from bewer.metrics.hallucination._insertion_params import InsertionParams
 from bewer.metrics.hallucination.example_insertion_rate import ExampleInsertionRate
@@ -37,9 +41,12 @@ __all__ = [
     "MetricParams",
     "KeyTermParams",
     "InsertionParams",
+    "WERStatsParams",
     "metric_property",
     "ConfidenceInterval",
     "WER",
+    "BWER",
+    "UWER",
     "CER",
     "KTF",
     "KTER",

@@ -109,6 +109,21 @@ class TestKeyTermTrieFindInTokens:
         assert key_terms == []
 
 
+class TestKeyTermTrieKeyTerms:
+    """Tests for the KeyTermTrie.key_terms property."""
+
+    def test_contains_all_input_terms(self, sample_dataset):
+        """All input terms are retrievable, including multi-token terms."""
+        terms = {KeyTerm("fox", config=sample_dataset.config), KeyTerm("quick brown", config=sample_dataset.config)}
+        trie = KeyTermTrie(terms)
+        assert trie.key_terms == terms
+
+    def test_empty_trie_has_no_key_terms(self, sample_dataset):
+        """An empty trie exposes no input terms."""
+        trie = KeyTermTrie(set())
+        assert trie.key_terms == frozenset()
+
+
 class TestKeyTermRepr:
     """Tests for KeyTerm.__repr__()."""
 
