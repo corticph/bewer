@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from bewer.alignment import OpType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
-from ._wer_stats_params import WERStatsParams
+from ._bu_wer_outcomes_params import BUWEROutcomesParams
 
 if TYPE_CHECKING:
     from bewer.alignment.op import Op
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 __all__: list[str] = []
 
 
-class WERStat(NamedTuple):
+class BUWEROutcome(NamedTuple):
     """Per-example B-WER/U-WER statistics, following Le et al. (2021, arXiv:2104.02194).
 
     Every alignment operation is attributed exactly once — substitutions and deletions
@@ -31,7 +31,7 @@ class WERStat(NamedTuple):
     num_ref_other_tokens: int
 
 
-class _WERStats_(ExampleMetric):
+class _BUWEROutcomes_(ExampleMetric):
     @metric_property(is_value=True)
     def ref_matches(self) -> list[KeyTermMatch]:
         """Vocabulary term occurrences found in the reference text."""
@@ -72,7 +72,7 @@ class _WERStats_(ExampleMetric):
         return positions
 
     @metric_property(is_value=True)
-    def _counts(self) -> WERStat:
+    def _counts(self) -> BUWEROutcome:
         """Attribute every alignment operation to the biased or the unbiased side.
 
         Substitutions and deletions are attributed by their reference token,
@@ -128,7 +128,7 @@ class _WERStats_(ExampleMetric):
             else:
                 num_unbiased_errors += 1
                 num_ref_other_tokens += 1
-        return WERStat(num_biased_errors, num_unbiased_errors, num_ref_vocab_tokens, num_ref_other_tokens)
+        return BUWEROutcome(num_biased_errors, num_unbiased_errors, num_ref_vocab_tokens, num_ref_other_tokens)
 
     @metric_property(is_value=True)
     def num_biased_errors(self) -> int:
@@ -151,10 +151,10 @@ class _WERStats_(ExampleMetric):
         return self._counts.num_ref_other_tokens
 
 
-@METRIC_REGISTRY.register("_wer_stats")
-class _WERStats(Metric):
-    short_name_base = "_WERStats"
-    long_name_base = "Biased/Unbiased WER Statistics"
+@METRIC_REGISTRY.register("_bu_wer_outcomes")
+class _BUWEROutcomes(Metric):
+    short_name_base = "_BUWEROutcomes"
+    long_name_base = "Biased/Unbiased WER Outcomes"
     description = (
         "Private metric that computes the shared biased/unbiased WER statistics "
         "(num_biased_errors, num_unbiased_errors, num_ref_vocab_tokens, num_ref_other_tokens) "
@@ -164,9 +164,9 @@ class _WERStats(Metric):
         "insertions by hypothesis-token membership — so B-WER and U-WER together form an exact "
         "two-way split of plain WER. Not intended for direct use."
     )
-    example_cls = _WERStats_
+    example_cls = _BUWEROutcomes_
 
-    param_schema = WERStatsParams
+    param_schema = BUWEROutcomesParams
 
     @metric_property(is_value=False)
     def _matcher(self):

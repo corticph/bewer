@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
-from ._wer_stats_params import WERStatsParams
+from ._bu_wer_outcomes_params import BUWEROutcomesParams
 
 __all__ = ["UWER"]
 
@@ -11,12 +11,12 @@ class UWER_(ExampleMetric):
     @metric_property(is_value=True)
     def num_errors(self) -> int:
         """Errors attributed to the non-vocabulary (unbiased) side in this example."""
-        return self.parent_metric._wer_stats[self.example.index].num_unbiased_errors
+        return self.parent_metric._bu_wer_outcomes[self.example.index].num_unbiased_errors
 
     @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Reference tokens attributed to the unbiased side in this example."""
-        return self.parent_metric._wer_stats[self.example.index].num_ref_other_tokens
+        return self.parent_metric._bu_wer_outcomes[self.example.index].num_ref_other_tokens
 
     @metric_property(is_main=True)
     def value(self) -> float:
@@ -43,12 +43,12 @@ class UWER(Metric):
     )
     example_cls = UWER_
 
-    param_schema = WERStatsParams
+    param_schema = BUWEROutcomesParams
 
     @metric_property(is_dependency=True)
-    def _wer_stats(self):
-        """Get the shared _WERStats metric instance."""
-        return self.dataset.metrics._wer_stats(
+    def _bu_wer_outcomes(self):
+        """Get the shared _BUWEROutcomes metric instance."""
+        return self.dataset.metrics._bu_wer_outcomes(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             alignment=self.params.alignment,
@@ -61,12 +61,12 @@ class UWER(Metric):
     @metric_property(is_value=True)
     def num_errors(self) -> int:
         """Total errors attributed to the non-vocabulary (unbiased) side."""
-        return self._wer_stats.num_unbiased_errors
+        return self._bu_wer_outcomes.num_unbiased_errors
 
     @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Total reference tokens attributed to the unbiased side."""
-        return self._wer_stats.num_ref_other_tokens
+        return self._bu_wer_outcomes.num_ref_other_tokens
 
     @metric_property(is_main=True)
     def value(self) -> float:

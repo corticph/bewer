@@ -4,11 +4,11 @@ from dataclasses import dataclass
 
 from bewer.metrics.base import MetricParams
 
-__all__ = ["WERStatsParams"]
+__all__ = ["BUWEROutcomesParams"]
 
 
 @dataclass
-class WERStatsParams(MetricParams):
+class BUWEROutcomesParams(MetricParams):
     """Base class for B-WER/U-WER metric parameter dataclasses.
 
     Subclass this with @dataclass (or use directly) to define B-WER/U-WER metric

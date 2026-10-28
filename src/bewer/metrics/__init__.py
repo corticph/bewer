@@ -9,8 +9,8 @@ from bewer.metrics.base import (
     metric_property,
 )
 from bewer.metrics.confidence import ConfidenceInterval
-from bewer.metrics.general._wer_stats import _WERStats  # noqa: F401 (registers "_wer_stats")
-from bewer.metrics.general._wer_stats_params import WERStatsParams
+from bewer.metrics.general._bu_wer_outcomes import _BUWEROutcomes  # noqa: F401 (registers "_bu_wer_outcomes")
+from bewer.metrics.general._bu_wer_outcomes_params import BUWEROutcomesParams
 from bewer.metrics.general.b_wer import BWER
 from bewer.metrics.general.cer import CER
 from bewer.metrics.general.per import PER
@@ -41,7 +41,7 @@ __all__ = [
     "MetricParams",
     "KeyTermParams",
     "InsertionParams",
-    "WERStatsParams",
+    "BUWEROutcomesParams",
     "metric_property",
     "ConfidenceInterval",
     "WER",

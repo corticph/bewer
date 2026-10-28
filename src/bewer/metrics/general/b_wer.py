@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
-from ._wer_stats_params import WERStatsParams
+from ._bu_wer_outcomes_params import BUWEROutcomesParams
 
 __all__ = ["BWER"]
 
@@ -11,12 +11,12 @@ class BWER_(ExampleMetric):
     @metric_property(is_value=True)
     def num_errors(self) -> int:
         """Errors attributed to the vocabulary (biased) side in this example."""
-        return self.parent_metric._wer_stats[self.example.index].num_biased_errors
+        return self.parent_metric._bu_wer_outcomes[self.example.index].num_biased_errors
 
     @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Reference tokens attributed to the biased side in this example."""
-        return self.parent_metric._wer_stats[self.example.index].num_ref_vocab_tokens
+        return self.parent_metric._bu_wer_outcomes[self.example.index].num_ref_vocab_tokens
 
     @metric_property(is_main=True)
     def value(self) -> float:
@@ -46,12 +46,12 @@ class BWER(Metric):
     )
     example_cls = BWER_
 
-    param_schema = WERStatsParams
+    param_schema = BUWEROutcomesParams
 
     @metric_property(is_dependency=True)
-    def _wer_stats(self):
-        """Get the shared _WERStats metric instance."""
-        return self.dataset.metrics._wer_stats(
+    def _bu_wer_outcomes(self):
+        """Get the shared _BUWEROutcomes metric instance."""
+        return self.dataset.metrics._bu_wer_outcomes(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             alignment=self.params.alignment,
@@ -64,12 +64,12 @@ class BWER(Metric):
     @metric_property(is_value=True)
     def num_errors(self) -> int:
         """Total errors attributed to the vocabulary (biased) side."""
-        return self._wer_stats.num_biased_errors
+        return self._bu_wer_outcomes.num_biased_errors
 
     @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Total reference tokens attributed to the biased side."""
-        return self._wer_stats.num_ref_vocab_tokens
+        return self._bu_wer_outcomes.num_ref_vocab_tokens
 
     @metric_property(is_main=True)
     def value(self) -> float:
