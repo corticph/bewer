@@ -51,7 +51,6 @@ class UWER(Metric):
         return self.dataset.metrics._bu_wer_outcomes(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
-            alignment=self.params.alignment,
             multi_token=self.params.multi_token,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,

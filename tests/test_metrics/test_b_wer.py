@@ -131,12 +131,11 @@ class TestBWERSplitOfWER:
     """Tests that B-WER and U-WER together form an exact split of plain WER."""
 
     @pytest.mark.parametrize("multi_token", ["occurrence", "split"])
-    @pytest.mark.parametrize("alignment", ["levenshtein", "error_align"])
-    def test_errors_split_wer(self, multi_token, alignment):
-        """B-WER + U-WER errors equal plain WER edits, on both backends and modes."""
+    def test_errors_split_wer(self, multi_token):
+        """B-WER + U-WER errors equal plain WER edits, in both modes."""
         dataset = _medical_dataset()
-        b_wer = dataset.metrics.b_wer(vocab="medical", multi_token=multi_token, alignment=alignment)
-        u_wer = dataset.metrics.u_wer(vocab="medical", multi_token=multi_token, alignment=alignment)
+        b_wer = dataset.metrics.b_wer(vocab="medical", multi_token=multi_token)
+        u_wer = dataset.metrics.u_wer(vocab="medical", multi_token=multi_token)
         wer = dataset.metrics.wer()
         assert b_wer.num_errors + u_wer.num_errors == wer.num_edits
         assert b_wer.ref_length + u_wer.ref_length == wer.ref_length

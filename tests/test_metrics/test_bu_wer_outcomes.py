@@ -165,60 +165,6 @@ class TestBUWEROutcomesMultiTokenModes:
         assert stats.num_unbiased_errors == 2
 
 
-class TestBUWEROutcomesBackends:
-    """Tests that both alignment backends produce identical attributions."""
-
-    @pytest.fixture
-    def dataset(self):
-        return _medical_dataset()
-
-    @pytest.mark.parametrize("multi_token", ["occurrence", "split"])
-    def test_error_align_matches_levenshtein(self, dataset, multi_token):
-        """error_align attribution equals levenshtein attribution, occurrence and split."""
-        lev = dataset.metrics._bu_wer_outcomes(vocab="medical", alignment="levenshtein", multi_token=multi_token)
-        ea = dataset.metrics._bu_wer_outcomes(vocab="medical", alignment="error_align", multi_token=multi_token)
-        assert (
-            ea.num_biased_errors,
-            ea.num_unbiased_errors,
-            ea.num_ref_vocab_tokens,
-            ea.num_ref_other_tokens,
-        ) == (
-            lev.num_biased_errors,
-            lev.num_unbiased_errors,
-            lev.num_ref_vocab_tokens,
-            lev.num_ref_other_tokens,
-        )
-
-    def test_error_align_per_example(self, dataset):
-        """Per-example error_align attribution matches levenshtein (multi-word inserts)."""
-        for i in range(len(dataset)):
-            lev = dataset[i].metrics._bu_wer_outcomes(vocab="medical", alignment="levenshtein")
-            ea = dataset[i].metrics._bu_wer_outcomes(vocab="medical", alignment="error_align")
-            assert (
-                ea.num_biased_errors,
-                ea.num_unbiased_errors,
-                ea.num_ref_vocab_tokens,
-                ea.num_ref_other_tokens,
-            ) == (
-                lev.num_biased_errors,
-                lev.num_unbiased_errors,
-                lev.num_ref_vocab_tokens,
-                lev.num_ref_other_tokens,
-            )
-
-    def test_unnormalized_error_align(self):
-        """normalized=False works with the error_align backend."""
-        dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["Fox"])))
-        dataset.add(ref="The Fox jumps", hyp="The fox jumps")
-        for alignment in ("levenshtein", "error_align"):
-            stats = dataset[0].metrics._bu_wer_outcomes(vocab="animals", normalized=False, alignment=alignment)
-            # "Fox" (vocab) was substituted by "fox": biased error, biased denominator.
-            assert stats.num_biased_errors == 1
-            assert stats.num_unbiased_errors == 0
-            assert stats.num_ref_vocab_tokens == 1
-            assert stats.num_ref_other_tokens == 2
-
-
 class TestBUWEROutcomesDecomposition:
     """Tests that B/U statistics always form an exact split of plain WER."""
 
@@ -227,10 +173,9 @@ class TestBUWEROutcomesDecomposition:
         return _medical_dataset()
 
     @pytest.mark.parametrize("multi_token", ["occurrence", "split", "flag"])
-    @pytest.mark.parametrize("alignment", ["levenshtein", "error_align"])
-    def test_exact_split_of_wer(self, dataset, multi_token, alignment):
+    def test_exact_split_of_wer(self, dataset, multi_token):
         """Biased + unbiased errors equal WER edits; denominators equal reference length."""
-        stats = dataset.metrics._bu_wer_outcomes(vocab="medical", multi_token=multi_token, alignment=alignment)
+        stats = dataset.metrics._bu_wer_outcomes(vocab="medical", multi_token=multi_token)
         wer = dataset.metrics.wer()
         assert stats.num_biased_errors + stats.num_unbiased_errors == wer.num_edits
         assert stats.num_ref_vocab_tokens + stats.num_ref_other_tokens == wer.ref_length
@@ -335,11 +280,6 @@ class TestBUWEROutcomesParameters:
         """Metric construction fails for a vocabulary not attached to the dataset."""
         with pytest.raises(ValueError, match="Vocabulary 'animals' not found"):
             dataset.metrics._bu_wer_outcomes(vocab="animals")
-
-    def test_invalid_alignment(self, dataset):
-        """Alignment backend must be 'levenshtein' or 'error_align'."""
-        with pytest.raises(ValueError, match="alignment must be"):
-            dataset.metrics._bu_wer_outcomes(vocab="medical", alignment="bogus")
 
     def test_invalid_multi_token(self, dataset):
         """Multi-token mode must be 'occurrence', 'flag', or 'split'."""

@@ -122,12 +122,11 @@ class TestUWERSplitOfWER:
     """Tests that U-WER pairs with B-WER into an exact split of plain WER."""
 
     @pytest.mark.parametrize("multi_token", ["occurrence", "split"])
-    @pytest.mark.parametrize("alignment", ["levenshtein", "error_align"])
-    def test_errors_split_wer(self, multi_token, alignment):
-        """U-WER + B-WER errors equal plain WER edits, on both backends and modes."""
+    def test_errors_split_wer(self, multi_token):
+        """U-WER + B-WER errors equal plain WER edits, in both modes."""
         dataset = _medical_dataset()
-        u_wer = dataset.metrics.u_wer(vocab="medical", multi_token=multi_token, alignment=alignment)
-        b_wer = dataset.metrics.b_wer(vocab="medical", multi_token=multi_token, alignment=alignment)
+        u_wer = dataset.metrics.u_wer(vocab="medical", multi_token=multi_token)
+        b_wer = dataset.metrics.b_wer(vocab="medical", multi_token=multi_token)
         wer = dataset.metrics.wer()
         assert u_wer.num_errors + b_wer.num_errors == wer.num_edits
         assert u_wer.ref_length + b_wer.ref_length == wer.ref_length
@@ -197,12 +196,6 @@ class TestUWERParameters:
         dataset = _medical_dataset()
         with pytest.raises(ValueError, match="Vocabulary 'animals' not found"):
             dataset.metrics.u_wer(vocab="animals")
-
-    def test_invalid_alignment(self):
-        """Construction fails for an unknown alignment backend."""
-        dataset = _medical_dataset()
-        with pytest.raises(ValueError, match="alignment must be"):
-            dataset.metrics.u_wer(vocab="medical", alignment="bogus")
 
 
 class TestUWERFlagWarning:

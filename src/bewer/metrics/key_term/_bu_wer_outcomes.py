@@ -9,7 +9,6 @@ from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_pr
 from ._bu_wer_outcomes_params import BUWEROutcomesParams
 
 if TYPE_CHECKING:
-    from bewer.alignment.op import Op
     from bewer.key_term.key_term import KeyTermMatch
 
 __all__: list[str] = []
@@ -52,25 +51,6 @@ class _BUWEROutcomes_(ExampleMetric):
         """Hypothesis token positions covered by a vocabulary term occurrence."""
         return {pos for match in self.hyp_matches for pos in range(match.start, match.stop)}
 
-    def _insert_positions(self, op: "Op") -> set[int]:
-        """Hypothesis token positions covered by an INSERT operation.
-
-        The Levenshtein backend tags its operations with ``hyp_token_idx`` directly.
-        The error_align backend does not, so positions are recovered from the
-        operation's character span, which indexes the standardized hypothesis text —
-        the same coordinate space as ``Token`` offsets.
-        """
-        if op.hyp_token_idx is not None:
-            return {op.hyp_token_idx}
-        positions: set[int] = set()
-        span = op.hyp_span
-        if span is None:
-            return positions
-        for i, token in enumerate(self.example.hyp.tokens):
-            if token.start < span.stop and span.start < token.end:
-                positions.add(i)
-        return positions
-
     @metric_property(is_value=True)
     def _counts(self) -> BUWEROutcome:
         """Attribute every alignment operation to the biased or the unbiased side.
@@ -104,8 +84,9 @@ class _BUWEROutcomes_(ExampleMetric):
                 if split_mode:
                     biased = op.hyp in vocab_tokens
                 else:
-                    positions = self._insert_positions(op)
-                    biased = any(pos in self._hyp_vocab_positions for pos in positions)
+                    # Levenshtein operations tag their hypothesis token directly,
+                    # so insertion attribution is O(1) per operation.
+                    biased = op.hyp_token_idx in self._hyp_vocab_positions
                 if biased:
                     num_biased_errors += 1
                 else:
@@ -197,14 +178,7 @@ class _BUWEROutcomes(Metric):
 
     @metric_property(is_dependency=True)
     def _alignment(self):
-        """The shared alignment metric instance (levenshtein or error_align backend)."""
-        if self.params.alignment == "error_align":
-            return self.dataset.metrics.error_align(
-                normalized=self.params.normalized,
-                standardizer=self.standardizer,
-                tokenizer=self.tokenizer,
-                normalizer=self.normalizer,
-            )
+        """The shared Levenshtein alignment instance, as in `_kt_stats`."""
         return self.dataset.metrics.levenshtein(
             normalized=self.params.normalized,
             standardizer=self.standardizer,

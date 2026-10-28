@@ -261,7 +261,7 @@ B-WER: 33.33%
 U-WER: 0.00%
 ```
 
-Both metrics share one hidden `_bu_wer_outcomes` computation, so requesting both costs little more than either alone. By default (`multi_token="occurrence"`), the words of a multi-token term such as `"blood sugar"` only count as biased when they are part of a matched term occurrence. Use `multi_token="split"` for word-list semantics, where every term token counts as in-vocabulary word on its own; `multi_token="flag"` behaves like `"occurrence"` but warns when the vocabulary contains multi-token terms. Both metrics also accept the `alignment` and `normalized` arguments familiar from WER.
+Both metrics share one hidden `_bu_wer_outcomes` computation, so requesting both costs little more than either alone. By default (`multi_token="occurrence"`), the words of a multi-token term such as `"blood sugar"` only count as biased when they are part of a matched term occurrence. Use `multi_token="split"` for word-list semantics, where every term token counts as in-vocabulary word on its own; `multi_token="flag"` behaves like `"occurrence"` but warns when the vocabulary contains multi-token terms. Both metrics also accept the `normalized` argument familiar from WER.
 
 #### Alignments
 
