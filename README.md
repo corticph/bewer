@@ -244,25 +244,6 @@ Key-Term Recall: 50.00%
 
 You can also load line-separated key terms directly from a file (`files=["terms.txt"]`) or provide a custom extractor function (`Dataset -> Iterable[str]`) to derive key terms from the dataset (`extractors=[extract_fn]`).
 
-#### Biased and Unbiased WER
-
-B-WER and U-WER come from contextual-biasing evaluation (Le et al., 2021): B-WER is the word error rate on words *in* a biasing list, U-WER the word error rate on words *outside* it. In `bewer`, a `Vocabulary` plays the role of the biasing list, and B-WER/U-WER split plain WER exactly: every reference token lands in exactly one of the two denominators, and every error is attributed to exactly one side (insertions by the inserted word).
-
-```python
-# Continuing the vocabulary example above:
-b_wer = dataset.metrics.b_wer(vocab="medical")
-u_wer = dataset.metrics.u_wer(vocab="medical")
-print(f"{b_wer.short_name_base}: {b_wer.value:.2%}")
-print(f"{u_wer.short_name_base}: {u_wer.value:.2%}")
-```
-
-```text
-B-WER: 33.33%
-U-WER: 0.00%
-```
-
-Both metrics share one hidden `_bu_wer_outcomes` computation, so requesting both costs little more than either alone. A word counts as in-vocabulary only when its token belongs to a matched occurrence of a vocabulary term, so the words of a multi-token term such as `"blood sugar"` count as biased words only inside a full match of that term. Both metrics also accept the `normalized` argument familiar from WER.
-
 #### Alignments
 
 Alignments produce an example-level text-to-text alignment as their primary output, rather than a dataset-level numeric score. An [`Alignment`](src/bewer/alignment/alignment.py) is a sequence of [`Op`](src/bewer/alignment/op.py) objects, each representing a match, substitution, insertion, or deletion between hypothesis and reference. Edit counts are available as supportive values.
