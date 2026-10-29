@@ -16,7 +16,7 @@ class BWER_(ExampleMetric):
     @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Reference tokens attributed to the biased side in this example."""
-        return self.parent_metric._bu_wer_outcomes[self.example.index].num_ref_vocab_tokens
+        return self.parent_metric._bu_wer_outcomes[self.example.index].num_biased_ref_tokens
 
     @metric_property(is_main=True)
     def value(self) -> float:
@@ -36,7 +36,7 @@ class BWER(Metric):
         "(2021, arXiv:2104.02194) for contextual-biasing evaluation. Substitutions and "
         "deletions are attributed to B-WER when the reference token belongs to the "
         "vocabulary; insertions when the hypothesis token does. "
-        "B-WER = biased_errors / num_ref_vocab_tokens, and together with U-WER it forms "
+        "B-WER = biased_errors / num_biased_ref_tokens, and together with U-WER it forms "
         "an exact two-way split of plain WER. A word counts as in-vocabulary only when "
         "its token belongs to a matched occurrence of a vocabulary term; the words of "
         'multi-token terms such as "blood sugar" count only inside a full match of '
@@ -65,7 +65,7 @@ class BWER(Metric):
     @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Total reference tokens attributed to the biased side."""
-        return self._bu_wer_outcomes.num_ref_vocab_tokens
+        return self._bu_wer_outcomes.num_biased_ref_tokens
 
     @metric_property(is_main=True)
     def value(self) -> float:

@@ -30,32 +30,32 @@ class TestBUWEROutcomesAttribution:
         stats = dataset[0].metrics._bu_wer_outcomes(vocab="medical")
         assert stats.num_biased_errors == 1
         assert stats.num_unbiased_errors == 0
-        assert stats.num_ref_vocab_tokens == 1
-        assert stats.num_ref_other_tokens == 2
+        assert stats.num_biased_ref_tokens == 1
+        assert stats.num_unbiased_ref_tokens == 2
 
     def test_non_vocab_insertions(self, dataset):
         """Inserted non-vocab words: unbiased errors, no reference-side counts."""
         stats = dataset[1].metrics._bu_wer_outcomes(vocab="medical")
         assert stats.num_biased_errors == 0
         assert stats.num_unbiased_errors == 2
-        assert stats.num_ref_vocab_tokens == 0
-        assert stats.num_ref_other_tokens == 2
+        assert stats.num_biased_ref_tokens == 0
+        assert stats.num_unbiased_ref_tokens == 2
 
     def test_inserted_term_occurrence(self, dataset):
         """A fully inserted multi-token term: every insert is a biased error."""
         stats = dataset[2].metrics._bu_wer_outcomes(vocab="medical")
         assert stats.num_biased_errors == 2
         assert stats.num_unbiased_errors == 0
-        assert stats.num_ref_vocab_tokens == 0
-        assert stats.num_ref_other_tokens == 1
+        assert stats.num_biased_ref_tokens == 0
+        assert stats.num_unbiased_ref_tokens == 1
 
     def test_partial_term_insert_is_not_biased(self, dataset):
         """A partial term insert is unbiased: tokens count only within a full match."""
         stats = dataset[3].metrics._bu_wer_outcomes(vocab="medical")
         assert stats.num_biased_errors == 0
         assert stats.num_unbiased_errors == 1
-        assert stats.num_ref_vocab_tokens == 0
-        assert stats.num_ref_other_tokens == 1
+        assert stats.num_biased_ref_tokens == 0
+        assert stats.num_unbiased_ref_tokens == 1
 
     def test_deletion_of_vocab_token(self):
         """Deleted vocab token: biased error plus biased denominator."""
@@ -64,8 +64,8 @@ class TestBUWEROutcomesAttribution:
         stats = dataset[0].metrics._bu_wer_outcomes(vocab="animals")
         assert stats.num_biased_errors == 1
         assert stats.num_unbiased_errors == 0
-        assert stats.num_ref_vocab_tokens == 1
-        assert stats.num_ref_other_tokens == 2
+        assert stats.num_biased_ref_tokens == 1
+        assert stats.num_unbiased_ref_tokens == 2
 
     def test_substitution_of_non_vocab_token(self):
         """Substituted non-vocab token: unbiased error plus unbiased denominator."""
@@ -74,8 +74,8 @@ class TestBUWEROutcomesAttribution:
         stats = dataset[0].metrics._bu_wer_outcomes(vocab="animals")
         assert stats.num_biased_errors == 0
         assert stats.num_unbiased_errors == 1
-        assert stats.num_ref_vocab_tokens == 0
-        assert stats.num_ref_other_tokens == 3
+        assert stats.num_biased_ref_tokens == 0
+        assert stats.num_unbiased_ref_tokens == 3
 
     def test_perfect_match_attribution(self):
         """Perfect match of a multi-token term: biased denominator, no errors."""
@@ -86,8 +86,8 @@ class TestBUWEROutcomesAttribution:
         stats = dataset[0].metrics._bu_wer_outcomes(vocab="medical")
         assert stats.num_biased_errors == 0
         assert stats.num_unbiased_errors == 0
-        assert stats.num_ref_vocab_tokens == 2
-        assert stats.num_ref_other_tokens == 2
+        assert stats.num_biased_ref_tokens == 2
+        assert stats.num_unbiased_ref_tokens == 2
 
     def test_empty_reference(self):
         """Empty reference: all inserts land on the unbiased side, zero denominators."""
@@ -96,8 +96,8 @@ class TestBUWEROutcomesAttribution:
         stats = dataset[0].metrics._bu_wer_outcomes(vocab="animals")
         assert stats.num_biased_errors == 0
         assert stats.num_unbiased_errors == 2
-        assert stats.num_ref_vocab_tokens == 0
-        assert stats.num_ref_other_tokens == 0
+        assert stats.num_biased_ref_tokens == 0
+        assert stats.num_unbiased_ref_tokens == 0
 
 
 class TestBUWEROutcomesDecomposition:
@@ -112,7 +112,7 @@ class TestBUWEROutcomesDecomposition:
         stats = dataset.metrics._bu_wer_outcomes(vocab="medical")
         wer = dataset.metrics.wer()
         assert stats.num_biased_errors + stats.num_unbiased_errors == wer.num_edits
-        assert stats.num_ref_vocab_tokens + stats.num_ref_other_tokens == wer.ref_length
+        assert stats.num_biased_ref_tokens + stats.num_unbiased_ref_tokens == wer.ref_length
 
 
 class TestBUWEROutcomesDatasetMetric:
@@ -128,11 +128,16 @@ class TestBUWEROutcomesDatasetMetric:
         expected = [
             sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_biased_errors for ex in dataset),
             sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_unbiased_errors for ex in dataset),
-            sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_ref_vocab_tokens for ex in dataset),
-            sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_ref_other_tokens for ex in dataset),
+            sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_biased_ref_tokens for ex in dataset),
+            sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_unbiased_ref_tokens for ex in dataset),
         ]
         assert (
-            [stats.num_biased_errors, stats.num_unbiased_errors, stats.num_ref_vocab_tokens, stats.num_ref_other_tokens]
+            [
+                stats.num_biased_errors,
+                stats.num_unbiased_errors,
+                stats.num_biased_ref_tokens,
+                stats.num_unbiased_ref_tokens,
+            ]
             == expected
             == [3, 3, 1, 6]
         )
@@ -144,8 +149,8 @@ class TestBUWEROutcomesDatasetMetric:
         stats = dataset.metrics._bu_wer_outcomes(vocab="animals")
         assert stats.num_biased_errors == 0
         assert stats.num_unbiased_errors == 0
-        assert stats.num_ref_vocab_tokens == 0
-        assert stats.num_ref_other_tokens == 0
+        assert stats.num_biased_ref_tokens == 0
+        assert stats.num_unbiased_ref_tokens == 0
 
 
 class TestBUWEROutcomesIsPrivate:
