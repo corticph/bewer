@@ -19,12 +19,12 @@ class BUWEROutcome(NamedTuple):
     Every alignment operation is attributed exactly once — substitutions and deletions
     by their reference token, insertions by their hypothesis token — and the
     denominator fields count every reference token exactly once. Consequently
-    ``num_biased_errors + num_unbiased_errors`` equals plain WER's edit count and
+    ``num_biased_edits + num_unbiased_edits`` equals plain WER's edit count and
     ``num_biased_ref_tokens + num_unbiased_ref_tokens`` equals the reference length.
     """
 
-    num_biased_errors: int
-    num_unbiased_errors: int
+    num_biased_edits: int
+    num_unbiased_edits: int
     num_biased_ref_tokens: int
     num_unbiased_ref_tokens: int
 
@@ -59,8 +59,8 @@ class _BUWEROutcomes_(ExampleMetric):
         biased only when it is part of a matched vocabulary term occurrence.
         """
         alignment = self.parent_metric._alignment[self.example.index].alignment
-        num_biased_errors = 0
-        num_unbiased_errors = 0
+        num_biased_edits = 0
+        num_unbiased_edits = 0
         num_biased_ref_tokens = 0
         num_unbiased_ref_tokens = 0
         for op in alignment:
@@ -69,9 +69,9 @@ class _BUWEROutcomes_(ExampleMetric):
                 # so insertion attribution is O(1) per operation.
                 biased = op.hyp_token_idx in self._hyp_vocab_positions
                 if biased:
-                    num_biased_errors += 1
+                    num_biased_edits += 1
                 else:
-                    num_unbiased_errors += 1
+                    num_unbiased_edits += 1
                 continue
             biased = op.ref_token_idx in self._ref_vocab_positions
             if op.type == OpType.MATCH:
@@ -80,24 +80,24 @@ class _BUWEROutcomes_(ExampleMetric):
                 else:
                     num_unbiased_ref_tokens += 1
                 continue
-            # SUBSTITUTE / DELETE: reference-side errors.
+            # SUBSTITUTE / DELETE: reference-side edits.
             if biased:
-                num_biased_errors += 1
+                num_biased_edits += 1
                 num_biased_ref_tokens += 1
             else:
-                num_unbiased_errors += 1
+                num_unbiased_edits += 1
                 num_unbiased_ref_tokens += 1
-        return BUWEROutcome(num_biased_errors, num_unbiased_errors, num_biased_ref_tokens, num_unbiased_ref_tokens)
+        return BUWEROutcome(num_biased_edits, num_unbiased_edits, num_biased_ref_tokens, num_unbiased_ref_tokens)
 
     @metric_property(is_value=True)
-    def num_biased_errors(self) -> int:
-        """Errors attributed to the biased (vocabulary) side."""
-        return self._counts.num_biased_errors
+    def num_biased_edits(self) -> int:
+        """Edits attributed to the biased (vocabulary) side."""
+        return self._counts.num_biased_edits
 
     @metric_property(is_value=True)
-    def num_unbiased_errors(self) -> int:
-        """Errors attributed to the unbiased (non-vocabulary) side."""
-        return self._counts.num_unbiased_errors
+    def num_unbiased_edits(self) -> int:
+        """Edits attributed to the unbiased (non-vocabulary) side."""
+        return self._counts.num_unbiased_edits
 
     @metric_property(is_value=True)
     def num_biased_ref_tokens(self) -> int:
@@ -116,7 +116,7 @@ class _BUWEROutcomes(Metric):
     long_name_base = "Biased/Unbiased WER Outcomes"
     description = (
         "Private metric that computes the shared biased/unbiased WER statistics "
-        "(num_biased_errors, num_unbiased_errors, num_biased_ref_tokens, num_unbiased_ref_tokens) "
+        "(num_biased_edits, num_unbiased_edits, num_biased_ref_tokens, num_unbiased_ref_tokens) "
         "used by B-WER (b_wer) and U-WER (u_wer), following the B-WER/U-WER protocol of "
         "Le et al. (2021, arXiv:2104.02194): every alignment operation is attributed exactly "
         "once — substitutions and deletions by reference-token membership in the vocabulary, "
@@ -147,14 +147,14 @@ class _BUWEROutcomes(Metric):
         )
 
     @metric_property(is_value=True)
-    def num_biased_errors(self) -> int:
-        """Total errors attributed to the biased (vocabulary) side."""
-        return sum(em.num_biased_errors for em in self)
+    def num_biased_edits(self) -> int:
+        """Total edits attributed to the biased (vocabulary) side."""
+        return sum(em.num_biased_edits for em in self)
 
     @metric_property(is_value=True)
-    def num_unbiased_errors(self) -> int:
-        """Total errors attributed to the unbiased (non-vocabulary) side."""
-        return sum(em.num_unbiased_errors for em in self)
+    def num_unbiased_edits(self) -> int:
+        """Total edits attributed to the unbiased (non-vocabulary) side."""
+        return sum(em.num_unbiased_edits for em in self)
 
     @metric_property(is_value=True)
     def num_biased_ref_tokens(self) -> int:

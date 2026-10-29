@@ -28,35 +28,35 @@ class TestBWERExampleMetric:
     def test_substitution_of_vocab_token(self, dataset):
         """B-WER counts a substituted vocab token: 1 error over 1 vocab ref token."""
         b_wer = dataset[0].metrics.b_wer(vocab="medical")
-        assert b_wer.num_errors == 1
-        assert b_wer.ref_length == 1
+        assert b_wer.num_biased_edits == 1
+        assert b_wer.num_biased_ref_tokens == 1
         assert b_wer.value == 1.0
 
     def test_non_vocab_insertions(self, dataset):
         """Non-vocab insertions leave B-WER at zero, with an empty denominator."""
         b_wer = dataset[1].metrics.b_wer(vocab="medical")
-        assert b_wer.num_errors == 0
-        assert b_wer.ref_length == 0
+        assert b_wer.num_biased_edits == 0
+        assert b_wer.num_biased_ref_tokens == 0
 
     def test_inserted_term_occurrence(self, dataset):
         """A fully inserted term gives zero-denominator B-WER: value equals the error count."""
         b_wer = dataset[2].metrics.b_wer(vocab="medical")
-        assert b_wer.num_errors == 2
-        assert b_wer.ref_length == 0
+        assert b_wer.num_biased_edits == 2
+        assert b_wer.num_biased_ref_tokens == 0
         assert b_wer.value == 2.0
 
     def test_partial_term_insert_unbiased(self, dataset):
         """Occurrence semantics: a partial term insert is not a biased error."""
         b_wer = dataset[3].metrics.b_wer(vocab="medical")
-        assert b_wer.num_errors == 0
+        assert b_wer.num_biased_edits == 0
 
     def test_deletion_of_vocab_token(self):
         """B-WER counts a deleted vocab token."""
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
         dataset.add(ref="the fox jumps", hyp="the jumps")
         b_wer = dataset[0].metrics.b_wer(vocab="animals")
-        assert b_wer.num_errors == 1
-        assert b_wer.ref_length == 1
+        assert b_wer.num_biased_edits == 1
+        assert b_wer.num_biased_ref_tokens == 1
         assert b_wer.value == 1.0
 
     def test_perfect_match(self):
@@ -66,23 +66,23 @@ class TestBWERExampleMetric:
         )
         dataset.add(ref="blood pressure is normal", hyp="blood pressure is normal")
         b_wer = dataset[0].metrics.b_wer(vocab="medical")
-        assert b_wer.num_errors == 0
-        assert b_wer.ref_length == 2
+        assert b_wer.num_biased_edits == 0
+        assert b_wer.num_biased_ref_tokens == 2
         assert b_wer.value == 0.0
 
 
 class TestBWERZeroDenominators:
     """Tests for the empty-denominator convention (mirrors plain WER)."""
 
-    def test_empty_ref_returns_num_errors(self):
+    def test_empty_ref_returns_num_biased_edits(self):
         """With no biased reference tokens, the value is the raw biased-error count."""
         dataset = Dataset(
             config=get_config("base").clone().add_vocabulary(Vocabulary("medical", terms=["blood pressure"]))
         )
         dataset.add(ref="", hyp="blood pressure")
         b_wer = dataset[0].metrics.b_wer(vocab="medical")
-        assert b_wer.ref_length == 0
-        assert b_wer.value == float(b_wer.num_errors) == 2.0
+        assert b_wer.num_biased_ref_tokens == 0
+        assert b_wer.value == float(b_wer.num_biased_edits) == 2.0
 
 
 class TestBWERDatasetMetric:
@@ -92,45 +92,45 @@ class TestBWERDatasetMetric:
     def dataset(self):
         return _medical_dataset()
 
-    def test_num_errors_aggregates(self, dataset):
-        """Dataset num_errors sums the example-level values."""
+    def test_num_biased_edits_aggregates(self, dataset):
+        """Dataset num_biased_edits sums the example-level values."""
         b_wer = dataset.metrics.b_wer(vocab="medical")
-        assert b_wer.num_errors == 3
-        expected = sum(ex.metrics.b_wer(vocab="medical").num_errors for ex in dataset)
-        assert b_wer.num_errors == expected
+        assert b_wer.num_biased_edits == 3
+        expected = sum(ex.metrics.b_wer(vocab="medical").num_biased_edits for ex in dataset)
+        assert b_wer.num_biased_edits == expected
 
-    def test_ref_length_aggregates(self, dataset):
-        """Dataset ref_length sums the example-level values."""
+    def test_num_biased_ref_tokens_aggregates(self, dataset):
+        """Dataset num_biased_ref_tokens sums the example-level values."""
         b_wer = dataset.metrics.b_wer(vocab="medical")
-        assert b_wer.ref_length == 1
-        expected = sum(ex.metrics.b_wer(vocab="medical").ref_length for ex in dataset)
-        assert b_wer.ref_length == expected
+        assert b_wer.num_biased_ref_tokens == 1
+        expected = sum(ex.metrics.b_wer(vocab="medical").num_biased_ref_tokens for ex in dataset)
+        assert b_wer.num_biased_ref_tokens == expected
 
     def test_value_calculation(self, dataset):
-        """Value is num_errors over ref_length."""
+        """Value is num_biased_edits over num_biased_ref_tokens."""
         b_wer = dataset.metrics.b_wer(vocab="medical")
-        assert b_wer.value == b_wer.num_errors / b_wer.ref_length == 3.0
+        assert b_wer.value == b_wer.num_biased_edits / b_wer.num_biased_ref_tokens == 3.0
 
     def test_empty_dataset(self):
         """An empty dataset yields zero errors and zero length."""
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
         dataset.metrics.b_wer(vocab="animals")
         b_wer = dataset.metrics.b_wer(vocab="animals")
-        assert b_wer.ref_length == 0
-        assert b_wer.num_errors == 0
+        assert b_wer.num_biased_ref_tokens == 0
+        assert b_wer.num_biased_edits == 0
 
 
 class TestBWERSplitOfWER:
     """Tests that B-WER and U-WER together form an exact split of plain WER."""
 
-    def test_errors_split_wer(self):
-        """B-WER + U-WER errors equal plain WER edits."""
+    def test_edits_split_wer(self):
+        """B-WER + U-WER edits equal plain WER edits."""
         dataset = _medical_dataset()
         b_wer = dataset.metrics.b_wer(vocab="medical")
         u_wer = dataset.metrics.u_wer(vocab="medical")
         wer = dataset.metrics.wer()
-        assert b_wer.num_errors + u_wer.num_errors == wer.num_edits
-        assert b_wer.ref_length + u_wer.ref_length == wer.ref_length
+        assert b_wer.num_biased_edits + u_wer.num_unbiased_edits == wer.num_edits
+        assert b_wer.num_biased_ref_tokens + u_wer.num_unbiased_ref_tokens == wer.ref_length
 
 
 class TestBWERMetricAttributes:
@@ -170,17 +170,17 @@ class TestBWERMetricValues:
         assert values["main"] == "value"
 
     def test_metric_values_other(self):
-        """num_errors and ref_length are other metric values."""
+        """num_biased_edits and num_biased_ref_tokens are other metric values."""
         values = BWER.metric_values()
-        assert "num_errors" in values["other"]
-        assert "ref_length" in values["other"]
+        assert "num_biased_edits" in values["other"]
+        assert "num_biased_ref_tokens" in values["other"]
 
     def test_example_metric_values(self):
-        """BWER_ value: main value; num_errors/ref_length are other values."""
+        """BWER_ value: main value; num_biased_edits/num_biased_ref_tokens are other values."""
         values = BWER_.metric_values()
         assert values["main"] == "value"
-        assert "num_errors" in values["other"]
-        assert "ref_length" in values["other"]
+        assert "num_biased_edits" in values["other"]
+        assert "num_biased_ref_tokens" in values["other"]
 
 
 class TestBWERParameters:

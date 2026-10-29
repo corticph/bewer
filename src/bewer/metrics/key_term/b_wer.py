@@ -9,21 +9,21 @@ __all__ = ["BWER"]
 
 class BWER_(ExampleMetric):
     @metric_property(is_value=True)
-    def num_errors(self) -> int:
-        """Errors attributed to the vocabulary (biased) side in this example."""
-        return self.parent_metric._bu_wer_outcomes[self.example.index].num_biased_errors
+    def num_biased_edits(self) -> int:
+        """Edits attributed to the biased (vocabulary) side in this example."""
+        return self.parent_metric._bu_wer_outcomes[self.example.index].num_biased_edits
 
     @metric_property(is_value=True)
-    def ref_length(self) -> int:
+    def num_biased_ref_tokens(self) -> int:
         """Reference tokens attributed to the biased side in this example."""
         return self.parent_metric._bu_wer_outcomes[self.example.index].num_biased_ref_tokens
 
     @metric_property(is_main=True)
     def value(self) -> float:
         """Example-level biased word error rate (B-WER)."""
-        if self.ref_length == 0:
-            return float(self.num_errors)
-        return self.num_errors / self.ref_length
+        if self.num_biased_ref_tokens == 0:
+            return float(self.num_biased_edits)
+        return self.num_biased_edits / self.num_biased_ref_tokens
 
 
 @METRIC_REGISTRY.register("b_wer")
@@ -36,7 +36,7 @@ class BWER(Metric):
         "(2021, arXiv:2104.02194) for contextual-biasing evaluation. Substitutions and "
         "deletions are attributed to B-WER when the reference token belongs to the "
         "vocabulary; insertions when the hypothesis token does. "
-        "B-WER = biased_errors / num_biased_ref_tokens, and together with U-WER it forms "
+        "B-WER = num_biased_edits / num_biased_ref_tokens, and together with U-WER it forms "
         "an exact two-way split of plain WER. A word counts as in-vocabulary only when "
         "its token belongs to a matched occurrence of a vocabulary term; the words of "
         'multi-token terms such as "blood sugar" count only inside a full match of '
@@ -58,18 +58,18 @@ class BWER(Metric):
         )
 
     @metric_property(is_value=True)
-    def num_errors(self) -> int:
-        """Total errors attributed to the vocabulary (biased) side."""
-        return self._bu_wer_outcomes.num_biased_errors
+    def num_biased_edits(self) -> int:
+        """Total edits attributed to the biased (vocabulary) side."""
+        return self._bu_wer_outcomes.num_biased_edits
 
     @metric_property(is_value=True)
-    def ref_length(self) -> int:
+    def num_biased_ref_tokens(self) -> int:
         """Total reference tokens attributed to the biased side."""
         return self._bu_wer_outcomes.num_biased_ref_tokens
 
     @metric_property(is_main=True)
     def value(self) -> float:
         """Biased word error rate (B-WER)."""
-        if self.ref_length == 0:
-            return float(self.num_errors)
-        return self.num_errors / self.ref_length
+        if self.num_biased_ref_tokens == 0:
+            return float(self.num_biased_edits)
+        return self.num_biased_edits / self.num_biased_ref_tokens

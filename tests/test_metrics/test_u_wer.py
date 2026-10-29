@@ -28,29 +28,29 @@ class TestUWERExampleMetric:
     def test_substitution_of_vocab_token(self, dataset):
         """A vocab-token substitution leaves U-WER at zero errors."""
         u_wer = dataset[0].metrics.u_wer(vocab="medical")
-        assert u_wer.num_errors == 0
-        assert u_wer.ref_length == 2
+        assert u_wer.num_unbiased_edits == 0
+        assert u_wer.num_unbiased_ref_tokens == 2
         assert u_wer.value == 0.0
 
     def test_non_vocab_insertions(self, dataset):
         """Non-vocab insertions count as unbiased errors."""
         u_wer = dataset[1].metrics.u_wer(vocab="medical")
-        assert u_wer.num_errors == 2
-        assert u_wer.ref_length == 2
+        assert u_wer.num_unbiased_edits == 2
+        assert u_wer.num_unbiased_ref_tokens == 2
         assert u_wer.value == 1.0
 
     def test_inserted_term_occurrence(self, dataset):
         """A fully inserted term does not touch the unbiased side."""
         u_wer = dataset[2].metrics.u_wer(vocab="medical")
-        assert u_wer.num_errors == 0
-        assert u_wer.ref_length == 1
+        assert u_wer.num_unbiased_edits == 0
+        assert u_wer.num_unbiased_ref_tokens == 1
         assert u_wer.value == 0.0
 
     def test_partial_term_insert_unbiased(self, dataset):
         """Occurrence semantics: a partial term insert is an unbiased error."""
         u_wer = dataset[3].metrics.u_wer(vocab="medical")
-        assert u_wer.num_errors == 1
-        assert u_wer.ref_length == 1
+        assert u_wer.num_unbiased_edits == 1
+        assert u_wer.num_unbiased_ref_tokens == 1
         assert u_wer.value == 1.0
 
     def test_substitution_of_non_vocab_token(self):
@@ -58,23 +58,23 @@ class TestUWERExampleMetric:
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
         dataset.add(ref="the dog house", hyp="the cat house")
         u_wer = dataset[0].metrics.u_wer(vocab="animals")
-        assert u_wer.num_errors == 1
-        assert u_wer.ref_length == 3
+        assert u_wer.num_unbiased_edits == 1
+        assert u_wer.num_unbiased_ref_tokens == 3
         assert u_wer.value == 1 / 3
 
 
 class TestUWERZeroDenominators:
     """Tests for the empty-denominator convention (mirrors plain WER)."""
 
-    def test_empty_ref_returns_num_errors(self):
+    def test_empty_ref_returns_num_unbiased_edits(self):
         """With no non-vocab reference tokens, the value is the raw unbiased-error count."""
         dataset = Dataset(
             config=get_config("base").clone().add_vocabulary(Vocabulary("medical", terms=["blood pressure"]))
         )
         dataset.add(ref="", hyp="hello world")
         u_wer = dataset[0].metrics.u_wer(vocab="medical")
-        assert u_wer.ref_length == 0
-        assert u_wer.value == float(u_wer.num_errors) == 2.0
+        assert u_wer.num_unbiased_ref_tokens == 0
+        assert u_wer.value == float(u_wer.num_unbiased_edits) == 2.0
 
 
 class TestUWERDatasetMetric:
@@ -84,44 +84,44 @@ class TestUWERDatasetMetric:
     def dataset(self):
         return _medical_dataset()
 
-    def test_num_errors_aggregates(self, dataset):
-        """Dataset num_errors sums the example-level values."""
+    def test_num_unbiased_edits_aggregates(self, dataset):
+        """Dataset num_unbiased_edits sums the example-level values."""
         u_wer = dataset.metrics.u_wer(vocab="medical")
-        assert u_wer.num_errors == 3
-        expected = sum(ex.metrics.u_wer(vocab="medical").num_errors for ex in dataset)
-        assert u_wer.num_errors == expected
+        assert u_wer.num_unbiased_edits == 3
+        expected = sum(ex.metrics.u_wer(vocab="medical").num_unbiased_edits for ex in dataset)
+        assert u_wer.num_unbiased_edits == expected
 
-    def test_ref_length_aggregates(self, dataset):
-        """Dataset ref_length sums the example-level values."""
+    def test_num_unbiased_ref_tokens_aggregates(self, dataset):
+        """Dataset num_unbiased_ref_tokens sums the example-level values."""
         u_wer = dataset.metrics.u_wer(vocab="medical")
-        assert u_wer.ref_length == 6
-        expected = sum(ex.metrics.u_wer(vocab="medical").ref_length for ex in dataset)
-        assert u_wer.ref_length == expected
+        assert u_wer.num_unbiased_ref_tokens == 6
+        expected = sum(ex.metrics.u_wer(vocab="medical").num_unbiased_ref_tokens for ex in dataset)
+        assert u_wer.num_unbiased_ref_tokens == expected
 
     def test_value_calculation(self, dataset):
-        """Value is num_errors over ref_length."""
+        """Value is num_unbiased_edits over num_unbiased_ref_tokens."""
         u_wer = dataset.metrics.u_wer(vocab="medical")
-        assert u_wer.value == u_wer.num_errors / u_wer.ref_length == 0.5
+        assert u_wer.value == u_wer.num_unbiased_edits / u_wer.num_unbiased_ref_tokens == 0.5
 
     def test_empty_dataset(self):
         """An empty dataset yields zero errors and zero length."""
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
         u_wer = dataset.metrics.u_wer(vocab="animals")
-        assert u_wer.ref_length == 0
-        assert u_wer.num_errors == 0
+        assert u_wer.num_unbiased_ref_tokens == 0
+        assert u_wer.num_unbiased_edits == 0
 
 
 class TestUWERSplitOfWER:
     """Tests that U-WER pairs with B-WER into an exact split of plain WER."""
 
-    def test_errors_split_wer(self):
-        """U-WER + B-WER errors equal plain WER edits."""
+    def test_edits_split_wer(self):
+        """U-WER + B-WER edits equal plain WER edits."""
         dataset = _medical_dataset()
         u_wer = dataset.metrics.u_wer(vocab="medical")
         b_wer = dataset.metrics.b_wer(vocab="medical")
         wer = dataset.metrics.wer()
-        assert u_wer.num_errors + b_wer.num_errors == wer.num_edits
-        assert u_wer.ref_length + b_wer.ref_length == wer.ref_length
+        assert u_wer.num_unbiased_edits + b_wer.num_biased_edits == wer.num_edits
+        assert u_wer.num_unbiased_ref_tokens + b_wer.num_biased_ref_tokens == wer.ref_length
 
 
 class TestUWERMetricAttributes:
@@ -161,17 +161,17 @@ class TestUWERMetricValues:
         assert values["main"] == "value"
 
     def test_metric_values_other(self):
-        """num_errors and ref_length are other metric values."""
+        """num_unbiased_edits and num_unbiased_ref_tokens are other metric values."""
         values = UWER.metric_values()
-        assert "num_errors" in values["other"]
-        assert "ref_length" in values["other"]
+        assert "num_unbiased_edits" in values["other"]
+        assert "num_unbiased_ref_tokens" in values["other"]
 
     def test_example_metric_values(self):
-        """UWER_ value: main value; num_errors/ref_length are other values."""
+        """UWER_ value: main value; num_unbiased_edits/num_unbiased_ref_tokens are other values."""
         values = UWER_.metric_values()
         assert values["main"] == "value"
-        assert "num_errors" in values["other"]
-        assert "ref_length" in values["other"]
+        assert "num_unbiased_edits" in values["other"]
+        assert "num_unbiased_ref_tokens" in values["other"]
 
 
 class TestUWERParameters:

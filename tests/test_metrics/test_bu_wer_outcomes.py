@@ -28,32 +28,32 @@ class TestBUWEROutcomesAttribution:
     def test_substitution_of_vocab_token(self, dataset):
         """Substituted vocab token: biased error plus biased denominator."""
         stats = dataset[0].metrics._bu_wer_outcomes(vocab="medical")
-        assert stats.num_biased_errors == 1
-        assert stats.num_unbiased_errors == 0
+        assert stats.num_biased_edits == 1
+        assert stats.num_unbiased_edits == 0
         assert stats.num_biased_ref_tokens == 1
         assert stats.num_unbiased_ref_tokens == 2
 
     def test_non_vocab_insertions(self, dataset):
         """Inserted non-vocab words: unbiased errors, no reference-side counts."""
         stats = dataset[1].metrics._bu_wer_outcomes(vocab="medical")
-        assert stats.num_biased_errors == 0
-        assert stats.num_unbiased_errors == 2
+        assert stats.num_biased_edits == 0
+        assert stats.num_unbiased_edits == 2
         assert stats.num_biased_ref_tokens == 0
         assert stats.num_unbiased_ref_tokens == 2
 
     def test_inserted_term_occurrence(self, dataset):
         """A fully inserted multi-token term: every insert is a biased error."""
         stats = dataset[2].metrics._bu_wer_outcomes(vocab="medical")
-        assert stats.num_biased_errors == 2
-        assert stats.num_unbiased_errors == 0
+        assert stats.num_biased_edits == 2
+        assert stats.num_unbiased_edits == 0
         assert stats.num_biased_ref_tokens == 0
         assert stats.num_unbiased_ref_tokens == 1
 
     def test_partial_term_insert_is_not_biased(self, dataset):
         """A partial term insert is unbiased: tokens count only within a full match."""
         stats = dataset[3].metrics._bu_wer_outcomes(vocab="medical")
-        assert stats.num_biased_errors == 0
-        assert stats.num_unbiased_errors == 1
+        assert stats.num_biased_edits == 0
+        assert stats.num_unbiased_edits == 1
         assert stats.num_biased_ref_tokens == 0
         assert stats.num_unbiased_ref_tokens == 1
 
@@ -62,8 +62,8 @@ class TestBUWEROutcomesAttribution:
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
         dataset.add(ref="the fox jumps", hyp="the jumps")
         stats = dataset[0].metrics._bu_wer_outcomes(vocab="animals")
-        assert stats.num_biased_errors == 1
-        assert stats.num_unbiased_errors == 0
+        assert stats.num_biased_edits == 1
+        assert stats.num_unbiased_edits == 0
         assert stats.num_biased_ref_tokens == 1
         assert stats.num_unbiased_ref_tokens == 2
 
@@ -72,8 +72,8 @@ class TestBUWEROutcomesAttribution:
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
         dataset.add(ref="the dog house", hyp="the cat house")
         stats = dataset[0].metrics._bu_wer_outcomes(vocab="animals")
-        assert stats.num_biased_errors == 0
-        assert stats.num_unbiased_errors == 1
+        assert stats.num_biased_edits == 0
+        assert stats.num_unbiased_edits == 1
         assert stats.num_biased_ref_tokens == 0
         assert stats.num_unbiased_ref_tokens == 3
 
@@ -84,8 +84,8 @@ class TestBUWEROutcomesAttribution:
         )
         dataset.add(ref="blood pressure is normal", hyp="blood pressure is normal")
         stats = dataset[0].metrics._bu_wer_outcomes(vocab="medical")
-        assert stats.num_biased_errors == 0
-        assert stats.num_unbiased_errors == 0
+        assert stats.num_biased_edits == 0
+        assert stats.num_unbiased_edits == 0
         assert stats.num_biased_ref_tokens == 2
         assert stats.num_unbiased_ref_tokens == 2
 
@@ -94,8 +94,8 @@ class TestBUWEROutcomesAttribution:
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
         dataset.add(ref="", hyp="hello world")
         stats = dataset[0].metrics._bu_wer_outcomes(vocab="animals")
-        assert stats.num_biased_errors == 0
-        assert stats.num_unbiased_errors == 2
+        assert stats.num_biased_edits == 0
+        assert stats.num_unbiased_edits == 2
         assert stats.num_biased_ref_tokens == 0
         assert stats.num_unbiased_ref_tokens == 0
 
@@ -111,7 +111,7 @@ class TestBUWEROutcomesDecomposition:
         """Biased + unbiased errors equal WER edits; denominators equal reference length."""
         stats = dataset.metrics._bu_wer_outcomes(vocab="medical")
         wer = dataset.metrics.wer()
-        assert stats.num_biased_errors + stats.num_unbiased_errors == wer.num_edits
+        assert stats.num_biased_edits + stats.num_unbiased_edits == wer.num_edits
         assert stats.num_biased_ref_tokens + stats.num_unbiased_ref_tokens == wer.ref_length
 
 
@@ -126,15 +126,15 @@ class TestBUWEROutcomesDatasetMetric:
         """Dataset totals are the sum of example-level statistics."""
         stats = dataset.metrics._bu_wer_outcomes(vocab="medical")
         expected = [
-            sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_biased_errors for ex in dataset),
-            sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_unbiased_errors for ex in dataset),
+            sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_biased_edits for ex in dataset),
+            sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_unbiased_edits for ex in dataset),
             sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_biased_ref_tokens for ex in dataset),
             sum(ex.metrics._bu_wer_outcomes(vocab="medical").num_unbiased_ref_tokens for ex in dataset),
         ]
         assert (
             [
-                stats.num_biased_errors,
-                stats.num_unbiased_errors,
+                stats.num_biased_edits,
+                stats.num_unbiased_edits,
                 stats.num_biased_ref_tokens,
                 stats.num_unbiased_ref_tokens,
             ]
@@ -147,8 +147,8 @@ class TestBUWEROutcomesDatasetMetric:
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
         dataset.metrics._bu_wer_outcomes(vocab="animals")
         stats = dataset.metrics._bu_wer_outcomes(vocab="animals")
-        assert stats.num_biased_errors == 0
-        assert stats.num_unbiased_errors == 0
+        assert stats.num_biased_edits == 0
+        assert stats.num_unbiased_edits == 0
         assert stats.num_biased_ref_tokens == 0
         assert stats.num_unbiased_ref_tokens == 0
 
