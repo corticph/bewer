@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple
 
 from bewer.alignment import OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+
+from ._keyterm_params import KeyTermParams
 
 if TYPE_CHECKING:
     from bewer.key_term.key_term import KeyTermMatch
@@ -13,25 +15,14 @@ __all__: list[str] = []
 
 
 @dataclass
-class BUWEROutcomesParams(MetricParams):
-    """Base class for B-WER/U-WER metric parameter dataclasses.
+class BUWEROutcomesParams(KeyTermParams):
+    """B-WER/U-WER metric parameters.
 
-    Subclass this with @dataclass (or use directly) to define B-WER/U-WER metric
-    parameters. Provides the common ``vocab`` and ``normalized`` fields, validates
-    them, and checks that the vocabulary exists on the dataset.
-
-    Attributes:
-        vocab: The vocabulary name to use for the biased/unbiased word split.
-        normalized: Whether to use normalized tokens for alignment and vocabulary matching.
+    Inherits ``vocab`` and ``normalized`` (with validation) from
+    ``KeyTermParams``. The ``allow_subset_matches`` knob of the KTR family does
+    not apply here: B-WER/U-WER consume the union of covered token positions,
+    which is invariant under subset removal.
     """
-
-    vocab: str
-    normalized: bool = True
-
-    def validate(self) -> None:
-        """Validate the parameter values against the metric's dataset."""
-        if self.vocab not in self.metric.dataset.config.vocabularies:
-            raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset config vocabularies.")
 
 
 class BUWEROutcome(NamedTuple):

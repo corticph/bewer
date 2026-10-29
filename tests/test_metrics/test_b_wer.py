@@ -197,3 +197,9 @@ class TestBWERParameters:
         dataset = _medical_dataset()
         with pytest.raises(ValueError, match="Vocabulary 'animals' not found"):
             dataset.metrics.b_wer(vocab="animals")
+
+    def test_allow_subset_matches_not_supported(self):
+        """The KTR-family subset-matching knob does not apply to BWER."""
+        dataset = _medical_dataset()
+        with pytest.raises(ValueError, match=r"Unknown parameter.*allow_subset_matches"):
+            dataset.metrics.b_wer(vocab="medical", allow_subset_matches=True)

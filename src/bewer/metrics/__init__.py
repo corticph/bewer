@@ -17,7 +17,7 @@ from bewer.metrics.hallucination.example_insertion_rate import ExampleInsertionR
 from bewer.metrics.hallucination.insertion_rate import InsertionRate
 from bewer.metrics.key_term import _BUWEROutcomes, _KTStats, _RKTStats  # noqa: F401 (registers the hidden metrics)
 from bewer.metrics.key_term._bu_wer_outcomes import BUWEROutcomesParams
-from bewer.metrics.key_term._keyterm_params import KeyTermParams
+from bewer.metrics.key_term._keyterm_params import KeyTermParams, KeyTermSubsetParams
 from bewer.metrics.key_term.b_wer import BWER
 from bewer.metrics.key_term.ktcer import KTCER
 from bewer.metrics.key_term.kter import KTER
@@ -39,6 +39,7 @@ __all__ = [
     "ExampleMetric",
     "MetricParams",
     "KeyTermParams",
+    "KeyTermSubsetParams",
     "InsertionParams",
     "BUWEROutcomesParams",
     "metric_property",
