@@ -61,17 +61,17 @@ class _BUWEROutcomes_(ExampleMetric):
         """Vocabulary term occurrences found in the hypothesis text."""
         return self.parent_metric._matcher.find_matches(self.example.hyp)
 
-    @metric_property(is_value=False)
+    @metric_property
     def _ref_vocab_positions(self) -> set[int]:
         """Reference token positions covered by a vocabulary term occurrence."""
         return {pos for match in self.ref_matches for pos in range(match.start, match.stop)}
 
-    @metric_property(is_value=False)
+    @metric_property
     def _hyp_vocab_positions(self) -> set[int]:
         """Hypothesis token positions covered by a vocabulary term occurrence."""
         return {pos for match in self.hyp_matches for pos in range(match.start, match.stop)}
 
-    @metric_property(is_value=False)
+    @metric_property
     def _counts(self) -> BUWEROutcome:
         """Attribute every alignment operation to the biased or the unbiased side.
 
@@ -148,7 +148,7 @@ class _BUWEROutcomes(Metric):
 
     param_schema = BUWEROutcomesParams
 
-    @metric_property(is_value=False)
+    @metric_property
     def _matcher(self):
         """Build (and cache) the vocabulary matcher for this metric's vocabulary + pipeline."""
         vocab = self.dataset.config.vocabularies[self.params.vocab]
