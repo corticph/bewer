@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple
 
 from bewer.alignment import OpType
@@ -12,17 +11,6 @@ if TYPE_CHECKING:
     from bewer.key_term.key_term import KeyTermMatch
 
 __all__: list[str] = []
-
-
-@dataclass
-class BUWEROutcomesParams(KeyTermParams):
-    """B-WER/U-WER metric parameters.
-
-    Inherits ``vocab`` and ``normalized`` (with validation) from
-    ``KeyTermParams``. The ``allow_subset_matches`` knob of the KTR family does
-    not apply here: B-WER/U-WER consume the union of covered token positions,
-    which is invariant under subset removal.
-    """
 
 
 class BUWEROutcome(NamedTuple):
@@ -133,11 +121,14 @@ class _BUWEROutcomes(Metric):
         "Le et al. (2021, arXiv:2104.02194): every alignment operation is attributed exactly "
         "once — substitutions and deletions by reference-token membership in the vocabulary, "
         "insertions by hypothesis-token membership — so B-WER and U-WER together form an exact "
-        "two-way split of plain WER. Not intended for direct use."
+        "two-way split of plain WER. Parameters are the lean KeyTermParams "
+        "(vocab, normalized); the KTR family's allow_subset_matches does not "
+        "apply — the union of covered token positions is invariant under subset "
+        "removal. Not intended for direct use."
     )
     example_cls = _BUWEROutcomes_
 
-    param_schema = BUWEROutcomesParams
+    param_schema = KeyTermParams
 
     @metric_property
     def _matcher(self):

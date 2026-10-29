@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
-from ._bu_wer_outcomes import BUWEROutcomesParams
+from ._keyterm_params import KeyTermParams
 
 __all__ = ["UWER"]
 
@@ -43,7 +43,7 @@ class UWER(Metric):
     )
     example_cls = UWER_
 
-    param_schema = BUWEROutcomesParams
+    param_schema = KeyTermParams
 
     @metric_property(is_dependency=True)
     def _bu_wer_outcomes(self):
