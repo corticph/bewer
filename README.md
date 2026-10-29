@@ -297,8 +297,8 @@ assert wer is dataset.metrics.wer(normalizer="default")
 | Key-Term False-Positive Rate | Key-term | `ktfpr` | [`>`](src/bewer/metrics/key_term/ktfpr.py) |
 | Key-Term Character Error Rate | Key-term | `ktcer` | [`>`](src/bewer/metrics/key_term/ktcer.py) |
 | Relaxed Key-Term Recall | Key-term | `rktr` | [`>`](src/bewer/metrics/key_term/rktr.py) |
-| Biased WER | Key-term | `b_wer` | [`>`](src/bewer/metrics/key_term/b_wer.py) |
-| Unbiased WER | Key-term | `u_wer` | [`>`](src/bewer/metrics/key_term/u_wer.py) |
+| Biased Word Error Rate | Key-term | `b_wer` | [`>`](src/bewer/metrics/key_term/b_wer.py) |
+| Unbiased Word Error Rate | Key-term | `u_wer` | [`>`](src/bewer/metrics/key_term/u_wer.py) |
 | **Orthographically complex terms** | | | |
 | Orthographically Complex Term Recall | Key-term | `orthographically_complex_term_recall` | [`>`](src/bewer/metrics/key_term/orthographically_complex_term.py) |
 | Orthographically Complex Term Precision | Key-term | `orthographically_complex_term_precision` | [`>`](src/bewer/metrics/key_term/orthographically_complex_term.py) |
