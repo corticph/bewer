@@ -1,16 +1,37 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple
 
 from bewer.alignment import OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
-
-from ._bu_wer_outcomes_params import BUWEROutcomesParams
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
 
 if TYPE_CHECKING:
     from bewer.key_term.key_term import KeyTermMatch
 
 __all__: list[str] = []
+
+
+@dataclass
+class BUWEROutcomesParams(MetricParams):
+    """Base class for B-WER/U-WER metric parameter dataclasses.
+
+    Subclass this with @dataclass (or use directly) to define B-WER/U-WER metric
+    parameters. Provides the common ``vocab`` and ``normalized`` fields, validates
+    them, and checks that the vocabulary exists on the dataset.
+
+    Attributes:
+        vocab: The vocabulary name to use for the biased/unbiased word split.
+        normalized: Whether to use normalized tokens for alignment and vocabulary matching.
+    """
+
+    vocab: str
+    normalized: bool = True
+
+    def validate(self) -> None:
+        """Validate the parameter values against the metric's dataset."""
+        if self.vocab not in self.metric.dataset.config.vocabularies:
+            raise ValueError(f"Vocabulary '{self.vocab}' not found in dataset config vocabularies.")
 
 
 class BUWEROutcome(NamedTuple):

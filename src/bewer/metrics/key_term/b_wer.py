@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
-from ._bu_wer_outcomes_params import BUWEROutcomesParams
+from ._bu_wer_outcomes import BUWEROutcomesParams
 
 __all__ = ["BWER"]
 
