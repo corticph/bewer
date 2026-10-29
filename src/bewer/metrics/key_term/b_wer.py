@@ -35,10 +35,10 @@ class BWER(Metric):
         "the biasing vocabulary (here: a `Vocabulary`), as defined by Le et al. "
         "(2021, arXiv:2104.02194) for contextual-biasing evaluation. Substitutions and "
         "deletions are attributed to B-WER when the reference token belongs to the "
-        "vocabulary; insertions when the hypothesis token does. "
+        "vocabulary. Insertions are attributed when the hypothesis token does. "
         "B-WER = num_biased_edits / num_biased_ref_tokens, and together with U-WER it forms "
         "an exact two-way split of plain WER. A word counts as in-vocabulary only when "
-        "its token belongs to a matched occurrence of a vocabulary term; the words of "
+        "its token belongs to a matched occurrence of a vocabulary term. The words of "
         'multi-token terms such as "blood sugar" count only inside a full match of '
         "that term."
     )

@@ -16,8 +16,8 @@ __all__: list[str] = []
 class BUWEROutcome(NamedTuple):
     """Per-example B-WER/U-WER statistics, following Le et al. (2021, arXiv:2104.02194).
 
-    Every alignment operation is attributed exactly once — substitutions and deletions
-    by their reference token, insertions by their hypothesis token — and the
+    Every alignment operation is attributed exactly once: substitutions and deletions
+    by their reference token, insertions by their hypothesis token. The
     denominator fields count every reference token exactly once. Consequently
     ``num_biased_edits + num_unbiased_edits`` equals plain WER's edit count and
     ``num_biased_ref_tokens + num_unbiased_ref_tokens`` equals the reference length.
@@ -118,12 +118,12 @@ class _BUWEROutcomes(Metric):
         "Private metric that computes the shared biased/unbiased WER statistics "
         "(num_biased_edits, num_unbiased_edits, num_biased_ref_tokens, num_unbiased_ref_tokens) "
         "used by B-WER (b_wer) and U-WER (u_wer), following the B-WER/U-WER protocol of "
-        "Le et al. (2021, arXiv:2104.02194): every alignment operation is attributed exactly "
-        "once — substitutions and deletions by reference-token membership in the vocabulary, "
-        "insertions by hypothesis-token membership — so B-WER and U-WER together form an exact "
+        "Le et al. (2021, arXiv:2104.02194). Every alignment operation is attributed exactly "
+        "once: substitutions and deletions by reference-token membership in the vocabulary, "
+        "insertions by hypothesis-token membership. B-WER and U-WER therefore form an exact "
         "two-way split of plain WER. Parameters are the lean KeyTermParams "
-        "(vocab, normalized); the KTR family's allow_subset_matches does not "
-        "apply — the union of covered token positions is invariant under subset "
+        "(vocab, normalized). The KTR family's allow_subset_matches does not "
+        "apply, since the union of covered token positions is invariant under subset "
         "removal. Not intended for direct use."
     )
     example_cls = _BUWEROutcomes_

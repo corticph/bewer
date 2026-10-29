@@ -35,7 +35,7 @@ class UWER(Metric):
         "the biasing vocabulary (here: a `Vocabulary`), as defined by Le et al. "
         "(2021, arXiv:2104.02194) for contextual-biasing evaluation. Substitutions and "
         "deletions are attributed to U-WER when the reference token does not belong to "
-        "the vocabulary; insertions when the hypothesis token does not. "
+        "the vocabulary. Insertions are attributed when the hypothesis token does not. "
         "U-WER = num_unbiased_edits / num_unbiased_ref_tokens, and together with B-WER it "
         "forms an exact two-way split of plain WER. A word counts as in-vocabulary "
         "only when its token belongs to a matched occurrence of a vocabulary term "
