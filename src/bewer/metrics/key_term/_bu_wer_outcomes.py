@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING, NamedTuple
 
 from bewer.alignment import OpType
@@ -56,24 +55,9 @@ class _BUWEROutcomes_(ExampleMetric):
         """Attribute every alignment operation to the biased or the unbiased side.
 
         Substitutions and deletions are attributed by their reference token,
-        insertions by their hypothesis token (Le et al., 2021). In
-        ``multi_token='occurrence'/'flag'`` mode a token is biased only when it is
-        part of a matched vocabulary term occurrence; in ``multi_token='split'``
-        mode a token is biased when it appears as a token of any vocabulary term.
+        insertions by their hypothesis token (Le et al., 2021). A token is
+        biased only when it is part of a matched vocabulary term occurrence.
         """
-        if self.params.multi_token == "flag":
-            terms = self.parent_metric._multi_token_terms
-            if terms:
-                warnings.warn(
-                    f"Vocabulary '{self.params.vocab}' contains multi-token term(s): {', '.join(terms)}. "
-                    "Occurrence semantics are used for multi-token terms: tokens of such terms only "
-                    "count as biased when they are part of a matched term occurrence. Use "
-                    "multi_token='split' for word-list semantics instead.",
-                    category=UserWarning,
-                )
-        split_mode = self.params.multi_token == "split"
-        vocab_tokens = self.parent_metric._vocab_tokens if split_mode else None
-
         alignment = self.parent_metric._alignment[self.example.index].alignment
         num_biased_errors = 0
         num_unbiased_errors = 0
@@ -81,21 +65,15 @@ class _BUWEROutcomes_(ExampleMetric):
         num_ref_other_tokens = 0
         for op in alignment:
             if op.type == OpType.INSERT:
-                if split_mode:
-                    biased = op.hyp in vocab_tokens
-                else:
-                    # Levenshtein operations tag their hypothesis token directly,
-                    # so insertion attribution is O(1) per operation.
-                    biased = op.hyp_token_idx in self._hyp_vocab_positions
+                # Levenshtein operations tag their hypothesis token directly,
+                # so insertion attribution is O(1) per operation.
+                biased = op.hyp_token_idx in self._hyp_vocab_positions
                 if biased:
                     num_biased_errors += 1
                 else:
                     num_unbiased_errors += 1
                 continue
-            if split_mode:
-                biased = op.ref in vocab_tokens
-            else:
-                biased = op.ref_token_idx in self._ref_vocab_positions
+            biased = op.ref_token_idx in self._ref_vocab_positions
             if op.type == OpType.MATCH:
                 if biased:
                     num_ref_vocab_tokens += 1
@@ -154,27 +132,6 @@ class _BUWEROutcomes(Metric):
         """Build (and cache) the vocabulary matcher for this metric's vocabulary + pipeline."""
         vocab = self.dataset.config.vocabularies[self.params.vocab]
         return vocab.build_matcher(self.dataset, normalized=self.params.normalized)
-
-    @metric_property(is_value=False)
-    def _vocab_tokens(self) -> frozenset[str]:
-        """The vocabulary's word list: every token of every term, individually."""
-        tokens: set[str] = set()
-        for key_term in self._matcher.key_terms:
-            if self.params.normalized:
-                tokens.update(key_term.tokens.normalized)
-            else:
-                tokens.update(key_term.tokens.standardized)
-        return frozenset(tokens)
-
-    @metric_property(is_value=False)
-    def _multi_token_terms(self) -> tuple[str, ...]:
-        """Vocabulary terms that tokenize to more than one token, sorted by raw text."""
-        terms: list[str] = []
-        for key_term in self._matcher.key_terms:
-            token_list = key_term.tokens.normalized if self.params.normalized else key_term.tokens.standardized
-            if len(token_list) > 1:
-                terms.append(key_term.raw)
-        return tuple(sorted(terms))
 
     @metric_property(is_dependency=True)
     def _alignment(self):

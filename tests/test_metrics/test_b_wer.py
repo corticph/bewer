@@ -50,13 +50,6 @@ class TestBWERExampleMetric:
         b_wer = dataset[3].metrics.b_wer(vocab="medical")
         assert b_wer.num_errors == 0
 
-    def test_partial_term_insert_biased_in_split_mode(self, dataset):
-        """Split semantics: a partial term insert becomes a biased error."""
-        b_wer = dataset[3].metrics.b_wer(vocab="medical", multi_token="split")
-        assert b_wer.num_errors == 1
-        assert b_wer.ref_length == 0
-        assert b_wer.value == 1.0
-
     def test_deletion_of_vocab_token(self):
         """B-WER counts a deleted vocab token."""
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
@@ -130,12 +123,11 @@ class TestBWERDatasetMetric:
 class TestBWERSplitOfWER:
     """Tests that B-WER and U-WER together form an exact split of plain WER."""
 
-    @pytest.mark.parametrize("multi_token", ["occurrence", "split"])
-    def test_errors_split_wer(self, multi_token):
-        """B-WER + U-WER errors equal plain WER edits, in both modes."""
+    def test_errors_split_wer(self):
+        """B-WER + U-WER errors equal plain WER edits."""
         dataset = _medical_dataset()
-        b_wer = dataset.metrics.b_wer(vocab="medical", multi_token=multi_token)
-        u_wer = dataset.metrics.u_wer(vocab="medical", multi_token=multi_token)
+        b_wer = dataset.metrics.b_wer(vocab="medical")
+        u_wer = dataset.metrics.u_wer(vocab="medical")
         wer = dataset.metrics.wer()
         assert b_wer.num_errors + u_wer.num_errors == wer.num_edits
         assert b_wer.ref_length + u_wer.ref_length == wer.ref_length
@@ -205,19 +197,3 @@ class TestBWERParameters:
         dataset = _medical_dataset()
         with pytest.raises(ValueError, match="Vocabulary 'animals' not found"):
             dataset.metrics.b_wer(vocab="animals")
-
-    def test_invalid_multi_token(self):
-        """Construction fails for an unknown multi_token mode."""
-        dataset = _medical_dataset()
-        with pytest.raises(ValueError, match="multi_token must be"):
-            dataset.metrics.b_wer(vocab="medical", multi_token="bogus")
-
-
-class TestBWERFlagWarning:
-    """Tests that flag-mode warnings surface through BWER."""
-
-    def test_flag_warns_for_multi_token_vocabulary(self):
-        """Flag mode warns, naming the multi-token terms."""
-        dataset = _medical_dataset()
-        with pytest.warns(UserWarning, match="blood pressure"):
-            dataset.metrics.b_wer(vocab="medical", multi_token="flag").value

@@ -37,12 +37,10 @@ class BWER(Metric):
         "deletions are attributed to B-WER when the reference token belongs to the "
         "vocabulary; insertions when the hypothesis token does. "
         "B-WER = biased_errors / num_ref_vocab_tokens, and together with U-WER it forms "
-        "an exact two-way split of plain WER. The `multi_token` parameter (default "
-        "'occurrence') controls vocabulary membership of multi-token terms: 'occurrence' "
-        "and 'flag' count a token as biased only when it is part of a matched term "
-        "occurrence ('flag' also warns when the vocabulary contains terms that tokenize "
-        "to multiple tokens); 'split' treats each term token as an individual "
-        "in-vocabulary word."
+        "an exact two-way split of plain WER. A word counts as in-vocabulary only when "
+        "its token belongs to a matched occurrence of a vocabulary term; the words of "
+        'multi-token terms such as "blood sugar" count only inside a full match of '
+        "that term."
     )
     example_cls = BWER_
 
@@ -54,7 +52,6 @@ class BWER(Metric):
         return self.dataset.metrics._bu_wer_outcomes(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
-            multi_token=self.params.multi_token,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

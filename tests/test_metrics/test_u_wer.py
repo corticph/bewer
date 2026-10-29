@@ -53,13 +53,6 @@ class TestUWERExampleMetric:
         assert u_wer.ref_length == 1
         assert u_wer.value == 1.0
 
-    def test_partial_term_insert_excluded_in_split_mode(self, dataset):
-        """Split semantics: a partial term insert no longer an unbiased error."""
-        u_wer = dataset[3].metrics.u_wer(vocab="medical", multi_token="split")
-        assert u_wer.num_errors == 0
-        assert u_wer.ref_length == 1
-        assert u_wer.value == 0.0
-
     def test_substitution_of_non_vocab_token(self):
         """A non-vocab substitution counts as an unbiased error."""
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
@@ -121,12 +114,11 @@ class TestUWERDatasetMetric:
 class TestUWERSplitOfWER:
     """Tests that U-WER pairs with B-WER into an exact split of plain WER."""
 
-    @pytest.mark.parametrize("multi_token", ["occurrence", "split"])
-    def test_errors_split_wer(self, multi_token):
-        """U-WER + B-WER errors equal plain WER edits, in both modes."""
+    def test_errors_split_wer(self):
+        """U-WER + B-WER errors equal plain WER edits."""
         dataset = _medical_dataset()
-        u_wer = dataset.metrics.u_wer(vocab="medical", multi_token=multi_token)
-        b_wer = dataset.metrics.b_wer(vocab="medical", multi_token=multi_token)
+        u_wer = dataset.metrics.u_wer(vocab="medical")
+        b_wer = dataset.metrics.b_wer(vocab="medical")
         wer = dataset.metrics.wer()
         assert u_wer.num_errors + b_wer.num_errors == wer.num_edits
         assert u_wer.ref_length + b_wer.ref_length == wer.ref_length
@@ -196,13 +188,3 @@ class TestUWERParameters:
         dataset = _medical_dataset()
         with pytest.raises(ValueError, match="Vocabulary 'animals' not found"):
             dataset.metrics.u_wer(vocab="animals")
-
-
-class TestUWERFlagWarning:
-    """Tests that flag-mode warnings surface through UWER."""
-
-    def test_flag_warns_for_multi_token_vocabulary(self):
-        """Flag mode warns, naming the multi-token terms."""
-        dataset = _medical_dataset()
-        with pytest.warns(UserWarning, match="blood pressure"):
-            dataset.metrics.u_wer(vocab="medical", multi_token="flag").value

@@ -33,9 +33,6 @@ class KeyTermTrie:
         self.normalized = normalized
         self.add_capitalized = add_capitalized
 
-        # The input terms, kept for introspection (e.g. multi-token term detection).
-        self._key_terms = frozenset(key_terms)
-
         # (key_term, token_pattern) pairs, keeping each pattern tied to its originating
         # key term so matches can report which KeyTerm they were identified as. Iterate in
         # a stable order (by raw text) so that when distinct key terms collapse to the same
@@ -68,16 +65,6 @@ class KeyTermTrie:
                 self._automaton.add_word(int_pattern, (len(pattern), key_term))
                 seen.add(int_pattern)
         self._automaton.make_automaton()
-
-    @property
-    def key_terms(self) -> frozenset[KeyTerm]:
-        """The key terms this trie was built from.
-
-        Includes every input term, also when distinct terms collapse to the same
-        token pattern (first-wins de-duplication in the automaton drops the duplicate
-        pattern, not the term here).
-        """
-        return self._key_terms
 
     def encode(self, tokens: TokenList) -> tuple[int, ...]:
         """Encode a token list into the trie's integer vocabulary."""

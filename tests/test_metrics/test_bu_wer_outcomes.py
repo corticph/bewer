@@ -1,7 +1,5 @@
 """Tests for the private _BUWEROutcomes metric shared by B-WER and U-WER."""
 
-import warnings
-
 import pytest
 
 from bewer import Dataset, Vocabulary, get_config
@@ -102,69 +100,6 @@ class TestBUWEROutcomesAttribution:
         assert stats.num_ref_other_tokens == 0
 
 
-class TestBUWEROutcomesMultiTokenModes:
-    """Tests for the multi_token parameter modes."""
-
-    @pytest.fixture
-    def dataset(self):
-        return _medical_dataset()
-
-    def test_split_counts_term_tokens_individually(self, dataset):
-        """Split mode: every term token is an individual in-vocab word."""
-        stats = dataset[3].metrics._bu_wer_outcomes(vocab="medical", multi_token="split")
-        # "blood" alone is a term token, so the partial insert becomes biased.
-        assert stats.num_biased_errors == 1
-        assert stats.num_unbiased_errors == 0
-        assert stats.num_ref_vocab_tokens == 0
-        assert stats.num_ref_other_tokens == 1
-
-    def test_flag_matches_occurrence_counts(self, dataset):
-        """Flag mode gives the same counts as occurrence mode."""
-        occurrence = dataset[3].metrics._bu_wer_outcomes(vocab="medical")
-        flag = dataset[3].metrics._bu_wer_outcomes(vocab="medical", multi_token="flag")
-        assert (
-            flag.num_biased_errors,
-            flag.num_unbiased_errors,
-            flag.num_ref_vocab_tokens,
-            flag.num_ref_other_tokens,
-        ) == (
-            occurrence.num_biased_errors,
-            occurrence.num_unbiased_errors,
-            occurrence.num_ref_vocab_tokens,
-            occurrence.num_ref_other_tokens,
-        )
-
-    def test_flag_warns_about_multi_token_terms(self, dataset):
-        """Flag mode warns, naming the multi-token vocabulary terms."""
-        with pytest.warns(UserWarning, match="blood pressure"):
-            dataset[3].metrics._bu_wer_outcomes(vocab="medical", multi_token="flag").num_biased_errors
-
-    def test_occurrence_does_not_warn(self, dataset):
-        """Occurrence mode stays silent about multi-token terms."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            dataset[3].metrics._bu_wer_outcomes(vocab="medical").num_biased_errors
-
-    def test_flag_silent_for_single_token_vocabulary(self):
-        """Flag mode does not warn when every term tokenizes to a single token."""
-        dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["fox"])))
-        dataset.add(ref="the fox jumps", hyp="the dog jumps")
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            dataset[0].metrics._bu_wer_outcomes(vocab="animals", multi_token="flag").num_biased_errors
-
-    def test_split_requires_no_term_occurrence(self, dataset):
-        """Split-mode inserts: only word membership matters, not occurrence."""
-        # Example 2 inserts the whole term: still biased in split mode.
-        stats = dataset[2].metrics._bu_wer_outcomes(vocab="medical", multi_token="split")
-        assert stats.num_biased_errors == 2
-        assert stats.num_unbiased_errors == 0
-        # Example 1 inserts two non-vocab words: still unbiased in split mode.
-        stats = dataset[1].metrics._bu_wer_outcomes(vocab="medical", multi_token="split")
-        assert stats.num_biased_errors == 0
-        assert stats.num_unbiased_errors == 2
-
-
 class TestBUWEROutcomesDecomposition:
     """Tests that B/U statistics always form an exact split of plain WER."""
 
@@ -172,10 +107,9 @@ class TestBUWEROutcomesDecomposition:
     def dataset(self):
         return _medical_dataset()
 
-    @pytest.mark.parametrize("multi_token", ["occurrence", "split", "flag"])
-    def test_exact_split_of_wer(self, dataset, multi_token):
+    def test_exact_split_of_wer(self, dataset):
         """Biased + unbiased errors equal WER edits; denominators equal reference length."""
-        stats = dataset.metrics._bu_wer_outcomes(vocab="medical", multi_token=multi_token)
+        stats = dataset.metrics._bu_wer_outcomes(vocab="medical")
         wer = dataset.metrics.wer()
         assert stats.num_biased_errors + stats.num_unbiased_errors == wer.num_edits
         assert stats.num_ref_vocab_tokens + stats.num_ref_other_tokens == wer.ref_length
@@ -280,8 +214,3 @@ class TestBUWEROutcomesParameters:
         """Metric construction fails for a vocabulary not attached to the dataset."""
         with pytest.raises(ValueError, match="Vocabulary 'animals' not found"):
             dataset.metrics._bu_wer_outcomes(vocab="animals")
-
-    def test_invalid_multi_token(self, dataset):
-        """Multi-token mode must be 'occurrence', 'flag', or 'split'."""
-        with pytest.raises(ValueError, match="multi_token must be"):
-            dataset.metrics._bu_wer_outcomes(vocab="medical", multi_token="bogus")

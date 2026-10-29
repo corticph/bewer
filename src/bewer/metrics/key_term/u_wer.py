@@ -37,9 +37,9 @@ class UWER(Metric):
         "deletions are attributed to U-WER when the reference token does not belong to "
         "the vocabulary; insertions when the hypothesis token does not. "
         "U-WER = unbiased_errors / num_ref_other_tokens, and together with B-WER it "
-        "forms an exact two-way split of plain WER. The `multi_token` parameter "
-        "(default 'occurrence') controls vocabulary membership of multi-token terms — "
-        "see B-WER for the semantics of 'occurrence', 'flag', and 'split'."
+        "forms an exact two-way split of plain WER. A word counts as in-vocabulary "
+        "only when its token belongs to a matched occurrence of a vocabulary term "
+        "(see B-WER)."
     )
     example_cls = UWER_
 
@@ -51,7 +51,6 @@ class UWER(Metric):
         return self.dataset.metrics._bu_wer_outcomes(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
-            multi_token=self.params.multi_token,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,
