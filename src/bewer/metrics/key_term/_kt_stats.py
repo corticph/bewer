@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from bewer.alignment import Alignment, OpType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
-from ._keyterm_params import KeyTermParams
+from ._keyterm_params import KeyTermSubsetParams
 
 if TYPE_CHECKING:
     from bewer.key_term.key_term import KeyTermMatch
@@ -191,7 +191,7 @@ class _KTStats(Metric):
     example_cls = _KTStats_
 
     @dataclass
-    class param_schema(KeyTermParams):
+    class param_schema(KeyTermSubsetParams):
         """Parameters for the _KTStats metric.
 
         Attributes:
