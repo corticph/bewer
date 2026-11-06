@@ -35,7 +35,7 @@ class KeyTermSubsetParams(KeyTermParams):
 
     Adds ``allow_subset_matches`` on top of :class:`KeyTermParams` for metrics
     that consume the matched-term list (KTR, KTP, KTF, KTFPR, KTCER, RKTR, KTER,
-    and the hidden stats metrics). Position-based consumers such as
+    and the hidden outcomes metrics). Position-based consumers such as
     B-WER/U-WER derive from :class:`KeyTermParams` directly: the union of
     covered token positions is invariant under subset removal, so subset
     matching cannot affect their counts.

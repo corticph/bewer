@@ -224,11 +224,11 @@ class TestDependencyDecorator:
         assert result1 is result2
         assert call_count == 1
 
-    def test_ktp_has_kt_stats_dependency(self):
-        """Test that KTP registers _kt_stats as a dependency."""
+    def test_ktp_has_kt_outcomes_dependency(self):
+        """Test that KTP registers _kt_outcomes as a dependency."""
         from bewer.metrics.key_term.ktp import KTP
 
-        assert "_kt_stats" in KTP.dependencies()
+        assert "_kt_outcomes" in KTP.dependencies()
 
 
 class TestMetricRegistry:

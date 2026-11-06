@@ -138,7 +138,7 @@ class _BUWEROutcomes(Metric):
 
     @metric_property(is_dependency=True)
     def _alignment(self):
-        """The shared Levenshtein alignment instance, as in `_kt_stats`."""
+        """The shared Levenshtein alignment instance, as in `_kt_outcomes`."""
         return self.dataset.metrics.levenshtein(
             normalized=self.params.normalized,
             standardizer=self.standardizer,

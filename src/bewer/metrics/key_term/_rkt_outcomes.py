@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 __all__: list[str] = []
 
 
-class TermStat(NamedTuple):
+class TermOutcome(NamedTuple):
     """Per-term edit statistics and alignment segment for a ref key term match."""
 
     char_edits: int
@@ -63,7 +63,7 @@ def _join_op_hyps(ops: Alignment) -> str:
     return joined.strip()
 
 
-class _RKTStats_(ExampleMetric):
+class _RKTOutcomes_(ExampleMetric):
     @metric_property(is_value=True)
     def ref_matches(self) -> list[KeyTermMatch]:
         """Key term matches found in the reference text."""
@@ -73,8 +73,8 @@ class _RKTStats_(ExampleMetric):
         )
 
     @metric_property(is_value=True)
-    def term_stats(self) -> list[TermStat]:
-        """Compute TermStat for each ref key term match.
+    def term_outcomes(self) -> list[TermOutcome]:
+        """Compute TermOutcome for each ref key term match.
 
         Alignment is derived from error_align. Results are threshold-agnostic so
         this metric can be shared across RKTR instances with different thresholds.
@@ -83,7 +83,7 @@ class _RKTStats_(ExampleMetric):
         if not key_term_matches:
             return []
         alignment = self.parent_metric._error_align[self.example.index].alignment
-        stats: list[TermStat] = []
+        outcomes: list[TermOutcome] = []
         for kt_match in key_term_matches:
             op_start = alignment.ref_index_mapping.get(kt_match.start)
             op_stop = alignment.ref_index_mapping.get(kt_match.stop - 1) + 1
@@ -92,8 +92,8 @@ class _RKTStats_(ExampleMetric):
             hyp_text = _join_op_hyps(segment)
             char_edits = Levenshtein.distance(hyp_text, ref_text)
             char_edits += int(segment[0].hyp_left_partial) + int(segment[-1].hyp_right_partial)
-            stats.append(TermStat(char_edits=char_edits, ref_chars=len(ref_text), segment=segment))
-        return stats
+            outcomes.append(TermOutcome(char_edits=char_edits, ref_chars=len(ref_text), segment=segment))
+        return outcomes
 
     @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
@@ -101,21 +101,21 @@ class _RKTStats_(ExampleMetric):
         return len(self.ref_matches)
 
 
-@METRIC_REGISTRY.register("_rkt_stats", tokenizer="key_term")
-class _RKTStats(Metric):
-    short_name_base = "_RKTStats"
-    long_name_base = "Relaxed Key-Term Statistics"
+@METRIC_REGISTRY.register("_rkt_outcomes", tokenizer="key_term")
+class _RKTOutcomes(Metric):
+    short_name_base = "_RKTOutcomes"
+    long_name_base = "Relaxed Key-Term Outcomes"
     description = (
         "Private metric that computes per-term character edit distance statistics for relaxed key term "
         "metrics. Stores (char_edits, ref_chars) per key term match using error_align alignment, without "
         "applying any threshold. Intended to be shared across RKTR instances with different thresholds. "
         "Not intended for direct use."
     )
-    example_cls = _RKTStats_
+    example_cls = _RKTOutcomes_
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
-        """Parameters for the _RKTStats metric.
+        """Parameters for the _RKTOutcomes metric.
 
         Attributes:
             vocab: The vocabulary name to use for key term identification.

@@ -350,13 +350,13 @@ class TestKeyTermIndicators:
         )
         example = dataset[0]
         alignment = example.metrics.levenshtein().alignment
-        # Matches come from the dataset's _kt_stats metric, following the displayed
+        # Matches come from the dataset's _kt_outcomes metric, following the displayed
         # alignment's pipeline (mirrors render_report_html's wiring).
         alignment_metric = dataset.metrics.get("levenshtein")()
-        kt_stats = dataset.metrics.get("_kt_stats")(
+        kt_outcomes = dataset.metrics.get("_kt_outcomes")(
             vocab="overlapping", allow_subset_matches=True, **_kt_match_overrides(alignment_metric)
         )
-        matches = kt_stats[0].ref_matches
+        matches = kt_outcomes[0].ref_matches
         start_indices, stop_indices, _ = _key_term_indicator_sets(alignment, matches)
         # "brown" ends at its own op and "brown fox" ends at fox's op — two distinct stop indices
         assert len(stop_indices) > len(start_indices)

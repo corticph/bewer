@@ -13,20 +13,20 @@ class KTR_(ExampleMetric):
     @metric_property(is_value=True)
     def num_matches(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis text."""
-        return self.parent_metric._kt_stats[self.example.index].num_tp
+        return self.parent_metric._kt_outcomes[self.example.index].num_tp
 
     @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
-        return self.parent_metric._kt_stats[self.example.index].num_ref_terms
+        return self.parent_metric._kt_outcomes[self.example.index].num_ref_terms
 
     @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level key term recall."""
-        stats = self.parent_metric._kt_stats[self.example.index]
-        if (stats.num_tp + stats.num_fn) == 0:
+        outcomes = self.parent_metric._kt_outcomes[self.example.index]
+        if (outcomes.num_tp + outcomes.num_fn) == 0:
             return 0.0
-        return stats.num_tp / (stats.num_tp + stats.num_fn)
+        return outcomes.num_tp / (outcomes.num_tp + outcomes.num_fn)
 
 
 @METRIC_REGISTRY.register("ktr", tokenizer="key_term")
@@ -59,9 +59,9 @@ class KTR(Metric):
         partial_credit: bool = False
 
     @metric_property(is_dependency=True)
-    def _kt_stats(self):
-        """Get the shared _KTStats metric instance."""
-        return self.dataset.metrics._kt_stats(
+    def _kt_outcomes(self):
+        """Get the shared _KTOutcomes metric instance."""
+        return self.dataset.metrics._kt_outcomes(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
@@ -74,16 +74,16 @@ class KTR(Metric):
     @metric_property(is_value=True)
     def num_matches(self) -> int:
         """Get the number of correctly transcribed key term units (occurrences or token positions)."""
-        return self._kt_stats.num_tp
+        return self._kt_outcomes.num_tp
 
     @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference texts."""
-        return self._kt_stats.num_ref_terms
+        return self._kt_outcomes.num_ref_terms
 
     @metric_property(is_main=True)
     def value(self) -> float:
         """Get the key term recall."""
-        if (self._kt_stats.num_tp + self._kt_stats.num_fn) == 0:
+        if (self._kt_outcomes.num_tp + self._kt_outcomes.num_fn) == 0:
             return 0.0
-        return self._kt_stats.num_tp / (self._kt_stats.num_tp + self._kt_stats.num_fn)
+        return self._kt_outcomes.num_tp / (self._kt_outcomes.num_tp + self._kt_outcomes.num_fn)

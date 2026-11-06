@@ -13,12 +13,12 @@ class KTFPR_(ExampleMetric):
     @metric_property(is_value=True)
     def num_fp(self) -> int:
         """Get the number of spurious key term token positions in the hypothesis text."""
-        return self.parent_metric._kt_stats[self.example.index].num_fp
+        return self.parent_metric._kt_outcomes[self.example.index].num_fp
 
     @metric_property(is_value=True)
     def num_ref_tokens(self) -> int:
         """Get the number of reference tokens (N_R) for this example."""
-        return self.parent_metric._kt_stats[self.example.index].num_ref_tokens
+        return self.parent_metric._kt_outcomes[self.example.index].num_ref_tokens
 
     @metric_property(is_main=True)
     def value(self) -> float:
@@ -65,9 +65,9 @@ class KTFPR(Metric):
             super().validate()
 
     @metric_property(is_dependency=True)
-    def _kt_stats(self):
-        """Get the shared _KTStats metric instance."""
-        return self.dataset.metrics._kt_stats(
+    def _kt_outcomes(self):
+        """Get the shared _KTOutcomes metric instance."""
+        return self.dataset.metrics._kt_outcomes(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 __all__: list[str] = []
 
 
-class _KTStats_(ExampleMetric):
+class _KTOutcomes_(ExampleMetric):
     @metric_property(is_value=True)
     def ref_matches(self) -> list[KeyTermMatch]:
         """Key term matches found in the reference text."""
@@ -174,10 +174,10 @@ class _KTStats_(ExampleMetric):
         return len(self.fp_alignments)
 
 
-@METRIC_REGISTRY.register("_kt_stats", tokenizer="key_term")
-class _KTStats(Metric):
-    short_name_base = "_KTStats"
-    long_name_base = "Key-Term Statistics"
+@METRIC_REGISTRY.register("_kt_outcomes", tokenizer="key_term")
+class _KTOutcomes(Metric):
+    short_name_base = "_KTOutcomes"
+    long_name_base = "Key-Term Outcomes"
     description = (
         "Private metric that computes shared key term statistics (num_ref_terms, num_hyp_terms, TP, FN, FP) "
         "used by KTR, KTER, KTP, and KTF. Not intended for direct use. "
@@ -188,11 +188,11 @@ class _KTStats(Metric):
         "allow_subset_matches=False and the ref matches a longer superset phrase (e.g. ref matches "
         "'hello world' but hyp only matches the subset 'world')."
     )
-    example_cls = _KTStats_
+    example_cls = _KTOutcomes_
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
-        """Parameters for the _KTStats metric.
+        """Parameters for the _KTOutcomes metric.
 
         Attributes:
             vocab: The vocabulary name to use for key term identification.

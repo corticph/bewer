@@ -6,12 +6,12 @@ from bewer.alignment import Alignment
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 from ._keyterm_params import KeyTermSubsetParams
-from ._rkt_stats import TermStat
+from ._rkt_outcomes import TermOutcome
 
 __all__ = ["RKTR"]
 
 
-def _is_tp(ts: TermStat, threshold: float) -> bool:
+def _is_tp(ts: TermOutcome, threshold: float) -> bool:
     """Return True if a term's char CER is at or below the threshold."""
     cer = ts.char_edits / ts.ref_chars if ts.ref_chars else float(ts.char_edits)
     return cer <= threshold
@@ -21,14 +21,14 @@ class RKTR_(ExampleMetric):
     @metric_property(is_value=True)
     def tp_alignments(self) -> list[Alignment]:
         """Get alignment segments for each key term classified as TP."""
-        stats = self.parent_metric._rkt_stats[self.example.index].term_stats
-        return [ts.segment for ts in stats if _is_tp(ts, self.params.threshold)]
+        outcomes = self.parent_metric._rkt_outcomes[self.example.index].term_outcomes
+        return [ts.segment for ts in outcomes if _is_tp(ts, self.params.threshold)]
 
     @metric_property(is_value=True)
     def fn_alignments(self) -> list[Alignment]:
         """Get alignment segments for each key term classified as FN."""
-        stats = self.parent_metric._rkt_stats[self.example.index].term_stats
-        return [ts.segment for ts in stats if not _is_tp(ts, self.params.threshold)]
+        outcomes = self.parent_metric._rkt_outcomes[self.example.index].term_outcomes
+        return [ts.segment for ts in outcomes if not _is_tp(ts, self.params.threshold)]
 
     @metric_property(is_value=True)
     def num_relaxed_matches(self) -> int:
@@ -38,7 +38,7 @@ class RKTR_(ExampleMetric):
     @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
-        return self.parent_metric._rkt_stats[self.example.index].num_ref_terms
+        return self.parent_metric._rkt_outcomes[self.example.index].num_ref_terms
 
     @metric_property(is_main=True)
     def value(self) -> float:
@@ -79,9 +79,9 @@ class RKTR(Metric):
             super().validate()
 
     @metric_property(is_dependency=True)
-    def _rkt_stats(self):
-        """Get the shared _RKTStats metric instance."""
-        return self.dataset.metrics._rkt_stats(
+    def _rkt_outcomes(self):
+        """Get the shared _RKTOutcomes metric instance."""
+        return self.dataset.metrics._rkt_outcomes(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
@@ -94,14 +94,14 @@ class RKTR(Metric):
     def num_relaxed_matches(self) -> int:
         """Get the number of key terms classified as TP across all hypothesis texts."""
         return sum(
-            sum(1 for ts in self._rkt_stats[ex.index].term_stats if _is_tp(ts, self.params.threshold))
+            sum(1 for ts in self._rkt_outcomes[ex.index].term_outcomes if _is_tp(ts, self.params.threshold))
             for ex in self._src
         )
 
     @metric_property(is_value=True)
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference texts."""
-        return self._rkt_stats.num_ref_terms
+        return self._rkt_outcomes.num_ref_terms
 
     @metric_property(is_main=True)
     def value(self) -> float:
