@@ -302,14 +302,14 @@ class TestKTERMetricAttributes:
         assert kter1 is kter2
 
 
-class TestKTERSharesKTStats:
-    """Tests that KTER and KTR share the same _KTStats instance."""
+class TestKTERSharesKTOutcomes:
+    """Tests that KTER and KTR share the same _KTOutcomes instance."""
 
-    def test_kter_and_ktr_share_kt_stats(self):
-        """Test that KTER and KTR with identical params use the same cached _KTStats instance."""
+    def test_kter_and_ktr_share_kt_outcomes(self):
+        """Test that KTER and KTR with identical params use the same cached _KTOutcomes instance."""
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["fox"]))
         dataset = Dataset(config=config)
         dataset.add(ref="the fox jumps", hyp="the fox jumps")
         kter = dataset.metrics.kter(vocab="animals")
         ktr = dataset.metrics.ktr(vocab="animals")
-        assert kter._kt_stats is ktr._kt_stats
+        assert kter._kt_outcomes is ktr._kt_outcomes

@@ -13,12 +13,12 @@ class KTF_(ExampleMetric):
     @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level key term F-score."""
-        stats = self.parent_metric._kt_stats[self.example.index]
+        outcomes = self.parent_metric._kt_outcomes[self.example.index]
         beta_sq = self.params.beta**2
-        denominator = (1 + beta_sq) * stats.num_tp + beta_sq * stats.num_fn + stats.num_fp
+        denominator = (1 + beta_sq) * outcomes.num_tp + beta_sq * outcomes.num_fn + outcomes.num_fp
         if denominator == 0:
             return 0.0
-        return (1 + beta_sq) * stats.num_tp / denominator
+        return (1 + beta_sq) * outcomes.num_tp / denominator
 
 
 @METRIC_REGISTRY.register("ktf", tokenizer="key_term")
@@ -60,9 +60,9 @@ class KTF(Metric):
             super().validate()
 
     @metric_property(is_dependency=True)
-    def _kt_stats(self):
-        """Get the shared _KTStats metric instance."""
-        return self.dataset.metrics._kt_stats(
+    def _kt_outcomes(self):
+        """Get the shared _KTOutcomes metric instance."""
+        return self.dataset.metrics._kt_outcomes(
             vocab=self.params.vocab,
             normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
@@ -76,7 +76,9 @@ class KTF(Metric):
     def value(self) -> float:
         """Get the key term F-score."""
         beta_sq = self.params.beta**2
-        denominator = (1 + beta_sq) * self._kt_stats.num_tp + beta_sq * self._kt_stats.num_fn + self._kt_stats.num_fp
+        denominator = (
+            (1 + beta_sq) * self._kt_outcomes.num_tp + beta_sq * self._kt_outcomes.num_fn + self._kt_outcomes.num_fp
+        )
         if denominator == 0:
             return 0.0
-        return (1 + beta_sq) * self._kt_stats.num_tp / denominator
+        return (1 + beta_sq) * self._kt_outcomes.num_tp / denominator

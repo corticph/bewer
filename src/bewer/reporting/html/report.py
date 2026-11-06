@@ -99,7 +99,7 @@ def _refs_match(datasets: list["Dataset"]) -> bool:
 
 
 def _kt_match_overrides(alignment_metric: "Metric") -> dict[str, Any]:
-    """Pipeline fields of the displayed alignment, for the ``_kt_stats`` request.
+    """Pipeline fields of the displayed alignment, for the ``_kt_outcomes`` request.
 
     Match indices only map into the rendered alignment when both live in the same
     token view, so the key-term metric inherits the alignment's pipeline rather
@@ -119,7 +119,7 @@ def _kt_match_overrides(alignment_metric: "Metric") -> dict[str, Any]:
 def _resolve_matches(dataset: "Dataset", report_alignment: ReportAlignment) -> list[Any]:
     """Reference-side key term matches per example, for alignment highlighting.
 
-    Collected from the dataset's ``_kt_stats`` metric — the primary key-term
+    Collected from the dataset's ``_kt_outcomes`` metric — the primary key-term
     matcher — so each vocabulary's matcher is built once per dataset and the
     result is cached on the dataset's metric collection. With no vocabularies
     configured, all examples get empty matches.
@@ -134,9 +134,9 @@ def _resolve_matches(dataset: "Dataset", report_alignment: ReportAlignment) -> l
         if overrides is None:
             alignment_metric = dataset.metrics.get(report_alignment.name)(**report_alignment.metric_kwargs)
             overrides = _kt_match_overrides(alignment_metric)
-        kt_stats = dataset.metrics.get("_kt_stats")(vocab=vocab_name, **overrides)
+        kt_outcomes = dataset.metrics.get("_kt_outcomes")(vocab=vocab_name, **overrides)
         for ex_idx in range(len(dataset)):
-            merged[ex_idx].extend(kt_stats[ex_idx].ref_matches)
+            merged[ex_idx].extend(kt_outcomes[ex_idx].ref_matches)
     return merged
 
 

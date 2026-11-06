@@ -200,7 +200,7 @@ def compute(
 
     With ``isolate=True`` (default) each metric is computed on its OWN freshly built
     dataset, so a metric that shares an underlying computation with another (e.g. KTCER
-    and RKTR both build the error_align alignment; the KT-family shares _kt_stats) pays
+    and RKTR both build the error_align alignment; the KT-family shares _kt_outcomes) pays
     its full cost rather than being deflated by a warm cache left behind by a sibling.
     The timing then reflects each metric's true isolated cost (incl. lazy preprocessing
     and shared dependencies) from a cold state.

@@ -1,4 +1,4 @@
-"""Tests for partial-credit counts in _KTStats and the public KT metrics."""
+"""Tests for partial-credit counts in _KTOutcomes and the public KT metrics."""
 
 import pytest
 
@@ -16,16 +16,16 @@ class TestPartialCreditStatsExactMatchEquivalence:
 
     def test_tp_single_token_correct(self):
         ds = _dataset("the fox jumps", "the fox jumps", ["fox"])
-        exact = ds[0].metrics._kt_stats(vocab="vocab")
-        partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
+        exact = ds[0].metrics._kt_outcomes(vocab="vocab")
+        partial = ds[0].metrics._kt_outcomes(vocab="vocab", partial_credit=True)
         assert partial.num_tp == exact.num_tp == 1
         assert partial.num_fn == exact.num_fn == 0
         assert partial.num_fp == exact.num_fp == 0
 
     def test_fn_single_token_substitution(self):
         ds = _dataset("the fox jumps", "the dog jumps", ["fox"])
-        exact = ds[0].metrics._kt_stats(vocab="vocab")
-        partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
+        exact = ds[0].metrics._kt_outcomes(vocab="vocab")
+        partial = ds[0].metrics._kt_outcomes(vocab="vocab", partial_credit=True)
         assert partial.num_tp == exact.num_tp == 0
         assert partial.num_fn == exact.num_fn == 1
         assert partial.num_fp == exact.num_fp == 0
@@ -33,8 +33,8 @@ class TestPartialCreditStatsExactMatchEquivalence:
     def test_fp_single_token_insertion(self):
         # hyp inserts a vocab term not present in ref
         ds = _dataset("the jumps", "the fox jumps", ["fox"])
-        exact = ds[0].metrics._kt_stats(vocab="vocab")
-        partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
+        exact = ds[0].metrics._kt_outcomes(vocab="vocab")
+        partial = ds[0].metrics._kt_outcomes(vocab="vocab", partial_credit=True)
         assert partial.num_tp == exact.num_tp == 0
         assert partial.num_fn == exact.num_fn == 0
         assert partial.num_fp == exact.num_fp == 1
@@ -46,8 +46,8 @@ class TestPartialCreditMultiToken:
     def test_correct_multitoken_tp(self):
         # exact-match: 1 TP occurrence; partial-credit: 2 TP positions (both tokens matched)
         ds = _dataset("blood sugar levels", "blood sugar levels", ["blood sugar"])
-        exact = ds[0].metrics._kt_stats(vocab="vocab")
-        partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
+        exact = ds[0].metrics._kt_outcomes(vocab="vocab")
+        partial = ds[0].metrics._kt_outcomes(vocab="vocab", partial_credit=True)
         assert exact.num_tp == 1
         assert partial.num_tp == 2
         assert partial.num_fn == 0
@@ -58,8 +58,8 @@ class TestPartialCreditMultiToken:
         # exact-match: 0 TP, 1 FN (whole term fails)
         # partial-credit: 1 TP (blood), 1 FN (sugar→sweet)
         ds = _dataset("blood sugar", "blood sweet", ["blood sugar"])
-        exact = ds[0].metrics._kt_stats(vocab="vocab")
-        partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
+        exact = ds[0].metrics._kt_outcomes(vocab="vocab")
+        partial = ds[0].metrics._kt_outcomes(vocab="vocab", partial_credit=True)
         assert exact.num_tp == 0
         assert exact.num_fn == 1
         assert partial.num_tp == 1
@@ -71,8 +71,8 @@ class TestPartialCreditMultiToken:
         # exact-match: 0 TP, 1 FN (whole term span contains an insertion)
         # partial-credit: 2 TP (both constituent tokens matched), insertion not penalised per-token
         ds = _dataset("blood sugar", "blood sweet sugar", ["blood sugar"])
-        exact = ds[0].metrics._kt_stats(vocab="vocab")
-        partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
+        exact = ds[0].metrics._kt_outcomes(vocab="vocab")
+        partial = ds[0].metrics._kt_outcomes(vocab="vocab", partial_credit=True)
         assert exact.num_tp == 0
         assert exact.num_fn == 1
         assert partial.num_tp == 2
@@ -83,8 +83,8 @@ class TestPartialCreditMultiToken:
         # ref has no "blood sugar"; hyp inserts it
         # exact-match: 1 FP occurrence; partial-credit: 2 FP positions (both inserted tokens inside I_H)
         ds = _dataset("the levels", "the blood sugar levels", ["blood sugar"])
-        exact = ds[0].metrics._kt_stats(vocab="vocab")
-        partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
+        exact = ds[0].metrics._kt_outcomes(vocab="vocab")
+        partial = ds[0].metrics._kt_outcomes(vocab="vocab", partial_credit=True)
         assert exact.num_fp == 1
         assert partial.num_fp == 2
         assert partial.num_tp == 0
@@ -101,7 +101,7 @@ class TestPartialCreditPositionDeduplication:
         # Alignment: MATCH(blood), SUBSTITUTE(sugar→sweet)
         # partial-credit: TP=1 (pos 0 matched), FN=1 (pos 1 not matched), FP=0 (hyp "blood" matched so not FP)
         ds = _dataset("blood sugar", "blood sweet", ["blood", "blood sugar"])
-        partial = ds[0].metrics._kt_stats(vocab="vocab", partial_credit=True)
+        partial = ds[0].metrics._kt_outcomes(vocab="vocab", partial_credit=True)
         assert partial.num_tp == 1
         assert partial.num_fn == 1
         assert partial.num_fp == 0
@@ -174,10 +174,10 @@ class TestPartialCreditDatasetLevel:
         ds.add(ref="blood sugar levels", hyp="blood sugar levels")  # partial-credit: TP=2
         ds.add(ref="blood sugar levels", hyp="blood sweet levels")  # partial-credit: TP=1, FN=1
 
-        stats = ds.metrics._kt_stats(vocab="terms", partial_credit=True)
-        assert stats.num_tp == 3
-        assert stats.num_fn == 1
-        assert stats.num_fp == 0
+        outcomes = ds.metrics._kt_outcomes(vocab="terms", partial_credit=True)
+        assert outcomes.num_tp == 3
+        assert outcomes.num_fn == 1
+        assert outcomes.num_fp == 0
 
     def test_ktr_dataset_aggregation(self):
         ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("terms", terms=["blood sugar"])))

@@ -111,7 +111,7 @@ class TestVocabularyMatching:
         )
         dataset.add("the cold weather today", "a cold morning")
         # "cold" is extracted from the hypothesis and also appears in the reference.
-        kt = dataset.metrics._kt_stats(vocab="h")
+        kt = dataset.metrics._kt_outcomes(vocab="h")
         assert kt.num_ref_terms == 1
 
     def test_multi_source_union_and_dedup(self):
@@ -120,7 +120,7 @@ class TestVocabularyMatching:
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         dataset.add("diabetes and asthma", "diabetes and asthma")
         # Two distinct ref terms (diabetes, asthma), not three.
-        assert dataset.metrics._kt_stats(vocab="m").num_ref_terms == 2
+        assert dataset.metrics._kt_outcomes(vocab="m").num_ref_terms == 2
 
 
 class TestVocabularySharing:
@@ -136,8 +136,8 @@ class TestVocabularySharing:
         d2.add("severe asthma", "severe asthma")
 
         # Same Vocabulary object, different resolved terms / matches per dataset.
-        assert d1.metrics._kt_stats(vocab="last").num_ref_terms == 1
-        assert d2.metrics._kt_stats(vocab="last").num_ref_terms == 1
+        assert d1.metrics._kt_outcomes(vocab="last").num_ref_terms == 1
+        assert d2.metrics._kt_outcomes(vocab="last").num_ref_terms == 1
         # The resolved term sets differ between the two datasets.
         terms1 = {kt.raw for kt in vocab._resolve_terms(d1)}
         terms2 = {kt.raw for kt in vocab._resolve_terms(d2)}
@@ -303,7 +303,7 @@ class TestVocabularyEdgeCases:
         dataset.add("a b c", "a b c")
         matcher = dataset.config.vocabularies["empty"].build_matcher(dataset)
         assert matcher.find_matches(dataset[0].ref) == []
-        assert dataset.metrics._kt_stats(vocab="empty").num_ref_terms == 0
+        assert dataset.metrics._kt_outcomes(vocab="empty").num_ref_terms == 0
 
     def test_unregistered_vocab_name_returns_no_matches(self):
         dataset = Dataset()
