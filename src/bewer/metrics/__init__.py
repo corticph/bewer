@@ -10,8 +10,11 @@ from bewer.metrics.base import (
 )
 from bewer.metrics.confidence import ConfidenceInterval
 from bewer.metrics.general.cer import CER
+from bewer.metrics.general.mer import MER
 from bewer.metrics.general.per import PER
 from bewer.metrics.general.wer import WER
+from bewer.metrics.general.wil import WIL
+from bewer.metrics.general.wip import WIP
 from bewer.metrics.hallucination._insertion_params import InsertionParams
 from bewer.metrics.hallucination.example_insertion_rate import ExampleInsertionRate
 from bewer.metrics.hallucination.insertion_rate import InsertionRate
@@ -50,6 +53,9 @@ __all__ = [
     "BWER",
     "UWER",
     "CER",
+    "MER",
+    "WIL",
+    "WIP",
     "KTF",
     "KTER",
     "KTFPR",
