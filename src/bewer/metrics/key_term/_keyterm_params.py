@@ -12,8 +12,7 @@ class KeyTermParams(MetricParams):
     """Base class for key-term metric parameter dataclasses.
 
     Subclass this with @dataclass to define key-term metric parameters.
-    Provides the common ``vocab`` field and validates
-    that the vocabulary exists on the dataset.
+    Provides the common ``vocab`` field and validates that the vocabulary exists on the dataset.
 
     Attributes:
         vocab: The vocabulary name to use for key term identification.
