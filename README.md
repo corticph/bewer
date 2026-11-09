@@ -286,6 +286,9 @@ assert wer is dataset.metrics.wer(normalizer="default")
 | Word Error Rate | General | `wer` | [`>`](src/bewer/metrics/general/wer.py) |
 | Character Error Rate | General | `cer` | [`>`](src/bewer/metrics/general/cer.py) |
 | Punctuation Error Rate | General | `per` | [`>`](src/bewer/metrics/general/per.py) |
+| Match Error Rate | General | `mer` | [`>`](src/bewer/metrics/general/mer.py) |
+| Word Information Preserved | General | `wip` | [`>`](src/bewer/metrics/general/wip.py) |
+| Word Information Lost | General | `wil` | [`>`](src/bewer/metrics/general/wil.py) |
 | **Hallucination metrics** | | | |
 | Insertion Rate | Hallucination | `insertion_rate` | [`>`](src/bewer/metrics/hallucination/insertion_rate.py) |
 | Example Insertion Rate | Hallucination | `example_insertion_rate` | [`>`](src/bewer/metrics/hallucination/example_insertion_rate.py) |
