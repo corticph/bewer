@@ -19,7 +19,14 @@ Terms are extracted from both sides by default. A pattern defines a *class* of t
 hypothesis token in that class is a candidate key term whether or not any reference contains
 it. Extracting from references only would hide hallucinated class terms from precision and
 false-positive counts (a hypothesis ``HbA1c`` with no reference ``HbA1c`` would never be
-matched). Recall is unaffected: hypothesis-only terms have no reference occurrences.
+matched).
+
+Recall changes only when a hypothesis-only term matches reference tokens after normalization.
+Terms are matched on normalized tokens, so under a lowercasing normalizer a hypothesis ``MRI``
+also matches a reference ``mri`` that the pattern alone would not extract, adding a reference
+occurrence. Under a case-preserving normalizer (e.g. ``cased``, used by the
+orthographically-complex term metrics) a hypothesis-only term has no reference occurrences, and
+recall is unchanged. Pass ``sources=("ref",)`` to keep the reference-only behaviour.
 """
 
 from __future__ import annotations

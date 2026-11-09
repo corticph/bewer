@@ -169,6 +169,17 @@ class TestRegexExtractorSources:
         dataset.add("the MRI was clear", "the CT was clear")
         assert OrthographicallyComplexTermExtractor(sources=("hyp",))(dataset) == {"CT"}
 
+    @pytest.mark.parametrize(("sources", "num_ref_terms", "recall"), [(("ref",), 1, 0.0), (("ref", "hyp"), 2, 0.5)])
+    def test_hypothesis_term_can_add_reference_occurrences_after_normalization(self, sources, num_ref_terms, recall):
+        """Under the lowercasing default normalizer, hypothesis `MRI` also matches reference `mri`."""
+        config = get_config("base").clone()
+        config.add_vocabulary(Vocabulary("caps", extractors=[RegexExtractor(r"[A-Z]+", sources=sources)]))
+        dataset = Dataset(config=config)
+        dataset.add("mri ECG", "MRI")
+        ktr = dataset.metrics.ktr(vocab="caps")
+        assert ktr.num_ref_terms == num_ref_terms
+        assert ktr.value == recall
+
     def test_duplicate_sources_are_collapsed(self):
         assert RegexExtractor(sources=("ref", "ref", "hyp")).sources == ("ref", "hyp")
 
