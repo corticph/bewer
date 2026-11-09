@@ -69,6 +69,7 @@ poetry run twine check dist/*  # Validate built packages
 - Standardizers: Unicode normalization (NFC)
 - Tokenizers: Whitespace-based with customizable symbol handling
 - Normalizers: Lowercase, transliteration, symbol removal/translation (applied to tokens)
+- Every `BewerConfig` holds identity `Standardizer("none")` and `Normalizer("none")` under the reserved name `none`. Code always reads `tokens.normalized` under the active normalizer.
 
 ### Metrics System
 

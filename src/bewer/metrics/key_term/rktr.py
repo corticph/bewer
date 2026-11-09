@@ -65,7 +65,6 @@ class RKTR(Metric):
 
         Attributes:
             vocab: The vocabulary name to use for key term identification.
-            normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
             threshold: Maximum character error rate for a key term to be classified as TP. Default 0.0
                 means exact match (equivalent to KTR).
@@ -83,7 +82,6 @@ class RKTR(Metric):
         """Get the shared _RKTOutcomes metric instance."""
         return self.dataset.metrics._rkt_outcomes(
             vocab=self.params.vocab,
-            normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,

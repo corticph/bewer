@@ -47,7 +47,7 @@ console = Console()
 # One computed metric entry, keyed in a dataset's `metrics` by its manifest name:
 #   {"params": {param_name: value}, "values": {value_name: number}}
 # `params` are the fully-resolved metric params (schema fields + pipeline), tracked so a
-# change to a metric's *default* (e.g. normalized, tokenizer) fails the check explicitly.
+# change to a metric's *default* (e.g. normalizer, tokenizer) fails the check explicitly.
 MetricEntry = dict[str, dict[str, Any]]
 
 
@@ -263,7 +263,7 @@ def compare(dataset_name: str, computed: dict[str, MetricEntry], baseline: dict,
     """Compare computed entries (params + values) against a baseline's ``metrics`` section.
 
     Values are compared within ``tolerance`` (ints exactly); params are compared exactly,
-    so a change to a metric's resolved defaults (e.g. ``normalized``, ``tokenizer``) is
+    so a change to a metric's resolved defaults (e.g. ``normalizer``, ``tokenizer``) is
     flagged as a ``param`` diff rather than silently altering values.
     """
     diffs: list[Diff] = []

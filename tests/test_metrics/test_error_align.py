@@ -135,25 +135,25 @@ class TestErrorAlignAlignment:
 
 
 class TestErrorAlignNormalization:
-    """Tests for the normalized parameter."""
+    """Tests for selecting the normalizer, including the identity ``none`` normalizer."""
 
-    def test_default_is_normalized(self, sample_dataset):
-        """Test that the default parameter is normalized=True."""
+    def test_default_normalizer(self, sample_dataset):
+        """The default normalizer is selected unless another is requested."""
         example = sample_dataset[0]
         ea = example.metrics.error_align()
-        assert ea.params.normalized is True
+        assert ea.parent_metric.normalizer == "default"
 
-    def test_normalized_false(self, sample_dataset):
-        """Test that normalized=False can be set."""
+    def test_none_normalizer(self, sample_dataset):
+        """normalizer="none" can be selected."""
         example = sample_dataset[0]
-        ea = example.metrics.error_align(normalized=False)
-        assert ea.params.normalized is False
+        ea = example.metrics.error_align(normalizer="none")
+        assert ea.parent_metric.normalizer == "none"
 
     def test_normalized_does_not_change_edit_counts(self, sample_dataset):
         """Test that normalization does not change the edit counts for ASCII-only text."""
         example = sample_dataset[1]
-        ea_norm = example.metrics.error_align(normalized=True)
-        ea_no_norm = example.metrics.error_align(normalized=False)
+        ea_norm = example.metrics.error_align()
+        ea_no_norm = example.metrics.error_align(normalizer="none")
         assert ea_norm.num_edits == ea_no_norm.num_edits
         assert ea_norm.num_matches == ea_no_norm.num_matches
 
@@ -165,33 +165,33 @@ class TestErrorAlignDatasetNormalizer:
         """Diacritics that the dataset normalizer removes should match, not substitute."""
         empty_dataset.add("café", "cafe")
         example = empty_dataset[0]
-        ea = example.metrics.error_align(normalized=True)
+        ea = example.metrics.error_align()
         assert ea.num_matches == 1
         assert ea.num_substitutions == 0
         assert ea.num_edits == 0
 
     def test_diacritic_match_agrees_with_wer(self, empty_dataset):
-        """ErrorAlign with normalized=True should agree with WER on diacritic inputs."""
+        """ErrorAlign with the default normalizer should agree with WER on diacritic inputs."""
         empty_dataset.add("café", "cafe")
         example = empty_dataset[0]
-        wer = example.metrics.wer(normalized=True)
-        ea = example.metrics.error_align(normalized=True)
+        wer = example.metrics.wer()
+        ea = example.metrics.error_align()
         assert ea.num_edits == 0
         assert wer.value == 0.0
 
-    def test_case_difference_normalized_false_is_substitution(self, empty_dataset):
-        """With normalized=False, case differences are substitutions (no normalization during alignment)."""
+    def test_case_difference_none_normalizer_is_substitution(self, empty_dataset):
+        """With normalizer="none", case differences are substitutions (no normalization during alignment)."""
         empty_dataset.add("Hello World", "hello world")
         example = empty_dataset[0]
-        ea = example.metrics.error_align(normalized=False)
+        ea = example.metrics.error_align(normalizer="none")
         assert ea.num_substitutions == 2
         assert ea.num_matches == 0
 
-    def test_case_difference_normalized_true_is_match(self, empty_dataset):
-        """With normalized=True, case differences should match (lowercase normalizer)."""
+    def test_case_difference_default_normalizer_is_match(self, empty_dataset):
+        """With the default normalizer, case differences should match (lowercase normalizer)."""
         empty_dataset.add("Hello World", "hello world")
         example = empty_dataset[0]
-        ea = example.metrics.error_align(normalized=True)
+        ea = example.metrics.error_align()
         assert ea.num_matches == 2
         assert ea.num_substitutions == 0
 
@@ -199,7 +199,7 @@ class TestErrorAlignDatasetNormalizer:
         """Multiple diacritic words should match correctly, not cascade into substitutions."""
         empty_dataset.add("café résumé naïve hôtel", "hotel cafe resume naive")
         example = empty_dataset[0]
-        ea = example.metrics.error_align(normalized=True)
+        ea = example.metrics.error_align()
         assert ea.num_matches == 3
         assert ea.num_substitutions == 0
         assert ea.num_edits == 2  # word reordering: insert + delete
@@ -209,15 +209,15 @@ class TestErrorAlignDatasetNormalizer:
         empty_dataset.add("Straße", "Strasse")
         example = empty_dataset[0]
         with pytest.warns(UserWarning, match="not length-preserving"):
-            ea = example.metrics.error_align(normalized=True)
+            ea = example.metrics.error_align()
             assert ea.num_edits == 1  # ß -> ss is not length-preserving, falls back to basic_normalizer
             assert ea.num_substitutions == 1
 
-    def test_normalized_output_preserves_original_when_false(self, empty_dataset):
-        """With normalized=False, output ops should contain original (unnormalized) text."""
+    def test_none_normalizer_output_preserves_original(self, empty_dataset):
+        """With normalizer="none", output ops should contain original (unnormalized) text."""
         empty_dataset.add("café", "cafe")
         example = empty_dataset[0]
-        ea = example.metrics.error_align(normalized=False)
+        ea = example.metrics.error_align(normalizer="none")
         for op in ea.alignment:
             if op.ref is not None:
                 assert op.ref == "café"

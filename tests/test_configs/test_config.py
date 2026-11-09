@@ -8,12 +8,14 @@ from bewer.configs import (
 )
 from bewer.preprocessing.normalization import (
     Normalizer,
+    Standardizer,
     Transform,
     lowercase,
     nfc,
     transliterate_latin_letters,
     transliterate_symbols,
 )
+from bewer.preprocessing.tokenization import Tokenizer
 
 
 class TestBewerConfig:
@@ -24,7 +26,56 @@ class TestBewerConfig:
         a = BewerConfig()
         b = BewerConfig()
         a.standardizers["x"] = None
-        assert b.standardizers == {}
+        assert set(b.standardizers) == {"none"}
+
+
+class TestReservedNoneStage:
+    """Tests for the reserved identity stages named ``none``."""
+
+    @pytest.mark.parametrize("config", [BewerConfig(), get_config("base"), get_config("da")])
+    def test_none_stages_always_present(self, config):
+        """Every config holds identity ``none`` standardizer and normalizer, but no ``none`` tokenizer."""
+        assert config.standardizers["none"].transforms == ()
+        assert config.normalizers["none"].transforms == ()
+        assert "none" not in config.tokenizers
+
+    def test_none_stages_are_identity(self):
+        """The ``none`` stages return text unchanged."""
+        config = BewerConfig()
+        text = "Caf\u00e9 \u2019HELLO\u2013world"
+        assert config.standardizers["none"](text) == text
+        assert config.normalizers["none"](text) == text
+
+    def test_clone_keeps_none_stages(self):
+        """Cloned configs keep the ``none`` stages."""
+        clone = get_config("base").clone()
+        assert "none" in clone.standardizers
+        assert "none" in clone.normalizers
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"standardizers": (Standardizer("none", Transform(nfc)),)},
+            {"normalizers": (Normalizer("none", Transform(lowercase)),)},
+            {"tokenizers": (Tokenizer("none", r"\S+"),)},
+        ],
+    )
+    def test_constructor_rejects_none_name(self, kwargs):
+        """User-supplied stages may not be named ``none``, with or without ``extends``."""
+        with pytest.raises(ValueError, match="reserved"):
+            BewerConfig(**kwargs)
+        with pytest.raises(ValueError, match="reserved"):
+            BewerConfig(extends="base", **kwargs)
+
+    def test_add_methods_reject_none_name(self):
+        """``add_*`` rejects ``none`` even with ``allow_override=True``."""
+        config = BewerConfig()
+        with pytest.raises(ValueError, match="reserved"):
+            config.add_standardizer(Standardizer("none", Transform(nfc)), allow_override=True)
+        with pytest.raises(ValueError, match="reserved"):
+            config.add_normalizer(Normalizer("none", Transform(lowercase)), allow_override=True)
+        with pytest.raises(ValueError, match="tokenization cannot be skipped"):
+            config.add_tokenizer(Tokenizer("none", r"\S+"))
 
 
 class TestExtends:

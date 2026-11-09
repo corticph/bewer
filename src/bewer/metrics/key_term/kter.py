@@ -51,7 +51,6 @@ class KTER(Metric):
 
         Attributes:
             vocab: The vocabulary name to use for key term identification.
-            normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches. If False, overlapping key term matches
                 are deduplicated, keeping only the longest match.
             partial_credit: When False (default, exact-match view), each key term occurrence is a single
@@ -66,7 +65,6 @@ class KTER(Metric):
         """Get the shared _KTOutcomes metric instance."""
         return self.dataset.metrics._kt_outcomes(
             vocab=self.params.vocab,
-            normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
             partial_credit=self.params.partial_credit,
             standardizer=self.standardizer,

@@ -151,7 +151,6 @@ class Vocabulary:
         self,
         dataset: "Dataset",
         *,
-        normalized: bool = True,
         add_capitalized: bool = False,
     ) -> KeyTermTrie:
         """Resolve the vocabulary against ``dataset`` and return a :class:`KeyTermTrie`.
@@ -166,7 +165,7 @@ class Vocabulary:
         self.freeze()
         dataset.freeze()
         terms = self._resolve_terms(dataset)
-        return KeyTermTrie(terms, normalized=normalized, add_capitalized=add_capitalized)
+        return KeyTermTrie(terms, add_capitalized=add_capitalized)
 
     def __repr__(self):
         return f"Vocabulary({self._name!r})"

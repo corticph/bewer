@@ -19,18 +19,19 @@ class KeyTermTrie:
     def __init__(
         self,
         key_terms: set[KeyTerm],
-        normalized: bool = True,
         add_capitalized: bool = False,
     ):
         """Initialize the automaton with the given set of key terms.
 
+        Key terms and searched text are compared in their normalized token form under the
+        active normalizer. Select ``normalizer="none"`` to match on standardized tokens.
+
         Args:
             key_terms: A set of KeyTerm objects to build the automaton from.
-            normalized: Whether to use normalized text for matching. If False, uses standardized text.
-            add_capitalized: Whether to add capitalized versions of key terms for case-insensitive matching.
-                Only applies if normalized is False and is only applied to the first word in an n-gram key term.
+            add_capitalized: Whether to add a variant of each key term with its first token
+                capitalized, so case-preserving matching also finds terms at sentence start.
+                Has no effect under a lowercasing normalizer.
         """
-        self.normalized = normalized
         self.add_capitalized = add_capitalized
 
         # (key_term, token_pattern) pairs, keeping each pattern tied to its originating
@@ -39,14 +40,13 @@ class KeyTermTrie:
         # token pattern, the first-wins de-duplication below picks the same one every run.
         pattern_entries: list[tuple[KeyTerm, tuple[str, ...]]] = []
         for key_term in sorted(key_terms, key=lambda kt: kt.raw):
-            tokens = key_term.tokens.normalized if normalized else key_term.tokens.standardized
-            token_pattern = tuple(tokens)
+            token_pattern = tuple(key_term.tokens.normalized)
             if not token_pattern:
                 continue
             pattern_entries.append((key_term, token_pattern))
 
         # Handle capitalization variants, mapped back to their originating key term.
-        if add_capitalized and not normalized:
+        if add_capitalized:
             for key_term, p in list(pattern_entries):
                 first_cap = p[0].capitalize()
                 if first_cap != p[0]:
@@ -68,8 +68,7 @@ class KeyTermTrie:
 
     def encode(self, tokens: TokenList) -> tuple[int, ...]:
         """Encode a token list into the trie's integer vocabulary."""
-        token_strings = tokens.normalized if self.normalized else tokens.standardized
-        return tuple(self._vocab.get(w, self._unknown) for w in token_strings)
+        return tuple(self._vocab.get(w, self._unknown) for w in tokens.normalized)
 
     def find_in_tokens(self, tokens: TokenList) -> tuple[list[slice], list[KeyTerm]]:
         """Find all key term matches, returning token spans and the matched key terms."""

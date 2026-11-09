@@ -537,7 +537,7 @@ class TestFormatRegisteredParams:
         """A parameter with a default renders as name=default."""
         from bewer.metrics.base import _format_registered_params
 
-        assert _format_registered_params("wer") == "normalized=True"
+        assert _format_registered_params("insertion_rate") == "min_run_length=1, alignment='levenshtein'"
 
     def test_required_params_are_marked(self):
         """A parameter without a default is marked with a star, not a value."""
@@ -546,7 +546,7 @@ class TestFormatRegisteredParams:
         summary = _format_registered_params("ktr")
 
         assert summary.startswith("vocab*")
-        assert "normalized=True" in summary
+        assert "allow_subset_matches=False" in summary
 
     def test_reads_the_registry_not_an_instance(self):
         """Metrics with required params cannot be constructed, but are still describable."""
@@ -568,11 +568,11 @@ class TestFormatRegisteredParams:
         """A default supplied at registration wins over the one on param_schema."""
         from bewer.metrics.base import METRIC_REGISTRY, _format_registered_params
 
-        metadata = METRIC_REGISTRY.metric_metadata["wer"]
+        metadata = METRIC_REGISTRY.metric_metadata["insertion_rate"]
         original = metadata["param_defaults"]
-        metadata["param_defaults"] = {"normalized": False}
+        metadata["param_defaults"] = {"min_run_length": 2}
         try:
-            assert _format_registered_params("wer") == "normalized=False"
+            assert _format_registered_params("insertion_rate") == "min_run_length=2, alignment='levenshtein'"
         finally:
             metadata["param_defaults"] = original
 

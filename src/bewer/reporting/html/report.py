@@ -98,22 +98,18 @@ def _refs_match(datasets: list["Dataset"]) -> bool:
     return True
 
 
-def _kt_match_overrides(alignment_metric: "Metric") -> dict[str, Any]:
+def _kt_match_overrides(alignment_metric: "Metric") -> dict[str, str]:
     """Pipeline fields of the displayed alignment, for the ``_kt_outcomes`` request.
 
     Match indices only map into the rendered alignment when both live in the same
     token view, so the key-term metric inherits the alignment's pipeline rather
     than using its own defaults.
     """
-    overrides: dict[str, Any] = {
+    return {
         "standardizer": alignment_metric.standardizer,
         "tokenizer": alignment_metric.tokenizer,
         "normalizer": alignment_metric.normalizer,
     }
-    params = alignment_metric.params
-    if params is not None and hasattr(params, "normalized"):
-        overrides["normalized"] = params.normalized
-    return overrides
 
 
 def _resolve_matches(dataset: "Dataset", report_alignment: ReportAlignment) -> list[Any]:

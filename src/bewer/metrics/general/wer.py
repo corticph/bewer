@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from rapidfuzz.distance import Levenshtein
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 __all__ = ["WER"]
 
@@ -13,22 +11,15 @@ class WER_(ExampleMetric):
     @metric_property(is_value=True)
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference text."""
-        if self.params.normalized:
-            return Levenshtein.distance(
-                self.example.ref.tokens.normalized,
-                self.example.hyp.tokens.normalized,
-            )
         return Levenshtein.distance(
-            self.example.ref.tokens.standardized,
-            self.example.hyp.tokens.standardized,
+            self.example.ref.tokens.normalized,
+            self.example.hyp.tokens.normalized,
         )
 
     @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Get the number of tokens in the reference text."""
-        if self.params.normalized:
-            return len(self.example.ref.tokens.normalized)
-        return len(self.example.ref.tokens.standardized)
+        return len(self.example.ref.tokens)
 
     @metric_property(is_main=True)
     def value(self) -> float:
@@ -47,10 +38,6 @@ class WER(Metric):
         "and hypothesis texts, divided by the total number of words in the reference texts."
     )
     example_cls = WER_
-
-    @dataclass
-    class param_schema(MetricParams):
-        normalized: bool = True
 
     @metric_property(is_value=True)
     def num_edits(self) -> int:

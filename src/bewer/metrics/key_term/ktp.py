@@ -48,7 +48,6 @@ class KTP(Metric):
 
         Attributes:
             vocab: The vocabulary name to use for key term identification.
-            normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
             partial_credit: When False (default, exact-match view), each key term occurrence is a single
                 TP or FP unit. When True (partial-credit view), TP and FP are counted at the
@@ -62,7 +61,6 @@ class KTP(Metric):
         """Get the shared _KTOutcomes metric instance."""
         return self.dataset.metrics._kt_outcomes(
             vocab=self.params.vocab,
-            normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
             partial_credit=self.params.partial_credit,
             standardizer=self.standardizer,

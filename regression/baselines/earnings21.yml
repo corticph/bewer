@@ -3,7 +3,6 @@ metrics:
   cer:
     compute_seconds: 10.583
     params:
-      normalized: true
       normalizer: default
       standardizer: default
       tokenizer: default
@@ -15,7 +14,6 @@ metrics:
     compute_seconds: 24.987
     params:
       allow_subset_matches: false
-      normalized: true
       normalizer: default
       standardizer: default
       tokenizer: key_term
@@ -28,7 +26,6 @@ metrics:
     compute_seconds: 10.172
     params:
       allow_subset_matches: false
-      normalized: true
       normalizer: default
       partial_credit: false
       standardizer: default
@@ -41,7 +38,6 @@ metrics:
     params:
       allow_subset_matches: false
       beta: 1.0
-      normalized: true
       normalizer: default
       partial_credit: false
       standardizer: default
@@ -53,7 +49,6 @@ metrics:
     compute_seconds: 9.493
     params:
       allow_subset_matches: false
-      normalized: true
       normalizer: default
       partial_credit: false
       standardizer: default
@@ -65,7 +60,6 @@ metrics:
     compute_seconds: 9.501
     params:
       allow_subset_matches: false
-      normalized: true
       normalizer: default
       partial_credit: false
       standardizer: default
@@ -78,7 +72,6 @@ metrics:
   levenshtein:
     compute_seconds: 8.427
     params:
-      normalized: true
       normalizer: default
       standardizer: default
       tokenizer: default
@@ -91,7 +84,6 @@ metrics:
     compute_seconds: 25.531
     params:
       allow_subset_matches: false
-      normalized: true
       normalizer: default
       standardizer: default
       threshold: 0.5
@@ -104,7 +96,6 @@ metrics:
   wer:
     compute_seconds: 5.838
     params:
-      normalized: true
       normalizer: default
       standardizer: default
       tokenizer: default

@@ -43,7 +43,6 @@ class ExampleInsertionRate(Metric):
     def _insertion_rate(self):
         return self.dataset.metrics.insertion_rate(
             min_run_length=self.params.min_run_length,
-            normalized=self.params.normalized,
             alignment=self.params.alignment,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
