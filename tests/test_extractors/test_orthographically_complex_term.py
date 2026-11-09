@@ -138,9 +138,48 @@ class TestRegexExtractorBase:
     def test_repr_includes_pattern(self):
         assert repr(RegexExtractor("[ab]+")) == "RegexExtractor('[ab]+')"
 
+    def test_repr_includes_non_default_sources(self):
+        assert repr(RegexExtractor("[ab]+", sources=["ref"])) == "RegexExtractor('[ab]+', sources=('ref',))"
+
+
+class TestRegexExtractorSources:
+    """RegexExtractor scans references and hypotheses by default; `sources` restricts the sides."""
+
+    def test_defaults_to_ref_and_hyp(self):
+        assert RegexExtractor().sources == ("ref", "hyp")
+
+    def test_extracts_from_hypothesis_by_default(self, complex_term_context):
+        dataset = Dataset()
+        dataset.add("the MRI was clear", "the MRI and HbA1c was clear")
+        assert OrthographicallyComplexTermExtractor()(dataset) == {"MRI", "HbA1c"}
+
+    def test_unions_hypothesis_terms_across_examples(self, complex_term_context):
+        dataset = Dataset()
+        dataset.add("an MRI scan", "an MRI scan")
+        dataset.add("a normal reading", "a CO2 reading")
+        assert OrthographicallyComplexTermExtractor()(dataset) == {"MRI", "CO2"}
+
+    def test_ref_only(self, complex_term_context):
+        dataset = Dataset()
+        dataset.add("the MRI was clear", "the MRI and HbA1c was clear")
+        assert OrthographicallyComplexTermExtractor(sources=("ref",))(dataset) == {"MRI"}
+
+    def test_hyp_only(self, complex_term_context):
+        dataset = Dataset()
+        dataset.add("the MRI was clear", "the CT was clear")
+        assert OrthographicallyComplexTermExtractor(sources=("hyp",))(dataset) == {"CT"}
+
+    def test_duplicate_sources_are_collapsed(self):
+        assert RegexExtractor(sources=("ref", "ref", "hyp")).sources == ("ref", "hyp")
+
+    @pytest.mark.parametrize("sources", [(), ("reference",), ("ref", "text")])
+    def test_rejects_invalid_sources(self, sources):
+        with pytest.raises(ValueError, match="sources must be"):
+            RegexExtractor(sources=sources)
+
 
 class TestOrthographicallyComplexTermExtractor:
-    """OrthographicallyComplexTermExtractor harvests complex terms from references as a global term set."""
+    """OrthographicallyComplexTermExtractor harvests complex terms from both sides as a global term set."""
 
     def test_extracts_complex_terms(self, complex_term_context):
         dataset = Dataset()

@@ -71,6 +71,22 @@ class TestPrecision:
         assert precision.num_matches == 1  # TP
         assert precision.value == 0.5  # TP / (TP + FP) = 1 / (1 + 1)
 
+    def test_hallucinated_term_absent_from_references_is_false_positive(self):
+        """A hypothesis class term that no reference contains still counts against precision."""
+        dataset = Dataset()
+        dataset.add("the MRI was clear", "the MRI and HbA1c was clear")
+        precision = dataset.metrics.orthographically_complex_term_precision()
+        assert precision.num_matches == 1  # MRI -> TP
+        assert precision.num_fp == 1  # HbA1c, found only in the hypothesis
+        assert precision.value == 0.5
+
+    def test_hallucinated_term_does_not_change_recall(self):
+        dataset = Dataset()
+        dataset.add("the MRI was clear", "the MRI and HbA1c was clear")
+        recall = dataset.metrics.orthographically_complex_term_recall()
+        assert recall.num_ref_terms == 1
+        assert recall.value == 1.0
+
 
 class TestFScore:
     def test_f1_is_harmonic_mean(self):
