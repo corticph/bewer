@@ -196,7 +196,6 @@ class _KTOutcomes(Metric):
 
         Attributes:
             vocab: The vocabulary name to use for key term identification.
-            normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
             partial_credit: Whether to use the partial-credit view (position-level counts)
                 instead of the exact-match view (occurrence-level counts).
@@ -208,16 +207,12 @@ class _KTOutcomes(Metric):
     def _matcher(self):
         """Build (and cache) the key-term matcher for this metric's vocabulary + pipeline."""
         vocab = self.dataset.config.vocabularies[self.params.vocab]
-        return vocab.build_matcher(
-            self.dataset,
-            normalized=self.params.normalized,
-        )
+        return vocab.build_matcher(self.dataset)
 
     @metric_property(is_dependency=True)
     def _levenshtein(self):
         """The shared Levenshtein metric instance."""
         return self.dataset.metrics.levenshtein(
-            normalized=self.params.normalized,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

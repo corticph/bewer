@@ -153,28 +153,28 @@ class TestKTERExampleMetric:
 
 
 class TestKTERNormalization:
-    """Tests for KTER with normalized=False."""
+    """Tests for KTER with normalizer="none"."""
 
     def test_unnormalized_casing_mismatch(self):
-        """Test that differing casing causes an error when normalized=False."""
+        """Test that differing casing causes an error under normalizer="none"."""
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["Fox"]))
         dataset = Dataset(config=config)
         dataset.add(
             ref="the Fox jumps",
             hyp="the fox jumps",
         )
-        kter = dataset[0].metrics.kter(vocab="animals", normalized=False)
+        kter = dataset[0].metrics.kter(vocab="animals", normalizer="none")
         assert kter.num_errors == 1
 
     def test_unnormalized_casing_match(self):
-        """Test that matching casing is fine when normalized=False."""
+        """Test that matching casing is fine under normalizer="none"."""
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["FOX"]))
         dataset = Dataset(config=config)
         dataset.add(
             ref="the FOX jumps",
             hyp="the FOX jumps",
         )
-        kter = dataset[0].metrics.kter(vocab="animals", normalized=False)
+        kter = dataset[0].metrics.kter(vocab="animals", normalizer="none")
         assert kter.num_errors == 0
 
 

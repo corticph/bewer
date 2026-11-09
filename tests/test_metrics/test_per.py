@@ -143,10 +143,10 @@ class TestPERExampleMetric:
         assert per.num_edits == per.num_substitutions + per.num_insertions + per.num_deletions
 
     def test_standardized_tokens(self, empty_dataset):
-        """PER works with normalized=False (standardized tokens)."""
+        """PER works with normalizer="none" (standardized tokens)."""
         empty_dataset.add("hello, world.", "hello, world.")
         example = empty_dataset[0]
-        per = example.metrics.per(normalized=False)
+        per = example.metrics.per(normalizer="none")
         assert per.value == 0.0
         assert per.num_correct == 2
 
@@ -176,10 +176,10 @@ class TestPERExampleMetric:
         assert per.num_correct == 2  # « »
 
     def test_guillemets_standardized(self, empty_dataset):
-        """Guillemets work with normalized=False (standardized tokens)."""
+        """Guillemets work with normalizer="none" (standardized tokens)."""
         empty_dataset.add("«bonjour»", "«bonjour»")
         example = empty_dataset[0]
-        per = example.metrics.per(normalized=False)
+        per = example.metrics.per(normalizer="none")
         assert per.value == 0.0
         assert per.num_correct == 2  # « »
 

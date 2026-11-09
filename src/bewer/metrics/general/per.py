@@ -27,8 +27,8 @@ contractions) cannot be counted even if listed here.
 
 Note: the default ``punct_chars`` includes both Unicode punctuation (e.g.
 "\u201c", "\u201d", "«", "»") and their ASCII normalized forms (e.g. '"',
-"<", ">") so that the metric works under both ``normalized=True`` and
-``normalized=False``.
+"<", ">") so that the metric works under both the default normalizer and
+``normalizer="none"``.
 """
 
 from __future__ import annotations
@@ -62,12 +62,8 @@ class PER_(ExampleMetric):
 
         Returns ``(S_P, I_P, D_P, C_P, N_{P_ref}, N_{P_hyp})``.
         """
-        if self.params.normalized:
-            ref_tokens = self.example.ref.tokens.normalized
-            hyp_tokens = self.example.hyp.tokens.normalized
-        else:
-            ref_tokens = self.example.ref.tokens.standardized
-            hyp_tokens = self.example.hyp.tokens.standardized
+        ref_tokens = self.example.ref.tokens.normalized
+        hyp_tokens = self.example.hyp.tokens.normalized
 
         punct_set = frozenset(self.params.punct_chars)
 
@@ -182,7 +178,6 @@ class PER(Metric):
             "¡",
             "¿",
         )
-        normalized: bool = True
 
     @metric_property(is_value=True)
     def num_substitutions(self) -> int:

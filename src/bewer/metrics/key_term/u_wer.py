@@ -50,7 +50,6 @@ class UWER(Metric):
         """Get the shared _BUWEROutcomes metric instance."""
         return self.dataset.metrics._bu_wer_outcomes(
             vocab=self.params.vocab,
-            normalized=self.params.normalized,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

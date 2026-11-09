@@ -69,6 +69,7 @@ poetry run twine check dist/*  # Validate built packages
 - Standardizers: Unicode normalization (NFC)
 - Tokenizers: Whitespace-based with customizable symbol handling
 - Normalizers: Lowercase, transliteration, symbol removal/translation (applied to tokens)
+- Skipping a stage: every `BewerConfig` holds identity `Standardizer("none")` and `Normalizer("none")` under the reserved name `none` (injected by the constructor, so configs that don't extend base have them too). Metrics take `standardizer="none"` / `normalizer="none"`; there is no `normalized` metric parameter. Code always reads `tokens.normalized` under the active normalizer. User stages named `none` raise `ValueError`; tokenization cannot be skipped, so `tokenizer="none"` is rejected
 
 ### Metrics System
 

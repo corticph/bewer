@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
+from bewer.flags import NONE
 from bewer.preprocessing.normalization import Normalizer, Standardizer
 from bewer.preprocessing.tokenization import Tokenizer
 
@@ -89,15 +90,39 @@ CONFIG_REGISTRY = ConfigRegistry()
 # ============================================================
 
 
-def _to_dict(items) -> dict:
+# Identity stages, present in every config under the reserved name ``none``. Selecting
+# ``standardizer="none"`` keeps the text as submitted; ``normalizer="none"`` compares
+# standardized tokens. Tokenization cannot be skipped, so tokenizers have no ``none``.
+NONE_STANDARDIZER = Standardizer(NONE)
+NONE_NORMALIZER = Normalizer(NONE)
+
+_RESERVED_STAGES = {
+    "standardizers": NONE_STANDARDIZER,
+    "normalizers": NONE_NORMALIZER,
+}
+
+
+def _check_not_reserved(field: str, name: str) -> None:
+    """Raise ``ValueError`` if ``name`` is the reserved stage name ``none``."""
+    if name != NONE or field not in ("standardizers", "tokenizers", "normalizers"):
+        return
+    if field == "tokenizers":
+        raise ValueError(f"{NONE!r} is reserved: tokenization cannot be skipped, so no tokenizer may be named {NONE!r}")
+    raise ValueError(f"{NONE!r} is reserved for the built-in identity stage in {field}")
+
+
+def _to_dict(items, field: str | None = None) -> dict:
     """Convert a sequence of named objects into a dict keyed by ``.name``.
 
-    Raises ``ValueError`` on duplicate names.
+    Raises ``ValueError`` on duplicate names or, when ``field`` names a pipeline
+    stage, on the reserved name ``none``.
     """
     if items is None:
         return {}
     result = {}
     for item in items:
+        if field is not None:
+            _check_not_reserved(field, item.name)
         if item.name in result:
             raise ValueError(f"Duplicate name: {item.name!r}")
         result[item.name] = item
@@ -114,6 +139,10 @@ class BewerConfig:
     - ``tokenizers``: sequence of Tokenizer
     - ``normalizers``: sequence of Normalizer
     - ``vocabularies``: sequence of Vocabulary
+
+    Every config also holds an identity standardizer and normalizer under the
+    reserved name ``none``, so ``standardizer="none"`` and ``normalizer="none"``
+    skip that stage in any config. User-supplied stages may not use that name.
 
     Configs are mutable until frozen. Freezing happens automatically when a
     config is registered or handed to a Dataset. Use ``clone()`` to get a
@@ -133,15 +162,17 @@ class BewerConfig:
     ):
         if extends is not None:
             base = get_config(extends) if isinstance(extends, str) else extends
-            self.standardizers = {**base.standardizers, **_to_dict(standardizers)}
-            self.tokenizers = {**base.tokenizers, **_to_dict(tokenizers)}
-            self.normalizers = {**base.normalizers, **_to_dict(normalizers)}
+            self.standardizers = {**base.standardizers, **_to_dict(standardizers, "standardizers")}
+            self.tokenizers = {**base.tokenizers, **_to_dict(tokenizers, "tokenizers")}
+            self.normalizers = {**base.normalizers, **_to_dict(normalizers, "normalizers")}
             self.vocabularies = {**base.vocabularies, **_to_dict(vocabularies)}
         else:
-            self.standardizers = _to_dict(standardizers)
-            self.tokenizers = _to_dict(tokenizers)
-            self.normalizers = _to_dict(normalizers)
+            self.standardizers = _to_dict(standardizers, "standardizers")
+            self.tokenizers = _to_dict(tokenizers, "tokenizers")
+            self.normalizers = _to_dict(normalizers, "normalizers")
             self.vocabularies = _to_dict(vocabularies)
+        for field, identity in _RESERVED_STAGES.items():
+            getattr(self, field)[NONE] = identity
         # Match ``add_vocabulary``: vocabularies freeze when they enter a config.
         for vocab in self.vocabularies.values():
             vocab.freeze()
@@ -173,6 +204,7 @@ class BewerConfig:
     def _add(self, field: str, item, allow_override: bool = False) -> BewerConfig:
         if self._frozen:
             raise ConfigFrozenError(f"Cannot modify frozen BewerConfig (adding to {field})")
+        _check_not_reserved(field, item.name)
         items = getattr(self, field)
         if not allow_override and item.name in items:
             raise ValueError(f"{item.name!r} already exists in {field}")

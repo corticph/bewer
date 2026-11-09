@@ -51,14 +51,14 @@ class TestKTCERExampleMetric:
         assert ktcer.ref_chars == 8
         assert ktcer.value == pytest.approx(1.0)
 
-    def test_normalized_false_uses_raw_tokens(self):
-        # With normalized=False, casing is preserved; a case mismatch counts as an edit.
+    def test_none_normalizer_uses_standardized_tokens(self):
+        # With normalizer="none", casing is preserved; a case mismatch counts as an edit.
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["Diabetes"]))
         dataset = Dataset(config=config)
         dataset.add(ref="patient has Diabetes", hyp="patient has diabetes")
         example = dataset[0]
-        ktcer_normalized = example.metrics.ktcer(vocab="k", normalized=True)
-        ktcer_raw = example.metrics.ktcer(vocab="k", normalized=False)
+        ktcer_normalized = example.metrics.ktcer(vocab="k")
+        ktcer_raw = example.metrics.ktcer(vocab="k", normalizer="none")
         assert ktcer_normalized.value == 0.0
         assert ktcer_raw.value > 0.0
 

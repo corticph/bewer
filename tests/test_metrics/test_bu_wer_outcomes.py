@@ -191,10 +191,10 @@ class TestBUWEROutcomesSharing:
             is not dataset.metrics.b_wer(vocab="verbs")._bu_wer_outcomes
         )
 
-    def test_different_normalized_different_instances(self, dataset):
-        """Different normalized params produce different _BUWEROutcomes instances."""
-        norm = dataset.metrics.b_wer(vocab="medical", normalized=True)
-        unnorm = dataset.metrics.b_wer(vocab="medical", normalized=False)
+    def test_different_normalizer_different_instances(self, dataset):
+        """Different normalizers produce different _BUWEROutcomes instances."""
+        norm = dataset.metrics.b_wer(vocab="medical")
+        unnorm = dataset.metrics.b_wer(vocab="medical", normalizer="none")
         assert norm._bu_wer_outcomes is not unnorm._bu_wer_outcomes
 
     def test_instance_is_cached(self, dataset):

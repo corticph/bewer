@@ -326,10 +326,10 @@ class TestKTOutcomesSharing:
         ktr_verbs = dataset.metrics.ktr(vocab="verbs")
         assert ktr_animals._kt_outcomes is not ktr_verbs._kt_outcomes
 
-    def test_different_normalized_different_instances(self, dataset):
-        """Different normalized params produce different _KTOutcomes instances."""
-        ktr_norm = dataset.metrics.ktr(vocab="animals", normalized=True)
-        ktr_unnorm = dataset.metrics.ktr(vocab="animals", normalized=False)
+    def test_different_normalizer_different_instances(self, dataset):
+        """Different normalizers produce different _KTOutcomes instances."""
+        ktr_norm = dataset.metrics.ktr(vocab="animals")
+        ktr_unnorm = dataset.metrics.ktr(vocab="animals", normalizer="none")
         assert ktr_norm._kt_outcomes is not ktr_unnorm._kt_outcomes
 
     def test_instance_is_cached(self, dataset):

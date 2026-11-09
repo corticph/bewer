@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Iterator, Optional, Union, get_type_hints
 
 from typeguard import check_type
 
-from bewer.flags import DEFAULT, NORMALIZERS, STANDARDIZERS, TOKENIZERS
+from bewer.flags import DEFAULT, NONE, NORMALIZERS, STANDARDIZERS, TOKENIZERS
 from bewer.preprocessing.context import set_pipeline
 from bewer.reporting.python.tables import print_metric_table
 
@@ -270,6 +270,11 @@ class Metric(ABC):
         self._normalizer = normalizer
         self._pipeline = (standardizer, tokenizer, normalizer)
 
+        if "normalized" in params:
+            raise ValueError(
+                "The 'normalized' metric parameter was removed. Pass normalizer='none' to skip token normalization."
+            )
+
         # Construct params dataclass or reject unexpected params
         if self.param_schema is not None:
             try:
@@ -516,6 +521,8 @@ def _validate_pipeline_variants(resolved: dict, pipelines) -> None:
     for stage_name, stage_attr in _PIPELINE_STAGES:
         variant = resolved.get(stage_name, DEFAULT)
         available = getattr(pipelines, stage_attr)
+        if stage_name == "tokenizer" and variant == NONE:
+            raise ValueError(f"Tokenizer {NONE!r} is not supported: tokenization cannot be skipped.")
         if variant not in available:
             raise ValueError(f"{stage_name.capitalize()} '{variant}' not found. Available: {sorted(available)}")
 
