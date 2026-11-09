@@ -114,8 +114,7 @@ def _check_not_reserved(field: str, name: str) -> None:
 def _to_dict(items, field: str | None = None) -> dict:
     """Convert a sequence of named objects into a dict keyed by ``.name``.
 
-    Raises ``ValueError`` on duplicate names or, when ``field`` names a pipeline
-    stage, on the reserved name ``none``.
+    Raises ``ValueError`` on duplicate names or, when ``field`` names a pipeline stage, on the reserved name ``none``.
     """
     if items is None:
         return {}
