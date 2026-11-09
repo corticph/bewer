@@ -7,10 +7,8 @@ reference implementation, which computes MER from a word-level Levenshtein align
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 __all__ = ["MER"]
 
@@ -51,14 +49,9 @@ class MER(Metric):
     )
     example_cls = MER_
 
-    @dataclass
-    class param_schema(MetricParams):
-        normalized: bool = True
-
     @metric_property(is_dependency=True)
     def _alignment(self):
         return self.dataset.metrics.levenshtein(
-            normalized=self.params.normalized,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

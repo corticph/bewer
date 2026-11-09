@@ -139,15 +139,15 @@ class TestWIPDatasetMetric:
             assert 0.0 <= dataset.metrics.wip().value <= 1.0
 
 
-class TestWIPNormalizedFalse:
-    """Tests for WIP with normalized=False."""
+class TestWIPNoneNormalizer:
+    """Tests for WIP with normalizer="none" (standardized tokens)."""
 
     def test_value_unnormalized(self, sample_dataset):
         """Test WIP value with unnormalized tokens."""
-        wip = sample_dataset.metrics.wip(normalized=False)
-        num_matches = sum(ex.metrics.wip(normalized=False).num_matches for ex in sample_dataset)
-        ref_length = sum(ex.metrics.wip(normalized=False).ref_length for ex in sample_dataset)
-        hyp_length = sum(ex.metrics.wip(normalized=False).hyp_length for ex in sample_dataset)
+        wip = sample_dataset.metrics.wip(normalizer="none")
+        num_matches = sum(ex.metrics.wip(normalizer="none").num_matches for ex in sample_dataset)
+        ref_length = sum(ex.metrics.wip(normalizer="none").ref_length for ex in sample_dataset)
+        hyp_length = sum(ex.metrics.wip(normalizer="none").hyp_length for ex in sample_dataset)
         assert wip.value == pytest.approx((num_matches / ref_length) * (num_matches / hyp_length))
 
 
