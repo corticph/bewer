@@ -139,8 +139,33 @@ class TestRegexExtractorBase:
         assert repr(RegexExtractor("[ab]+")) == "RegexExtractor('[ab]+')"
 
 
+class TestRegexExtractorScansBothSides:
+    """RegexExtractor scans references and hypotheses."""
+
+    def test_extracts_from_hypothesis(self, complex_term_context):
+        dataset = Dataset()
+        dataset.add("the MRI was clear", "the MRI and HbA1c was clear")
+        assert OrthographicallyComplexTermExtractor()(dataset) == {"MRI", "HbA1c"}
+
+    def test_unions_hypothesis_terms_across_examples(self, complex_term_context):
+        dataset = Dataset()
+        dataset.add("an MRI scan", "an MRI scan")
+        dataset.add("a normal reading", "a CO2 reading")
+        assert OrthographicallyComplexTermExtractor()(dataset) == {"MRI", "CO2"}
+
+    def test_hypothesis_term_can_add_reference_occurrences_after_normalization(self):
+        """Under the lowercasing default normalizer, hypothesis `MRI` also matches reference `mri`."""
+        config = get_config("base").clone()
+        config.add_vocabulary(Vocabulary("caps", extractors=[RegexExtractor(r"[A-Z]+")]))
+        dataset = Dataset(config=config)
+        dataset.add("mri ECG", "MRI")
+        ktr = dataset.metrics.ktr(vocab="caps")
+        assert ktr.num_ref_terms == 2
+        assert ktr.value == 0.5
+
+
 class TestOrthographicallyComplexTermExtractor:
-    """OrthographicallyComplexTermExtractor harvests complex terms from references as a global term set."""
+    """OrthographicallyComplexTermExtractor harvests complex terms from both sides as a global term set."""
 
     def test_extracts_complex_terms(self, complex_term_context):
         dataset = Dataset()
