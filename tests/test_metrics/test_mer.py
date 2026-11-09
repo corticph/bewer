@@ -165,14 +165,14 @@ class TestMERDatasetMetric:
         assert mer.value == pytest.approx(wer.num_edits / (wer.ref_length + num_insertions))
 
 
-class TestMERNormalizedFalse:
-    """Tests for MER with normalized=False."""
+class TestMERNoneNormalizer:
+    """Tests for MER with normalizer="none" (standardized tokens)."""
 
     def test_value_unnormalized(self, sample_dataset):
         """Test MER value with unnormalized tokens."""
-        mer = sample_dataset.metrics.mer(normalized=False)
-        expected = sum(ex.metrics.mer(normalized=False).num_edits for ex in sample_dataset)
-        matches = sum(ex.metrics.mer(normalized=False).num_matches for ex in sample_dataset)
+        mer = sample_dataset.metrics.mer(normalizer="none")
+        expected = sum(ex.metrics.mer(normalizer="none").num_edits for ex in sample_dataset)
+        matches = sum(ex.metrics.mer(normalizer="none").num_matches for ex in sample_dataset)
         assert mer.num_edits == expected
         assert mer.num_matches == matches
         assert mer.value == expected / (expected + matches)

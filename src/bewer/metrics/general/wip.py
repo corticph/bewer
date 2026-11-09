@@ -7,10 +7,8 @@ reference implementation, which computes WIP from a word-level Levenshtein align
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 __all__ = ["WIP"]
 
@@ -28,16 +26,12 @@ class WIP_(ExampleMetric):
     @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Get the number of tokens in the reference text."""
-        if self.params.normalized:
-            return len(self.example.ref.tokens.normalized)
-        return len(self.example.ref.tokens.standardized)
+        return len(self.example.ref.tokens.normalized)
 
     @metric_property(is_value=True)
     def hyp_length(self) -> int:
         """Get the number of tokens in the hypothesis text."""
-        if self.params.normalized:
-            return len(self.example.hyp.tokens.normalized)
-        return len(self.example.hyp.tokens.standardized)
+        return len(self.example.hyp.tokens.normalized)
 
     @metric_property(is_main=True)
     def value(self) -> float:
@@ -62,14 +56,9 @@ class WIP(Metric):
     )
     example_cls = WIP_
 
-    @dataclass
-    class param_schema(MetricParams):
-        normalized: bool = True
-
     @metric_property(is_dependency=True)
     def _alignment(self):
         return self.dataset.metrics.levenshtein(
-            normalized=self.params.normalized,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

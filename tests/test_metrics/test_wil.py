@@ -85,9 +85,9 @@ class TestWILIdentity:
 
     def test_shared_params(self, sample_dataset):
         """Test that WIL forwards its params and pipeline to the borrowed WIP metric."""
-        wil = sample_dataset.metrics.wil(normalized=False)
+        wil = sample_dataset.metrics.wil(normalizer="none")
         wip = wil._wip
-        assert wip.params.normalized is False
+        assert wip.normalizer == "none"
         assert wip.pipeline == wil.pipeline
 
     def test_borrowed_wip_is_cached(self, sample_dataset):

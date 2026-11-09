@@ -8,9 +8,7 @@ computes WIL as exactly that difference.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 __all__ = ["WIL"]
 
@@ -38,15 +36,10 @@ class WIL(Metric):
     )
     example_cls = WIL_
 
-    @dataclass
-    class param_schema(MetricParams):
-        normalized: bool = True
-
     @metric_property(is_dependency=True)
     def _wip(self):
         """The shared WIP metric instance this metric negates."""
         return self.dataset.metrics.wip(
-            normalized=self.params.normalized,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,
