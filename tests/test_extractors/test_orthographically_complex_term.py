@@ -138,17 +138,11 @@ class TestRegexExtractorBase:
     def test_repr_includes_pattern(self):
         assert repr(RegexExtractor("[ab]+")) == "RegexExtractor('[ab]+')"
 
-    def test_repr_includes_non_default_sources(self):
-        assert repr(RegexExtractor("[ab]+", sources=["ref"])) == "RegexExtractor('[ab]+', sources=('ref',))"
 
+class TestRegexExtractorScansBothSides:
+    """RegexExtractor scans references and hypotheses."""
 
-class TestRegexExtractorSources:
-    """RegexExtractor scans references and hypotheses by default; `sources` restricts the sides."""
-
-    def test_defaults_to_ref_and_hyp(self):
-        assert RegexExtractor().sources == ("ref", "hyp")
-
-    def test_extracts_from_hypothesis_by_default(self, complex_term_context):
+    def test_extracts_from_hypothesis(self, complex_term_context):
         dataset = Dataset()
         dataset.add("the MRI was clear", "the MRI and HbA1c was clear")
         assert OrthographicallyComplexTermExtractor()(dataset) == {"MRI", "HbA1c"}
@@ -159,34 +153,15 @@ class TestRegexExtractorSources:
         dataset.add("a normal reading", "a CO2 reading")
         assert OrthographicallyComplexTermExtractor()(dataset) == {"MRI", "CO2"}
 
-    def test_ref_only(self, complex_term_context):
-        dataset = Dataset()
-        dataset.add("the MRI was clear", "the MRI and HbA1c was clear")
-        assert OrthographicallyComplexTermExtractor(sources=("ref",))(dataset) == {"MRI"}
-
-    def test_hyp_only(self, complex_term_context):
-        dataset = Dataset()
-        dataset.add("the MRI was clear", "the CT was clear")
-        assert OrthographicallyComplexTermExtractor(sources=("hyp",))(dataset) == {"CT"}
-
-    @pytest.mark.parametrize(("sources", "num_ref_terms", "recall"), [(("ref",), 1, 0.0), (("ref", "hyp"), 2, 0.5)])
-    def test_hypothesis_term_can_add_reference_occurrences_after_normalization(self, sources, num_ref_terms, recall):
+    def test_hypothesis_term_can_add_reference_occurrences_after_normalization(self):
         """Under the lowercasing default normalizer, hypothesis `MRI` also matches reference `mri`."""
         config = get_config("base").clone()
-        config.add_vocabulary(Vocabulary("caps", extractors=[RegexExtractor(r"[A-Z]+", sources=sources)]))
+        config.add_vocabulary(Vocabulary("caps", extractors=[RegexExtractor(r"[A-Z]+")]))
         dataset = Dataset(config=config)
         dataset.add("mri ECG", "MRI")
         ktr = dataset.metrics.ktr(vocab="caps")
-        assert ktr.num_ref_terms == num_ref_terms
-        assert ktr.value == recall
-
-    def test_duplicate_sources_are_collapsed(self):
-        assert RegexExtractor(sources=("ref", "ref", "hyp")).sources == ("ref", "hyp")
-
-    @pytest.mark.parametrize("sources", [(), ("reference",), ("ref", "text")])
-    def test_rejects_invalid_sources(self, sources):
-        with pytest.raises(ValueError, match="sources must be"):
-            RegexExtractor(sources=sources)
+        assert ktr.num_ref_terms == 2
+        assert ktr.value == 0.5
 
 
 class TestOrthographicallyComplexTermExtractor:
