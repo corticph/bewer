@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, NamedTuple
 
 from bewer.alignment import OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import ALIGNMENT_ALGORITHMS, METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 from ._keyterm_params import KeyTermParams
 
@@ -65,9 +65,9 @@ class _BUWEROutcomes_(ExampleMetric):
         num_unbiased_ref_tokens = 0
         for op in alignment:
             if op.type == OpType.INSERT:
-                # Levenshtein operations tag their hypothesis token directly,
-                # so insertion attribution is O(1) per operation.
-                biased = op.hyp_token_idx in self._hyp_vocab_positions
+                # Ops tag the hypothesis tokens they cover, so attribution needs no span
+                # lookup; a merged insertion is biased if any covered token is.
+                biased = any(idx in self._hyp_vocab_positions for idx in op.hyp_token_indices)
                 if biased:
                     num_biased_edits += 1
                 else:
@@ -127,6 +127,7 @@ class _BUWEROutcomes(Metric):
         "removal. Not intended for direct use."
     )
     example_cls = _BUWEROutcomes_
+    supported_alignments = ALIGNMENT_ALGORITHMS
 
     param_schema = KeyTermParams
 
@@ -138,12 +139,8 @@ class _BUWEROutcomes(Metric):
 
     @metric_property(is_dependency=True)
     def _alignment(self):
-        """The shared Levenshtein alignment instance, as in `_kt_outcomes`."""
-        return self.dataset.metrics.levenshtein(
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+        """The shared alignment metric instance selected by ``params.alignment``, as in `_kt_outcomes`."""
+        return self._get_alignment_metric()
 
     @metric_property(is_value=True)
     def num_biased_edits(self) -> int:

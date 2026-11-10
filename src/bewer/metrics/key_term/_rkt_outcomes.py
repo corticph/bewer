@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, NamedTuple
 from rapidfuzz.distance import Levenshtein
 
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import ALIGNMENT_ALGORITHMS, METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
-from ._keyterm_params import KeyTermSubsetParams
+from ._keyterm_params import RelaxedKeyTermParams
 
 if TYPE_CHECKING:
     from bewer.key_term.key_term import KeyTermMatch
@@ -46,7 +46,7 @@ def _join_op_refs(ops: Alignment) -> str:
 def _join_op_hyps(ops: Alignment) -> str:
     """Join hypothesis text from alignment ops, preserving original spacing.
 
-    Uses op.hyp_span character positions (from error_align) to determine whether
+    Uses op.hyp_span character positions to determine whether
     a space should be inserted between adjacent hypothesis tokens, mirroring the
     logic of _join_tokens for reference tokens.
     """
@@ -76,13 +76,13 @@ class _RKTOutcomes_(ExampleMetric):
     def term_outcomes(self) -> list[TermOutcome]:
         """Compute TermOutcome for each ref key term match.
 
-        Alignment is derived from error_align. Results are threshold-agnostic so
+        Alignment is selected by ``params.alignment``. Results are threshold-agnostic so
         this metric can be shared across RKTR instances with different thresholds.
         """
         key_term_matches = self.ref_matches
         if not key_term_matches:
             return []
-        alignment = self.parent_metric._error_align[self.example.index].alignment
+        alignment = self.parent_metric._alignment[self.example.index].alignment
         outcomes: list[TermOutcome] = []
         for kt_match in key_term_matches:
             op_start = alignment.ref_index_mapping.get(kt_match.start)
@@ -107,14 +107,16 @@ class _RKTOutcomes(Metric):
     long_name_base = "Relaxed Key-Term Outcomes"
     description = (
         "Private metric that computes per-term character edit distance statistics for relaxed key term "
-        "metrics. Stores (char_edits, ref_chars) per key term match using error_align alignment, without "
+        "metrics. Stores (char_edits, ref_chars) per key term match, from the selected alignment "
+        "(default error_align), without "
         "applying any threshold. Intended to be shared across RKTR instances with different thresholds. "
         "Not intended for direct use."
     )
     example_cls = _RKTOutcomes_
+    supported_alignments = ALIGNMENT_ALGORITHMS
 
     @dataclass
-    class param_schema(KeyTermSubsetParams):
+    class param_schema(RelaxedKeyTermParams):
         """Parameters for the _RKTOutcomes metric.
 
         Attributes:
@@ -129,13 +131,9 @@ class _RKTOutcomes(Metric):
         return vocab.build_matcher(self.dataset)
 
     @metric_property(is_dependency=True)
-    def _error_align(self):
-        """The shared error_align metric instance."""
-        return self.dataset.metrics.error_align(
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+    def _alignment(self):
+        """The shared alignment metric instance selected by ``params.alignment``."""
+        return self._get_alignment_metric()
 
     @metric_property(is_value=True)
     def num_ref_terms(self) -> int:

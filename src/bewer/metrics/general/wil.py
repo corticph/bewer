@@ -8,7 +8,14 @@ computes WIL as exactly that difference.
 
 from __future__ import annotations
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import (
+    ALIGNMENT_ALGORITHMS,
+    METRIC_REGISTRY,
+    AlignmentParams,
+    ExampleMetric,
+    Metric,
+    metric_property,
+)
 
 __all__ = ["WIL"]
 
@@ -35,11 +42,14 @@ class WIL(Metric):
         "Morris, Maier and Green (2004, From WER and RIL to MER and WIL)."
     )
     example_cls = WIL_
+    param_schema = AlignmentParams
+    supported_alignments = ALIGNMENT_ALGORITHMS
 
     @metric_property(is_dependency=True)
     def _wip(self):
         """The shared WIP metric instance this metric negates."""
         return self.dataset.metrics.wip(
+            alignment=self.params.alignment,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

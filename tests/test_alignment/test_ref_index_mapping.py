@@ -172,3 +172,50 @@ class TestOpsFromRefIndex:
         """Test that range queries return an Alignment (via __getitem__ slice)."""
         result = alignment_with_mixed_ops.ops_from_ref_index(0, 2)
         assert isinstance(result, Alignment)
+
+
+class TestOpsFromHypIndex:
+    """Tests for ops_from_hyp_index, which covers hypothesis tokens split across ops."""
+
+    @pytest.fixture
+    def split_alignment(self):
+        """`bedroom` (hyp token 1) is split across two ops, as error_align does."""
+        ops = [
+            Op(type=OpType.MATCH, ref="the", hyp="the", ref_token_idx=0, hyp_token_idx=0),
+            Op(type=OpType.SUBSTITUTE, ref="bed", hyp="bed", ref_token_idx=1, hyp_token_idx=1),
+            Op(type=OpType.SUBSTITUTE, ref="room", hyp="room", ref_token_idx=2, hyp_token_idx=1),
+            Op(type=OpType.DELETE, ref="is", hyp=None, ref_token_idx=3),
+            Op(type=OpType.MATCH, ref="big", hyp="big", ref_token_idx=4, hyp_token_idx=2),
+        ]
+        return Alignment(ops, src=Mock())
+
+    def test_single_token_covers_all_its_ops(self, split_alignment):
+        assert [op.ref for op in split_alignment.ops_from_hyp_index(1)] == ["bed", "room"]
+
+    def test_range_spans_first_to_last_op(self, split_alignment):
+        assert [op.ref for op in split_alignment.ops_from_hyp_index(1, 2)] == ["bed", "room", "is", "big"]
+
+    def test_hyp_index_mapping_holds_last_op(self, split_alignment):
+        assert split_alignment.hyp_index_mapping == {0: 0, 1: 2, 2: 4}
+
+    def test_unknown_start_raises(self, split_alignment):
+        with pytest.raises(ValueError, match="Start index 9"):
+            split_alignment.ops_from_hyp_index(9)
+
+    def test_unknown_stop_raises(self, split_alignment):
+        with pytest.raises(ValueError, match="Stop index 9"):
+            split_alignment.ops_from_hyp_index(0, 9)
+
+    def test_merged_op_counts_for_each_token(self):
+        """An op covering hyp tokens 1-2 (error_align merge) is found from either token."""
+        ops = [
+            Op(type=OpType.INSERT, hyp="c", hyp_token_idx=0),
+            Op(type=OpType.SUBSTITUTE, ref="ba", hyp="ab cab", ref_token_idx=0, hyp_token_idx=1, hyp_token_stop=3),
+        ]
+        alignment = Alignment(ops, src=Mock())
+        assert alignment.hyp_index_mapping == {0: 0, 1: 1, 2: 1}
+        assert [op.hyp for op in alignment.ops_from_hyp_index(2)] == ["ab cab"]
+
+    def test_stop_before_start_raises(self, split_alignment):
+        with pytest.raises(ValueError, match="greater than or equal"):
+            split_alignment.ops_from_hyp_index(2, 1)

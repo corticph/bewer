@@ -147,3 +147,20 @@ class TestKTFPRRegistered:
         ds = _dataset("the fox jumps", "the fox jumps", ["fox"])
         result = ds.metrics.ktfpr(vocab="vocab")
         assert isinstance(result, KTFPR)
+
+
+class TestKTFPRErrorAlign:
+    def test_split_hypothesis_token_is_one_false_positive(self):
+        """error_align splits hyp `bedroom` into two mismatched pieces; the token is one FP, not two."""
+        dataset = _dataset("the bed room", "the bedroom", ["bedroom"])
+        pieces = [op for op in dataset[0].metrics.error_align().alignment if op.hyp_token_idx == 1]
+        assert len(pieces) == 2
+        ktfpr = dataset.metrics.ktfpr(vocab="vocab", partial_credit=True, alignment="error_align")
+        assert ktfpr.num_fp == 1
+        assert ktfpr.num_fp == dataset.metrics.ktfpr(vocab="vocab", partial_credit=True).num_fp
+
+    def test_term_inside_merged_op_is_false_positive(self):
+        """error_align merges hyp `ab cab` into one op; the key-term token `cab` (hyp token 2) is still an FP."""
+        dataset = _dataset("ba", "c ab cab", ["cab"])
+        ktfpr = dataset.metrics.ktfpr(vocab="vocab", partial_credit=True, alignment="error_align")
+        assert ktfpr.num_fp == 1

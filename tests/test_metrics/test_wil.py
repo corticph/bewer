@@ -164,3 +164,11 @@ class TestWILMetricValues:
         values = WIL_.metric_values()
         assert values["main"] == "value"
         assert values["other"] == []
+
+
+class TestWILAlignment:
+    def test_forwards_alignment_to_wip(self, empty_dataset):
+        empty_dataset.add("the bed room is big", "the bedroom is a big")
+        wil = empty_dataset.metrics.wil(alignment="error_align")
+        assert wil.value == pytest.approx(1 - empty_dataset.metrics.wip(alignment="error_align").value)
+        assert wil.value != pytest.approx(empty_dataset.metrics.wil().value)

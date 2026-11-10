@@ -110,6 +110,12 @@ class TestDynamicNaming:
         assert "threshold=0.5" in rktr.short_name
         assert "vocab=medical_terms" in rktr.short_name
 
+    def test_alignment_listed_after_own_params(self, sample_dataset):
+        """Test that the inherited keyword-only alignment param comes after the metric's own params."""
+        ktr = sample_dataset.metrics.ktr(vocab="medical_terms")
+        assert ktr.short_name.startswith("KTR (vocab=medical_terms")
+        assert ktr.short_name.endswith("alignment=levenshtein)")
+
 
 class TestRKTRParameterization:
     """Test suite for parameterization on a real parameterized metric (RKTR)."""

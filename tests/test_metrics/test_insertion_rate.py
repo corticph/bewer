@@ -353,5 +353,5 @@ class TestInsertionRateValidation:
 
     def test_invalid_alignment_raises(self, sample_dataset):
         """Test that invalid alignment value raises ValueError."""
-        with pytest.raises(ValueError, match="alignment must be 'levenshtein' or 'error_align'"):
+        with pytest.raises(ValueError, match="does not support alignment 'foo'"):
             sample_dataset.metrics.insertion_rate(alignment="foo")

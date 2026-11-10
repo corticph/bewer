@@ -141,3 +141,12 @@ class TestKTCERMetricAttributes:
         values = KTCER.metric_values()
         assert "num_char_edits" in values["other"]
         assert "ref_chars" in values["other"]
+
+
+class TestKTCERAlignment:
+    @pytest.mark.parametrize("alignment", ["levenshtein", "error_align"])
+    def test_merged_compound(self, alignment):
+        config = get_config("base").clone().add_vocabulary(Vocabulary("v", terms=["bed room"]))
+        dataset = Dataset(config=config)
+        dataset.add("the bed room", "the bedroom")
+        assert dataset.metrics.ktcer(vocab="v", alignment=alignment).value == pytest.approx(1 / 8)

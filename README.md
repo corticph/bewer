@@ -276,6 +276,12 @@ alignment.display()
 
 <img src="https://raw.githubusercontent.com/corticph/bewer/main/.github/assets/alignment-display.png" alt="A color-coded two-row alignment, showing an insertion, a substitution and a deletion" width="100%"/>
 
+Metrics computed from an alignment take an `alignment` parameter that selects it: `levenshtein` (the default) or `error_align`. The relaxed key-term metrics (`rktr`, `ktcer`) default to `error_align`. `per` and `summary` take no `alignment` parameter. A metric lists the alignments it accepts in its `supported_alignments` attribute and rejects any other.
+
+```python
+wer = dataset.metrics.wer(alignment="error_align")
+```
+
 ### Lazy Computation and Caching
 
 Metric values and pipeline attributes are computed lazily. The dependencies between the pipeline stages are tracked to make sure that the full pipeline is considered when deciding which computations are necessary. Once a metric is requested from the metrics collection, it is cached and reused for subsequent requests with matching parameters or by other metrics that depend on it.

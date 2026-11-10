@@ -235,3 +235,21 @@ class TestRKTRMetricAttributes:
         values = RKTR.metric_values()
         assert "num_relaxed_matches" in values["other"]
         assert "num_ref_terms" in values["other"]
+
+
+class TestRKTRAlignment:
+    def _dataset(self):
+        config = get_config("base").clone().add_vocabulary(Vocabulary("v", terms=["bed room"]))
+        dataset = Dataset(config=config)
+        dataset.add("the bed room", "the bedroom")
+        return dataset
+
+    def test_defaults_to_error_align(self):
+        assert self._dataset().metrics.rktr(vocab="v").params.alignment == "error_align"
+
+    @pytest.mark.parametrize("alignment", ["levenshtein", "error_align"])
+    def test_merged_compound_is_near_miss(self, alignment):
+        """`bed room` -> `bedroom` is 1 character edit over 8 reference characters under either alignment."""
+        dataset = self._dataset()
+        assert dataset.metrics.rktr(vocab="v", threshold=0.2, alignment=alignment).value == 1.0
+        assert dataset.metrics.rktr(vocab="v", threshold=0.1, alignment=alignment).value == 0.0

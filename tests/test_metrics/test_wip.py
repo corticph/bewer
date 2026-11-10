@@ -197,3 +197,10 @@ class TestWIPMetricValues:
         assert "num_matches" in values["other"]
         assert "ref_length" in values["other"]
         assert "hyp_length" in values["other"]
+
+
+class TestWIPAlignment:
+    def test_counts_from_selected_alignment(self, empty_dataset):
+        empty_dataset.add("the bed room is big", "the bedroom is a big")
+        assert empty_dataset.metrics.wip().value == pytest.approx((2 / 5) * (2 / 5))
+        assert empty_dataset.metrics.wip(alignment="error_align").value == pytest.approx((3 / 5) * (3 / 5))

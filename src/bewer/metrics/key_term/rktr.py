@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import ALIGNMENT_ALGORITHMS, METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
-from ._keyterm_params import KeyTermSubsetParams
+from ._keyterm_params import RelaxedKeyTermParams
 from ._rkt_outcomes import TermOutcome
 
 __all__ = ["RKTR"]
@@ -55,12 +55,14 @@ class RKTR(Metric):
     description = (
         "Relaxed key term recall (RKTR) is computed as TP / (TP + FN), where a key term is counted as TP "
         "if its character error rate (CER) against the aligned hypothesis text is at or below the given "
-        "threshold. Alignment is derived from error_align. With threshold=0.0, RKTR is equivalent to KTR."
+        "threshold. Alignment defaults to error_align; Levenshtein is also supported. "
+        "With threshold=0.0, RKTR is equivalent to KTR."
     )
     example_cls = RKTR_
+    supported_alignments = ALIGNMENT_ALGORITHMS
 
     @dataclass
-    class param_schema(KeyTermSubsetParams):
+    class param_schema(RelaxedKeyTermParams):
         """Parameters for the RKTR metric.
 
         Attributes:
@@ -82,6 +84,7 @@ class RKTR(Metric):
         """Get the shared _RKTOutcomes metric instance."""
         return self.dataset.metrics._rkt_outcomes(
             vocab=self.params.vocab,
+            alignment=self.params.alignment,
             allow_subset_matches=self.params.allow_subset_matches,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,

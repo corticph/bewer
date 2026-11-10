@@ -8,7 +8,14 @@ reference implementation, which computes MER from a word-level Levenshtein align
 from __future__ import annotations
 
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import (
+    ALIGNMENT_ALGORITHMS,
+    METRIC_REGISTRY,
+    AlignmentParams,
+    ExampleMetric,
+    Metric,
+    metric_property,
+)
 
 __all__ = ["MER"]
 
@@ -48,14 +55,13 @@ class MER(Metric):
         "Morris, Maier and Green (2004, From WER and RIL to MER and WIL)."
     )
     example_cls = MER_
+    param_schema = AlignmentParams
+    supported_alignments = ALIGNMENT_ALGORITHMS
 
     @metric_property(is_dependency=True)
     def _alignment(self):
-        return self.dataset.metrics.levenshtein(
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+        """The shared alignment metric instance selected by ``params.alignment``."""
+        return self._get_alignment_metric()
 
     @metric_property(is_value=True)
     def num_edits(self) -> int:

@@ -203,3 +203,13 @@ class TestBWERParameters:
         dataset = _medical_dataset()
         with pytest.raises(ValueError, match=r"Unknown parameter.*allow_subset_matches"):
             dataset.metrics.b_wer(vocab="medical", allow_subset_matches=True)
+
+
+class TestBWERAlignment:
+    @pytest.mark.parametrize("alignment", ["levenshtein", "error_align"])
+    def test_biased_and_unbiased_edits_split_the_alignment_edits(self, alignment):
+        dataset = _medical_dataset()
+        outcomes = dataset.metrics._bu_wer_outcomes(vocab="medical", alignment=alignment)
+        total = sum(ex.metrics.get(alignment)().num_edits for ex in dataset)
+        assert outcomes.num_biased_edits + outcomes.num_unbiased_edits == total
+        assert dataset.metrics.b_wer(vocab="medical", alignment=alignment).num_biased_edits == outcomes.num_biased_edits

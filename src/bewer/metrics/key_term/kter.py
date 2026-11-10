@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import ALIGNMENT_ALGORITHMS, METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 from ._keyterm_params import KeyTermSubsetParams
 
@@ -44,6 +44,7 @@ class KTER(Metric):
         "KTER is the complement of KTR: KTER = 1 - KTR."
     )
     example_cls = KTER_
+    supported_alignments = ALIGNMENT_ALGORITHMS
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -65,6 +66,7 @@ class KTER(Metric):
         """Get the shared _KTOutcomes metric instance."""
         return self.dataset.metrics._kt_outcomes(
             vocab=self.params.vocab,
+            alignment=self.params.alignment,
             allow_subset_matches=self.params.allow_subset_matches,
             partial_credit=self.params.partial_credit,
             standardizer=self.standardizer,

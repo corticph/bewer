@@ -1,6 +1,6 @@
 """Tests for bewer.metrics.error_align module."""
 
-import pytest
+import logging
 
 from bewer.alignment import OpType
 from bewer.metrics.alignment.error_align import ErrorAlign, ErrorAlign_
@@ -204,14 +204,15 @@ class TestErrorAlignDatasetNormalizer:
         assert ea.num_substitutions == 0
         assert ea.num_edits == 2  # word reordering: insert + delete
 
-    def test_length_changing_normalizer_does_not_crash(self, empty_dataset):
-        """Tokens whose normalization changes length (ß -> ss) should not crash."""
+    def test_length_changing_normalizer_does_not_crash(self, empty_dataset, caplog):
+        """Tokens whose normalization changes length (ß -> ss) should not crash, and log a warning."""
         empty_dataset.add("Straße", "Strasse")
         example = empty_dataset[0]
-        with pytest.warns(UserWarning, match="not length-preserving"):
+        with caplog.at_level(logging.WARNING, logger="bewer.metrics.alignment.error_align"):
             ea = example.metrics.error_align()
             assert ea.num_edits == 1  # ß -> ss is not length-preserving, falls back to basic_normalizer
             assert ea.num_substitutions == 1
+        assert "not length-preserving" in caplog.text
 
     def test_none_normalizer_output_preserves_original(self, empty_dataset):
         """With normalizer="none", output ops should contain original (unnormalized) text."""
@@ -292,3 +293,39 @@ class TestErrorAlignMetricValues:
         """Test that ErrorAlign (dataset-level) has no main metric."""
         values = ErrorAlign.metric_values()
         assert values["main"] is None
+
+
+class TestErrorAlignHypTokenIndex:
+    """Every op with hypothesis text carries the index of the hypothesis token it starts in."""
+
+    def test_split_token_pieces_share_index(self, empty_dataset):
+        empty_dataset.add("the bed room is big", "the bedroom is a big")
+        ops = empty_dataset[0].metrics.error_align().alignment
+        assert [(op.ref, op.hyp, op.hyp_token_idx) for op in ops] == [
+            ("the", "the", 0),
+            ("bed", "bed", 1),
+            ("room", "room", 1),
+            ("is", "is", 2),
+            (None, "a", 3),
+            ("big", "big", 4),
+        ]
+
+    def test_deletion_has_no_index(self, empty_dataset):
+        empty_dataset.add("a b", "a")
+        ops = empty_dataset[0].metrics.error_align().alignment
+        assert [op.hyp_token_idx for op in ops] == [0, None]
+
+    def test_merged_op_covers_every_token(self, empty_dataset):
+        """error_align aligns `ab cab` (hyp tokens 1 and 2) to `ba` as one op."""
+        empty_dataset.add("ba", "c ab cab")
+        ops = empty_dataset[0].metrics.error_align().alignment
+        assert [(op.hyp, op.hyp_token_idx, list(op.hyp_token_indices)) for op in ops] == [
+            ("c", 0, [0]),
+            ("ab cab", 1, [1, 2]),
+        ]
+        assert [op.hyp for op in ops.ops_from_hyp_index(2)] == ["ab cab"]
+
+    def test_hyp_span_lookup_covers_split_token(self, empty_dataset):
+        empty_dataset.add("the bed room", "the bedroom")
+        ops = empty_dataset[0].metrics.error_align().alignment
+        assert [op.ref for op in ops.ops_from_hyp_index(1)] == ["bed", "room"]

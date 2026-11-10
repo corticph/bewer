@@ -1,5 +1,7 @@
 """Tests for bewer.metrics.cer module."""
 
+import pytest
+
 from bewer.metrics.general.cer import CER, CER_
 
 
@@ -155,3 +157,37 @@ class TestCERVsWER:
         example = dataset_perfect_match[0]
         assert example.metrics.cer().value == 0.0
         assert example.metrics.wer().value == 0.0
+
+
+class TestCERAlignment:
+    """Under error_align, CER counts character edits along the word alignment, spaces included."""
+
+    @pytest.mark.parametrize(
+        ("ref", "hyp", "num_edits"),
+        [
+            ("a b", "a", 2),  # delete `b` and its space
+            ("", "x y", 3),  # insert `x`, `y` and the space between them
+            ("the bed room is big", "the bedroom is a big", 3),  # missing space, extra `a` and its space
+        ],
+    )
+    def test_error_align_counts(self, empty_dataset, ref, hyp, num_edits):
+        empty_dataset.add(ref, hyp)
+        assert empty_dataset[0].metrics.cer(alignment="error_align").num_edits == num_edits
+
+    @pytest.mark.parametrize(
+        ("ref", "hyp"),
+        [
+            ("cab a c ba", "ba ba c abc c"),  # error_align merges `ba b` into one op
+            ("she sells sea shells", "she sell seashells"),
+            ("ba", "c ab cab"),
+        ],
+    )
+    def test_error_align_never_below_levenshtein(self, empty_dataset, ref, hyp):
+        empty_dataset.add(ref, hyp)
+        example = empty_dataset[0]
+        assert example.metrics.cer(alignment="error_align").num_edits >= example.metrics.cer().num_edits
+
+    def test_error_align_ref_length_unchanged(self, empty_dataset):
+        empty_dataset.add("the bed room", "the bedroom")
+        example = empty_dataset[0]
+        assert example.metrics.cer(alignment="error_align").ref_length == example.metrics.cer().ref_length

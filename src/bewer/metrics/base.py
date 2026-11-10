@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import MISSING, dataclass, fields
+from dataclasses import MISSING, dataclass, field, fields
 from functools import cached_property, update_wrapper
 from typing import TYPE_CHECKING, Any, Iterator, Optional, Union, get_type_hints
 
@@ -19,6 +19,8 @@ __all__ = [
     "Metric",
     "ExampleMetric",
     "MetricParams",
+    "AlignmentParams",
+    "ALIGNMENT_ALGORITHMS",
     "metric_property",
     "METRIC_REGISTRY",
     "MetricRegistry",
@@ -236,9 +238,50 @@ class MetricParams:
         pass
 
 
+def _fields_kw_only_last(params) -> list:
+    """Return a params dataclass's fields with keyword-only ones (e.g. ``alignment``) last.
+
+    ``dataclasses.fields`` lists inherited fields first; this keeps each metric's own
+    parameters leading in names and tables.
+    """
+    return sorted(fields(params), key=lambda f: f.kw_only)
+
+
+#: Registered alignment metrics a metric can compute from, selected by the ``alignment`` parameter.
+ALIGNMENT_ALGORITHMS: tuple[str, ...] = ("levenshtein", "error_align")
+
+
+@dataclass(kw_only=True)
+class AlignmentParams(MetricParams):
+    """Base class for parameters of metrics computed from an alignment.
+
+    Provides the ``alignment`` field, validated against the metric's
+    :attr:`Metric.supported_alignments`. The field is keyword-only, so it composes with
+    required fields of subclasses. A metric with a different default redeclares the field
+    with ``field(default=..., kw_only=True)``.
+
+    Attributes:
+        alignment: The alignment algorithm the metric is computed from.
+    """
+
+    alignment: str = field(default="levenshtein", kw_only=True)
+
+    def validate(self) -> None:
+        """Validate that the metric supports the requested alignment algorithm."""
+        super().validate()
+        supported = type(self.metric).supported_alignments
+        if self.alignment not in supported:
+            raise ValueError(
+                f"{type(self.metric).short_name_base} does not support alignment '{self.alignment}'. "
+                f"Supported alignments: {list(supported)}."
+            )
+
+
 class Metric(ABC):
     example_cls: type["ExampleMetric"] | None = None
     param_schema: type["MetricParams"] | None = None
+    #: Alignment algorithms this metric accepts via ``AlignmentParams.alignment``; empty if none.
+    supported_alignments: tuple[str, ...] = ()
     short_name_base: str
     long_name_base: str
 
@@ -312,7 +355,7 @@ class Metric(ABC):
         """Get the short name, including parameters if present."""
         if self.params is None:
             return self.short_name_base
-        param_strs = [f"{f.name}={getattr(self.params, f.name)}" for f in fields(self.params)]
+        param_strs = [f"{f.name}={getattr(self.params, f.name)}" for f in _fields_kw_only_last(self.params)]
         return f"{self.short_name_base} ({', '.join(param_strs)})"
 
     @property
@@ -320,7 +363,7 @@ class Metric(ABC):
         """Get the long name, including parameters if present."""
         if self.params is None:
             return self.long_name_base
-        param_strs = [f"{f.name}={getattr(self.params, f.name)}" for f in fields(self.params)]
+        param_strs = [f"{f.name}={getattr(self.params, f.name)}" for f in _fields_kw_only_last(self.params)]
         return f"{self.long_name_base} ({', '.join(param_strs)})"
 
     @property
@@ -338,6 +381,14 @@ class Metric(ABC):
     def dataset(self) -> "Dataset":
         """Alias for src property."""
         return self._src
+
+    def _get_alignment_metric(self) -> "Metric":
+        """Return the alignment metric selected by ``params.alignment``, under this metric's pipeline."""
+        return self.dataset.metrics.get(self.params.alignment)(
+            standardizer=self.standardizer,
+            tokenizer=self.tokenizer,
+            normalizer=self.normalizer,
+        )
 
     @property
     def pipeline(self) -> tuple[str, str, str]:
@@ -766,7 +817,7 @@ class MetricRegistry:
                 raise TypeError(f"param_schema on {metric_cls.__name__} must be a @dataclass inheriting MetricParams.")
             hints = get_type_hints(metric_cls.param_schema)
             param_schema = {}
-            for f in fields(metric_cls.param_schema):
+            for f in _fields_kw_only_last(metric_cls.param_schema):
                 field_type = hints[f.name]
                 if f.default is not MISSING:
                     param_schema[f.name] = (field_type, f.default)

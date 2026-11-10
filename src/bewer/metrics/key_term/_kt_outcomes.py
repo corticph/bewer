@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from bewer.alignment import Alignment, OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import ALIGNMENT_ALGORITHMS, METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 from ._keyterm_params import KeyTermSubsetParams
 
@@ -34,7 +34,7 @@ class _KTOutcomes_(ExampleMetric):
     @metric_property(is_value=True)
     def num_ref_tokens(self) -> int:
         """Number of tokens in the reference text."""
-        alignment = self.parent_metric._levenshtein[self.example.index].alignment
+        alignment = self.parent_metric._alignment[self.example.index].alignment
         return alignment.num_matches + alignment.num_substitutions + alignment.num_deletions
 
     @metric_property(is_value=True)
@@ -52,7 +52,7 @@ class _KTOutcomes_(ExampleMetric):
         if not ref_matches and not hyp_matches:
             return {"tp": [], "fn": [], "fp": []}
 
-        alignment = self.parent_metric._levenshtein[self.example.index].alignment
+        alignment = self.parent_metric._alignment[self.example.index].alignment
         tp: list[Alignment] = []
         fn: list[Alignment] = []
         for kt_match in ref_matches:
@@ -66,9 +66,7 @@ class _KTOutcomes_(ExampleMetric):
 
         fp: list[Alignment] = []
         for hyp_match in hyp_matches:
-            op_start = alignment.hyp_index_mapping[hyp_match.start]
-            op_stop = alignment.hyp_index_mapping[hyp_match.stop - 1] + 1
-            segment = alignment[op_start:op_stop]
+            segment = alignment.ops_from_hyp_index(hyp_match.start, hyp_match.stop - 1)
             if segment.num_edits > 0:
                 fp.append(segment)
 
@@ -93,7 +91,9 @@ class _KTOutcomes_(ExampleMetric):
           - ref position in I_R + MATCH     → TP (one single-op slice)
           - ref position in I_R + non-MATCH → FN (one single-op slice)
           - hyp position in I_H + non-MATCH → FP (one single-op slice)
-        Positions shared by overlapping or nested terms are counted only once.
+        Positions shared by overlapping or nested terms are counted only once. A hyp token
+        split across several ops (error_align) is one FP, at its first non-MATCH op; an op
+        covering several hyp tokens (an error_align merge) is one FP per covered key-term token.
         """
         ref_matches = self.ref_matches
         hyp_matches = self.hyp_matches
@@ -109,10 +109,11 @@ class _KTOutcomes_(ExampleMetric):
         if not I_R and not I_H:
             return {"tp": [], "fn": [], "fp": []}
 
-        alignment = self.parent_metric._levenshtein[self.example.index].alignment
+        alignment = self.parent_metric._alignment[self.example.index].alignment
         tp: list[Alignment] = []
         fn: list[Alignment] = []
         fp: list[Alignment] = []
+        fp_positions: set[int] = set()
         for i, op in enumerate(alignment):
             is_match = op.type == OpType.MATCH
             if op.ref_token_idx is not None and op.ref_token_idx in I_R:
@@ -120,8 +121,10 @@ class _KTOutcomes_(ExampleMetric):
                     tp.append(alignment[i : i + 1])
                 else:
                     fn.append(alignment[i : i + 1])
-            if op.hyp_token_idx is not None and op.hyp_token_idx in I_H and not is_match:
-                fp.append(alignment[i : i + 1])
+            if not is_match:
+                new_fp_positions = (I_H & set(op.hyp_token_indices)) - fp_positions
+                fp_positions |= new_fp_positions
+                fp.extend(alignment[i : i + 1] for _ in new_fp_positions)
         return {"tp": tp, "fn": fn, "fp": fp}
 
     @metric_property(is_value=True)
@@ -189,6 +192,7 @@ class _KTOutcomes(Metric):
         "'hello world' but hyp only matches the subset 'world')."
     )
     example_cls = _KTOutcomes_
+    supported_alignments = ALIGNMENT_ALGORITHMS
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -210,13 +214,9 @@ class _KTOutcomes(Metric):
         return vocab.build_matcher(self.dataset)
 
     @metric_property(is_dependency=True)
-    def _levenshtein(self):
-        """The shared Levenshtein metric instance."""
-        return self.dataset.metrics.levenshtein(
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+    def _alignment(self):
+        """The shared alignment metric instance selected by ``params.alignment``."""
+        return self._get_alignment_metric()
 
     @metric_property(is_value=True)
     def num_ref_tokens(self) -> int:

@@ -3,6 +3,7 @@ metrics:
   cer:
     compute_seconds: 10.583
     params:
+      alignment: levenshtein
       normalizer: default
       standardizer: default
       tokenizer: default
@@ -13,6 +14,7 @@ metrics:
   ktcer:
     compute_seconds: 24.987
     params:
+      alignment: error_align
       allow_subset_matches: false
       normalizer: default
       standardizer: default
@@ -25,6 +27,7 @@ metrics:
   kter:
     compute_seconds: 10.172
     params:
+      alignment: levenshtein
       allow_subset_matches: false
       normalizer: default
       partial_credit: false
@@ -36,6 +39,7 @@ metrics:
   ktf:
     compute_seconds: 9.788
     params:
+      alignment: levenshtein
       allow_subset_matches: false
       beta: 1.0
       normalizer: default
@@ -48,6 +52,7 @@ metrics:
   ktp:
     compute_seconds: 9.493
     params:
+      alignment: levenshtein
       allow_subset_matches: false
       normalizer: default
       partial_credit: false
@@ -59,6 +64,7 @@ metrics:
   ktr:
     compute_seconds: 9.501
     params:
+      alignment: levenshtein
       allow_subset_matches: false
       normalizer: default
       partial_credit: false
@@ -83,6 +89,7 @@ metrics:
   rktr:
     compute_seconds: 25.531
     params:
+      alignment: error_align
       allow_subset_matches: false
       normalizer: default
       standardizer: default
@@ -96,6 +103,7 @@ metrics:
   wer:
     compute_seconds: 5.838
     params:
+      alignment: levenshtein
       normalizer: default
       standardizer: default
       tokenizer: default

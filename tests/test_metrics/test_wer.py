@@ -1,5 +1,7 @@
 """Tests for bewer.metrics.wer module."""
 
+import pytest
+
 from bewer.metrics.general.wer import WER, WER_
 
 
@@ -155,3 +157,25 @@ class TestWERMetricValues:
         assert values["main"] == "value"
         assert "num_edits" in values["other"]
         assert "ref_length" in values["other"]
+
+
+class TestWERAlignment:
+    """WER counts edits from the selected alignment; Levenshtein stays the direct edit distance."""
+
+    def test_levenshtein_is_direct_edit_distance(self, empty_dataset):
+        empty_dataset.add("ba", "c ab cab")
+        assert empty_dataset[0].metrics.wer().num_edits == 3  # 1 substitution + 2 insertions
+
+    def test_error_align_can_be_lower(self, empty_dataset):
+        """error_align aligns `ab cab` to `ba` as one substitution, after inserting `c`."""
+        empty_dataset.add("ba", "c ab cab")
+        wer = empty_dataset[0].metrics.wer(alignment="error_align")
+        assert wer.num_edits == 2
+        assert wer.num_edits == empty_dataset[0].metrics.error_align().num_edits
+
+    def test_dataset_sums_error_align_edits(self, empty_dataset):
+        empty_dataset.add("ba", "c ab cab")
+        empty_dataset.add("hello world", "hello there world")
+        wer = empty_dataset.metrics.wer(alignment="error_align")
+        assert wer.num_edits == 3
+        assert wer.value == pytest.approx(3 / 3)

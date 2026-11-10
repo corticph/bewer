@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import ALIGNMENT_ALGORITHMS, METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 from ._keyterm_params import KeyTermParams
 
@@ -43,6 +43,7 @@ class BWER(Metric):
         "that term."
     )
     example_cls = BWER_
+    supported_alignments = ALIGNMENT_ALGORITHMS
 
     param_schema = KeyTermParams
 
@@ -51,6 +52,7 @@ class BWER(Metric):
         """Get the shared _BUWEROutcomes metric instance."""
         return self.dataset.metrics._bu_wer_outcomes(
             vocab=self.params.vocab,
+            alignment=self.params.alignment,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

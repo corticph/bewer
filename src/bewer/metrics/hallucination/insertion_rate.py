@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bewer.alignment import Alignment
 from bewer.alignment.op_type import OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import ALIGNMENT_ALGORITHMS, METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 from bewer.metrics.hallucination._insertion_params import InsertionParams
 
 __all__ = ["InsertionRate"]
@@ -64,20 +64,12 @@ class InsertionRate(Metric):
     example_cls = InsertionRate_
 
     param_schema = InsertionParams
+    supported_alignments = ALIGNMENT_ALGORITHMS
 
     @metric_property(is_dependency=True)
     def _alignment(self):
-        if self.params.alignment == "error_align":
-            return self.dataset.metrics.error_align(
-                standardizer=self.standardizer,
-                tokenizer=self.tokenizer,
-                normalizer=self.normalizer,
-            )
-        return self.dataset.metrics.levenshtein(
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+        """The shared alignment metric instance selected by ``params.alignment``."""
+        return self._get_alignment_metric()
 
     @metric_property(is_value=True)
     def num_insertions(self) -> int:

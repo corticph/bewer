@@ -336,3 +336,30 @@ class TestKTOutcomesSharing:
         """Accessing _kt_outcomes twice on the same metric returns the identical object."""
         ktr = dataset.metrics.ktr(vocab="animals")
         assert ktr._kt_outcomes is ktr._kt_outcomes
+
+
+class TestKTOutcomesErrorAlign:
+    def _dataset(self):
+        config = get_config("base").clone().add_vocabulary(Vocabulary("v", terms=["bedroom"]))
+        dataset = Dataset(config=config)
+        dataset.add("the bed room", "the bedroom")
+        return dataset
+
+    def test_exact_match_fp_segment_covers_split_token(self):
+        outcomes = self._dataset().metrics._kt_outcomes(vocab="v", alignment="error_align")
+        (segment,) = outcomes[0].fp_alignments
+        assert [(op.ref, op.hyp) for op in segment] == [("bed", "bed"), ("room", "room")]
+
+    @pytest.mark.parametrize("terms", [["cab"], ["ab cab"]])
+    def test_term_inside_merged_op(self, terms):
+        """A hyp key term inside an error_align merge (`ab cab` -> `ba`) is one exact-match FP."""
+        config = get_config("base").clone().add_vocabulary(Vocabulary("v", terms=terms))
+        dataset = Dataset(config=config)
+        dataset.add("ba", "c ab cab")
+        outcomes = dataset.metrics._kt_outcomes(vocab="v", alignment="error_align")
+        assert outcomes.num_fp == 1
+        assert dataset.metrics.ktp(vocab="v", alignment="error_align").value == 0.0
+
+    def test_uses_selected_alignment(self):
+        outcomes = self._dataset().metrics._kt_outcomes(vocab="v", alignment="error_align")
+        assert outcomes._alignment.short_name_base == "EA"

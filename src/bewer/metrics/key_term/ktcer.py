@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import ALIGNMENT_ALGORITHMS, METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
-from ._keyterm_params import KeyTermSubsetParams
+from ._keyterm_params import RelaxedKeyTermParams
 
 __all__ = ["KTCER"]
 
@@ -35,13 +35,15 @@ class KTCER(Metric):
     description = (
         "Key term character error rate (KTCER) is computed as the total character-level edit distance "
         "across all key term occurrences in the reference, divided by the total number of reference "
-        "characters in those key terms. Alignment is derived from error_align. Complements KTR by "
+        "characters in those key terms. "
+        "Alignment defaults to error_align; Levenshtein is also supported. Complements KTR by "
         "providing a continuous measure of transcription accuracy for domain-critical terminology."
     )
     example_cls = KTCER_
+    supported_alignments = ALIGNMENT_ALGORITHMS
 
     @dataclass
-    class param_schema(KeyTermSubsetParams):
+    class param_schema(RelaxedKeyTermParams):
         """Parameters for the KTCER metric.
 
         Attributes:
@@ -54,6 +56,7 @@ class KTCER(Metric):
         """Get the shared _RKTOutcomes metric instance."""
         return self.dataset.metrics._rkt_outcomes(
             vocab=self.params.vocab,
+            alignment=self.params.alignment,
             allow_subset_matches=self.params.allow_subset_matches,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,

@@ -20,6 +20,8 @@ class Op:
         hyp (str | None): The hypothesis string involved in the operation.
         ref_token_idx (int | None): The index of the token in the reference text (for word-level alignments).
         hyp_token_idx (int | None): The index of the token in the hypothesis text (for word-level alignments).
+            For an op covering several hypothesis tokens (an error_align merge), the first of them.
+        hyp_token_indices (range): All hypothesis token indices the op covers; empty without hyp_token_idx.
         ref_span (slice | None): The index span in the reference text.
         hyp_span (slice | None): The index span in the hypothesis text.
         hyp_left_partial (bool): Whether the hypothesis token is a partial word, cropped on the left.
@@ -35,6 +37,7 @@ class Op:
         hyp: str | None = None,
         ref_token_idx: int | None = None,
         hyp_token_idx: int | None = None,
+        hyp_token_stop: int | None = None,
         ref_span: slice | None = None,
         hyp_span: slice | None = None,
         hyp_left_partial: bool = False,
@@ -50,7 +53,9 @@ class Op:
             ref: Reference string.
             hyp: Hypothesis string.
             ref_token_idx: Reference token index.
-            hyp_token_idx: Hypothesis token index.
+            hyp_token_idx: Hypothesis token index (the first, for an op covering several tokens).
+            hyp_token_stop: Exclusive end of the hypothesis tokens the op covers. Defaults to
+                ``hyp_token_idx + 1``; set it when one op covers several hypothesis tokens.
             ref_span: Reference span.
             hyp_span: Hypothesis span.
             hyp_left_partial: Whether hypothesis is left-partial.
@@ -64,6 +69,7 @@ class Op:
         self.hyp = hyp
         self.ref_token_idx = ref_token_idx
         self.hyp_token_idx = hyp_token_idx
+        self._hyp_token_stop = hyp_token_stop
         self._ref_span = ref_span
         self._hyp_span = hyp_span
         self.hyp_left_partial = hyp_left_partial
@@ -148,6 +154,14 @@ class Op:
                 return None
             return self._src.src.hyp.tokens[self.hyp_token_idx].slice
         return None
+
+    @property
+    def hyp_token_indices(self) -> range:
+        """All hypothesis token indices the op covers; empty when ``hyp_token_idx`` is unset."""
+        if self.hyp_token_idx is None:
+            return range(0)
+        stop = self.hyp_token_idx + 1 if self._hyp_token_stop is None else self._hyp_token_stop
+        return range(self.hyp_token_idx, stop)
 
     def to_dict(self) -> dict:
         """Convert the Op instance to a dictionary."""

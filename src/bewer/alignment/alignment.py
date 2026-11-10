@@ -119,14 +119,52 @@ class Alignment(tuple["Op", ...]):
     def hyp_index_mapping(self) -> dict[int, int]:
         """Create a mapping from hypothesis token index to operation index for quick lookup.
 
-        Requires a token-indexed alignment (word-level Levenshtein). Returns an empty dict
-        for character-level or error-align style alignments where hyp_token_idx is not set.
+        Covers every token an op spans (``Op.hyp_token_indices``). When one hypothesis token
+        spans several ops (error_align splits compounds), the mapping holds its *last* op. Use
+        :meth:`ops_from_hyp_index` for a token's full span. Returns an empty dict for
+        alignments where hyp_token_idx is not set.
         """
         mapping = {}
         for i, op in enumerate(self):
-            if op.hyp_token_idx is not None:
-                mapping[op.hyp_token_idx] = i
+            for hyp_idx in op.hyp_token_indices:
+                mapping[hyp_idx] = i
         return mapping
+
+    @cached_property
+    def _hyp_first_op_mapping(self) -> dict[int, int]:
+        """Map each hypothesis token index to its *first* operation index."""
+        mapping: dict[int, int] = {}
+        for i, op in enumerate(self):
+            for hyp_idx in op.hyp_token_indices:
+                mapping.setdefault(hyp_idx, i)
+        return mapping
+
+    def ops_from_hyp_index(self, start: int, stop: Optional[int] = None) -> Alignment:
+        """Get the ops covering the given hypothesis token index or inclusive index range.
+
+        The span runs from the first op of token ``start`` to the last op of token ``stop``
+        (or ``start``), so a hypothesis token split across several ops is covered whole, and
+        an op covering several hypothesis tokens (an error_align merge) counts for each.
+
+        Args:
+            start (int): The start hypothesis token index.
+            stop (Optional[int]): The inclusive stop hypothesis token index.
+
+        Returns:
+            Alignment: The ops that correspond to the given hypothesis token span.
+
+        Raises:
+            ValueError: If start or stop indices are not found in the alignment, or if stop index is less than
+                start index.
+        """
+        stop = start if stop is None else stop
+        if start not in self._hyp_first_op_mapping:
+            raise ValueError(f"Start index {start} not found in hypothesis index mapping.")
+        if stop not in self.hyp_index_mapping:
+            raise ValueError(f"Stop index {stop} not found in hypothesis index mapping.")
+        if stop < start:
+            raise ValueError("Stop index must be greater than or equal to start index.")
+        return self[self._hyp_first_op_mapping[start] : self.hyp_index_mapping[stop] + 1]
 
     def ops_from_ref_index(self, start: int, stop: Optional[int] = None) -> Alignment:
         """Get the ops that correspond to the given reference token index or slice.

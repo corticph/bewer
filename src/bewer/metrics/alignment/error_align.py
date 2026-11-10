@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import warnings
+import logging
+from bisect import bisect_left, bisect_right
 from typing import Optional
 
 from error_align import error_align
@@ -12,6 +13,8 @@ from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_pr
 from bewer.preprocessing.context import get_normalizer, get_tokenizer
 
 __all__ = ["ErrorAlign"]
+
+logger = logging.getLogger(__name__)
 
 
 class ErrorAlign_(ExampleMetric):
@@ -76,12 +79,12 @@ class ErrorAlign_(ExampleMetric):
             result = normalizer(text)
             if len(result) == len(text):
                 return result
-            warnings.warn(
-                "Dataset normalizer is not length-preserving. The error_align algorithm "
-                "requires length-preserving normalization, so affected tokens fall back to "
-                "basic_normalizer and their alignment may be faulty. Use a length-preserving "
+            logger.warning(
+                "Dataset normalizer is not length-preserving for %r. The error_align algorithm "
+                "requires length-preserving normalization, so the token falls back to "
+                "basic_normalizer and its alignment may be faulty. Use a length-preserving "
                 "normalizer to avoid this warning.",
-                category=UserWarning,
+                text,
             )
             return basic_normalizer(text)
 
@@ -96,6 +99,13 @@ class ErrorAlign_(ExampleMetric):
         ``normalizer="none"`` the identity normalizer applies, so alignment and output use
         the standardized text.
 
+        error_align may split one hypothesis token across several ops (e.g. hypothesis
+        ``bedroom`` against reference ``bed room``); every piece carries the index of the
+        hypothesis token it starts in, so pieces of one token share a ``hyp_token_idx``. An op
+        whose hypothesis text spans several tokens (a merge) covers all of them: its
+        ``hyp_token_idx`` is the first and ``hyp_token_indices`` lists every one.
+        Reference tokens are never split: each has exactly one op.
+
         Note:
             ``ref_span`` and ``hyp_span`` always index into the *standardized* (pre-normalized)
             text. The ``ref`` and ``hyp`` fields contain *normalized* text, so ``text[op.ref_span] != op.ref``
@@ -109,6 +119,7 @@ class ErrorAlign_(ExampleMetric):
         tokenizer = tokenizer or basic_tokenizer
         dataset_normalizer = get_normalizer(self.parent_metric.dataset)
         normalizer = self._length_preserving(dataset_normalizer) if dataset_normalizer else basic_normalizer
+        hyp_token_starts = [token.slice.start for token in self.example.hyp.tokens]
         ea_ops = []
         ref_idx = 0
         for ea_op in error_align(
@@ -118,12 +129,14 @@ class ErrorAlign_(ExampleMetric):
             normalizer=normalizer,
         ):
             ref_empty = ea_op.ref is None
+            hyp_empty = ea_op.hyp is None
             op = Op(
                 type=self.OPS_MAP[ea_op.op_type],
                 ref=self._normalize_conditionally(ea_op.ref, normalizer),
                 hyp=self._normalize_conditionally(ea_op.hyp, normalizer),
                 ref_token_idx=None if ref_empty else ref_idx,
-                hyp_token_idx=None,
+                hyp_token_idx=None if hyp_empty else bisect_right(hyp_token_starts, ea_op.hyp_slice.start) - 1,
+                hyp_token_stop=None if hyp_empty else bisect_left(hyp_token_starts, ea_op.hyp_slice.stop),
                 ref_span=ea_op.ref_slice,
                 hyp_span=ea_op.hyp_slice,
                 hyp_left_partial=ea_op.left_compound,

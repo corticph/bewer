@@ -222,3 +222,13 @@ class TestMERMetricValues:
         assert values["main"] == "value"
         assert "num_edits" in values["other"]
         assert "num_matches" in values["other"]
+
+
+class TestMERAlignment:
+    def test_counts_from_selected_alignment(self, empty_dataset):
+        """error_align splits `bedroom` across `bed room` and keeps `is` matched; Levenshtein does not."""
+        empty_dataset.add("the bed room is big", "the bedroom is a big")
+        assert empty_dataset.metrics.mer().value == pytest.approx(3 / 5)  # 3 subs, 2 matches
+        assert empty_dataset.metrics.mer(alignment="error_align").value == pytest.approx(
+            3 / 6
+        )  # 2 subs + 1 ins, 3 matches
