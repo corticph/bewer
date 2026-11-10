@@ -1,6 +1,6 @@
-"""Tests for bewer.metrics.per module."""
+"""Tests for bewer.metrics.general.punctuation_error_rate module."""
 
-from bewer.metrics.general.per import PER, PER_
+from bewer.metrics.general.punctuation_error_rate import PER, PER_
 
 
 class TestPERExampleMetric:
@@ -10,7 +10,7 @@ class TestPERExampleMetric:
         """PER is 0 when all punctuation is correct."""
         empty_dataset.add("hello, world.", "hello, world.")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.value == 0.0
         assert per.num_correct == 2
         assert per.num_substitutions == 0
@@ -21,7 +21,7 @@ class TestPERExampleMetric:
         """Comma replaced by period counts as one substitution."""
         empty_dataset.add("hello, world.", "hello. world.")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.num_substitutions == 1
         assert per.num_correct == 1
         assert per.num_deletions == 0
@@ -32,7 +32,7 @@ class TestPERExampleMetric:
         """Missing comma counts as one deletion."""
         empty_dataset.add("hello, world.", "hello world.")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.num_deletions == 1
         assert per.num_correct == 1
         assert per.num_substitutions == 0
@@ -43,7 +43,7 @@ class TestPERExampleMetric:
         """Extra comma in hypothesis counts as one insertion."""
         empty_dataset.add("hello world", "hello, world")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.num_insertions == 1
         assert per.num_correct == 0
         assert per.num_substitutions == 0
@@ -54,7 +54,7 @@ class TestPERExampleMetric:
         """All punctuation missing from hypothesis."""
         empty_dataset.add("hello, world.", "hello world")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.num_deletions == 2
         assert per.num_correct == 0
         assert per.value == 1.0
@@ -63,7 +63,7 @@ class TestPERExampleMetric:
         """All punctuation is spurious in hypothesis."""
         empty_dataset.add("hello world", "hello, world.")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.num_insertions == 2
         assert per.num_correct == 0
         assert per.value == 1.0
@@ -72,7 +72,7 @@ class TestPERExampleMetric:
         """PER is 0 when neither ref nor hyp has punctuation."""
         empty_dataset.add("hello world", "hello world")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.value == 0.0
         assert per.num_punct_ref == 0
         assert per.num_punct_hyp == 0
@@ -126,7 +126,7 @@ class TestPERExampleMetric:
         # PER = (0 + 1 + 2) / (0 + 1 + 2 + 0) = 3/3 = 1.0
         empty_dataset.add("hello, world! how are you?", "hello. world how are you;")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.num_substitutions == 2  # , → . and ? → ;
         assert per.num_deletions == 1  # ! deleted
         assert per.num_insertions == 0
@@ -139,14 +139,14 @@ class TestPERExampleMetric:
         """num_edits is the sum of substitutions, insertions, and deletions."""
         empty_dataset.add("hello, world.", "hello. world,")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.num_edits == per.num_substitutions + per.num_insertions + per.num_deletions
 
     def test_standardized_tokens(self, empty_dataset):
         """PER works with normalized=False (standardized tokens)."""
         empty_dataset.add("hello, world.", "hello, world.")
         example = empty_dataset[0]
-        per = example.metrics.per(normalized=False)
+        per = example.metrics.punctuation_error_rate(normalized=False)
         assert per.value == 0.0
         assert per.num_correct == 2
 
@@ -155,7 +155,7 @@ class TestPERExampleMetric:
         # ¡ and ¿ are in the default punct_chars
         empty_dataset.add("¡hola! ¿qué?", "¡hola! ¿qué?")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.value == 0.0
         assert per.num_correct == 4  # ¡ ! ¿ ?
 
@@ -163,7 +163,7 @@ class TestPERExampleMetric:
         """Curly quotation marks are counted as punctuation."""
         empty_dataset.add("\u201chello\u201d", "\u201chello\u201d")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.value == 0.0
         assert per.num_correct == 2  # " "
 
@@ -171,7 +171,7 @@ class TestPERExampleMetric:
         """Guillemets (« ») are recognized as punctuation even after normalization to << >>."""
         empty_dataset.add("«bonjour»", "«bonjour»")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.value == 0.0
         assert per.num_correct == 2  # « »
 
@@ -179,7 +179,7 @@ class TestPERExampleMetric:
         """Guillemets work with normalized=False (standardized tokens)."""
         empty_dataset.add("«bonjour»", "«bonjour»")
         example = empty_dataset[0]
-        per = example.metrics.per(normalized=False)
+        per = example.metrics.punctuation_error_rate(normalized=False)
         assert per.value == 0.0
         assert per.num_correct == 2  # « »
 
@@ -189,7 +189,7 @@ class TestPERExampleMetric:
         # as a standalone token, so this is a safety check.
         empty_dataset.add("hello world", "hello world")
         example = empty_dataset[0]
-        per = example.metrics.per()
+        per = example.metrics.punctuation_error_rate()
         assert per.num_punct_ref == 0
         assert per.num_punct_hyp == 0
         assert per.value == 0.0
@@ -202,7 +202,7 @@ class TestPERCustomPunctChars:
         """Custom punct_chars includes additional characters."""
         empty_dataset.add("hello- world", "hello- world")
         example = empty_dataset[0]
-        per = example.metrics.per(punct_chars=(".", ",", "!", "?", ":", ";", "-"))
+        per = example.metrics.punctuation_error_rate(punct_chars=(".", ",", "!", "?", ":", ";", "-"))
         assert per.value == 0.0
         assert per.num_correct == 1
 
@@ -211,7 +211,7 @@ class TestPERCustomPunctChars:
         # ref has comma and period, but punct_chars only includes period
         empty_dataset.add("hello, world.", "hello world.")
         example = empty_dataset[0]
-        per = example.metrics.per(punct_chars=(".",))
+        per = example.metrics.punctuation_error_rate(punct_chars=(".",))
         # Only . is punctuation. Comma is treated as a regular word.
         # ref tokens: hello , world .
         # hyp tokens: hello world .
@@ -229,7 +229,7 @@ class TestPERDatasetMetric:
         """Dataset-level PER is 0 for perfect matches."""
         empty_dataset.add("hello, world.", "hello, world.")
         empty_dataset.add("goodbye, world.", "goodbye, world.")
-        per = empty_dataset.metrics.per()
+        per = empty_dataset.metrics.punctuation_error_rate()
         assert per.value == 0.0
 
     def test_aggregates_across_examples(self, empty_dataset):
@@ -238,7 +238,7 @@ class TestPERDatasetMetric:
         empty_dataset.add("hello, world.", "hello, world.")
         # Example 2: one substitution (S_P=1, C_P=1)
         empty_dataset.add("foo, bar.", "foo. bar.")
-        per = empty_dataset.metrics.per()
+        per = empty_dataset.metrics.punctuation_error_rate()
         assert per.num_correct == 3
         assert per.num_substitutions == 1
         assert per.num_deletions == 0
@@ -248,7 +248,7 @@ class TestPERDatasetMetric:
 
     def test_empty_dataset(self, empty_dataset):
         """PER on empty dataset returns 0."""
-        per = empty_dataset.metrics.per()
+        per = empty_dataset.metrics.punctuation_error_rate()
         assert per.value == 0.0
         assert per.num_correct == 0
         assert per.num_edits == 0
@@ -258,19 +258,19 @@ class TestPERMetricAttributes:
     """Tests for PER metric class attributes."""
 
     def test_short_name(self, sample_dataset):
-        per = sample_dataset.metrics.per()
+        per = sample_dataset.metrics.punctuation_error_rate()
         assert per.short_name_base == "PER"
 
     def test_long_name(self, sample_dataset):
-        per = sample_dataset.metrics.per()
+        per = sample_dataset.metrics.punctuation_error_rate()
         assert per.long_name_base == "Punctuation Error Rate"
 
     def test_description(self, sample_dataset):
-        per = sample_dataset.metrics.per()
+        per = sample_dataset.metrics.punctuation_error_rate()
         assert len(per.description) > 0
 
     def test_example_cls(self, sample_dataset):
-        per = sample_dataset.metrics.per()
+        per = sample_dataset.metrics.punctuation_error_rate()
         assert per.example_cls == PER_
 
 

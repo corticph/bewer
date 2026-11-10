@@ -144,7 +144,7 @@ class PER_(ExampleMetric):
         return (i_p + d_p + s_p) / denom
 
 
-@METRIC_REGISTRY.register("per", tokenizer="with_punctuation")
+@METRIC_REGISTRY.register("punctuation_error_rate", tokenizer="with_punctuation")
 class PER(Metric):
     short_name_base = "PER"
     long_name_base = "Punctuation Error Rate"
