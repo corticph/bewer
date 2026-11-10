@@ -28,12 +28,12 @@ datasets:
       - {name: wer,         values: [value, num_edits, ref_length]}
       - {name: cer,         values: [value, num_edits, ref_length]}
       - {name: levenshtein, values: [num_substitutions, num_insertions, num_deletions, num_matches]}
-      - {name: ktr,   params: {vocab: oracle}, values: [value, num_matches, num_ref_terms]}
-      - {name: ktp,   params: {vocab: oracle}, values: [value]}
-      - {name: ktf,   params: {vocab: oracle}, values: [value]}
-      - {name: kter,  params: {vocab: oracle}, values: [value]}
-      - {name: ktcer, params: {vocab: oracle}, values: [value, num_char_edits, ref_chars]}
-      - {name: rktr,  params: {vocab: oracle, threshold: 0.5}, values: [value, num_relaxed_matches, num_ref_terms]}
+      - {name: key_term_recall,   params: {vocab: oracle}, values: [value, num_matches, num_ref_terms]}
+      - {name: key_term_precision,   params: {vocab: oracle}, values: [value]}
+      - {name: key_term_fscore,   params: {vocab: oracle}, values: [value]}
+      - {name: key_term_error_rate,  params: {vocab: oracle}, values: [value]}
+      - {name: key_term_cer, params: {vocab: oracle}, values: [value, num_char_edits, ref_chars]}
+      - {name: relaxed_key_term_recall,  params: {vocab: oracle, threshold: 0.5}, values: [value, num_relaxed_matches, num_ref_terms]}
 
   - name: common_voice_de
     path: regression/datasets/common_voice_de/data.jsonl
