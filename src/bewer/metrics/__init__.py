@@ -18,10 +18,10 @@ from bewer.metrics.hallucination.insertion_rate import InsertionRate
 from bewer.metrics.key_term import _BUWEROutcomes, _KTStats, _RKTStats  # noqa: F401 (registers the hidden metrics)
 from bewer.metrics.key_term._keyterm_params import KeyTermParams, KeyTermSubsetParams
 from bewer.metrics.key_term.b_wer import BWER
-from bewer.metrics.key_term.key_term_fpr import KTFPR
 from bewer.metrics.key_term.ktcer import KTCER
 from bewer.metrics.key_term.kter import KTER
 from bewer.metrics.key_term.ktf import KTF
+from bewer.metrics.key_term.ktfpr import KTFPR
 from bewer.metrics.key_term.ktp import KTP
 from bewer.metrics.key_term.ktr import KTR
 from bewer.metrics.key_term.orthographically_complex_term import (  # noqa: F401

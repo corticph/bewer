@@ -294,7 +294,7 @@ assert wer is dataset.metrics.wer(normalizer="default")
 | Key-Term Precision | Key-term | `ktp` | [`>`](src/bewer/metrics/key_term/ktp.py) |
 | Key-Term F-Score | Key-term | `ktf` | [`>`](src/bewer/metrics/key_term/ktf.py) |
 | Key-Term Error Rate | Key-term | `kter` | [`>`](src/bewer/metrics/key_term/kter.py) |
-| Key-Term False-Positive Rate | Key-term | `key_term_fpr` | [`>`](src/bewer/metrics/key_term/key_term_fpr.py) |
+| Key-Term False-Positive Rate | Key-term | `ktfpr` | [`>`](src/bewer/metrics/key_term/ktfpr.py) |
 | Key-Term Character Error Rate | Key-term | `ktcer` | [`>`](src/bewer/metrics/key_term/ktcer.py) |
 | Relaxed Key-Term Recall | Key-term | `rktr` | [`>`](src/bewer/metrics/key_term/rktr.py) |
 | Biased Word Error Rate | Key-term | `b_wer` | [`>`](src/bewer/metrics/key_term/b_wer.py) |
