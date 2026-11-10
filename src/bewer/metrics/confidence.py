@@ -60,10 +60,27 @@ def _make_shadow(metric: "Metric", resampled_src: list) -> "Metric":
     """Build a throwaway Metric instance whose `_src` is a resampled list of
     examples. Shares the original's `_examples` cache (and its dependency
     metrics' caches) so per-example contributions are not recomputed.
+
+    Shadow contract:
+    - Value caches (``_all_value_attr_names``) are popped, so aggregates
+      recompute over the resample. Dependencies are recursively shadowed.
+    - Every other cached property is shared deliberately: such properties must
+      be resample-invariant (functions of the metric's parameters and config,
+      not of example order), e.g. ``_matcher`` tries built from the full-sample
+      vocabulary. Bootstrap conditions on the observed sample, so sharing these
+      is the intended semantics.
+    - ``_orig_src`` keeps the un-resampled source: under a shadow, ``_src``
+      holds the resample while ``example.index`` (and every other integer
+      index) still refers to positions in the ORIGINAL dataset, so
+      ``Metric.__getitem__`` resolves integer indices through ``_orig_src``.
+      That is what keeps ExampleMetric borrows like
+      ``parent_metric._X[example.index]`` correct on cache misses.
     """
+
     shadow = type(metric).__new__(type(metric))
     shadow.__dict__.update(metric.__dict__)
     shadow._src = resampled_src
+    shadow._orig_src = metric._src
     for dep_name in type(metric).dependencies():
         if dep_name in metric.__dict__:
             shadow.__dict__[dep_name] = _make_shadow(metric.__dict__[dep_name], resampled_src)

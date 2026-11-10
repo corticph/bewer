@@ -242,6 +242,11 @@ class Metric(ABC):
     short_name_base: str
     long_name_base: str
 
+    # Set on bootstrap shadows (metrics.confidence._make_shadow): the
+    # un-resampled source that integer indices refer to. None on regular
+    # metrics, where ``_src`` is already the un-resampled source.
+    _orig_src: Optional["Dataset"] = None
+
     def __init__(
         self,
         name: Optional[str] = None,
@@ -399,11 +404,19 @@ class Metric(ABC):
         return (self._example_metric(example) for example in self._src)
 
     def __getitem__(self, index):
+        """Get the ExampleMetric(s) at a position or a slice of positions.
+
+        Integer indices are dataset positions. Under a bootstrap shadow (see
+        ``_make_shadow`` in ``metrics.confidence``), ``_src`` holds a resampled
+        list while positions still refer to the original dataset, so integer
+        indices resolve through the shadow's ``_orig_src``.
+        """
         if self.example_cls is None:
             raise TypeError(f"{type(self).__name__} has no example-level metric")
         if isinstance(index, slice):
             return [self._example_metric(ex) for ex in self._src[index]]
-        return self._example_metric(self._src[index])
+        source = self._orig_src if self._orig_src is not None else self._src
+        return self._example_metric(source[index])
 
     def compute_confidence_interval(
         self,
