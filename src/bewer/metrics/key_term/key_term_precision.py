@@ -29,7 +29,7 @@ class KTP_(ExampleMetric):
         return stats.num_tp / (stats.num_tp + stats.num_fp)
 
 
-@METRIC_REGISTRY.register("ktp", tokenizer="key_term")
+@METRIC_REGISTRY.register("key_term_precision", tokenizer="key_term")
 class KTP(Metric):
     short_name_base = "KTP"
     long_name_base = "Key-Term Precision"

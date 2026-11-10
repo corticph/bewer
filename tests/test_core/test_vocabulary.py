@@ -86,7 +86,7 @@ class TestVocabularyMatching:
         config = get_config("base").clone().add_vocabulary(Vocabulary("m", terms=["diabetes"]))
         dataset = Dataset(config=config)
         dataset.add("the patient has diabetes", "the patient has diabetes")
-        assert dataset.metrics.ktr(vocab="m").value == 1.0
+        assert dataset.metrics.key_term_recall(vocab="m").value == 1.0
 
     def test_extractor_from_refs_matched_like_static(self):
         """A term produced by an extractor reading refs is matched exactly like a static term."""
@@ -100,7 +100,9 @@ class TestVocabularyMatching:
         )
         extracted.add("the patient has diabetes", "the patient has diabetes")
 
-        assert extracted.metrics.ktr(vocab="m").value == static.metrics.ktr(vocab="m").value == 1.0
+        assert (
+            extracted.metrics.key_term_recall(vocab="m").value == static.metrics.key_term_recall(vocab="m").value == 1.0
+        )
 
     def test_extractor_can_read_hyps(self):
         """Extractors may pull terms from hypotheses; such terms match like any other."""
@@ -213,8 +215,8 @@ class TestVocabularyFreezeOnRegistration:
         d1.add("the quick brown fox", "the quick brown fox")
         d2 = Dataset(config=get_config("base").clone().add_vocabulary(vocab))
         d2.add("a fox", "a fox")
-        assert d1.metrics.ktr(vocab="m").value == 1.0
-        assert d2.metrics.ktr(vocab="m").value == 1.0
+        assert d1.metrics.key_term_recall(vocab="m").value == 1.0
+        assert d2.metrics.key_term_recall(vocab="m").value == 1.0
 
     def test_clone_allows_modification_after_freeze(self):
         """clone() returns a mutable copy of a frozen vocabulary."""
@@ -239,7 +241,7 @@ class TestVocabularyClone:
         # Same Vocabulary object is shared.
         assert clone.config.vocabularies["m"] is dataset.config.vocabularies["m"]
         # The clone resolves and computes independently.
-        assert clone.metrics.ktr(vocab="m").value == 0.0  # "diabetis" != "diabetes"
+        assert clone.metrics.key_term_recall(vocab="m").value == 0.0  # "diabetis" != "diabetes"
 
 
 class TestVocabularyFreezeAndCache:
@@ -288,7 +290,7 @@ class TestVocabularyEdgeCases:
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("e", extractors=[boom])))
         dataset.add("a b c", "a b c")
         with pytest.raises(VocabularyExtractorError):
-            dataset.metrics.ktr(vocab="e").value
+            dataset.metrics.key_term_recall(vocab="e").value
 
     def test_extractor_non_string_output_raises(self):
         dataset = Dataset(
@@ -296,7 +298,7 @@ class TestVocabularyEdgeCases:
         )
         dataset.add("a b c", "a b c")
         with pytest.raises(TypeError):
-            dataset.metrics.ktr(vocab="e").value
+            dataset.metrics.key_term_recall(vocab="e").value
 
     def test_source_less_vocab_yields_no_matches(self):
         dataset = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary(name="empty")))

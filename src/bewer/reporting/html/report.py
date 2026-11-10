@@ -57,8 +57,8 @@ class ReportSummaryItem:
 DEFAULT_REPORT_ALIGNMENT = ReportAlignment("levenshtein")
 
 # Only core, non-domain-specific metrics are included by default. Key-term metrics
-# (e.g. "ktr", "rktr") require a dataset-specific ``vocab`` and are opt-in via the
-# ``report_metrics`` argument, e.g. ReportMetric("ktr", label="Key-Term Recall", vocab="...").
+# (e.g. "key_term_recall", "relaxed_key_term_recall") require a dataset-specific ``vocab`` and are opt-in via the
+# ``report_metrics`` argument, e.g. ReportMetric("key_term_recall", label="Key-Term Recall", vocab="...").
 DEFAULT_REPORT_METRICS = [
     ReportMetric("wer"),
     ReportMetric("cer"),

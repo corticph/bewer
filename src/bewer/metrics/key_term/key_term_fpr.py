@@ -28,7 +28,7 @@ class KTFPR_(ExampleMetric):
         return self.num_fp / self.num_ref_tokens
 
 
-@METRIC_REGISTRY.register("ktfpr", tokenizer="key_term")
+@METRIC_REGISTRY.register("key_term_fpr", tokenizer="key_term")
 class KTFPR(Metric):
     short_name_base = "KTFPR"
     long_name_base = "Key-Term False-Positive Rate"

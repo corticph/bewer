@@ -28,7 +28,7 @@ class KTCER_(ExampleMetric):
         return self.num_char_edits / self.ref_chars
 
 
-@METRIC_REGISTRY.register("ktcer", tokenizer="key_term")
+@METRIC_REGISTRY.register("key_term_cer", tokenizer="key_term")
 class KTCER(Metric):
     short_name_base = "KTCER"
     long_name_base = "Key-Term Character Error Rate"

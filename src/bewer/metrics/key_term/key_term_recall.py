@@ -29,7 +29,7 @@ class KTR_(ExampleMetric):
         return stats.num_tp / (stats.num_tp + stats.num_fn)
 
 
-@METRIC_REGISTRY.register("ktr", tokenizer="key_term")
+@METRIC_REGISTRY.register("key_term_recall", tokenizer="key_term")
 class KTR(Metric):
     short_name_base = "KTR"
     long_name_base = "Key-Term Recall"

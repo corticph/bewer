@@ -1,9 +1,9 @@
-"""Tests for bewer.metrics.ktf module."""
+"""Tests for the corresponding metric module."""
 
 import pytest
 
 from bewer import Dataset, Vocabulary, get_config
-from bewer.metrics.key_term.ktf import KTF, KTF_
+from bewer.metrics.key_term.key_term_fscore import KTF, KTF_
 
 
 class TestKTFExampleMetric:
@@ -56,14 +56,14 @@ class TestKTFExampleMetric:
     def test_value_perfect(self, dataset_perfect):
         """Test KTF = 1.0 when TP=1, FN=0, FP=0."""
         example = dataset_perfect[0]
-        ktf = example.metrics.ktf(vocab="animals")
-        assert ktf.value == 1.0
+        key_term_fscore = example.metrics.key_term_fscore(vocab="animals")
+        assert key_term_fscore.value == 1.0
 
     def test_value_all_fn(self, dataset_all_fn):
         """Test KTF = 0.0 when TP=0, FN=1, FP=0."""
         example = dataset_all_fn[0]
-        ktf = example.metrics.ktf(vocab="animals")
-        assert ktf.value == 0.0
+        key_term_fscore = example.metrics.key_term_fscore(vocab="animals")
+        assert key_term_fscore.value == 0.0
 
     def test_value_zero_denominator(self):
         """Test KTF = 0.0 when TP=FN=FP=0 (key term not found in ref or hyp)."""
@@ -74,47 +74,49 @@ class TestKTFExampleMetric:
             hyp="hello world",
         )
         example = dataset[0]
-        ktf = example.metrics.ktf(vocab="animals")
-        assert ktf.value == 0.0
+        key_term_fscore = example.metrics.key_term_fscore(vocab="animals")
+        assert key_term_fscore.value == 0.0
 
     def test_partial_recall_full_precision(self, dataset_partial_recall):
         """Test F1 = 2/3 when TP=1, FN=1, FP=0 (full precision, partial recall)."""
         example = dataset_partial_recall[0]
-        ktf = example.metrics.ktf(vocab="animals")
+        key_term_fscore = example.metrics.key_term_fscore(vocab="animals")
         # F1 = 2*1 / (2*1 + 1*1 + 0) = 2/3
-        assert ktf.value == pytest.approx(2 / 3)
+        assert key_term_fscore.value == pytest.approx(2 / 3)
 
     def test_full_recall_partial_precision(self, dataset_partial_precision):
         """Test F1 = 2/3 when TP=1, FN=0, FP=1 (full recall, partial precision)."""
         example = dataset_partial_precision[0]
-        ktf = example.metrics.ktf(vocab="animals")
+        key_term_fscore = example.metrics.key_term_fscore(vocab="animals")
         # F1 = 2*1 / (2*1 + 1*0 + 1) = 2/3
-        assert ktf.value == pytest.approx(2 / 3)
+        assert key_term_fscore.value == pytest.approx(2 / 3)
 
     def test_beta_greater_than_one_weights_recall(self, dataset_partial_precision):
         """Test that beta=2 gives a higher score than beta=0.5 when FP > 0 and FN = 0."""
         example = dataset_partial_precision[0]
         # TP=1, FN=0, FP=1: beta=2 penalises FP less → higher score
-        ktf_beta2 = example.metrics.ktf(vocab="animals", beta=2.0)
-        ktf_beta05 = example.metrics.ktf(vocab="animals", beta=0.5)
+        ktf_beta2 = example.metrics.key_term_fscore(vocab="animals", beta=2.0)
+        ktf_beta05 = example.metrics.key_term_fscore(vocab="animals", beta=0.5)
         assert ktf_beta2.value > ktf_beta05.value
 
     def test_beta_less_than_one_weights_precision(self, dataset_partial_recall):
         """Test that beta=0.5 gives a higher score than beta=2 when FN > 0 and FP = 0."""
         example = dataset_partial_recall[0]
         # TP=1, FN=1, FP=0: beta=0.5 penalises FN less → higher score
-        ktf_beta05 = example.metrics.ktf(vocab="animals", beta=0.5)
-        ktf_beta2 = example.metrics.ktf(vocab="animals", beta=2.0)
+        ktf_beta05 = example.metrics.key_term_fscore(vocab="animals", beta=0.5)
+        ktf_beta2 = example.metrics.key_term_fscore(vocab="animals", beta=2.0)
         assert ktf_beta05.value > ktf_beta2.value
 
     def test_beta_one_equals_harmonic_mean(self, dataset_partial_precision):
         """Test that KTF(beta=1) equals the harmonic mean of KTP and KTR."""
         example = dataset_partial_precision[0]
-        ktf = example.metrics.ktf(vocab="animals")
-        ktp = example.metrics.ktp(vocab="animals")
-        ktr = example.metrics.ktr(vocab="animals")
-        expected = 2 * ktp.value * ktr.value / (ktp.value + ktr.value)
-        assert ktf.value == pytest.approx(expected)
+        key_term_fscore = example.metrics.key_term_fscore(vocab="animals")
+        key_term_precision = example.metrics.key_term_precision(vocab="animals")
+        key_term_recall = example.metrics.key_term_recall(vocab="animals")
+        expected = (
+            2 * key_term_precision.value * key_term_recall.value / (key_term_precision.value + key_term_recall.value)
+        )
+        assert key_term_fscore.value == pytest.approx(expected)
 
 
 class TestKTFDatasetMetric:
@@ -141,25 +143,25 @@ class TestKTFDatasetMetric:
         dataset = Dataset(config=config)
         dataset.add(ref="the fox", hyp="the fox")
         dataset.add(ref="the rabbit", hyp="the rabbit")
-        ktf = dataset.metrics.ktf(vocab="animals")
-        assert ktf.value == 1.0
+        key_term_fscore = dataset.metrics.key_term_fscore(vocab="animals")
+        assert key_term_fscore.value == 1.0
 
     def test_value_calculation(self, mixed_dataset):
         """Test dataset-level KTF formula: (1+β²)·TP / ((1+β²)·TP + β²·FN + FP)."""
-        ktf = mixed_dataset.metrics.ktf(vocab="animals")
+        key_term_fscore = mixed_dataset.metrics.key_term_fscore(vocab="animals")
         # TP=1, FN=1, FP=0. F1 = 2*1 / (2*1 + 1*1 + 0) = 2/3
-        assert ktf.value == pytest.approx(2 / 3)
+        assert key_term_fscore.value == pytest.approx(2 / 3)
 
     def test_empty_dataset(self):
         """Test KTF raises ValueError for unknown vocab."""
         dataset = Dataset()
         with pytest.raises(ValueError, match="not found in dataset config vocabularies"):
-            dataset.metrics.ktf(vocab="animals").value
+            dataset.metrics.key_term_fscore(vocab="animals").value
 
     def test_beta_affects_value(self, mixed_dataset):
         """Test that changing beta changes the dataset-level score."""
-        ktf_f1 = mixed_dataset.metrics.ktf(vocab="animals", beta=1.0)
-        ktf_f2 = mixed_dataset.metrics.ktf(vocab="animals", beta=2.0)
+        ktf_f1 = mixed_dataset.metrics.key_term_fscore(vocab="animals", beta=1.0)
+        ktf_f2 = mixed_dataset.metrics.key_term_fscore(vocab="animals", beta=2.0)
         assert ktf_f1.value != ktf_f2.value
 
 
@@ -190,5 +192,5 @@ class TestKTFMetricAttributes:
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["fox"]))
         dataset = Dataset(config=config)
         dataset.add(ref="the fox", hyp="the fox")
-        ktf = dataset.metrics.ktf(vocab="animals", beta=2.0)
-        assert "beta=2.0" in ktf.short_name
+        key_term_fscore = dataset.metrics.key_term_fscore(vocab="animals", beta=2.0)
+        assert "beta=2.0" in key_term_fscore.short_name

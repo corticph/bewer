@@ -482,7 +482,7 @@ class TestDatasetFreeze:
         dataset = Dataset(config=config)
         dataset.add("the quick brown fox", "the quick brown dog")
         with pytest.raises(ValueError):
-            dataset.metrics.ktr(vocab="missing")  # vocab not in dataset
+            dataset.metrics.key_term_recall(vocab="missing")  # vocab not in dataset
         assert dataset.is_frozen is False
 
     def test_unknown_param_request_does_not_freeze(self, sample_dataset):

@@ -48,7 +48,7 @@ class RKTR_(ExampleMetric):
         return self.num_relaxed_matches / self.num_ref_terms
 
 
-@METRIC_REGISTRY.register("rktr", tokenizer="key_term")
+@METRIC_REGISTRY.register("relaxed_key_term_recall", tokenizer="key_term")
 class RKTR(Metric):
     short_name_base = "RKTR"
     long_name_base = "Relaxed Key-Term Recall"
