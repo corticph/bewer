@@ -1,4 +1,4 @@
-"""Tests for the corresponding metric module."""
+"""Tests for bewer.metrics.key_term.key_term_error_rate module."""
 
 import pytest
 

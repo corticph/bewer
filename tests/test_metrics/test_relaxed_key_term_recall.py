@@ -1,4 +1,4 @@
-"""Tests for the corresponding metric module."""
+"""Tests for bewer.metrics.key_term.relaxed_key_term_recall module."""
 
 import pytest
 
