@@ -33,27 +33,29 @@ class TestParameterizedMetrics:
 
     def test_factory_returns_new_instance(self, sample_dataset):
         """Test that factory calls with different params return different instances."""
-        rktr_base = sample_dataset.metrics.rktr(vocab="medical_terms")
-        rktr_params = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
+        rktr_base = sample_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms")
+        rktr_params = sample_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.5)
         assert rktr_base is not rktr_params
         assert rktr_params.params.threshold == 0.5
 
     def test_factory_caching(self, sample_dataset):
         """Test that factory caches instances with same parameters."""
-        rktr1 = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
-        rktr2 = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
+        rktr1 = sample_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.5)
+        rktr2 = sample_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.5)
         assert rktr1 is rktr2
 
     def test_factory_different_params_different_instances(self, sample_dataset):
         """Test that different parameters create different instances."""
-        rktr1 = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
-        rktr2 = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.6)
+        rktr1 = sample_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.5)
+        rktr2 = sample_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.6)
         assert rktr1 is not rktr2
 
     def test_factory_non_hashable_params(self, sample_dataset):
         """Test that non-hashable parameters raise TypeError with helpful message."""
         with pytest.raises(TypeError) as exc_info:
-            sample_dataset.metrics.rktr(vocab="medical_terms", config={"a": [1, 2, 3], "b": {"x": 1}})
+            sample_dataset.metrics.relaxed_key_term_recall(
+                vocab="medical_terms", config={"a": [1, 2, 3], "b": {"x": 1}}
+            )
         error_msg = str(exc_info.value)
         assert "must be hashable" in error_msg or "unhashable type" in error_msg
         assert "config" in error_msg
@@ -61,13 +63,13 @@ class TestParameterizedMetrics:
     def test_factory_uses_defaults(self, sample_dataset):
         """Test that factory uses default parameters."""
         # RKTR has default threshold=0.0
-        rktr1 = sample_dataset.metrics.rktr(vocab="medical_terms")
+        rktr1 = sample_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms")
         assert rktr1.params.threshold == 0.0
 
     def test_factory_overrides_defaults(self, sample_dataset):
         """Test that factory can override default parameters."""
-        rktr = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
-        assert rktr.params.threshold == 0.5
+        relaxed_key_term_recall = sample_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.5)
+        assert relaxed_key_term_recall.params.threshold == 0.5
 
 
 class TestDynamicNaming:
@@ -93,22 +95,22 @@ class TestDynamicNaming:
 
     def test_parameterized_metric_short_name_includes_params(self, sample_dataset):
         """Test that parameterized metric includes params in short name."""
-        rktr = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
-        assert "threshold=0.5" in rktr.short_name
-        assert rktr.short_name.startswith("RKTR (")
+        relaxed_key_term_recall = sample_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.5)
+        assert "threshold=0.5" in relaxed_key_term_recall.short_name
+        assert relaxed_key_term_recall.short_name.startswith("RKTR (")
 
     def test_parameterized_metric_long_name_includes_params(self, sample_dataset):
         """Test that parameterized metric includes params in long name."""
-        rktr = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
-        assert "threshold=0.5" in rktr.long_name
-        assert rktr.long_name.startswith("Relaxed Key-Term Recall (")
+        relaxed_key_term_recall = sample_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.5)
+        assert "threshold=0.5" in relaxed_key_term_recall.long_name
+        assert relaxed_key_term_recall.long_name.startswith("Relaxed Key-Term Recall (")
 
     def test_multiple_params_in_name(self, sample_dataset):
         """Test that multiple parameters are shown in name."""
         # RKTR exposes several params; check that more than one is rendered in the name.
-        rktr = sample_dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
-        assert "threshold=0.5" in rktr.short_name
-        assert "vocab=medical_terms" in rktr.short_name
+        relaxed_key_term_recall = sample_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.5)
+        assert "threshold=0.5" in relaxed_key_term_recall.short_name
+        assert "vocab=medical_terms" in relaxed_key_term_recall.short_name
 
 
 class TestRKTRParameterization:
@@ -127,25 +129,25 @@ class TestRKTRParameterization:
 
     def test_default_threshold(self, keyword_dataset):
         """Test that default threshold is set correctly."""
-        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms")
-        assert rktr.params.threshold == 0.0
+        relaxed_key_term_recall = keyword_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms")
+        assert relaxed_key_term_recall.params.threshold == 0.0
 
     def test_custom_threshold(self, keyword_dataset):
         """Test that custom threshold can be set."""
-        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms", threshold=0.1)
-        assert rktr.params.threshold == 0.1
+        relaxed_key_term_recall = keyword_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.1)
+        assert relaxed_key_term_recall.params.threshold == 0.1
 
     def test_short_name_includes_threshold(self, keyword_dataset):
         """Test that RKTR short name includes threshold parameter."""
-        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms")
-        assert "threshold=0.0" in rktr.short_name
+        relaxed_key_term_recall = keyword_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms")
+        assert "threshold=0.0" in relaxed_key_term_recall.short_name
 
     def test_computes_with_threshold(self, keyword_dataset):
         """Test that RKTR correctly uses threshold in computation."""
         # This is a basic integration test to ensure it doesn't crash
-        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms")
-        _ = rktr.num_relaxed_matches
-        _ = rktr.num_ref_terms
+        relaxed_key_term_recall = keyword_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms")
+        _ = relaxed_key_term_recall.num_relaxed_matches
+        _ = relaxed_key_term_recall.num_ref_terms
 
 
 class TestExampleMetricParamsAccess:
@@ -165,25 +167,25 @@ class TestExampleMetricParamsAccess:
     def test_example_metric_has_params_property(self, keyword_dataset):
         """Test that ExampleMetric has params property."""
         example = keyword_dataset.examples[0]
-        rktr_example = example.metrics.rktr(vocab="medical_terms")
+        rktr_example = example.metrics.relaxed_key_term_recall(vocab="medical_terms")
         assert hasattr(rktr_example, "params")
 
     def test_example_metric_params_matches_parent(self, keyword_dataset):
         """Test that ExampleMetric params matches parent metric params."""
-        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms")
+        relaxed_key_term_recall = keyword_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms")
         example = keyword_dataset.examples[0]
-        rktr_example = example.metrics.rktr(vocab="medical_terms")
-        assert rktr_example.params == rktr.params
+        rktr_example = example.metrics.relaxed_key_term_recall(vocab="medical_terms")
+        assert rktr_example.params == relaxed_key_term_recall.params
 
     def test_example_metric_params_with_custom_threshold(self, keyword_dataset):
         """Test that ExampleMetric gets custom params from parent."""
-        rktr = keyword_dataset.metrics.rktr(vocab="medical_terms", threshold=0.1)
+        relaxed_key_term_recall = keyword_dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.1)
         # Force creation of example metric
-        _ = rktr.num_relaxed_matches
+        _ = relaxed_key_term_recall.num_relaxed_matches
         example = keyword_dataset.examples[0]
         # Access the example metric for the parameterized parent
         # This requires getting it through the parameterized parent's cache
-        rktr_example = rktr[example.index]
+        rktr_example = relaxed_key_term_recall[example.index]
         assert rktr_example.params.threshold == 0.1
 
 
@@ -269,8 +271,8 @@ class TestDeclarativeHyperparams:
         )
 
         # RKTR has threshold with default 0.0
-        rktr = dataset.metrics.rktr(vocab="medical_terms")
-        assert rktr.params.threshold == 0.0
+        relaxed_key_term_recall = dataset.metrics.relaxed_key_term_recall(vocab="medical_terms")
+        assert relaxed_key_term_recall.params.threshold == 0.0
 
     def test_metric_with_optional_hyperparam_can_override(self):
         """Test that optional hyperparams can be overridden."""
@@ -284,8 +286,8 @@ class TestDeclarativeHyperparams:
         )
 
         # Override threshold
-        rktr = dataset.metrics.rktr(vocab="medical_terms", threshold=0.5)
-        assert rktr.params.threshold == 0.5
+        relaxed_key_term_recall = dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold=0.5)
+        assert relaxed_key_term_recall.params.threshold == 0.5
 
     def test_metric_rejects_unknown_hyperparam(self):
         """Test that unknown hyperparams are rejected with helpful message."""
@@ -300,7 +302,7 @@ class TestDeclarativeHyperparams:
 
         # Try to set unknown param
         with pytest.raises(ValueError) as exc_info:
-            dataset.metrics.rktr(vocab="medical_terms", unknown_param=123)
+            dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", unknown_param=123)
         assert "Unknown parameter" in str(exc_info.value)
         assert "unknown_param" in str(exc_info.value)
         assert "Valid parameters:" in str(exc_info.value)
@@ -319,7 +321,7 @@ class TestDeclarativeHyperparams:
 
         # Try to set wrong type
         with pytest.raises(TypeError) as exc_info:
-            dataset.metrics.rktr(vocab="medical_terms", threshold="not a float")
+            dataset.metrics.relaxed_key_term_recall(vocab="medical_terms", threshold="not a float")
         assert "must be float" in str(exc_info.value)
 
 

@@ -179,7 +179,7 @@ All metrics accept the preprocessing components `standardizer`, `tokenizer` and 
 ```python
 # Override the pipeline components a metric runs under (see Vocabularies below
 # for how to define a key-term vocabulary):
-ktf = dataset.metrics.ktf(
+ktf = dataset.metrics.key_term_fscore(
     tokenizer="key_term",
     vocab="medical",
 )
@@ -241,7 +241,7 @@ dataset.add(
 )
 
 # Compute key-term recall by referencing the vocabulary name
-ktr = dataset.metrics.ktr(vocab="medical")
+ktr = dataset.metrics.key_term_recall(vocab="medical")
 print(f"{ktr.long_name_base}: {ktr.value:.2%}")
 ```
 
@@ -292,7 +292,7 @@ assert wer is dataset.metrics.wer(normalizer="default")
 | **General purpose** | | | |
 | Word Error Rate | General | `wer` | [`>`](src/bewer/metrics/general/wer.py) |
 | Character Error Rate | General | `cer` | [`>`](src/bewer/metrics/general/cer.py) |
-| Punctuation Error Rate | General | `per` | [`>`](src/bewer/metrics/general/per.py) |
+| Punctuation Error Rate | General | `punctuation_error_rate` | [`>`](src/bewer/metrics/general/punctuation_error_rate.py) |
 | Match Error Rate | General | `mer` | [`>`](src/bewer/metrics/general/mer.py) |
 | Word Information Preserved | General | `wip` | [`>`](src/bewer/metrics/general/wip.py) |
 | Word Information Lost | General | `wil` | [`>`](src/bewer/metrics/general/wil.py) |
@@ -300,13 +300,13 @@ assert wer is dataset.metrics.wer(normalizer="default")
 | Insertion Rate | Hallucination | `insertion_rate` | [`>`](src/bewer/metrics/hallucination/insertion_rate.py) |
 | Example Insertion Rate | Hallucination | `example_insertion_rate` | [`>`](src/bewer/metrics/hallucination/example_insertion_rate.py) |
 | **Key-term metrics** | | | |
-| Key-Term Recall | Key-term | `ktr` | [`>`](src/bewer/metrics/key_term/ktr.py) |
-| Key-Term Precision | Key-term | `ktp` | [`>`](src/bewer/metrics/key_term/ktp.py) |
-| Key-Term F-Score | Key-term | `ktf` | [`>`](src/bewer/metrics/key_term/ktf.py) |
-| Key-Term Error Rate | Key-term | `kter` | [`>`](src/bewer/metrics/key_term/kter.py) |
-| Key-Term False-Positive Rate | Key-term | `ktfpr` | [`>`](src/bewer/metrics/key_term/ktfpr.py) |
-| Key-Term Character Error Rate | Key-term | `ktcer` | [`>`](src/bewer/metrics/key_term/ktcer.py) |
-| Relaxed Key-Term Recall | Key-term | `rktr` | [`>`](src/bewer/metrics/key_term/rktr.py) |
+| Key-Term Recall | Key-term | `key_term_recall` | [`>`](src/bewer/metrics/key_term/key_term_recall.py) |
+| Key-Term Precision | Key-term | `key_term_precision` | [`>`](src/bewer/metrics/key_term/key_term_precision.py) |
+| Key-Term F-Score | Key-term | `key_term_fscore` | [`>`](src/bewer/metrics/key_term/key_term_fscore.py) |
+| Key-Term Error Rate | Key-term | `key_term_error_rate` | [`>`](src/bewer/metrics/key_term/key_term_error_rate.py) |
+| Key-Term False-Positive Rate | Key-term | `key_term_fpr` | [`>`](src/bewer/metrics/key_term/key_term_fpr.py) |
+| Key-Term Character Error Rate | Key-term | `key_term_cer` | [`>`](src/bewer/metrics/key_term/key_term_cer.py) |
+| Relaxed Key-Term Recall | Key-term | `relaxed_key_term_recall` | [`>`](src/bewer/metrics/key_term/relaxed_key_term_recall.py) |
 | Biased Word Error Rate | Key-term | `b_wer` | [`>`](src/bewer/metrics/key_term/b_wer.py) |
 | Unbiased Word Error Rate | Key-term | `u_wer` | [`>`](src/bewer/metrics/key_term/u_wer.py) |
 | **Orthographically complex terms** | | | |

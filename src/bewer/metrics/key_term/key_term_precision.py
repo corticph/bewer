@@ -6,52 +6,51 @@ from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_pr
 
 from ._keyterm_params import KeyTermSubsetParams
 
-__all__ = ["KTR"]
+__all__ = ["KTP"]
 
 
-class KTR_(ExampleMetric):
+class KTP_(ExampleMetric):
     @metric_property(is_value=True)
     def num_matches(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis text."""
         return self.parent_metric._kt_outcomes[self.example.index].num_tp
 
     @metric_property(is_value=True)
-    def num_ref_terms(self) -> int:
-        """Get the number of key terms in the reference text."""
-        return self.parent_metric._kt_outcomes[self.example.index].num_ref_terms
+    def num_fp(self) -> int:
+        """Get the number of spurious key term occurrences in the hypothesis text."""
+        return self.parent_metric._kt_outcomes[self.example.index].num_fp
 
     @metric_property(is_main=True)
     def value(self) -> float:
-        """Get the example-level key term recall."""
+        """Get the example-level key term precision."""
         outcomes = self.parent_metric._kt_outcomes[self.example.index]
-        if (outcomes.num_tp + outcomes.num_fn) == 0:
+        if (outcomes.num_tp + outcomes.num_fp) == 0:
             return 0.0
-        return outcomes.num_tp / (outcomes.num_tp + outcomes.num_fn)
+        return outcomes.num_tp / (outcomes.num_tp + outcomes.num_fp)
 
 
-@METRIC_REGISTRY.register("ktr", tokenizer="key_term")
-class KTR(Metric):
-    short_name_base = "KTR"
-    long_name_base = "Key-Term Recall"
+@METRIC_REGISTRY.register("key_term_precision", tokenizer="key_term")
+class KTP(Metric):
+    short_name_base = "KTP"
+    long_name_base = "Key-Term Precision"
     description = (
-        "Key term recall (KTR) is computed as TP / (TP + FN). "
+        "Key term precision (KTP) is computed as TP / (TP + FP). "
         "When partial_credit=False (default, exact-match view), each key term occurrence is treated as a single unit: "
-        "TP if every constituent token is correctly transcribed, FN otherwise. "
-        "When partial_credit=True (partial-credit view), TP and FN are counted at the token-position level within "
-        "key term spans, giving proportional credit for partially correct multi-token terms. "
-        "KTR is the complement of KTER (Key-Term Error Rate): KTR = 1 - KTER."
+        "TP if every constituent token is correctly transcribed, FP if any token in a hypothesis occurrence is wrong. "
+        "When partial_credit=True (partial-credit view), TP and FP are counted at the token-position level within "
+        "key term spans, giving proportional credit for partially correct multi-token terms."
     )
-    example_cls = KTR_
+    example_cls = KTP_
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
-        """Parameters for the KTR metric.
+        """Parameters for the KTP metric.
 
         Attributes:
             vocab: The vocabulary name to use for key term identification.
             allow_subset_matches: Whether to allow subset matches.
             partial_credit: When False (default, exact-match view), each key term occurrence is a single
-                TP or FN unit. When True (partial-credit view), TP and FN are counted at the
+                TP or FP unit. When True (partial-credit view), TP and FP are counted at the
                 token-position level within key term spans.
         """
 
@@ -71,17 +70,17 @@ class KTR(Metric):
 
     @metric_property(is_value=True)
     def num_matches(self) -> int:
-        """Get the number of correctly transcribed key term units (occurrences or token positions)."""
+        """Get the number of key terms correctly transcribed in the hypothesis texts."""
         return self._kt_outcomes.num_tp
 
     @metric_property(is_value=True)
-    def num_ref_terms(self) -> int:
-        """Get the number of key terms in the reference texts."""
-        return self._kt_outcomes.num_ref_terms
+    def num_fp(self) -> int:
+        """Get the number of spurious key term occurrences in the hypothesis texts."""
+        return self._kt_outcomes.num_fp
 
     @metric_property(is_main=True)
     def value(self) -> float:
-        """Get the key term recall."""
-        if (self._kt_outcomes.num_tp + self._kt_outcomes.num_fn) == 0:
+        """Get the key term precision."""
+        if (self._kt_outcomes.num_tp + self._kt_outcomes.num_fp) == 0:
             return 0.0
-        return self._kt_outcomes.num_tp / (self._kt_outcomes.num_tp + self._kt_outcomes.num_fn)
+        return self._kt_outcomes.num_tp / (self._kt_outcomes.num_tp + self._kt_outcomes.num_fp)

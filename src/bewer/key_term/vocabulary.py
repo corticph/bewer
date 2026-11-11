@@ -36,7 +36,7 @@ class Vocabulary:
 
     Args:
         name: The vocabulary name, used to reference it from metrics
-            (``metrics.ktr(vocab=name)``) and label it in reports.
+            (``metrics.key_term_recall(vocab=name)``) and label it in reports.
         terms: Optional static key terms.
         files: Optional paths to plain-text files (one term per line).
         extractors: Optional extractor functions ``Callable[[Dataset], Iterable[str]]``.

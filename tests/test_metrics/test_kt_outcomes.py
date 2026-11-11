@@ -296,43 +296,48 @@ class TestKTOutcomesSharing:
 
     def test_ktr_and_kter_share_instance(self, dataset):
         """KTR and KTER with identical params share the same _KTOutcomes instance."""
-        ktr = dataset.metrics.ktr(vocab="animals")
-        kter = dataset.metrics.kter(vocab="animals")
-        assert ktr._kt_outcomes is kter._kt_outcomes
+        key_term_recall = dataset.metrics.key_term_recall(vocab="animals")
+        key_term_error_rate = dataset.metrics.key_term_error_rate(vocab="animals")
+        assert key_term_recall._kt_outcomes is key_term_error_rate._kt_outcomes
 
     def test_ktr_and_ktp_share_instance(self, dataset):
         """KTR and KTP with identical params share the same _KTOutcomes instance."""
-        ktr = dataset.metrics.ktr(vocab="animals")
-        ktp = dataset.metrics.ktp(vocab="animals")
-        assert ktr._kt_outcomes is ktp._kt_outcomes
+        key_term_recall = dataset.metrics.key_term_recall(vocab="animals")
+        key_term_precision = dataset.metrics.key_term_precision(vocab="animals")
+        assert key_term_recall._kt_outcomes is key_term_precision._kt_outcomes
 
     def test_ktr_and_ktf_share_instance(self, dataset):
         """KTR and KTF with identical params share the same _KTOutcomes instance."""
-        ktr = dataset.metrics.ktr(vocab="animals")
-        ktf = dataset.metrics.ktf(vocab="animals")
-        assert ktr._kt_outcomes is ktf._kt_outcomes
+        key_term_recall = dataset.metrics.key_term_recall(vocab="animals")
+        key_term_fscore = dataset.metrics.key_term_fscore(vocab="animals")
+        assert key_term_recall._kt_outcomes is key_term_fscore._kt_outcomes
 
     def test_all_four_share_instance(self, dataset):
         """KTER, KTR, KTP, and KTF all share the same _KTOutcomes for identical params."""
-        kter = dataset.metrics.kter(vocab="animals")
-        ktr = dataset.metrics.ktr(vocab="animals")
-        ktp = dataset.metrics.ktp(vocab="animals")
-        ktf = dataset.metrics.ktf(vocab="animals")
-        assert kter._kt_outcomes is ktr._kt_outcomes is ktp._kt_outcomes is ktf._kt_outcomes
+        key_term_error_rate = dataset.metrics.key_term_error_rate(vocab="animals")
+        key_term_recall = dataset.metrics.key_term_recall(vocab="animals")
+        key_term_precision = dataset.metrics.key_term_precision(vocab="animals")
+        key_term_fscore = dataset.metrics.key_term_fscore(vocab="animals")
+        assert (
+            key_term_error_rate._kt_outcomes
+            is key_term_recall._kt_outcomes
+            is key_term_precision._kt_outcomes
+            is key_term_fscore._kt_outcomes
+        )
 
     def test_different_vocabs_different_instances(self, dataset):
         """Different vocab params produce different _KTOutcomes instances."""
-        ktr_animals = dataset.metrics.ktr(vocab="animals")
-        ktr_verbs = dataset.metrics.ktr(vocab="verbs")
+        ktr_animals = dataset.metrics.key_term_recall(vocab="animals")
+        ktr_verbs = dataset.metrics.key_term_recall(vocab="verbs")
         assert ktr_animals._kt_outcomes is not ktr_verbs._kt_outcomes
 
     def test_different_normalizer_different_instances(self, dataset):
         """Different normalizers produce different _KTOutcomes instances."""
-        ktr_norm = dataset.metrics.ktr(vocab="animals")
-        ktr_unnorm = dataset.metrics.ktr(vocab="animals", normalizer="none")
+        ktr_norm = dataset.metrics.key_term_recall(vocab="animals")
+        ktr_unnorm = dataset.metrics.key_term_recall(vocab="animals", normalizer="none")
         assert ktr_norm._kt_outcomes is not ktr_unnorm._kt_outcomes
 
     def test_instance_is_cached(self, dataset):
         """Accessing _kt_outcomes twice on the same metric returns the identical object."""
-        ktr = dataset.metrics.ktr(vocab="animals")
-        assert ktr._kt_outcomes is ktr._kt_outcomes
+        key_term_recall = dataset.metrics.key_term_recall(vocab="animals")
+        assert key_term_recall._kt_outcomes is key_term_recall._kt_outcomes

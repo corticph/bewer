@@ -21,7 +21,7 @@ class KTF_(ExampleMetric):
         return (1 + beta_sq) * outcomes.num_tp / denominator
 
 
-@METRIC_REGISTRY.register("ktf", tokenizer="key_term")
+@METRIC_REGISTRY.register("key_term_fscore", tokenizer="key_term")
 class KTF(Metric):
     short_name_base = "KTF"
     long_name_base = "Key-Term F-Score"

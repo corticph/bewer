@@ -1,9 +1,9 @@
-"""Tests for bewer.metrics.rktr module."""
+"""Tests for bewer.metrics.key_term.relaxed_key_term_recall module."""
 
 import pytest
 
 from bewer import Dataset, Vocabulary, get_config
-from bewer.metrics.key_term.rktr import RKTR, RKTR_
+from bewer.metrics.key_term.relaxed_key_term_recall import RKTR, RKTR_
 
 
 class TestRKTRExampleMetric:
@@ -32,39 +32,39 @@ class TestRKTRExampleMetric:
 
     def test_perfect_match_is_tp(self, dataset_perfect_match):
         example = dataset_perfect_match[0]
-        rktr = example.metrics.rktr(vocab="key_terms", threshold=0.0)
-        assert rktr.value == 1.0
-        assert rktr.num_relaxed_matches == 1
+        relaxed_key_term_recall = example.metrics.relaxed_key_term_recall(vocab="key_terms", threshold=0.0)
+        assert relaxed_key_term_recall.value == 1.0
+        assert relaxed_key_term_recall.num_relaxed_matches == 1
 
     def test_strict_threshold_rejects_error(self, dataset_one_char_error):
         example = dataset_one_char_error[0]
-        rktr = example.metrics.rktr(vocab="key_terms", threshold=0.0)
-        assert rktr.value == 0.0
-        assert rktr.num_relaxed_matches == 0
+        relaxed_key_term_recall = example.metrics.relaxed_key_term_recall(vocab="key_terms", threshold=0.0)
+        assert relaxed_key_term_recall.value == 0.0
+        assert relaxed_key_term_recall.num_relaxed_matches == 0
 
     def test_relaxed_threshold_accepts_near_miss(self, dataset_one_char_error):
         # 1/8 CER = 0.125 ≤ 0.2 → TP
         example = dataset_one_char_error[0]
-        rktr = example.metrics.rktr(vocab="key_terms", threshold=0.2)
-        assert rktr.value == 1.0
-        assert rktr.num_relaxed_matches == 1
+        relaxed_key_term_recall = example.metrics.relaxed_key_term_recall(vocab="key_terms", threshold=0.2)
+        assert relaxed_key_term_recall.value == 1.0
+        assert relaxed_key_term_recall.num_relaxed_matches == 1
 
     def test_threshold_boundary_equal(self, dataset_one_char_error):
         # threshold exactly at CER should be TP (<=)
         example = dataset_one_char_error[0]
-        rktr = example.metrics.rktr(vocab="key_terms", threshold=0.125)
-        assert rktr.value == 1.0
+        relaxed_key_term_recall = example.metrics.relaxed_key_term_recall(vocab="key_terms", threshold=0.125)
+        assert relaxed_key_term_recall.value == 1.0
 
     def test_threshold_boundary_below(self, dataset_one_char_error):
         # threshold just below CER should be FN
         example = dataset_one_char_error[0]
-        rktr = example.metrics.rktr(vocab="key_terms", threshold=0.124)
-        assert rktr.value == 0.0
+        relaxed_key_term_recall = example.metrics.relaxed_key_term_recall(vocab="key_terms", threshold=0.124)
+        assert relaxed_key_term_recall.value == 0.0
 
     def test_num_ref_terms(self, dataset_perfect_match):
         example = dataset_perfect_match[0]
-        rktr = example.metrics.rktr(vocab="key_terms")
-        assert rktr.num_ref_terms == 1
+        relaxed_key_term_recall = example.metrics.relaxed_key_term_recall(vocab="key_terms")
+        assert relaxed_key_term_recall.num_ref_terms == 1
 
     def test_partial_matches_with_threshold(self):
         config = (
@@ -77,19 +77,19 @@ class TestRKTRExampleMetric:
         )
         example = dataset[0]
         # strict: both errors rejected
-        rktr_strict = example.metrics.rktr(vocab="key_terms", threshold=0.0)
+        rktr_strict = example.metrics.relaxed_key_term_recall(vocab="key_terms", threshold=0.0)
         assert rktr_strict.num_ref_terms == 2
         assert rktr_strict.num_relaxed_matches == 0
         # relaxed: near-misses accepted (both have 1 edit in ≤13 chars)
-        rktr_relaxed = example.metrics.rktr(vocab="key_terms", threshold=0.2)
+        rktr_relaxed = example.metrics.relaxed_key_term_recall(vocab="key_terms", threshold=0.2)
         assert rktr_relaxed.num_ref_terms == 2
         assert rktr_relaxed.num_relaxed_matches == 2
         assert rktr_relaxed.value == 1.0
 
     def test_default_threshold_is_zero(self, dataset_perfect_match):
         example = dataset_perfect_match[0]
-        rktr_default = example.metrics.rktr(vocab="key_terms")
-        rktr_explicit = example.metrics.rktr(vocab="key_terms", threshold=0.0)
+        rktr_default = example.metrics.relaxed_key_term_recall(vocab="key_terms")
+        rktr_explicit = example.metrics.relaxed_key_term_recall(vocab="key_terms", threshold=0.0)
         assert rktr_default.value == rktr_explicit.value
 
 
@@ -111,51 +111,53 @@ class TestRKTRDatasetMetric:
         return dataset
 
     def test_num_ref_terms_aggregates(self, mixed_dataset):
-        rktr = mixed_dataset.metrics.rktr(vocab="key_terms")
-        expected = sum(ex.metrics.rktr(vocab="key_terms").num_ref_terms for ex in mixed_dataset)
-        assert rktr.num_ref_terms == expected
+        relaxed_key_term_recall = mixed_dataset.metrics.relaxed_key_term_recall(vocab="key_terms")
+        expected = sum(ex.metrics.relaxed_key_term_recall(vocab="key_terms").num_ref_terms for ex in mixed_dataset)
+        assert relaxed_key_term_recall.num_ref_terms == expected
 
     def test_num_relaxed_matches_aggregates(self, mixed_dataset):
-        rktr = mixed_dataset.metrics.rktr(vocab="key_terms")
-        expected = sum(ex.metrics.rktr(vocab="key_terms").num_relaxed_matches for ex in mixed_dataset)
-        assert rktr.num_relaxed_matches == expected
+        relaxed_key_term_recall = mixed_dataset.metrics.relaxed_key_term_recall(vocab="key_terms")
+        expected = sum(
+            ex.metrics.relaxed_key_term_recall(vocab="key_terms").num_relaxed_matches for ex in mixed_dataset
+        )
+        assert relaxed_key_term_recall.num_relaxed_matches == expected
 
     def test_strict_value(self, mixed_dataset):
-        rktr = mixed_dataset.metrics.rktr(vocab="key_terms", threshold=0.0)
-        assert rktr.num_ref_terms == 2
-        assert rktr.num_relaxed_matches == 1
-        assert rktr.value == 0.5
+        relaxed_key_term_recall = mixed_dataset.metrics.relaxed_key_term_recall(vocab="key_terms", threshold=0.0)
+        assert relaxed_key_term_recall.num_ref_terms == 2
+        assert relaxed_key_term_recall.num_relaxed_matches == 1
+        assert relaxed_key_term_recall.value == 0.5
 
     def test_relaxed_accepts_near_miss(self, mixed_dataset):
         # "astma" vs "asthma": 1 edit / 6 chars ≈ 0.167 ≤ 0.2
-        rktr = mixed_dataset.metrics.rktr(vocab="key_terms", threshold=0.2)
-        assert rktr.value == 1.0
+        relaxed_key_term_recall = mixed_dataset.metrics.relaxed_key_term_recall(vocab="key_terms", threshold=0.2)
+        assert relaxed_key_term_recall.value == 1.0
 
     def test_empty_vocab_raises(self):
         dataset = Dataset()
         with pytest.raises(ValueError, match="not found in dataset config vocabularies"):
-            dataset.metrics.rktr(vocab="key_terms").value
+            dataset.metrics.relaxed_key_term_recall(vocab="key_terms").value
 
     def test_threshold_above_one_raises(self):
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["diabetes"]))
         dataset = Dataset(config=config)
         dataset.add(ref="has diabetes", hyp="has diabetes")
         with pytest.raises(ValueError, match="threshold must be between 0.0 and 1.0"):
-            dataset.metrics.rktr(vocab="k", threshold=1.1).value
+            dataset.metrics.relaxed_key_term_recall(vocab="k", threshold=1.1).value
 
     def test_threshold_below_zero_raises(self):
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["diabetes"]))
         dataset = Dataset(config=config)
         dataset.add(ref="has diabetes", hyp="has diabetes")
         with pytest.raises(ValueError, match="threshold must be between 0.0 and 1.0"):
-            dataset.metrics.rktr(vocab="k", threshold=-0.1).value
+            dataset.metrics.relaxed_key_term_recall(vocab="k", threshold=-0.1).value
 
     def test_all_correct(self):
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["diabetes", "asthma"]))
         dataset = Dataset(config=config)
         dataset.add(ref="diabetes mellitus", hyp="diabetes mellitus")
         dataset.add(ref="acute asthma", hyp="acute asthma")
-        assert dataset.metrics.rktr(vocab="k").value == 1.0
+        assert dataset.metrics.relaxed_key_term_recall(vocab="k").value == 1.0
 
 
 class TestRKTRPartialPenalty:
@@ -174,9 +176,9 @@ class TestRKTRPartialPenalty:
         ts = dataset.metrics._rkt_outcomes(vocab="k")[example.index].term_outcomes
         assert ts[0].char_edits == 1
         assert ts[0].ref_chars == 5
-        rktr = example.metrics.rktr(vocab="k", threshold=0.0)
-        assert rktr.value == 0.0
-        rktr_relaxed = example.metrics.rktr(vocab="k", threshold=0.2)
+        relaxed_key_term_recall = example.metrics.relaxed_key_term_recall(vocab="k", threshold=0.0)
+        assert relaxed_key_term_recall.value == 0.0
+        rktr_relaxed = example.metrics.relaxed_key_term_recall(vocab="k", threshold=0.2)
         assert rktr_relaxed.value == 1.0
 
     def test_hyp_left_partial_adds_penalty(self):
@@ -192,9 +194,9 @@ class TestRKTRPartialPenalty:
         ts = dataset.metrics._rkt_outcomes(vocab="k")[example.index].term_outcomes
         assert ts[0].char_edits == 1
         assert ts[0].ref_chars == 8
-        rktr = example.metrics.rktr(vocab="k", threshold=0.0)
-        assert rktr.value == 0.0
-        rktr_relaxed = example.metrics.rktr(vocab="k", threshold=0.125)
+        relaxed_key_term_recall = example.metrics.relaxed_key_term_recall(vocab="k", threshold=0.0)
+        assert relaxed_key_term_recall.value == 0.0
+        rktr_relaxed = example.metrics.relaxed_key_term_recall(vocab="k", threshold=0.125)
         assert rktr_relaxed.value == 1.0
 
     def test_internal_partials_do_not_add_penalty(self):

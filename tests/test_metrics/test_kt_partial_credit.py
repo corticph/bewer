@@ -119,33 +119,33 @@ class TestPartialCreditPublicMetrics:
         return ds
 
     def test_ktr_partial_credit(self, ds_one_wrong):
-        assert ds_one_wrong.metrics.ktr(vocab="terms", partial_credit=True).value == pytest.approx(0.5)
+        assert ds_one_wrong.metrics.key_term_recall(vocab="terms", partial_credit=True).value == pytest.approx(0.5)
 
     def test_ktr_exact_match(self, ds_one_wrong):
-        assert ds_one_wrong.metrics.ktr(vocab="terms", partial_credit=False).value == pytest.approx(0.0)
+        assert ds_one_wrong.metrics.key_term_recall(vocab="terms", partial_credit=False).value == pytest.approx(0.0)
 
     def test_ktp_partial_credit(self, ds_one_wrong):
         # TP=1, FP=0 → precision=1.0
-        assert ds_one_wrong.metrics.ktp(vocab="terms", partial_credit=True).value == pytest.approx(1.0)
+        assert ds_one_wrong.metrics.key_term_precision(vocab="terms", partial_credit=True).value == pytest.approx(1.0)
 
     def test_ktp_exact_match(self, ds_one_wrong):
         # TP=0, FP=0 → 0.0 (zero denominator)
-        assert ds_one_wrong.metrics.ktp(vocab="terms", partial_credit=False).value == pytest.approx(0.0)
+        assert ds_one_wrong.metrics.key_term_precision(vocab="terms", partial_credit=False).value == pytest.approx(0.0)
 
     def test_ktf_partial_credit(self, ds_one_wrong):
         # TP=1, FN=1, FP=0, beta=1 → 2*1/(2*1 + 1*1 + 0) = 2/3
-        assert ds_one_wrong.metrics.ktf(vocab="terms", partial_credit=True).value == pytest.approx(2 / 3)
+        assert ds_one_wrong.metrics.key_term_fscore(vocab="terms", partial_credit=True).value == pytest.approx(2 / 3)
 
     def test_ktf_exact_match(self, ds_one_wrong):
-        assert ds_one_wrong.metrics.ktf(vocab="terms", partial_credit=False).value == pytest.approx(0.0)
+        assert ds_one_wrong.metrics.key_term_fscore(vocab="terms", partial_credit=False).value == pytest.approx(0.0)
 
     def test_kter_partial_credit(self, ds_one_wrong):
         # FN=1, TP+FN=2 → KTER=0.5
-        assert ds_one_wrong.metrics.kter(vocab="terms", partial_credit=True).value == pytest.approx(0.5)
+        assert ds_one_wrong.metrics.key_term_error_rate(vocab="terms", partial_credit=True).value == pytest.approx(0.5)
 
     def test_kter_exact_match(self, ds_one_wrong):
         # FN=1, TP+FN=1 → KTER=1.0
-        assert ds_one_wrong.metrics.kter(vocab="terms", partial_credit=False).value == pytest.approx(1.0)
+        assert ds_one_wrong.metrics.key_term_error_rate(vocab="terms", partial_credit=False).value == pytest.approx(1.0)
 
 
 class TestPartialCreditKterDenominator:
@@ -155,15 +155,15 @@ class TestPartialCreditKterDenominator:
         # exact-match: TP+FN == num_ref_terms always, so the formula change is invisible
         ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("v", terms=["fox"])))
         ds.add(ref="the fox jumps", hyp="the dog jumps")
-        kter = ds.metrics.kter(vocab="v")
+        key_term_error_rate = ds.metrics.key_term_error_rate(vocab="v")
         # TP=0, FN=1 → KTER = 1/(0+1) = 1.0
-        assert kter.value == pytest.approx(1.0)
+        assert key_term_error_rate.value == pytest.approx(1.0)
 
     def test_kter_zero_ref_terms(self):
         ds = Dataset(config=get_config("base").clone().add_vocabulary(Vocabulary("v", terms=["fox"])))
         ds.add(ref="the jumps", hyp="the jumps")
-        kter = ds.metrics.kter(vocab="v")
-        assert kter.value == pytest.approx(0.0)
+        key_term_error_rate = ds.metrics.key_term_error_rate(vocab="v")
+        assert key_term_error_rate.value == pytest.approx(0.0)
 
 
 class TestPartialCreditDatasetLevel:
@@ -184,6 +184,6 @@ class TestPartialCreditDatasetLevel:
         ds.add(ref="blood sugar levels", hyp="blood sugar levels")  # TP=2, FN=0
         ds.add(ref="blood sugar levels", hyp="blood sweet levels")  # TP=1, FN=1
 
-        ktr = ds.metrics.ktr(vocab="terms", partial_credit=True)
+        key_term_recall = ds.metrics.key_term_recall(vocab="terms", partial_credit=True)
         # total TP=3, total FN=1 → recall = 3/4
-        assert ktr.value == pytest.approx(3 / 4)
+        assert key_term_recall.value == pytest.approx(3 / 4)

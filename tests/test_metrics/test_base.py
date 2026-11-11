@@ -226,7 +226,7 @@ class TestDependencyDecorator:
 
     def test_ktp_has_kt_outcomes_dependency(self):
         """Test that KTP registers _kt_outcomes as a dependency."""
-        from bewer.metrics.key_term.ktp import KTP
+        from bewer.metrics.key_term.key_term_precision import KTP
 
         assert "_kt_outcomes" in KTP.dependencies()
 
@@ -543,7 +543,7 @@ class TestFormatRegisteredParams:
         """A parameter without a default is marked with a star, not a value."""
         from bewer.metrics.base import _format_registered_params
 
-        summary = _format_registered_params("ktr")
+        summary = _format_registered_params("key_term_recall")
 
         assert summary.startswith("vocab*")
         assert "allow_subset_matches=False" in summary
@@ -552,8 +552,8 @@ class TestFormatRegisteredParams:
         """Metrics with required params cannot be constructed, but are still describable."""
         from bewer.metrics.base import _format_registered_params
 
-        # ktr requires `vocab`, so no instance exists to introspect.
-        assert "vocab*" in _format_registered_params("ktr")
+        # key_term_recall requires `vocab`, so no instance exists to introspect.
+        assert "vocab*" in _format_registered_params("key_term_recall")
 
     def test_specialization_shows_its_own_default(self):
         """A subclass that gives a required param a default shows the value, unmarked."""

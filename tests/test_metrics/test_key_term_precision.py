@@ -1,9 +1,9 @@
-"""Tests for bewer.metrics.ktp module."""
+"""Tests for bewer.metrics.key_term.key_term_precision module."""
 
 import pytest
 
 from bewer import Dataset, Vocabulary, get_config
-from bewer.metrics.key_term.ktp import KTP, KTP_
+from bewer.metrics.key_term.key_term_precision import KTP, KTP_
 
 
 class TestKTPExampleMetric:
@@ -45,44 +45,44 @@ class TestKTPExampleMetric:
     def test_value_perfect_match(self, dataset_keyword_match):
         """Test KTP = 1.0 when key term is correctly transcribed."""
         example = dataset_keyword_match[0]
-        ktp = example.metrics.ktp(vocab="animals")
-        assert ktp.value == 1.0
+        key_term_precision = example.metrics.key_term_precision(vocab="animals")
+        assert key_term_precision.value == 1.0
 
     def test_value_zero_hyp_terms(self, dataset_keyword_error):
         """Test KTP = 0.0 when key term is absent from hypothesis (denominator guard)."""
         example = dataset_keyword_error[0]
-        ktp = example.metrics.ktp(vocab="animals")
-        assert ktp.value == 0.0
+        key_term_precision = example.metrics.key_term_precision(vocab="animals")
+        assert key_term_precision.value == 0.0
 
     def test_value_with_false_positive(self, dataset_keyword_fp):
         """Test KTP = 0.5 when hyp has key term twice but ref has it once (TP=1, FP=1)."""
         example = dataset_keyword_fp[0]
-        ktp = example.metrics.ktp(vocab="animals")
-        assert ktp.value == pytest.approx(0.5)
+        key_term_precision = example.metrics.key_term_precision(vocab="animals")
+        assert key_term_precision.value == pytest.approx(0.5)
 
     def test_num_matches_perfect(self, dataset_keyword_match):
         """Test num_matches = 1 on correct transcription."""
         example = dataset_keyword_match[0]
-        ktp = example.metrics.ktp(vocab="animals")
-        assert ktp.num_matches == 1
+        key_term_precision = example.metrics.key_term_precision(vocab="animals")
+        assert key_term_precision.num_matches == 1
 
     def test_num_matches_zero(self, dataset_keyword_error):
         """Test num_matches = 0 when key term is absent from hypothesis."""
         example = dataset_keyword_error[0]
-        ktp = example.metrics.ktp(vocab="animals")
-        assert ktp.num_matches == 0
+        key_term_precision = example.metrics.key_term_precision(vocab="animals")
+        assert key_term_precision.num_matches == 0
 
     def test_num_fp_correct(self, dataset_keyword_match):
         """Test num_fp = 0 on exact match."""
         example = dataset_keyword_match[0]
-        ktp = example.metrics.ktp(vocab="animals")
-        assert ktp.num_fp == 0
+        key_term_precision = example.metrics.key_term_precision(vocab="animals")
+        assert key_term_precision.num_fp == 0
 
     def test_num_fp_with_fp(self, dataset_keyword_fp):
         """Test num_fp = 1 when key term appears twice in hypothesis (one spurious)."""
         example = dataset_keyword_fp[0]
-        ktp = example.metrics.ktp(vocab="animals")
-        assert ktp.num_fp == 1
+        key_term_precision = example.metrics.key_term_precision(vocab="animals")
+        assert key_term_precision.num_fp == 1
 
     def test_works_with_any_vocab(self):
         """Test KTP is domain-agnostic and works with any vocabulary name."""
@@ -92,9 +92,9 @@ class TestKTPExampleMetric:
             ref="patient has diabetes",
             hyp="patient has diabetes",
         )
-        ktp = dataset[0].metrics.ktp(vocab="medical")
-        assert ktp.value == 1.0
-        assert ktp.num_matches == 1
+        key_term_precision = dataset[0].metrics.key_term_precision(vocab="medical")
+        assert key_term_precision.value == 1.0
+        assert key_term_precision.num_matches == 1
 
 
 class TestKTPDatasetMetric:
@@ -117,23 +117,23 @@ class TestKTPDatasetMetric:
 
     def test_num_fp_aggregates(self, ktp_dataset):
         """Test that dataset num_fp sums example-level counts."""
-        ktp = ktp_dataset.metrics.ktp(vocab="animals")
-        expected = sum(ex.metrics.ktp(vocab="animals").num_fp for ex in ktp_dataset)
-        assert ktp.num_fp == expected
+        key_term_precision = ktp_dataset.metrics.key_term_precision(vocab="animals")
+        expected = sum(ex.metrics.key_term_precision(vocab="animals").num_fp for ex in ktp_dataset)
+        assert key_term_precision.num_fp == expected
 
     def test_num_matches_aggregates(self, ktp_dataset):
         """Test that dataset num_matches sums example-level counts."""
-        ktp = ktp_dataset.metrics.ktp(vocab="animals")
-        expected = sum(ex.metrics.ktp(vocab="animals").num_matches for ex in ktp_dataset)
-        assert ktp.num_matches == expected
+        key_term_precision = ktp_dataset.metrics.key_term_precision(vocab="animals")
+        expected = sum(ex.metrics.key_term_precision(vocab="animals").num_matches for ex in ktp_dataset)
+        assert key_term_precision.num_matches == expected
 
     def test_value_calculation(self, ktp_dataset):
         """Test dataset-level KTP = num_tp / (num_tp + num_fp)."""
-        ktp = ktp_dataset.metrics.ktp(vocab="animals")
+        key_term_precision = ktp_dataset.metrics.key_term_precision(vocab="animals")
         # Example 1: TP=1, FP=0. Example 2: TP=1, FP=1.
-        assert ktp.num_matches == 2
-        assert ktp.num_fp == 1
-        assert ktp.value == pytest.approx(2 / 3)
+        assert key_term_precision.num_matches == 2
+        assert key_term_precision.num_fp == 1
+        assert key_term_precision.value == pytest.approx(2 / 3)
 
     def test_all_correct(self):
         """Test KTP = 1.0 when all transcriptions are correct."""
@@ -141,14 +141,14 @@ class TestKTPDatasetMetric:
         dataset = Dataset(config=config)
         dataset.add(ref="the fox", hyp="the fox")
         dataset.add(ref="the rabbit", hyp="the rabbit")
-        ktp = dataset.metrics.ktp(vocab="animals")
-        assert ktp.value == 1.0
+        key_term_precision = dataset.metrics.key_term_precision(vocab="animals")
+        assert key_term_precision.value == 1.0
 
     def test_empty_dataset(self):
         """Test KTP raises ValueError for unknown vocab."""
         dataset = Dataset()
         with pytest.raises(ValueError, match="not found in dataset config vocabularies"):
-            dataset.metrics.ktp(vocab="animals").value
+            dataset.metrics.key_term_precision(vocab="animals").value
 
 
 class TestKTPMetricAttributes:

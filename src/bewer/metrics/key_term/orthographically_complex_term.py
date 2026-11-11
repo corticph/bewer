@@ -14,9 +14,9 @@ from __future__ import annotations
 
 from bewer.metrics.base import METRIC_REGISTRY
 
-from .ktf import KTF
-from .ktp import KTP
-from .ktr import KTR
+from .key_term_fscore import KTF
+from .key_term_precision import KTP
+from .key_term_recall import KTR
 
 DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB = "orthographically_complex_terms"
 

@@ -159,7 +159,7 @@ class TestRegexExtractorScansBothSides:
         config.add_vocabulary(Vocabulary("caps", extractors=[RegexExtractor(r"[A-Z]+")]))
         dataset = Dataset(config=config)
         dataset.add("mri ECG", "MRI")
-        ktr = dataset.metrics.ktr(vocab="caps")
+        ktr = dataset.metrics.key_term_recall(vocab="caps")
         assert ktr.num_ref_terms == 2
         assert ktr.value == 0.5
 

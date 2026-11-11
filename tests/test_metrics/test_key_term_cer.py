@@ -1,9 +1,9 @@
-"""Tests for bewer.metrics.ktcer module."""
+"""Tests for bewer.metrics.key_term.key_term_cer module."""
 
 import pytest
 
 from bewer import Dataset, Vocabulary, get_config
-from bewer.metrics.key_term.ktcer import KTCER, KTCER_
+from bewer.metrics.key_term.key_term_cer import KTCER, KTCER_
 
 
 class TestKTCERExampleMetric:
@@ -14,7 +14,7 @@ class TestKTCERExampleMetric:
         dataset = Dataset(config=config)
         dataset.add(ref="the patient has diabetes", hyp="the patient has diabetes")
         example = dataset[0]
-        assert example.metrics.ktcer(vocab="k").value == 0.0
+        assert example.metrics.key_term_cer(vocab="k").value == 0.0
 
     def test_single_char_error(self):
         # "diabetis" vs "diabetes": 1 edit, 8 ref chars → CER = 1/8
@@ -22,10 +22,10 @@ class TestKTCERExampleMetric:
         dataset = Dataset(config=config)
         dataset.add(ref="the patient has diabetes", hyp="the patient has diabetis")
         example = dataset[0]
-        ktcer = example.metrics.ktcer(vocab="k")
-        assert ktcer.num_char_edits == 1
-        assert ktcer.ref_chars == 8
-        assert ktcer.value == pytest.approx(1 / 8)
+        key_term_cer = example.metrics.key_term_cer(vocab="k")
+        assert key_term_cer.num_char_edits == 1
+        assert key_term_cer.ref_chars == 8
+        assert key_term_cer.value == pytest.approx(1 / 8)
 
     def test_num_char_edits_and_ref_chars(self):
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["diabetes", "asthma"]))
@@ -35,10 +35,10 @@ class TestKTCERExampleMetric:
             hyp="patient has diabetis and astma",
         )
         example = dataset[0]
-        ktcer = example.metrics.ktcer(vocab="k")
-        assert ktcer.num_char_edits == 2
-        assert ktcer.ref_chars == 8 + 6  # len("diabetes") + len("asthma")
-        assert ktcer.value == pytest.approx(2 / 14)
+        key_term_cer = example.metrics.key_term_cer(vocab="k")
+        assert key_term_cer.num_char_edits == 2
+        assert key_term_cer.ref_chars == 8 + 6  # len("diabetes") + len("asthma")
+        assert key_term_cer.value == pytest.approx(2 / 14)
 
     def test_complete_deletion(self):
         # key term fully absent from hypothesis
@@ -46,10 +46,10 @@ class TestKTCERExampleMetric:
         dataset = Dataset(config=config)
         dataset.add(ref="patient has diabetes", hyp="patient has")
         example = dataset[0]
-        ktcer = example.metrics.ktcer(vocab="k")
-        assert ktcer.num_char_edits == 8  # all 8 chars deleted
-        assert ktcer.ref_chars == 8
-        assert ktcer.value == pytest.approx(1.0)
+        key_term_cer = example.metrics.key_term_cer(vocab="k")
+        assert key_term_cer.num_char_edits == 8  # all 8 chars deleted
+        assert key_term_cer.ref_chars == 8
+        assert key_term_cer.value == pytest.approx(1.0)
 
     def test_none_normalizer_uses_standardized_tokens(self):
         # With normalizer="none", casing is preserved; a case mismatch counts as an edit.
@@ -57,8 +57,8 @@ class TestKTCERExampleMetric:
         dataset = Dataset(config=config)
         dataset.add(ref="patient has Diabetes", hyp="patient has diabetes")
         example = dataset[0]
-        ktcer_normalized = example.metrics.ktcer(vocab="k")
-        ktcer_raw = example.metrics.ktcer(vocab="k", normalizer="none")
+        ktcer_normalized = example.metrics.key_term_cer(vocab="k")
+        ktcer_raw = example.metrics.key_term_cer(vocab="k", normalizer="none")
         assert ktcer_normalized.value == 0.0
         assert ktcer_raw.value > 0.0
 
@@ -71,9 +71,9 @@ class TestKTCERExampleMetric:
             hyp="patient has bloodpressure",
         )
         example = dataset[0]
-        ktcer = example.metrics.ktcer(vocab="k")
-        assert ktcer.num_char_edits == 1
-        assert ktcer.ref_chars == 5
+        key_term_cer = example.metrics.key_term_cer(vocab="k")
+        assert key_term_cer.num_char_edits == 1
+        assert key_term_cer.ref_chars == 5
 
 
 class TestKTCERDatasetMetric:
@@ -94,31 +94,31 @@ class TestKTCERDatasetMetric:
         return dataset
 
     def test_num_char_edits_aggregates(self, mixed_dataset):
-        ktcer = mixed_dataset.metrics.ktcer(vocab="k")
-        expected = sum(ex.metrics.ktcer(vocab="k").num_char_edits for ex in mixed_dataset)
-        assert ktcer.num_char_edits == expected
+        key_term_cer = mixed_dataset.metrics.key_term_cer(vocab="k")
+        expected = sum(ex.metrics.key_term_cer(vocab="k").num_char_edits for ex in mixed_dataset)
+        assert key_term_cer.num_char_edits == expected
 
     def test_ref_chars_aggregates(self, mixed_dataset):
-        ktcer = mixed_dataset.metrics.ktcer(vocab="k")
-        expected = sum(ex.metrics.ktcer(vocab="k").ref_chars for ex in mixed_dataset)
-        assert ktcer.ref_chars == expected
+        key_term_cer = mixed_dataset.metrics.key_term_cer(vocab="k")
+        expected = sum(ex.metrics.key_term_cer(vocab="k").ref_chars for ex in mixed_dataset)
+        assert key_term_cer.ref_chars == expected
 
     def test_value(self, mixed_dataset):
         # diabetes: 0 edits / 8 chars; asthma→astma: 1 edit / 6 chars → 1/14
-        ktcer = mixed_dataset.metrics.ktcer(vocab="k")
-        assert ktcer.value == pytest.approx(1 / 14)
+        key_term_cer = mixed_dataset.metrics.key_term_cer(vocab="k")
+        assert key_term_cer.value == pytest.approx(1 / 14)
 
     def test_all_correct(self):
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="k", terms=["diabetes", "asthma"]))
         dataset = Dataset(config=config)
         dataset.add(ref="has diabetes", hyp="has diabetes")
         dataset.add(ref="has asthma", hyp="has asthma")
-        assert dataset.metrics.ktcer(vocab="k").value == 0.0
+        assert dataset.metrics.key_term_cer(vocab="k").value == 0.0
 
     def test_empty_vocab_raises(self):
         dataset = Dataset()
         with pytest.raises(ValueError, match="not found in dataset config vocabularies"):
-            dataset.metrics.ktcer(vocab="k").value
+            dataset.metrics.key_term_cer(vocab="k").value
 
 
 class TestKTCERMetricAttributes:

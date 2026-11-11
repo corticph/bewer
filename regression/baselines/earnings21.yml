@@ -10,7 +10,7 @@ metrics:
       num_edits: 227282
       ref_length: 2009754
       value: 0.11308946269045864
-  ktcer:
+  key_term_cer:
     compute_seconds: 24.987
     params:
       allow_subset_matches: false
@@ -22,7 +22,7 @@ metrics:
       num_char_edits: 4392
       ref_chars: 38508
       value: 0.11405422249922094
-  kter:
+  key_term_error_rate:
     compute_seconds: 10.172
     params:
       allow_subset_matches: false
@@ -33,7 +33,7 @@ metrics:
       vocab: oracle
     values:
       value: 0.36033382425135
-  ktf:
+  key_term_fscore:
     compute_seconds: 9.788
     params:
       allow_subset_matches: false
@@ -45,7 +45,7 @@ metrics:
       vocab: oracle
     values:
       value: 0.7606538237011091
-  ktp:
+  key_term_precision:
     compute_seconds: 9.493
     params:
       allow_subset_matches: false
@@ -56,7 +56,7 @@ metrics:
       vocab: oracle
     values:
       value: 0.9380849532037437
-  ktr:
+  key_term_recall:
     compute_seconds: 9.501
     params:
       allow_subset_matches: false
@@ -80,7 +80,7 @@ metrics:
       num_insertions: 11887
       num_matches: 316326
       num_substitutions: 26253
-  rktr:
+  relaxed_key_term_recall:
     compute_seconds: 25.531
     params:
       allow_subset_matches: false

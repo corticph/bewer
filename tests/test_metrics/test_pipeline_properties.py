@@ -103,8 +103,8 @@ class TestNoneStages:
         config = get_config("base").clone().add_vocabulary(Vocabulary("animals", terms=["Fox"]))
         dataset = Dataset(config=config)
         dataset.add("the fox jumps", "the fox jumps")
-        assert dataset.metrics.ktr(vocab="animals").num_ref_terms == 1
-        assert dataset.metrics.ktr(vocab="animals", normalizer="none").num_ref_terms == 0
+        assert dataset.metrics.key_term_recall(vocab="animals").num_ref_terms == 1
+        assert dataset.metrics.key_term_recall(vocab="animals", normalizer="none").num_ref_terms == 0
 
     def test_none_tokenizer_is_rejected(self, sample_dataset):
         """Tokenization cannot be skipped; the request fails before the dataset freezes."""
