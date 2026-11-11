@@ -2,8 +2,8 @@
 
 These mirror the key-term metrics (KTR / KTP / KTF) but draw their terms from an
 *orthographically-complex term* vocabulary — abbreviations, acronyms, alphanumerics and
-hyphen compounds auto-extracted from the references. The vocabulary is declared in the
-base config and attached at Dataset init.
+hyphen compounds auto-extracted from the references and hypotheses. The vocabulary is
+declared in the base config and attached at Dataset init.
 
 They run under the ``orthographically_complex_term`` tokenizer (no hyphen split, so
 ``CT-scan`` is one token) and the ``cased`` normalizer (no lowercasing), so a term's

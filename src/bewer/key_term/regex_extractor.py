@@ -1,8 +1,8 @@
 """Regex-based vocabulary extractors.
 
 A :class:`RegexExtractor` is a reusable :data:`~bewer.key_term.vocabulary.ExtractorFn`: a
-callable ``(dataset) -> Iterable[str]`` that scans each example's *reference* and returns
-every token whose surface form fully matches a configured regular expression. It is the
+callable ``(dataset) -> Iterable[str]`` that scans each example's reference and hypothesis and
+returns every token whose surface form fully matches a configured regular expression. It is the
 generic building block behind metric-specific extractors such as
 :data:`~bewer.key_term.orthographically_complex_term_extractor.ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`.
 
@@ -14,6 +14,19 @@ with a ``pattern`` directly, or subclass it and override :attr:`default_pattern`
 
 Either form can be registered as a vocabulary via
 ``Vocabulary(name, extractors=[extractor])`` and then referenced from a key-term metric.
+
+Terms are always extracted from both sides. A pattern defines a *class* of terms, so a
+hypothesis token in that class is a candidate key term whether or not any reference contains
+it. Extracting from references only would hide hallucinated class terms from precision and
+false-positive counts (a hypothesis ``HbA1c`` with no reference ``HbA1c`` would never be
+matched).
+
+Recall changes only when a hypothesis-only term matches reference tokens after normalization.
+Terms are matched on normalized tokens, so under a lowercasing normalizer a hypothesis ``MRI``
+also matches a reference ``mri`` that the pattern alone would not extract, adding a reference
+occurrence. Under a case-preserving normalizer (e.g. ``cased``, used by the
+orthographically-complex term metrics) a hypothesis-only term has no reference occurrences, and
+recall is unchanged.
 """
 
 from __future__ import annotations
@@ -45,13 +58,14 @@ def match_token_regex(tokens: "TokenList", pattern: "regex.Pattern") -> list[sli
 
 
 class RegexExtractor:
-    """Extract terms from a dataset's reference texts by full-matching tokens against a regex.
+    """Extract terms from a dataset's texts by full-matching tokens against a regex.
 
     Instances are :data:`~bewer.key_term.vocabulary.ExtractorFn` callables: ``extractor(dataset)``
-    returns the set of distinct reference terms whose tokens fully match the pattern, ready to
-    register via ``Vocabulary(name, extractors=[extractor])``.
+    returns the set of distinct terms whose tokens fully match the pattern, ready to register via
+    ``Vocabulary(name, extractors=[extractor])``. Both references and hypotheses are scanned (see
+    the module docstring for why).
 
-    Each example's reference is read under the active tokenizer, so the surface form of a term
+    Each text is read under the active tokenizer, so the surface form of a term
     depends on the pipeline the owning metric runs with (e.g. the ``orthographically_complex_term`` tokenizer
     keeps ``CT-scan`` a single token, while ``key_term`` splits it on the hyphen).
     """
@@ -72,16 +86,16 @@ class RegexExtractor:
 
     @property
     def pattern(self) -> "regex.Pattern":
-        """The compiled pattern each reference token is full-matched against."""
+        """The compiled pattern each token is full-matched against."""
         return self._pattern
 
     def __call__(self, dataset: "Dataset") -> set[str]:
-        """Return the set of distinct reference terms matching the pattern across ``dataset``."""
+        """Return the set of distinct terms matching the pattern across ``dataset``'s references and hypotheses."""
         terms: set[str] = set()
         for example in dataset:
-            text = example.ref
-            tokens = text.tokens
-            terms.update(self._term_string(text, tokens, span) for span in match_token_regex(tokens, self._pattern))
+            for text in (example.ref, example.hyp):
+                tokens = text.tokens
+                terms.update(self._term_string(text, tokens, span) for span in match_token_regex(tokens, self._pattern))
         return terms
 
     @staticmethod

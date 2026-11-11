@@ -13,12 +13,12 @@ class KTCER_(ExampleMetric):
     @metric_property(is_value=True)
     def num_char_edits(self) -> int:
         """Get the total character edits across all key term occurrences in the example."""
-        return sum(ts.char_edits for ts in self.parent_metric._rkt_stats[self.example.index].term_stats)
+        return sum(ts.char_edits for ts in self.parent_metric._rkt_outcomes[self.example.index].term_outcomes)
 
     @metric_property(is_value=True)
     def ref_chars(self) -> int:
         """Get the total reference character count across all key term occurrences in the example."""
-        return sum(ts.ref_chars for ts in self.parent_metric._rkt_stats[self.example.index].term_stats)
+        return sum(ts.ref_chars for ts in self.parent_metric._rkt_outcomes[self.example.index].term_outcomes)
 
     @metric_property(is_main=True)
     def value(self) -> float:
@@ -46,16 +46,14 @@ class KTCER(Metric):
 
         Attributes:
             vocab: The vocabulary name to use for key term identification.
-            normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
         """
 
     @metric_property(is_dependency=True)
-    def _rkt_stats(self):
-        """Get the shared _RKTStats metric instance."""
-        return self.dataset.metrics._rkt_stats(
+    def _rkt_outcomes(self):
+        """Get the shared _RKTOutcomes metric instance."""
+        return self.dataset.metrics._rkt_outcomes(
             vocab=self.params.vocab,
-            normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,

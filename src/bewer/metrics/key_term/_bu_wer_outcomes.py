@@ -122,7 +122,7 @@ class _BUWEROutcomes(Metric):
         "once: substitutions and deletions by reference-token membership in the vocabulary, "
         "insertions by hypothesis-token membership. B-WER and U-WER therefore form an exact "
         "two-way split of plain WER. Parameters are the lean KeyTermParams "
-        "(vocab, normalized). The KTR family's allow_subset_matches does not "
+        "(vocab). The KTR family's allow_subset_matches does not "
         "apply, since the union of covered token positions is invariant under subset "
         "removal. Not intended for direct use."
     )
@@ -134,13 +134,12 @@ class _BUWEROutcomes(Metric):
     def _matcher(self):
         """Build (and cache) the vocabulary matcher for this metric's vocabulary + pipeline."""
         vocab = self.dataset.config.vocabularies[self.params.vocab]
-        return vocab.build_matcher(self.dataset, normalized=self.params.normalized)
+        return vocab.build_matcher(self.dataset)
 
     @metric_property(is_dependency=True)
     def _alignment(self):
-        """The shared Levenshtein alignment instance, as in `_kt_stats`."""
+        """The shared Levenshtein alignment instance, as in `_kt_outcomes`."""
         return self.dataset.metrics.levenshtein(
-            normalized=self.params.normalized,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

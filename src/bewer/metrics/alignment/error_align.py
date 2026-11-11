@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass
 from typing import Optional
 
 from error_align import error_align
@@ -9,7 +8,7 @@ from error_align.utils import OpType as EAOpType
 from error_align.utils import basic_normalizer, basic_tokenizer
 
 from bewer.alignment import Alignment, Op, OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, MetricParams, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 from bewer.preprocessing.context import get_normalizer, get_tokenizer
 
 __all__ = ["ErrorAlign"]
@@ -63,11 +62,6 @@ class ErrorAlign_(ExampleMetric):
         return normalizer(text) if normalizer else text
 
     @staticmethod
-    def _no_normalizer(text: str) -> str:
-        """Return text unchanged (used when normalization is disabled)."""
-        return text
-
-    @staticmethod
     def _length_preserving(normalizer: callable) -> callable:
         """Wrap a normalizer for use with error_align, which requires length-preserving normalizers.
 
@@ -97,27 +91,24 @@ class ErrorAlign_(ExampleMetric):
         """
         Compute and convert ErrorAlign edit operations to BeWER operations.
 
-        When ``normalized=True``, the dataset normalizer (wrapped to be length-preserving)
-        is used for both alignment and output — so ops show the same token form that was
-        used for matching.  When ``normalized=False``, no normalization is applied during
-        alignment or in the output.
+        The active normalizer (wrapped to be length-preserving) is used for both alignment
+        and output — so ops show the same token form that was used for matching. Under
+        ``normalizer="none"`` the identity normalizer applies, so alignment and output use
+        the standardized text.
 
         Note:
             ``ref_span`` and ``hyp_span`` always index into the *standardized* (pre-normalized)
-            text.  When ``normalized=True``, the ``ref`` and ``hyp`` fields contain *normalized*
-            text, so ``text[op.ref_span] != op.ref`` for tokens where normalization changes
-            characters (e.g. ``café`` → ``cafe``).  Use the span to recover the surface form.
+            text. The ``ref`` and ``hyp`` fields contain *normalized* text, so ``text[op.ref_span] != op.ref``
+            for tokens where normalization changes characters (e.g. ``café`` → ``cafe``). Use the span to
+            recover the surface form.
 
         Returns:
             list[Op]: List of BeWER operations.
         """
         tokenizer = get_tokenizer(self.parent_metric.dataset)
         tokenizer = tokenizer or basic_tokenizer
-        if self.params.normalized:
-            dataset_normalizer = get_normalizer(self.parent_metric.dataset)
-            normalizer = self._length_preserving(dataset_normalizer) if dataset_normalizer else basic_normalizer
-        else:
-            normalizer = self._no_normalizer
+        dataset_normalizer = get_normalizer(self.parent_metric.dataset)
+        normalizer = self._length_preserving(dataset_normalizer) if dataset_normalizer else basic_normalizer
         ea_ops = []
         ref_idx = 0
         for ea_op in error_align(
@@ -152,7 +143,3 @@ class ErrorAlign(Metric):
     long_name_base = "Error Alignment"
     description = "Error alignment between hypothesis and reference texts."
     example_cls = ErrorAlign_
-
-    @dataclass
-    class param_schema(MetricParams):
-        normalized: bool = True

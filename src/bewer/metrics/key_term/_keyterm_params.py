@@ -12,16 +12,13 @@ class KeyTermParams(MetricParams):
     """Base class for key-term metric parameter dataclasses.
 
     Subclass this with @dataclass to define key-term metric parameters.
-    Provides the common ``vocab`` and ``normalized`` fields and validates
-    that the vocabulary exists on the dataset.
+    Provides the common ``vocab`` field and validates that the vocabulary exists on the dataset.
 
     Attributes:
         vocab: The vocabulary name to use for key term identification.
-        normalized: Whether to use normalized tokens for alignment and key term matching.
     """
 
     vocab: str
-    normalized: bool = True
 
     def validate(self) -> None:
         """Validate that the vocabulary exists on the dataset."""
@@ -35,7 +32,7 @@ class KeyTermSubsetParams(KeyTermParams):
 
     Adds ``allow_subset_matches`` on top of :class:`KeyTermParams` for metrics
     that consume the matched-term list (KTR, KTP, KTF, KTFPR, KTCER, RKTR, KTER,
-    and the hidden stats metrics). Position-based consumers such as
+    and the hidden outcomes metrics). Position-based consumers such as
     B-WER/U-WER derive from :class:`KeyTermParams` directly: the union of
     covered token positions is invariant under subset removal, so subset
     matching cannot affect their counts.

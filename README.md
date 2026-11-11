@@ -99,6 +99,7 @@ print(dataset.config)
 BewerConfig(
   standardizers:
     - default
+    - none
   tokenizers:
     - default
     - with_punctuation
@@ -107,12 +108,15 @@ BewerConfig(
   normalizers:
     - default
     - cased
+    - none
   vocabularies:
     - orthographically_complex_terms
 )
 ```
 
-Each component is named and defined as part of the dataset's configuration. Typically, it is sufficient to just pass a pre-registered language-config name (e.g. `"en"`, `"de"`, `"fr"`) to the `Dataset`, and the configuration is applied automatically.
+Each component is named and defined as part of the dataset's configuration. Every config also holds an identity standardizer and normalizer under the reserved name `none`, which skip that stage: `standardizer="none"` keeps the text as submitted, and `normalizer="none"` compares standardized tokens. Tokenization cannot be skipped. User-defined components may not be named `none`.
+
+Typically, it is sufficient to just pass a pre-registered language-config name (e.g. `"en"`, `"de"`, `"fr"`) to the `Dataset`, and the configuration is applied automatically.
 
 You can adapt and extend the pipeline as needed. If you're using a pre-registered config, note that configs are frozen upon registration, so you'll need to make a clone before extending it.
 
@@ -179,6 +183,9 @@ ktf = dataset.metrics.key_term_fscore(
     tokenizer="key_term",
     vocab="medical",
 )
+
+# Skip token normalization, e.g. for a case-sensitive WER:
+cased_wer = dataset.metrics.wer(normalizer="none")
 ```
 
 Call `dataset.metrics.list_metrics()` to get an overview of available metrics and their parameters or see the [metrics catalog](#metrics-catalog) below.
@@ -286,6 +293,9 @@ assert wer is dataset.metrics.wer(normalizer="default")
 | Word Error Rate | General | `wer` | [`>`](src/bewer/metrics/general/wer.py) |
 | Character Error Rate | General | `cer` | [`>`](src/bewer/metrics/general/cer.py) |
 | Punctuation Error Rate | General | `punctuation_error_rate` | [`>`](src/bewer/metrics/general/punctuation_error_rate.py) |
+| Match Error Rate | General | `mer` | [`>`](src/bewer/metrics/general/mer.py) |
+| Word Information Preserved | General | `wip` | [`>`](src/bewer/metrics/general/wip.py) |
+| Word Information Lost | General | `wil` | [`>`](src/bewer/metrics/general/wil.py) |
 | **Hallucination metrics** | | | |
 | Insertion Rate | Hallucination | `insertion_rate` | [`>`](src/bewer/metrics/hallucination/insertion_rate.py) |
 | Example Insertion Rate | Hallucination | `example_insertion_rate` | [`>`](src/bewer/metrics/hallucination/example_insertion_rate.py) |

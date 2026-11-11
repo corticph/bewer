@@ -3,7 +3,6 @@ metrics:
   cer:
     compute_seconds: 6.998
     params:
-      normalized: true
       normalizer: default
       standardizer: default
       tokenizer: default
@@ -14,7 +13,6 @@ metrics:
   levenshtein:
     compute_seconds: 8.505
     params:
-      normalized: true
       normalizer: default
       standardizer: default
       tokenizer: default
@@ -26,7 +24,6 @@ metrics:
   wer:
     compute_seconds: 5.842
     params:
-      normalized: true
       normalizer: default
       standardizer: default
       tokenizer: default

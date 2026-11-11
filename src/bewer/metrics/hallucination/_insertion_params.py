@@ -11,17 +11,15 @@ __all__ = ["InsertionParams"]
 class InsertionParams(MetricParams):
     """Base class for insertion metric parameter dataclasses.
 
-    Provides the common ``min_run_length``, ``normalized``, and ``alignment``
+    Provides the common ``min_run_length`` and ``alignment``
     fields and validates them.
 
     Attributes:
         min_run_length: Minimum contiguous insertion run length to count.
-        normalized: Whether to use normalized tokens for alignment.
         alignment: Alignment backend — 'levenshtein' or 'error_align'.
     """
 
     min_run_length: int = 1
-    normalized: bool = True
     alignment: str = "levenshtein"
 
     def validate(self) -> None:

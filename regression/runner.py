@@ -47,7 +47,7 @@ console = Console()
 # One computed metric entry, keyed in a dataset's `metrics` by its manifest name:
 #   {"params": {param_name: value}, "values": {value_name: number}}
 # `params` are the fully-resolved metric params (schema fields + pipeline), tracked so a
-# change to a metric's *default* (e.g. normalized, tokenizer) fails the check explicitly.
+# change to a metric's *default* (e.g. normalizer, tokenizer) fails the check explicitly.
 MetricEntry = dict[str, dict[str, Any]]
 
 
@@ -200,7 +200,7 @@ def compute(
 
     With ``isolate=True`` (default) each metric is computed on its OWN freshly built
     dataset, so a metric that shares an underlying computation with another (e.g. KTCER
-    and RKTR both build the error_align alignment; the KT-family shares _kt_stats) pays
+    and RKTR both build the error_align alignment; the KT-family shares _kt_outcomes) pays
     its full cost rather than being deflated by a warm cache left behind by a sibling.
     The timing then reflects each metric's true isolated cost (incl. lazy preprocessing
     and shared dependencies) from a cold state.
@@ -263,7 +263,7 @@ def compare(dataset_name: str, computed: dict[str, MetricEntry], baseline: dict,
     """Compare computed entries (params + values) against a baseline's ``metrics`` section.
 
     Values are compared within ``tolerance`` (ints exactly); params are compared exactly,
-    so a change to a metric's resolved defaults (e.g. ``normalized``, ``tokenizer``) is
+    so a change to a metric's resolved defaults (e.g. ``normalizer``, ``tokenizer``) is
     flagged as a ``param`` diff rather than silently altering values.
     """
     diffs: list[Diff] = []

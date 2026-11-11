@@ -5,7 +5,7 @@ case-distinctive or alphanumeric evidence that it is an abbreviation, acronym, a
 code or hyphen compound rather than an ordinary word — e.g. ``MRI``, ``mmHg``, ``HbA1c``,
 ``CO2``, ``CT-scan`` or ``α-helix``. :class:`OrthographicallyComplexTermExtractor` is a
 :class:`~bewer.key_term.regex_extractor.RegexExtractor` that harvests such terms from a dataset's
-references; :data:`ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN` backs the predefined
+references and hypotheses; :data:`ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN` backs the predefined
 ``orthographically_complex_term_recall`` / ``_precision`` / ``_fscore`` metrics.
 
 It selects a term by its *orthography* (capitalization, digit/letter mixing, symbols, Greek),
@@ -52,7 +52,7 @@ ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN = (
 
 class OrthographicallyComplexTermExtractor(RegexExtractor):
     """Extract orthographically-complex terms — abbreviations, acronyms, alphanumerics and
-    hyphen compounds — from a dataset's reference texts.
+    hyphen compounds — from a dataset's reference and hypothesis texts.
 
     Defaults to :data:`ORTHOGRAPHICALLY_COMPLEX_TERM_DEFAULT_PATTERN`. Expects the
     ``orthographically_complex_term`` tokenizer (which does not split on hyphens), so a compound like ``CT-scan``

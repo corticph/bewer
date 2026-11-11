@@ -243,7 +243,7 @@ class TestAcrossMetricFamilies:
 
 
 class TestKeyTermMetricsWithDependencies:
-    """KT-family metrics depend on _kt_stats; bootstrap must shadow the dep."""
+    """KT-family metrics depend on _kt_outcomes; bootstrap must shadow the dep."""
 
     def test_ktf(self, dataset_with_key_terms):
         ci = dataset_with_key_terms.metrics.key_term_fscore(vocab="animals").compute_confidence_interval(
@@ -283,15 +283,15 @@ class TestKeyTermMetricsWithDependencies:
     def test_dependency_metric_not_mutated_by_bootstrap(self, dataset_with_key_terms):
         """Recomputing CI must not corrupt the dependency's _src or cached value."""
         key_term_fscore = dataset_with_key_terms.metrics.key_term_fscore(vocab="animals")
-        kt_stats_before = key_term_fscore._kt_stats
-        src_before = kt_stats_before._src
-        num_tp_before = kt_stats_before.num_tp
+        kt_outcomes_before = key_term_fscore._kt_outcomes
+        src_before = kt_outcomes_before._src
+        num_tp_before = kt_outcomes_before.num_tp
 
         key_term_fscore.compute_confidence_interval(seed=0, n_resamples=100)
 
-        assert key_term_fscore._kt_stats is kt_stats_before
-        assert key_term_fscore._kt_stats._src is src_before
-        assert key_term_fscore._kt_stats.num_tp == num_tp_before
+        assert key_term_fscore._kt_outcomes is kt_outcomes_before
+        assert key_term_fscore._kt_outcomes._src is src_before
+        assert key_term_fscore._kt_outcomes.num_tp == num_tp_before
 
 
 class TestAggregationCorrectness:

@@ -131,13 +131,13 @@ class TestKTFPRExampleLevel:
 
 
 class TestKTFPRSharing:
-    """KTFPR shares its _KTStats instance with KTR/KTP/KTF when params match."""
+    """KTFPR shares its _KTOutcomes instance with KTR/KTP/KTF when params match."""
 
-    def test_ktfpr_shares_kt_stats_with_ktr(self):
+    def test_ktfpr_shares_kt_outcomes_with_ktr(self):
         ds = _dataset("the fox jumps", "the fox jumps", ["fox"])
         key_term_fpr = ds.metrics.key_term_fpr(vocab="vocab")
         key_term_recall = ds.metrics.key_term_recall(vocab="vocab", partial_credit=True)
-        assert key_term_fpr._kt_stats is key_term_recall._kt_stats
+        assert key_term_fpr._kt_outcomes is key_term_recall._kt_outcomes
 
 
 class TestKTFPRRegistered:

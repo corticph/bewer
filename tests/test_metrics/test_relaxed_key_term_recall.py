@@ -173,7 +173,7 @@ class TestRKTRPartialPenalty:
             hyp="patient has bloodpressure",
         )
         example = dataset[0]
-        ts = dataset.metrics._rkt_stats(vocab="k")[example.index].term_stats
+        ts = dataset.metrics._rkt_outcomes(vocab="k")[example.index].term_outcomes
         assert ts[0].char_edits == 1
         assert ts[0].ref_chars == 5
         relaxed_key_term_recall = example.metrics.relaxed_key_term_recall(vocab="k", threshold=0.0)
@@ -191,7 +191,7 @@ class TestRKTRPartialPenalty:
             hyp="patient has bloodpressure",
         )
         example = dataset[0]
-        ts = dataset.metrics._rkt_stats(vocab="k")[example.index].term_stats
+        ts = dataset.metrics._rkt_outcomes(vocab="k")[example.index].term_outcomes
         assert ts[0].char_edits == 1
         assert ts[0].ref_chars == 8
         relaxed_key_term_recall = example.metrics.relaxed_key_term_recall(vocab="k", threshold=0.0)
@@ -210,7 +210,7 @@ class TestRKTRPartialPenalty:
             hyp="patient has bloodpressure",
         )
         example = dataset[0]
-        ts = dataset.metrics._rkt_stats(vocab="k")[example.index].term_stats
+        ts = dataset.metrics._rkt_outcomes(vocab="k")[example.index].term_outcomes
         assert ts[0].char_edits == 1
         assert ts[0].ref_chars == 14
 

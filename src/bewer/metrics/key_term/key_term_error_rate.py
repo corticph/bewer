@@ -13,21 +13,21 @@ class KTER_(ExampleMetric):
     @metric_property(is_value=True)
     def num_errors(self) -> int:
         """Get the number of key terms incorrectly transcribed in the hypothesis text."""
-        return self.parent_metric._kt_stats[self.example.index].num_fn
+        return self.parent_metric._kt_outcomes[self.example.index].num_fn
 
     @metric_property(is_value=True)
     def num_key_terms(self) -> int:
         """Get the number of key terms in the reference text."""
-        return self.parent_metric._kt_stats[self.example.index].num_ref_terms
+        return self.parent_metric._kt_outcomes[self.example.index].num_ref_terms
 
     @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level key term error rate."""
-        stats = self.parent_metric._kt_stats[self.example.index]
-        denom = stats.num_tp + stats.num_fn
+        outcomes = self.parent_metric._kt_outcomes[self.example.index]
+        denom = outcomes.num_tp + outcomes.num_fn
         if denom == 0:
             return 0.0
-        return stats.num_fn / denom
+        return outcomes.num_fn / denom
 
 
 @METRIC_REGISTRY.register("key_term_error_rate", tokenizer="key_term")
@@ -51,7 +51,6 @@ class KTER(Metric):
 
         Attributes:
             vocab: The vocabulary name to use for key term identification.
-            normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches. If False, overlapping key term matches
                 are deduplicated, keeping only the longest match.
             partial_credit: When False (default, exact-match view), each key term occurrence is a single
@@ -62,11 +61,10 @@ class KTER(Metric):
         partial_credit: bool = False
 
     @metric_property(is_dependency=True)
-    def _kt_stats(self):
-        """Get the shared _KTStats metric instance."""
-        return self.dataset.metrics._kt_stats(
+    def _kt_outcomes(self):
+        """Get the shared _KTOutcomes metric instance."""
+        return self.dataset.metrics._kt_outcomes(
             vocab=self.params.vocab,
-            normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
             partial_credit=self.params.partial_credit,
             standardizer=self.standardizer,
@@ -77,17 +75,17 @@ class KTER(Metric):
     @metric_property(is_value=True)
     def num_errors(self) -> int:
         """Get the number of key terms incorrectly transcribed in the hypothesis texts."""
-        return self._kt_stats.num_fn
+        return self._kt_outcomes.num_fn
 
     @metric_property(is_value=True)
     def num_key_terms(self) -> int:
         """Get the number of key terms in the reference texts."""
-        return self._kt_stats.num_ref_terms
+        return self._kt_outcomes.num_ref_terms
 
     @metric_property(is_main=True)
     def value(self) -> float:
         """Get the key term error rate."""
-        denom = self._kt_stats.num_tp + self._kt_stats.num_fn
+        denom = self._kt_outcomes.num_tp + self._kt_outcomes.num_fn
         if denom == 0:
             return 0.0
-        return self._kt_stats.num_fn / denom
+        return self._kt_outcomes.num_fn / denom

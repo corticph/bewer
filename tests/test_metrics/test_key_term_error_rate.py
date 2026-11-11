@@ -153,28 +153,28 @@ class TestKTERExampleMetric:
 
 
 class TestKTERNormalization:
-    """Tests for KTER with normalized=False."""
+    """Tests for KTER with normalizer="none"."""
 
     def test_unnormalized_casing_mismatch(self):
-        """Test that differing casing causes an error when normalized=False."""
+        """Test that differing casing causes an error under normalizer="none"."""
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["Fox"]))
         dataset = Dataset(config=config)
         dataset.add(
             ref="the Fox jumps",
             hyp="the fox jumps",
         )
-        key_term_error_rate = dataset[0].metrics.key_term_error_rate(vocab="animals", normalized=False)
+        key_term_error_rate = dataset[0].metrics.key_term_error_rate(vocab="animals", normalizer="none")
         assert key_term_error_rate.num_errors == 1
 
     def test_unnormalized_casing_match(self):
-        """Test that matching casing is fine when normalized=False."""
+        """Test that matching casing is fine under normalizer="none"."""
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["FOX"]))
         dataset = Dataset(config=config)
         dataset.add(
             ref="the FOX jumps",
             hyp="the FOX jumps",
         )
-        key_term_error_rate = dataset[0].metrics.key_term_error_rate(vocab="animals", normalized=False)
+        key_term_error_rate = dataset[0].metrics.key_term_error_rate(vocab="animals", normalizer="none")
         assert key_term_error_rate.num_errors == 0
 
 
@@ -302,14 +302,14 @@ class TestKTERMetricAttributes:
         assert kter1 is kter2
 
 
-class TestKTERSharesKTStats:
-    """Tests that KTER and KTR share the same _KTStats instance."""
+class TestKTERSharesKTOutcomes:
+    """Tests that KTER and KTR share the same _KTOutcomes instance."""
 
-    def test_kter_and_ktr_share_kt_stats(self):
-        """Test that KTER and KTR with identical params use the same cached _KTStats instance."""
+    def test_kter_and_ktr_share_kt_outcomes(self):
+        """Test that KTER and KTR with identical params use the same cached _KTOutcomes instance."""
         config = get_config("base").clone().add_vocabulary(Vocabulary(name="animals", terms=["fox"]))
         dataset = Dataset(config=config)
         dataset.add(ref="the fox jumps", hyp="the fox jumps")
         key_term_error_rate = dataset.metrics.key_term_error_rate(vocab="animals")
         key_term_recall = dataset.metrics.key_term_recall(vocab="animals")
-        assert key_term_error_rate._kt_stats is key_term_recall._kt_stats
+        assert key_term_error_rate._kt_outcomes is key_term_recall._kt_outcomes

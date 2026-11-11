@@ -37,9 +37,7 @@ class InsertionRate_(ExampleMetric):
     @metric_property(is_value=True)
     def ref_length(self) -> int:
         """Get the number of tokens in the reference text."""
-        if self.params.normalized:
-            return len(self.example.ref.tokens.normalized)
-        return len(self.example.ref.tokens.standardized)
+        return len(self.example.ref.tokens)
 
     @metric_property(is_main=True)
     def value(self) -> float:
@@ -71,13 +69,11 @@ class InsertionRate(Metric):
     def _alignment(self):
         if self.params.alignment == "error_align":
             return self.dataset.metrics.error_align(
-                normalized=self.params.normalized,
                 standardizer=self.standardizer,
                 tokenizer=self.tokenizer,
                 normalizer=self.normalizer,
             )
         return self.dataset.metrics.levenshtein(
-            normalized=self.params.normalized,
             standardizer=self.standardizer,
             tokenizer=self.tokenizer,
             normalizer=self.normalizer,

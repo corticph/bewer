@@ -10,12 +10,19 @@ from bewer.metrics.base import (
 )
 from bewer.metrics.confidence import ConfidenceInterval
 from bewer.metrics.general.cer import CER
+from bewer.metrics.general.mer import MER
 from bewer.metrics.general.punctuation_error_rate import PER
 from bewer.metrics.general.wer import WER
+from bewer.metrics.general.wil import WIL
+from bewer.metrics.general.wip import WIP
 from bewer.metrics.hallucination._insertion_params import InsertionParams
 from bewer.metrics.hallucination.example_insertion_rate import ExampleInsertionRate
 from bewer.metrics.hallucination.insertion_rate import InsertionRate
-from bewer.metrics.key_term import _BUWEROutcomes, _KTStats, _RKTStats  # noqa: F401 (registers the hidden metrics)
+from bewer.metrics.key_term import (  # noqa: F401 (registers the hidden metrics)
+    _BUWEROutcomes,
+    _KTOutcomes,
+    _RKTOutcomes,
+)
 from bewer.metrics.key_term._keyterm_params import KeyTermParams, KeyTermSubsetParams
 from bewer.metrics.key_term.b_wer import BWER
 from bewer.metrics.key_term.key_term_cer import KTCER
@@ -46,6 +53,9 @@ __all__ = [
     "BWER",
     "UWER",
     "CER",
+    "MER",
+    "WIL",
+    "WIP",
     "KTF",
     "KTER",
     "KTFPR",

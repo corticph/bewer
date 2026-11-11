@@ -4,6 +4,7 @@ from bewer import Dataset, Vocabulary, get_config
 from bewer.core.text import Text, TextType, TokenList
 from bewer.key_term import KeyTerm, KeyTermMatch, KeyTermTrie
 from bewer.key_term.trie import _remove_subset_matches
+from bewer.preprocessing.context import set_pipeline
 
 
 class TestKeyTermInit:
@@ -217,22 +218,45 @@ class TestKeyTermTrieAddCapitalized:
     """Tests for KeyTermTrie with add_capitalized parameter."""
 
     def test_add_capitalized_matches_sentence_start(self, sample_dataset):
-        """With normalized=False and add_capitalized=True, matches capitalized variant."""
+        """Under normalizer="none" with add_capitalized=True, matches capitalized variant."""
         sample_dataset.add("Hello world", "Hello world")
         example = sample_dataset[-1]
         kt = KeyTerm("hello", config=sample_dataset.config)
-        trie = KeyTermTrie({kt}, normalized=False, add_capitalized=True)
-        matches, _ = trie.find_in_tokens(example.ref.tokens)
+        with set_pipeline(normalizer="none"):
+            trie = KeyTermTrie({kt}, add_capitalized=True)
+            matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert len(matches) == 1
 
     def test_no_capitalized_misses_sentence_start(self, sample_dataset):
-        """With normalized=False and add_capitalized=False, does not match capitalized text."""
+        """Under normalizer="none" with add_capitalized=False, does not match capitalized text."""
         sample_dataset.add("Hello world", "Hello world")
         example = sample_dataset[-1]
         kt = KeyTerm("hello", config=sample_dataset.config)
-        trie = KeyTermTrie({kt}, normalized=False, add_capitalized=False)
-        matches, _ = trie.find_in_tokens(example.ref.tokens)
+        with set_pipeline(normalizer="none"):
+            trie = KeyTermTrie({kt}, add_capitalized=False)
+            matches, _ = trie.find_in_tokens(example.ref.tokens)
         assert len(matches) == 0
+
+
+class TestKeyTermTrieNormalizer:
+    """Tests that KeyTermTrie matches in the active normalizer's token form."""
+
+    def test_default_normalizer_matches_case_insensitively(self, sample_dataset):
+        """The lowercasing default normalizer makes matching case-insensitive."""
+        sample_dataset.add("Hello world", "Hello world")
+        kt = KeyTerm("hello", config=sample_dataset.config)
+        trie = KeyTermTrie({kt})
+        matches, _ = trie.find_in_tokens(sample_dataset[-1].ref.tokens)
+        assert len(matches) == 1
+
+    def test_none_normalizer_matches_standardized_tokens(self, sample_dataset):
+        """Under normalizer="none", matching compares standardized tokens and is case-sensitive."""
+        sample_dataset.add("Hello hello", "Hello hello")
+        kt = KeyTerm("hello", config=sample_dataset.config)
+        with set_pipeline(normalizer="none"):
+            trie = KeyTermTrie({kt})
+            matches, _ = trie.find_in_tokens(sample_dataset[-1].ref.tokens)
+        assert matches == [slice(1, 2)]
 
 
 class TestKeyTermMatch:

@@ -1,4 +1,4 @@
-"""Tests for bewer.metrics._kt_stats module."""
+"""Tests for bewer.metrics.key_term._kt_outcomes module."""
 
 import pytest
 
@@ -7,8 +7,8 @@ from bewer.alignment import Alignment, OpType
 from bewer.metrics.base import METRIC_REGISTRY
 
 
-class TestKTStatsExampleMetric:
-    """Tests for _KTStats_ (ExampleMetric) class."""
+class TestKTOutcomesExampleMetric:
+    """Tests for _KTOutcomes_ (ExampleMetric) class."""
 
     @pytest.fixture
     def dataset_correct(self):
@@ -42,63 +42,63 @@ class TestKTStatsExampleMetric:
 
     def test_num_ref_terms(self, dataset_correct):
         """Test num_ref_terms = 1 for a single key term in the reference."""
-        stats = dataset_correct[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_correct[0].metrics._kt_outcomes(vocab="animals")
         assert stats.num_ref_terms == 1
 
     def test_num_hyp_terms_correct(self, dataset_correct):
         """Test num_hyp_terms = 1 on an exact match."""
-        stats = dataset_correct[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_correct[0].metrics._kt_outcomes(vocab="animals")
         assert stats.num_hyp_terms == 1
 
     def test_num_hyp_terms_with_fp(self, dataset_fp):
         """Test num_hyp_terms = 2 when key term appears twice in hypothesis."""
-        stats = dataset_fp[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_fp[0].metrics._kt_outcomes(vocab="animals")
         assert stats.num_hyp_terms == 2
 
     def test_num_tp_correct(self, dataset_correct):
         """Test num_tp = 1 on correct transcription."""
-        stats = dataset_correct[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_correct[0].metrics._kt_outcomes(vocab="animals")
         assert stats.num_tp == 1
 
     def test_num_tp_error(self, dataset_error):
         """Test num_tp = 0 on incorrect transcription."""
-        stats = dataset_error[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_error[0].metrics._kt_outcomes(vocab="animals")
         assert stats.num_tp == 0
 
     def test_num_fn_correct(self, dataset_correct):
         """Test num_fn = 0 on correct transcription."""
-        stats = dataset_correct[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_correct[0].metrics._kt_outcomes(vocab="animals")
         assert stats.num_fn == 0
 
     def test_num_fn_error(self, dataset_error):
         """Test num_fn = 1 on incorrect transcription."""
-        stats = dataset_error[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_error[0].metrics._kt_outcomes(vocab="animals")
         assert stats.num_fn == 1
 
     def test_num_fp_none(self, dataset_correct):
         """Test num_fp = 0 on exact match."""
-        stats = dataset_correct[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_correct[0].metrics._kt_outcomes(vocab="animals")
         assert stats.num_fp == 0
 
     def test_num_fp_with_false_positive(self, dataset_fp):
         """Test num_fp = 1 when hyp has an extra key term occurrence."""
-        stats = dataset_fp[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_fp[0].metrics._kt_outcomes(vocab="animals")
         assert stats.num_fp == 1
 
     def test_tp_plus_fn_equals_ref_terms(self, dataset_correct):
         """Test invariant: TP + FN always equals num_ref_terms."""
         for fixture in [dataset_correct]:
-            stats = fixture[0].metrics._kt_stats(vocab="animals")
+            stats = fixture[0].metrics._kt_outcomes(vocab="animals")
             assert stats.num_tp + stats.num_fn == stats.num_ref_terms
 
     def test_tp_plus_fn_equals_ref_terms_on_error(self, dataset_error):
         """Test invariant holds when key term is missed."""
-        stats = dataset_error[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_error[0].metrics._kt_outcomes(vocab="animals")
         assert stats.num_tp + stats.num_fn == stats.num_ref_terms
 
 
-class TestKTStatsAlignmentAttributes:
-    """Tests for tp_alignments, fn_alignments, fp_alignments on _KTStats_."""
+class TestKTOutcomesAlignmentAttributes:
+    """Tests for tp_alignments, fn_alignments, fp_alignments on _KTOutcomes_."""
 
     @pytest.fixture
     def dataset_correct(self):
@@ -119,63 +119,63 @@ class TestKTStatsAlignmentAttributes:
         return dataset
 
     def test_tp_alignments_correct(self, dataset_correct):
-        stats = dataset_correct[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_correct[0].metrics._kt_outcomes(vocab="animals")
         assert len(stats.tp_alignments) == 1
         assert all(op.type == OpType.MATCH for op in stats.tp_alignments[0])
 
     def test_fn_alignments_correct(self, dataset_correct):
-        stats = dataset_correct[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_correct[0].metrics._kt_outcomes(vocab="animals")
         assert stats.fn_alignments == []
 
     def test_fp_alignments_correct(self, dataset_correct):
-        stats = dataset_correct[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_correct[0].metrics._kt_outcomes(vocab="animals")
         assert stats.fp_alignments == []
 
     def test_tp_alignments_error(self, dataset_error):
-        stats = dataset_error[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_error[0].metrics._kt_outcomes(vocab="animals")
         assert stats.tp_alignments == []
 
     def test_fn_alignments_error(self, dataset_error):
-        stats = dataset_error[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_error[0].metrics._kt_outcomes(vocab="animals")
         assert len(stats.fn_alignments) == 1
         op_types = {op.type for op in stats.fn_alignments[0]}
         assert OpType.SUBSTITUTE in op_types
 
     def test_fp_alignments_fp_case(self, dataset_fp):
-        stats = dataset_fp[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_fp[0].metrics._kt_outcomes(vocab="animals")
         assert len(stats.tp_alignments) == 1
         assert len(stats.fp_alignments) == 1
 
     def test_count_invariants(self, dataset_correct, dataset_error, dataset_fp):
         for dataset in (dataset_correct, dataset_error, dataset_fp):
             for partial_credit in (False, True):
-                stats = dataset[0].metrics._kt_stats(vocab="animals", partial_credit=partial_credit)
+                stats = dataset[0].metrics._kt_outcomes(vocab="animals", partial_credit=partial_credit)
                 assert len(stats.tp_alignments) == stats.num_tp
                 assert len(stats.fn_alignments) == stats.num_fn
                 assert len(stats.fp_alignments) == stats.num_fp
 
     def test_return_types(self, dataset_fp):
-        stats = dataset_fp[0].metrics._kt_stats(vocab="animals")
+        stats = dataset_fp[0].metrics._kt_outcomes(vocab="animals")
         for seg in stats.tp_alignments + stats.fn_alignments + stats.fp_alignments:
             assert isinstance(seg, Alignment)
 
     def test_partial_credit_alignments_are_single_ops(self, dataset_error, dataset_fp):
         """Partial-credit alignment entries are single-op slices."""
         for dataset in (dataset_error, dataset_fp):
-            stats = dataset[0].metrics._kt_stats(vocab="animals", partial_credit=True)
+            stats = dataset[0].metrics._kt_outcomes(vocab="animals", partial_credit=True)
             for seg in stats.tp_alignments + stats.fn_alignments + stats.fp_alignments:
                 assert isinstance(seg, Alignment)
                 assert len(seg) == 1
 
     def test_partial_credit_tp_alignments_are_matches(self, dataset_correct):
         """Every TP slice in partial-credit mode contains a MATCH op."""
-        stats = dataset_correct[0].metrics._kt_stats(vocab="animals", partial_credit=True)
+        stats = dataset_correct[0].metrics._kt_outcomes(vocab="animals", partial_credit=True)
         assert len(stats.tp_alignments) == 1
         assert stats.tp_alignments[0][0].type == OpType.MATCH
 
     def test_partial_credit_fn_alignments_are_non_matches(self, dataset_error):
         """Every FN slice in partial-credit mode contains a non-MATCH op."""
-        stats = dataset_error[0].metrics._kt_stats(vocab="animals", partial_credit=True)
+        stats = dataset_error[0].metrics._kt_outcomes(vocab="animals", partial_credit=True)
         assert len(stats.fn_alignments) == 1
         assert stats.fn_alignments[0][0].type != OpType.MATCH
 
@@ -188,7 +188,7 @@ class TestKTStatsAlignmentAttributes:
             ref="hello world",
             hyp="hollow world",
         )
-        stats = dataset[0].metrics._kt_stats(vocab="vocab", allow_subset_matches=False)
+        stats = dataset[0].metrics._kt_outcomes(vocab="vocab", allow_subset_matches=False)
         assert stats.fp_alignments == []
         assert stats.num_fp == 0
         assert stats.num_fn == 1
@@ -202,14 +202,14 @@ class TestKTStatsAlignmentAttributes:
             ref="world",
             hyp="wall",
         )
-        stats = dataset[0].metrics._kt_stats(vocab="vocab")
+        stats = dataset[0].metrics._kt_outcomes(vocab="vocab")
         assert len(stats.fn_alignments) == 1
         assert len(stats.fp_alignments) == 1
         assert stats.fn_alignments[0] == stats.fp_alignments[0]
 
 
-class TestKTStatsDatasetMetric:
-    """Tests for _KTStats (dataset-level Metric) class."""
+class TestKTOutcomesDatasetMetric:
+    """Tests for _KTOutcomes (dataset-level Metric) class."""
 
     @pytest.fixture
     def mixed_dataset(self):
@@ -229,56 +229,56 @@ class TestKTStatsDatasetMetric:
 
     def test_num_ref_terms_aggregates(self, mixed_dataset):
         """Test num_ref_terms sums example-level counts."""
-        stats = mixed_dataset.metrics._kt_stats(vocab="animals")
-        expected = sum(ex.metrics._kt_stats(vocab="animals").num_ref_terms for ex in mixed_dataset)
+        stats = mixed_dataset.metrics._kt_outcomes(vocab="animals")
+        expected = sum(ex.metrics._kt_outcomes(vocab="animals").num_ref_terms for ex in mixed_dataset)
         assert stats.num_ref_terms == expected
 
     def test_num_hyp_terms_aggregates(self, mixed_dataset):
         """Test num_hyp_terms sums example-level counts."""
-        stats = mixed_dataset.metrics._kt_stats(vocab="animals")
-        expected = sum(ex.metrics._kt_stats(vocab="animals").num_hyp_terms for ex in mixed_dataset)
+        stats = mixed_dataset.metrics._kt_outcomes(vocab="animals")
+        expected = sum(ex.metrics._kt_outcomes(vocab="animals").num_hyp_terms for ex in mixed_dataset)
         assert stats.num_hyp_terms == expected
 
     def test_num_tp_aggregates(self, mixed_dataset):
         """Test num_tp sums example-level counts."""
-        stats = mixed_dataset.metrics._kt_stats(vocab="animals")
-        expected = sum(ex.metrics._kt_stats(vocab="animals").num_tp for ex in mixed_dataset)
+        stats = mixed_dataset.metrics._kt_outcomes(vocab="animals")
+        expected = sum(ex.metrics._kt_outcomes(vocab="animals").num_tp for ex in mixed_dataset)
         assert stats.num_tp == expected
 
     def test_num_fn_aggregates(self, mixed_dataset):
         """Test num_fn sums example-level counts."""
-        stats = mixed_dataset.metrics._kt_stats(vocab="animals")
-        expected = sum(ex.metrics._kt_stats(vocab="animals").num_fn for ex in mixed_dataset)
+        stats = mixed_dataset.metrics._kt_outcomes(vocab="animals")
+        expected = sum(ex.metrics._kt_outcomes(vocab="animals").num_fn for ex in mixed_dataset)
         assert stats.num_fn == expected
 
     def test_num_fp_aggregates(self, mixed_dataset):
         """Test num_fp sums example-level counts."""
-        stats = mixed_dataset.metrics._kt_stats(vocab="animals")
-        expected = sum(ex.metrics._kt_stats(vocab="animals").num_fp for ex in mixed_dataset)
+        stats = mixed_dataset.metrics._kt_outcomes(vocab="animals")
+        expected = sum(ex.metrics._kt_outcomes(vocab="animals").num_fp for ex in mixed_dataset)
         assert stats.num_fp == expected
 
     def test_empty_dataset(self):
-        """Test _KTStats raises ValueError for unknown vocab."""
+        """Test _KTOutcomes raises ValueError for unknown vocab."""
         dataset = Dataset()
         with pytest.raises(ValueError, match="not found"):
-            dataset.metrics._kt_stats(vocab="animals").num_tp
+            dataset.metrics._kt_outcomes(vocab="animals").num_tp
 
 
-class TestKTStatsIsPrivate:
-    """Tests that _KTStats is hidden from the public metric listing."""
+class TestKTOutcomesIsPrivate:
+    """Tests that _KTOutcomes is hidden from the public metric listing."""
 
     def test_not_in_list_metrics(self):
-        """Test _kt_stats is not visible in the default (non-private) metric listing."""
+        """Test _kt_outcomes is not visible in the default (non-private) metric listing."""
         public_names = [name for name in METRIC_REGISTRY.metric_classes if not name.startswith("_")]
-        assert "_kt_stats" not in public_names
+        assert "_kt_outcomes" not in public_names
 
     def test_visible_with_show_private(self):
-        """Test _kt_stats is present in the registry when private metrics are included."""
-        assert "_kt_stats" in METRIC_REGISTRY.metric_classes
+        """Test _kt_outcomes is present in the registry when private metrics are included."""
+        assert "_kt_outcomes" in METRIC_REGISTRY.metric_classes
 
 
-class TestKTStatsSharing:
-    """Tests that all key term metrics share the same _KTStats instance for identical params."""
+class TestKTOutcomesSharing:
+    """Tests that all key term metrics share the same _KTOutcomes instance for identical params."""
 
     @pytest.fixture
     def dataset(self):
@@ -295,49 +295,49 @@ class TestKTStatsSharing:
         return dataset
 
     def test_ktr_and_kter_share_instance(self, dataset):
-        """KTR and KTER with identical params share the same _KTStats instance."""
+        """KTR and KTER with identical params share the same _KTOutcomes instance."""
         key_term_recall = dataset.metrics.key_term_recall(vocab="animals")
         key_term_error_rate = dataset.metrics.key_term_error_rate(vocab="animals")
-        assert key_term_recall._kt_stats is key_term_error_rate._kt_stats
+        assert key_term_recall._kt_outcomes is key_term_error_rate._kt_outcomes
 
     def test_ktr_and_ktp_share_instance(self, dataset):
-        """KTR and KTP with identical params share the same _KTStats instance."""
+        """KTR and KTP with identical params share the same _KTOutcomes instance."""
         key_term_recall = dataset.metrics.key_term_recall(vocab="animals")
         key_term_precision = dataset.metrics.key_term_precision(vocab="animals")
-        assert key_term_recall._kt_stats is key_term_precision._kt_stats
+        assert key_term_recall._kt_outcomes is key_term_precision._kt_outcomes
 
     def test_ktr_and_ktf_share_instance(self, dataset):
-        """KTR and KTF with identical params share the same _KTStats instance."""
+        """KTR and KTF with identical params share the same _KTOutcomes instance."""
         key_term_recall = dataset.metrics.key_term_recall(vocab="animals")
         key_term_fscore = dataset.metrics.key_term_fscore(vocab="animals")
-        assert key_term_recall._kt_stats is key_term_fscore._kt_stats
+        assert key_term_recall._kt_outcomes is key_term_fscore._kt_outcomes
 
     def test_all_four_share_instance(self, dataset):
-        """KTER, KTR, KTP, and KTF all share the same _KTStats for identical params."""
+        """KTER, KTR, KTP, and KTF all share the same _KTOutcomes for identical params."""
         key_term_error_rate = dataset.metrics.key_term_error_rate(vocab="animals")
         key_term_recall = dataset.metrics.key_term_recall(vocab="animals")
         key_term_precision = dataset.metrics.key_term_precision(vocab="animals")
         key_term_fscore = dataset.metrics.key_term_fscore(vocab="animals")
         assert (
-            key_term_error_rate._kt_stats
-            is key_term_recall._kt_stats
-            is key_term_precision._kt_stats
-            is key_term_fscore._kt_stats
+            key_term_error_rate._kt_outcomes
+            is key_term_recall._kt_outcomes
+            is key_term_precision._kt_outcomes
+            is key_term_fscore._kt_outcomes
         )
 
     def test_different_vocabs_different_instances(self, dataset):
-        """Different vocab params produce different _KTStats instances."""
+        """Different vocab params produce different _KTOutcomes instances."""
         ktr_animals = dataset.metrics.key_term_recall(vocab="animals")
         ktr_verbs = dataset.metrics.key_term_recall(vocab="verbs")
-        assert ktr_animals._kt_stats is not ktr_verbs._kt_stats
+        assert ktr_animals._kt_outcomes is not ktr_verbs._kt_outcomes
 
-    def test_different_normalized_different_instances(self, dataset):
-        """Different normalized params produce different _KTStats instances."""
-        ktr_norm = dataset.metrics.key_term_recall(vocab="animals", normalized=True)
-        ktr_unnorm = dataset.metrics.key_term_recall(vocab="animals", normalized=False)
-        assert ktr_norm._kt_stats is not ktr_unnorm._kt_stats
+    def test_different_normalizer_different_instances(self, dataset):
+        """Different normalizers produce different _KTOutcomes instances."""
+        ktr_norm = dataset.metrics.key_term_recall(vocab="animals")
+        ktr_unnorm = dataset.metrics.key_term_recall(vocab="animals", normalizer="none")
+        assert ktr_norm._kt_outcomes is not ktr_unnorm._kt_outcomes
 
     def test_instance_is_cached(self, dataset):
-        """Accessing _kt_stats twice on the same metric returns the identical object."""
+        """Accessing _kt_outcomes twice on the same metric returns the identical object."""
         key_term_recall = dataset.metrics.key_term_recall(vocab="animals")
-        assert key_term_recall._kt_stats is key_term_recall._kt_stats
+        assert key_term_recall._kt_outcomes is key_term_recall._kt_outcomes

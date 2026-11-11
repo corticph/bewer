@@ -13,20 +13,20 @@ class KTP_(ExampleMetric):
     @metric_property(is_value=True)
     def num_matches(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis text."""
-        return self.parent_metric._kt_stats[self.example.index].num_tp
+        return self.parent_metric._kt_outcomes[self.example.index].num_tp
 
     @metric_property(is_value=True)
     def num_fp(self) -> int:
         """Get the number of spurious key term occurrences in the hypothesis text."""
-        return self.parent_metric._kt_stats[self.example.index].num_fp
+        return self.parent_metric._kt_outcomes[self.example.index].num_fp
 
     @metric_property(is_main=True)
     def value(self) -> float:
         """Get the example-level key term precision."""
-        stats = self.parent_metric._kt_stats[self.example.index]
-        if (stats.num_tp + stats.num_fp) == 0:
+        outcomes = self.parent_metric._kt_outcomes[self.example.index]
+        if (outcomes.num_tp + outcomes.num_fp) == 0:
             return 0.0
-        return stats.num_tp / (stats.num_tp + stats.num_fp)
+        return outcomes.num_tp / (outcomes.num_tp + outcomes.num_fp)
 
 
 @METRIC_REGISTRY.register("key_term_precision", tokenizer="key_term")
@@ -48,7 +48,6 @@ class KTP(Metric):
 
         Attributes:
             vocab: The vocabulary name to use for key term identification.
-            normalized: Whether to use normalized tokens for alignment and key term matching.
             allow_subset_matches: Whether to allow subset matches.
             partial_credit: When False (default, exact-match view), each key term occurrence is a single
                 TP or FP unit. When True (partial-credit view), TP and FP are counted at the
@@ -58,11 +57,10 @@ class KTP(Metric):
         partial_credit: bool = False
 
     @metric_property(is_dependency=True)
-    def _kt_stats(self):
-        """Get the shared _KTStats metric instance."""
-        return self.dataset.metrics._kt_stats(
+    def _kt_outcomes(self):
+        """Get the shared _KTOutcomes metric instance."""
+        return self.dataset.metrics._kt_outcomes(
             vocab=self.params.vocab,
-            normalized=self.params.normalized,
             allow_subset_matches=self.params.allow_subset_matches,
             partial_credit=self.params.partial_credit,
             standardizer=self.standardizer,
@@ -73,16 +71,16 @@ class KTP(Metric):
     @metric_property(is_value=True)
     def num_matches(self) -> int:
         """Get the number of key terms correctly transcribed in the hypothesis texts."""
-        return self._kt_stats.num_tp
+        return self._kt_outcomes.num_tp
 
     @metric_property(is_value=True)
     def num_fp(self) -> int:
         """Get the number of spurious key term occurrences in the hypothesis texts."""
-        return self._kt_stats.num_fp
+        return self._kt_outcomes.num_fp
 
     @metric_property(is_main=True)
     def value(self) -> float:
         """Get the key term precision."""
-        if (self._kt_stats.num_tp + self._kt_stats.num_fp) == 0:
+        if (self._kt_outcomes.num_tp + self._kt_outcomes.num_fp) == 0:
             return 0.0
-        return self._kt_stats.num_tp / (self._kt_stats.num_tp + self._kt_stats.num_fp)
+        return self._kt_outcomes.num_tp / (self._kt_outcomes.num_tp + self._kt_outcomes.num_fp)
