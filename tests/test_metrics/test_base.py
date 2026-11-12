@@ -556,12 +556,18 @@ class TestFormatRegisteredParams:
         assert "vocab*" in _format_registered_params("key_term_recall")
 
     def test_specialization_shows_its_own_default(self):
-        """A subclass that gives a required param a default shows the value, unmarked."""
-        from bewer.metrics.base import _format_registered_params
+        """A registration default for a required param shows the value, unmarked."""
+        from bewer.metrics import KTR
+        from bewer.metrics.base import METRIC_REGISTRY, _format_registered_params
 
-        summary = _format_registered_params("orthographically_complex_term_recall")
+        METRIC_REGISTRY.register_metric(KTR, "_default_probe", vocab="terms", allow_override=True)
+        try:
+            summary = _format_registered_params("_default_probe")
+        finally:
+            del METRIC_REGISTRY.metric_metadata["_default_probe"]
+            del METRIC_REGISTRY.metric_classes["_default_probe"]
 
-        assert "vocab='orthographically_complex_terms'" in summary
+        assert "vocab='terms'" in summary
         assert "*" not in summary
 
     def test_registration_default_overrides_the_schema_default(self):

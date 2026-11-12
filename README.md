@@ -14,7 +14,7 @@
 
 **Bewer is an evaluation and analysis framework for automatic speech recognition in Python.** It defines a flexible approach for configuring and customizing speech recognition evaluation. The hierarchical structure, going from the dataset level down to individual tokens, makes it easy to inspect individual examples and understand evaluation results. The built-in preprocessing pipeline and metrics collection are designed to cover all conventional use cases and then some, while still being fully extensible.
 
-__Contents__ | [Installation](#installation) | [Quickstart](#quickstart) | [Core Concepts](#core-concepts) | [Metrics Catalog](#metrics-catalog) |
+__Contents__ | [Installation](#installation) | [Quickstart](#quickstart) | [Core Concepts](#core-concepts) | [Metrics Catalog](#metrics-catalog) | [Metric Presets Catalog](#metric-presets-catalog) |
 
 ## Installation
 
@@ -223,6 +223,15 @@ assert wer[0] is dataset[0].metrics.wer()
 assert wer.num_edits == sum(ex_wer.num_edits for ex_wer in wer)
 ```
 
+When a set of arguments applies across many metrics and the metric itself is a special case of another metric or a set of metrics, Bewer ships the arguments as a preset in [`bewer.metric_presets`](src/bewer/metric_presets.py) instead of registering dedicated variants. Splat a preset into a metric call that accepts its arguments:
+
+```python
+from bewer.metric_presets import ORTHOGRAPHICALLY_COMPLEX_TERM_KWARGS
+
+# Key-term recall on orthographically-complex terms (MRI, HbA1c, CT-scan), scored by exact surface form
+recall = dataset.metrics.key_term_recall(**ORTHOGRAPHICALLY_COMPLEX_TERM_KWARGS)
+```
+
 #### Vocabularies
 
 Key-term metrics measure performance on a pre-defined subset of terms (medical, financial, acronyms, etc.). To use them, build a [`Vocabulary`](src/bewer/key_term/vocabulary.py) and attach it to a config.
@@ -287,34 +296,36 @@ assert wer is dataset.metrics.wer(normalizer="default")
 
 ## Metrics Catalog
 
-| | Type | Accessor | |
-|--------|------|----------|---:|
-| **General purpose** | | | |
-| Word Error Rate | General | `wer` | [`>`](src/bewer/metrics/general/wer.py) |
-| Character Error Rate | General | `cer` | [`>`](src/bewer/metrics/general/cer.py) |
-| Punctuation Error Rate | General | `punctuation_error_rate` | [`>`](src/bewer/metrics/general/punctuation_error_rate.py) |
-| Match Error Rate | General | `mer` | [`>`](src/bewer/metrics/general/mer.py) |
-| Word Information Preserved | General | `wip` | [`>`](src/bewer/metrics/general/wip.py) |
-| Word Information Lost | General | `wil` | [`>`](src/bewer/metrics/general/wil.py) |
-| **Hallucination metrics** | | | |
-| Insertion Rate | Hallucination | `insertion_rate` | [`>`](src/bewer/metrics/hallucination/insertion_rate.py) |
-| Example Insertion Rate | Hallucination | `example_insertion_rate` | [`>`](src/bewer/metrics/hallucination/example_insertion_rate.py) |
-| **Key-term metrics** | | | |
-| Key-Term Recall | Key-term | `key_term_recall` | [`>`](src/bewer/metrics/key_term/key_term_recall.py) |
-| Key-Term Precision | Key-term | `key_term_precision` | [`>`](src/bewer/metrics/key_term/key_term_precision.py) |
-| Key-Term F-Score | Key-term | `key_term_fscore` | [`>`](src/bewer/metrics/key_term/key_term_fscore.py) |
-| Key-Term Error Rate | Key-term | `key_term_error_rate` | [`>`](src/bewer/metrics/key_term/key_term_error_rate.py) |
-| Key-Term False-Positive Rate | Key-term | `key_term_fpr` | [`>`](src/bewer/metrics/key_term/key_term_fpr.py) |
-| Key-Term Character Error Rate | Key-term | `key_term_cer` | [`>`](src/bewer/metrics/key_term/key_term_cer.py) |
-| Relaxed Key-Term Recall | Key-term | `relaxed_key_term_recall` | [`>`](src/bewer/metrics/key_term/relaxed_key_term_recall.py) |
-| Biased Word Error Rate | Key-term | `b_wer` | [`>`](src/bewer/metrics/key_term/b_wer.py) |
-| Unbiased Word Error Rate | Key-term | `u_wer` | [`>`](src/bewer/metrics/key_term/u_wer.py) |
-| **Orthographically complex terms** | | | |
-| Orthographically Complex Term Recall | Key-term | `orthographically_complex_term_recall` | [`>`](src/bewer/metrics/key_term/orthographically_complex_term.py) |
-| Orthographically Complex Term Precision | Key-term | `orthographically_complex_term_precision` | [`>`](src/bewer/metrics/key_term/orthographically_complex_term.py) |
-| Orthographically Complex Term F-Score | Key-term | `orthographically_complex_term_fscore` | [`>`](src/bewer/metrics/key_term/orthographically_complex_term.py) |
-| **Alignments** | | | |
-| Levenshtein Alignment | Alignment | `levenshtein` | [`>`](src/bewer/metrics/alignment/levenshtein.py) |
-| Error Alignment | Alignment | `error_align` | [`>`](src/bewer/metrics/alignment/error_align.py) |
-| **Dataset statistics** | | | |
-| Dataset Summary | Summary | `summary` | [`>`](src/bewer/metrics/summary/summary.py) |
+| | Type | Accessor |
+|--------|------|----------|
+| **General purpose** | | |
+| [`>`](src/bewer/metrics/general/wer.py) Word Error Rate | General | `wer` |
+| [`>`](src/bewer/metrics/general/cer.py) Character Error Rate | General | `cer` |
+| [`>`](src/bewer/metrics/general/punctuation_error_rate.py) Punctuation Error Rate | General | `punctuation_error_rate` |
+| [`>`](src/bewer/metrics/general/mer.py) Match Error Rate | General | `mer` |
+| [`>`](src/bewer/metrics/general/wip.py) Word Information Preserved | General | `wip` |
+| [`>`](src/bewer/metrics/general/wil.py) Word Information Lost | General | `wil` |
+| **Hallucination metrics** | | |
+| [`>`](src/bewer/metrics/hallucination/insertion_rate.py) Insertion Rate | Hallucination | `insertion_rate` |
+| [`>`](src/bewer/metrics/hallucination/example_insertion_rate.py) Example Insertion Rate | Hallucination | `example_insertion_rate` |
+| **Key-term metrics** | | |
+| [`>`](src/bewer/metrics/key_term/key_term_recall.py) Key-Term Recall | Key-term | `key_term_recall` |
+| [`>`](src/bewer/metrics/key_term/key_term_precision.py) Key-Term Precision | Key-term | `key_term_precision` |
+| [`>`](src/bewer/metrics/key_term/key_term_fscore.py) Key-Term F-Score | Key-term | `key_term_fscore` |
+| [`>`](src/bewer/metrics/key_term/key_term_error_rate.py) Key-Term Error Rate | Key-term | `key_term_error_rate` |
+| [`>`](src/bewer/metrics/key_term/key_term_fpr.py) Key-Term False-Positive Rate | Key-term | `key_term_fpr` |
+| [`>`](src/bewer/metrics/key_term/key_term_cer.py) Key-Term Character Error Rate | Key-term | `key_term_cer` |
+| [`>`](src/bewer/metrics/key_term/relaxed_key_term_recall.py) Relaxed Key-Term Recall | Key-term | `relaxed_key_term_recall` |
+| [`>`](src/bewer/metrics/key_term/b_wer.py) Biased Word Error Rate | Key-term | `b_wer` |
+| [`>`](src/bewer/metrics/key_term/u_wer.py) Unbiased Word Error Rate | Key-term | `u_wer` |
+| **Alignments** | | |
+| [`>`](src/bewer/metrics/alignment/levenshtein.py) Levenshtein Alignment | Alignment | `levenshtein` |
+| [`>`](src/bewer/metrics/alignment/error_align.py) Error Alignment | Alignment | `error_align` |
+| **Dataset statistics** | | |
+| [`>`](src/bewer/metrics/summary/summary.py) Dataset Summary | Summary | `summary` |
+
+## Metric Presets Catalog
+
+| Preset | Applies to |
+|--------|------------|
+| [`>`](src/bewer/metric_presets.py) `ORTHOGRAPHICALLY_COMPLEX_TERM_KWARGS` | Key-term metrics |
