@@ -339,8 +339,9 @@ class TestAggregationCorrectness:
         original dataset's counts on every resample, yielding a constant
         bootstrap distribution and a zero-width interval.
         """
+        name = "_ci_alignment_repro"
 
-        @METRIC_REGISTRY.register("_ci_alignment_repro")
+        @METRIC_REGISTRY.register(name)
         class _CIAlignmentRepro(Metric):
             short_name_base = "CIAlignmentRepro"
             long_name_base = "CI Alignment Repro"
@@ -355,9 +356,13 @@ class TestAggregationCorrectness:
             def value(self) -> float:
                 return self.alignment.num_edits
 
-        metric = dataset_with_more_variation.metrics._ci_alignment_repro()
-        assert metric.value == dataset_with_more_variation.metrics.levenshtein().num_edits
-        ci = metric.compute_confidence_interval(seed=0, n_resamples=500)
-        # 20 examples, half with 0 edits and half with 2 edits: resampling must
-        # produce variation, not the constant point value.
-        assert ci.width > 0.0
+        try:
+            metric = dataset_with_more_variation.metrics.get(name)()
+            assert metric.value == dataset_with_more_variation.metrics.levenshtein().num_edits
+            ci = metric.compute_confidence_interval(seed=0, n_resamples=500)
+            # 20 examples, half with 0 edits and half with 2 edits: resampling must
+            # produce variation, not the constant point value.
+            assert ci.width > 0.0
+        finally:
+            del METRIC_REGISTRY.metric_metadata[name]
+            del METRIC_REGISTRY.metric_classes[name]
