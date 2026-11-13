@@ -31,9 +31,6 @@ from bewer.metrics.key_term.key_term_fpr import KTFPR
 from bewer.metrics.key_term.key_term_fscore import KTF
 from bewer.metrics.key_term.key_term_precision import KTP
 from bewer.metrics.key_term.key_term_recall import KTR
-from bewer.metrics.key_term.orthographically_complex_term import (  # noqa: F401
-    DEFAULT_ORTHOGRAPHICALLY_COMPLEX_TERM_VOCAB,
-)
 from bewer.metrics.key_term.relaxed_key_term_recall import RKTR
 from bewer.metrics.key_term.u_wer import UWER
 from bewer.metrics.summary.summary import DatasetSummary

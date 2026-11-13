@@ -3,6 +3,7 @@ from importlib.metadata import PackageNotFoundError, version
 from bewer import configs as configs
 from bewer import core as core
 from bewer import key_term as key_term
+from bewer import metric_presets as metric_presets
 from bewer import metrics as metrics
 from bewer import preprocessing as preprocessing
 from bewer import reporting as reporting
@@ -33,6 +34,7 @@ __all__ = [
     "set_pipeline",
     "core",
     "key_term",
+    "metric_presets",
     "metrics",
     "preprocessing",
     "reporting",
