@@ -13,7 +13,7 @@
     font-family="'Courier New', Courier, monospace"
     font-size="56"
     font-weight="normal"
-    stroke-width="2.2"
+    stroke-width="2.5"
     stroke-linejoin="round"
   >
     <tspan fill="url(#accent)" stroke="url(#accent)">be</tspan><tspan fill="#73726c" stroke="#73726c">wer</tspan>
