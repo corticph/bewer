@@ -292,3 +292,20 @@ class TestErrorAlignMetricValues:
         """Test that ErrorAlign (dataset-level) has no main metric."""
         values = ErrorAlign.metric_values()
         assert values["main"] is None
+
+    def test_dataset_level_counts_sum_examples(self, empty_dataset):
+        """Dataset-level ErrorAlign counts equal the sum of example-level counts."""
+        empty_dataset.add("hello world", "hello there world")
+        empty_dataset.add("one two three", "one two")
+        ea = empty_dataset.metrics.error_align()
+        assert ea.num_substitutions == sum(em.num_substitutions for em in ea)
+        assert ea.num_insertions == sum(em.num_insertions for em in ea)
+        assert ea.num_deletions == sum(em.num_deletions for em in ea)
+        assert ea.num_edits == sum(em.num_edits for em in ea)
+        assert ea.num_matches == sum(em.num_matches for em in ea)
+
+    def test_dataset_metric_values_other(self):
+        """Dataset-level ErrorAlign aggregates the example-level edit counts."""
+        values = ErrorAlign.metric_values()
+        for name in ("num_substitutions", "num_insertions", "num_deletions", "num_edits", "num_matches"):
+            assert name in values["other"]

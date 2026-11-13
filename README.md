@@ -262,7 +262,9 @@ You can also load line-separated key terms directly from a file (`files=["terms.
 
 #### Alignments
 
-Alignments produce an example-level text-to-text alignment as their primary output, rather than a dataset-level numeric score. An [`Alignment`](src/bewer/alignment/alignment.py) is a sequence of [`Op`](src/bewer/alignment/op.py) objects, each representing a match, substitution, insertion, or deletion between hypothesis and reference. Edit counts are available as supportive values.
+Alignments produce an example-level text-to-text alignment as their primary output, rather than a dataset-level numeric score. An [`Alignment`](src/bewer/alignment/alignment.py) is a sequence of [`Op`](src/bewer/alignment/op.py) objects, each representing a match, substitution, insertion, or deletion between hypothesis and reference. Edit counts are available as supportive values, both per example and aggregated over the dataset.
+
+Any metric computed from an alignment exposes it through the `alignment` property, at both levels: the example-level property returns the example's `Alignment` object, and the dataset-level property returns the alignment `Metric` it is computed from. Alignment is inherited transitively through dependencies (e.g. WIL inherits the Levenshtein alignment from WIP).
 
 ```python
 dataset = Dataset(config="en")
@@ -278,6 +280,14 @@ alignment = example.metrics.levenshtein().alignment
 # Access pre-computed edit operation counts
 assert alignment.num_edits + alignment.num_matches == len(alignment)
 assert alignment.num_edits >= alignment.num_substitutions
+
+# Dataset-level alignment counts and inherited alignment access
+lev = dataset.metrics.levenshtein()
+assert lev.num_edits == lev.num_substitutions + lev.num_insertions + lev.num_deletions
+
+mer = dataset.metrics.mer()  # computed from a Levenshtein alignment
+assert mer.alignment is lev  # dataset level: the alignment metric
+assert example.metrics.mer().alignment is alignment  # example level: the Alignment object
 
 # Print a color-coded two-row alignment in the console
 alignment.display()

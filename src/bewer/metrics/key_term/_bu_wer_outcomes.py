@@ -58,7 +58,7 @@ class _BUWEROutcomes_(ExampleMetric):
         insertions by their hypothesis token (Le et al., 2021). A token is
         biased only when it is part of a matched vocabulary term occurrence.
         """
-        alignment = self.parent_metric._alignment[self.example.index].alignment
+        alignment = self.alignment
         num_biased_edits = 0
         num_unbiased_edits = 0
         num_biased_ref_tokens = 0

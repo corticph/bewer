@@ -258,12 +258,97 @@ class TestLevenshteinMetricAttributes:
         assert values["main"] is None
 
     def test_dataset_metric_values_other(self):
-        """Dataset-level Levenshtein has no other metrics."""
+        """Dataset-level Levenshtein aggregates the example-level edit counts."""
         values = Levenshtein.metric_values()
-        assert values["other"] == []
+        for name in ("num_substitutions", "num_insertions", "num_deletions", "num_edits", "num_matches"):
+            assert name in values["other"]
 
     def test_example_metric_values(self):
         """Test Levenshtein_ metric_values."""
         values = Levenshtein_.metric_values()
         assert values["main"] == "alignment"
         assert "num_substitutions" in values["other"]
+
+    def test_dataset_level_counts_sum_examples(self, empty_dataset):
+        """Dataset-level counts equal the sum of example-level counts."""
+        empty_dataset.add("hello world", "hello there world")
+        empty_dataset.add("one two three", "one two")
+        lev = empty_dataset.metrics.levenshtein()
+        assert lev.num_substitutions == sum(em.num_substitutions for em in lev)
+        assert lev.num_insertions == sum(em.num_insertions for em in lev)
+        assert lev.num_deletions == sum(em.num_deletions for em in lev)
+        assert lev.num_edits == sum(em.num_edits for em in lev)
+        assert lev.num_matches == sum(em.num_matches for em in lev)
+
+    def test_dataset_counts_are_consistent(self, empty_dataset):
+        """num_edits is substitutions + insertions + deletions at the dataset level."""
+        empty_dataset.add("hello world", "hello there world")
+        lev = empty_dataset.metrics.levenshtein()
+        assert lev.num_edits == lev.num_substitutions + lev.num_insertions + lev.num_deletions
+
+
+class TestAlignmentInheritance:
+    """Tests for the is_alignment flag and alignment resolution."""
+
+    def test_is_alignment_flag(self):
+        """Alignment metrics set is_alignment; other metrics default to False."""
+        assert Levenshtein.is_alignment is True
+        from bewer.metrics.alignment.error_align import ErrorAlign
+        from bewer.metrics.general.mer import MER
+
+        assert ErrorAlign.is_alignment is True
+        assert MER.is_alignment is False
+
+    def test_alignment_metric_resolves_to_itself(self, sample_dataset):
+        """A metric with is_alignment=True resolves its alignment to itself."""
+        lev = sample_dataset.metrics.levenshtein()
+        assert lev.alignment is lev
+
+    def test_dataset_alignment_property_on_dependent_metric(self, sample_dataset):
+        """A metric with an alignment dependency exposes the alignment metric."""
+        mer = sample_dataset.metrics.mer()
+        assert mer.alignment.is_alignment
+        assert mer.alignment is sample_dataset.metrics.levenshtein()
+
+    def test_example_alignment_property_on_dependent_metric(self, sample_dataset):
+        """The example-level alignment property returns the example's Alignment."""
+        em = sample_dataset[0].metrics.mer()
+        assert em.alignment is sample_dataset[0].metrics.levenshtein().alignment
+        assert em.alignment.num_edits == sum(1 for op in em.alignment if op.type != OpType.MATCH)
+
+    def test_alignment_is_transitive(self, sample_dataset):
+        """Alignment passes through non-alignment dependencies (WIL -> WIP -> Levenshtein)."""
+        wil = sample_dataset.metrics.wil()
+        assert wil.alignment is sample_dataset.metrics.levenshtein()
+        em = sample_dataset[0].metrics.wil()
+        assert em.alignment is sample_dataset[0].metrics.levenshtein().alignment
+
+    def test_metric_without_alignment_resolves_none(self, sample_dataset):
+        """Metrics without an alignment dependency resolve alignment to None."""
+        wer = sample_dataset.metrics.wer()
+        assert wer.alignment is None
+        assert sample_dataset[0].metrics.wer().alignment is None
+
+    def test_insertion_rate_alignment_param_selects_backend(self, sample_dataset):
+        """The alignment param of insertion_rate controls the resolved alignment metric."""
+        ir = sample_dataset.metrics.insertion_rate()
+        assert ir.alignment is sample_dataset.metrics.levenshtein()
+        ir_ea = sample_dataset.metrics.insertion_rate(alignment="error_align")
+        assert ir_ea.alignment is sample_dataset.metrics.error_align()
+
+    def test_key_term_metrics_inherit_alignment(self):
+        """Key-term metrics inherit alignment through their outcome dependencies."""
+        from bewer.configs import get_config
+        from bewer.core.dataset import Dataset
+        from bewer.key_term import Vocabulary
+
+        config = get_config("base").clone().add_vocabulary(Vocabulary(name="key_terms", terms=["quick"]))
+        dataset = Dataset(config=config)
+        dataset.add("the quick brown fox", "the quick brown dog")
+        ktr = dataset.metrics.key_term_recall(vocab="key_terms")
+        assert ktr.alignment.is_alignment
+        assert ktr.alignment is dataset.metrics.levenshtein(tokenizer="key_term")
+        ktr_em = dataset[0].metrics.key_term_recall(vocab="key_terms")
+        assert ktr_em.alignment is dataset[0].metrics.levenshtein(tokenizer="key_term").alignment
+        rktr = dataset.metrics.relaxed_key_term_recall(vocab="key_terms")
+        assert rktr.alignment is dataset.metrics.error_align(tokenizer="key_term")
