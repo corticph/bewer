@@ -12,6 +12,7 @@ from bewer.preprocessing.context import set_pipeline
 from bewer.reporting.python.tables import print_metric_table
 
 if TYPE_CHECKING:
+    from bewer.alignment import Alignment
     from bewer.core.dataset import Dataset
     from bewer.core.example import Example
 
@@ -241,6 +242,9 @@ class Metric(ABC):
     param_schema: type["MetricParams"] | None = None
     short_name_base: str
     long_name_base: str
+    #: Whether this metric produces an alignment (its example-level main value is an
+    #: ``Alignment``). Set on alignment metrics so dependent metrics can inherit them.
+    is_alignment: bool = False
 
     def __init__(
         self,
@@ -368,6 +372,46 @@ class Metric(ABC):
     def dependencies(cls) -> list[str]:
         """Get the dependency metric names defined in the class and its bases."""
         return _get_dependencies(cls)
+
+    def _resolve_alignment(self, _seen: frozenset[int] = frozenset()) -> "Optional[Metric]":
+        """Depth-first search for the alignment metric this metric is computed from.
+
+        An alignment metric resolves to itself. Otherwise the dependencies
+        (``metric_property(is_dependency=True)``) are searched in declaration order:
+        the first alignment dependency wins, and a non-alignment dependency passes on
+        its own resolved alignment, so alignment is inherited transitively.
+
+        Args:
+            _seen: Instance ids already visited on this path (cycle guard).
+
+        Returns:
+            The alignment Metric this metric is computed from, or None if it has none.
+        """
+        if self.is_alignment:
+            return self
+        if id(self) in _seen:
+            return None
+        _seen = _seen | {id(self)}
+        for dep_name in self.dependencies():
+            dep = getattr(self, dep_name)
+            if not isinstance(dep, Metric):
+                continue
+            if dep.is_alignment:
+                return dep
+            resolved = dep._resolve_alignment(_seen)
+            if resolved is not None:
+                return resolved
+        return None
+
+    @metric_property(is_value=True, private=True)
+    def alignment(self) -> "Optional[Metric]":
+        """The alignment metric this metric is computed from, or None if it has none.
+
+        An alignment metric resolves to itself. The resolved instance is cached
+        via the standard metric-value machinery, so bootstrap shadows clear it
+        like any other cached value.
+        """
+        return self._resolve_alignment()
 
     @classmethod
     def _get_row_values(cls) -> tuple[str, str, str] | None:
@@ -503,6 +547,19 @@ class ExampleMetric(ABC):
     def dependencies(cls) -> list[str]:
         """Get the dependency metric names defined in the class and its bases."""
         return _get_dependencies(cls)
+
+    @property
+    def alignment(self) -> "Optional[Alignment]":
+        """The example's Alignment from this metric's alignment metric, or None if it has none.
+
+        Resolves the parent metric's alignment metric (see ``Metric.alignment``) and
+        returns the Alignment computed for this example by it. Alignment metrics
+        return their own main value through this property.
+        """
+        alignment_metric = self.parent_metric.alignment
+        if alignment_metric is None:
+            return None
+        return alignment_metric[self.example.index].alignment
 
 
 _PIPELINE_STAGES = (

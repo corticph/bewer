@@ -143,3 +143,29 @@ class ErrorAlign(Metric):
     long_name_base = "Error Alignment"
     description = "Error alignment between hypothesis and reference texts."
     example_cls = ErrorAlign_
+    is_alignment = True
+
+    @metric_property(is_value=True)
+    def num_substitutions(self) -> int:
+        """Get the number of substitutions across all examples."""
+        return sum(em.num_substitutions for em in self)
+
+    @metric_property(is_value=True)
+    def num_insertions(self) -> int:
+        """Get the number of insertions across all examples."""
+        return sum(em.num_insertions for em in self)
+
+    @metric_property(is_value=True)
+    def num_deletions(self) -> int:
+        """Get the number of deletions across all examples."""
+        return sum(em.num_deletions for em in self)
+
+    @metric_property(is_value=True)
+    def num_edits(self) -> int:
+        """Get the number of edits across all examples."""
+        return sum(em.num_edits for em in self)
+
+    @metric_property(is_value=True)
+    def num_matches(self) -> int:
+        """Get the number of matches across all examples."""
+        return sum(em.num_matches for em in self)
