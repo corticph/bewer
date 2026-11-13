@@ -69,9 +69,6 @@ def _make_shadow(metric: "Metric", resampled_src: list) -> "Metric":
             shadow.__dict__[dep_name] = _make_shadow(metric.__dict__[dep_name], resampled_src)
     for vname in _all_value_attr_names(type(metric)):
         shadow.__dict__.pop(vname, None)
-    # The resolved-alignment cache points at the original dataset's alignment metric;
-    # clear it so the shadow re-resolves through its (shadowed) dependencies.
-    shadow.__dict__.pop("_resolved_alignment", None)
     return shadow
 
 

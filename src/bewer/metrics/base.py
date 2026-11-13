@@ -403,16 +403,15 @@ class Metric(ABC):
                 return resolved
         return None
 
-    @property
+    @metric_property(is_value=True, private=True)
     def alignment(self) -> "Optional[Metric]":
         """The alignment metric this metric is computed from, or None if it has none.
 
-        The resolved instance is cached on first access. Accessing this property on an
-        alignment metric returns the metric itself.
+        An alignment metric resolves to itself. The resolved instance is cached
+        via the standard metric-value machinery, so bootstrap shadows clear it
+        like any other cached value.
         """
-        if "_resolved_alignment" not in self.__dict__:
-            self.__dict__["_resolved_alignment"] = self._resolve_alignment()
-        return self.__dict__["_resolved_alignment"]
+        return self._resolve_alignment()
 
     @classmethod
     def _get_row_values(cls) -> tuple[str, str, str] | None:
