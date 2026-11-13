@@ -348,6 +348,16 @@ class TestDatasetLanguage:
         normalized = ds[0].ref.tokens.normalized
         assert "café" in normalized
 
+    def test_swedish_language_preserves_chars(self):
+        """Test that language='sv' retains å/ä/ö in normalization."""
+        ds = Dataset("sv")
+        ds.add("höra är att se med öron och åror", "hora ar att se med oron och aror")
+        normalized = ds[0].ref.tokens.normalized
+        assert "höra" in normalized
+        assert "är" in normalized
+        assert "öron" in normalized
+        assert "åror" in normalized
+
     def test_english_language_same_as_default(self):
         """Test that language='en' behaves the same as no language arg."""
         ds_default = Dataset()
