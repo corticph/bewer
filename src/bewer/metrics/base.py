@@ -373,35 +373,45 @@ class Metric(ABC):
         """Get the dependency metric names defined in the class and its bases."""
         return _get_dependencies(cls)
 
-    def _resolve_alignment(self, _seen: frozenset[int] = frozenset()) -> "Optional[Metric]":
-        """Depth-first search for the alignment metric this metric is computed from.
+    def _resolve_alignment(self) -> "Optional[Metric]":
+        """Find the alignment metric this metric is computed from.
 
-        An alignment metric resolves to itself. Otherwise the dependencies
-        (``metric_property(is_dependency=True)``) are searched in declaration order:
-        the first alignment dependency wins, and a non-alignment dependency passes on
-        its own resolved alignment, so alignment is inherited transitively.
-
-        Args:
-            _seen: Instance ids already visited on this path (cycle guard).
+        An alignment metric resolves to itself. Otherwise the whole dependency graph
+        (``metric_property(is_dependency=True)``, followed transitively) is searched
+        and every distinct alignment metric instance in it is collected.
 
         Returns:
             The alignment Metric this metric is computed from, or None if it has none.
+
+        Raises:
+            ValueError: If the dependency graph holds more than one distinct alignment
+                metric. Override ``alignment`` on the metric to choose one.
         """
         if self.is_alignment:
             return self
-        if id(self) in _seen:
-            return None
-        _seen = _seen | {id(self)}
-        for dep_name in self.dependencies():
-            dep = getattr(self, dep_name)
-            if not isinstance(dep, Metric):
+        found: dict[int, Metric] = {}
+        visited: set[int] = set()
+        stack: list[Metric] = [self]
+        while stack:
+            metric = stack.pop()
+            if id(metric) in visited:
                 continue
-            if dep.is_alignment:
-                return dep
-            resolved = dep._resolve_alignment(_seen)
-            if resolved is not None:
-                return resolved
-        return None
+            visited.add(id(metric))
+            for dep_name in metric.dependencies():
+                dep = getattr(metric, dep_name)
+                if not isinstance(dep, Metric):
+                    continue
+                if dep.is_alignment:
+                    found[id(dep)] = dep
+                else:
+                    stack.append(dep)
+        if len(found) > 1:
+            names = "; ".join(sorted(f"{m.short_name} [{', '.join(m.pipeline)}]" for m in found.values()))
+            raise ValueError(
+                f"{type(self).__name__} depends on {len(found)} distinct alignment metrics ({names}), "
+                "so its alignment is ambiguous. Override `alignment` to choose one."
+            )
+        return next(iter(found.values()), None)
 
     @metric_property(is_value=True, private=True)
     def alignment(self) -> "Optional[Metric]":
@@ -409,7 +419,9 @@ class Metric(ABC):
 
         An alignment metric resolves to itself. The resolved instance is cached
         via the standard metric-value machinery, so bootstrap shadows clear it
-        like any other cached value.
+        like any other cached value. A metric computed from several distinct
+        alignments raises ``ValueError`` here and must override this property to
+        choose one.
         """
         return self._resolve_alignment()
 

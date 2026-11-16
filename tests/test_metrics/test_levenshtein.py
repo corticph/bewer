@@ -1,7 +1,10 @@
 """Tests for bewer.metrics.levenshtein module."""
 
+import pytest
+
 from bewer.alignment import OpType
 from bewer.metrics.alignment.levenshtein import Levenshtein, Levenshtein_
+from bewer.metrics.base import METRIC_REGISTRY, Metric, metric_property
 
 
 class TestLevenshteinAlignment:
@@ -352,3 +355,100 @@ class TestAlignmentInheritance:
         assert ktr_em.alignment is dataset[0].metrics.levenshtein(tokenizer="key_term").alignment
         rktr = dataset.metrics.relaxed_key_term_recall(vocab="key_terms")
         assert rktr.alignment is dataset.metrics.error_align(tokenizer="key_term")
+
+
+@pytest.fixture
+def register_alignment_probe():
+    """Register throwaway metrics with the given dependencies; unregister them afterwards.
+
+    Yields a function taking a registry name, a mapping of dependency attribute name to
+    a factory ``(metric) -> Metric``, and an optional ``alignment`` override.
+    """
+    registered = []
+
+    def register(name, deps, alignment=None):
+        namespace = {
+            "short_name_base": name,
+            "long_name_base": name,
+            "description": "Alignment resolution probe.",
+            "example_cls": None,
+        }
+        for attr, factory in deps.items():
+            namespace[attr] = metric_property(factory, is_dependency=True)
+        if alignment is not None:
+            namespace["alignment"] = property(alignment)
+        METRIC_REGISTRY.register(name)(type(name, (Metric,), namespace))
+        registered.append(name)
+
+    yield register
+    for name in registered:
+        del METRIC_REGISTRY.metric_metadata[name]
+        del METRIC_REGISTRY.metric_classes[name]
+
+
+class TestAmbiguousAlignment:
+    """Tests for alignment resolution when the dependency graph holds several alignments."""
+
+    def test_distinct_alignments_raise(self, sample_dataset, register_alignment_probe):
+        """Two distinct alignment dependencies make alignment ambiguous."""
+        register_alignment_probe(
+            "_two_alignments",
+            {
+                "_levenshtein": lambda m: m.dataset.metrics.levenshtein(),
+                "_error_align": lambda m: m.dataset.metrics.error_align(),
+            },
+        )
+        metric = sample_dataset.metrics.get("_two_alignments")()
+        with pytest.raises(ValueError, match="2 distinct alignment metrics.*ambiguous"):
+            metric.alignment
+
+    def test_distinct_pipelines_raise(self, sample_dataset, register_alignment_probe):
+        """The same alignment class under two pipelines counts as two alignments."""
+        register_alignment_probe(
+            "_two_pipelines",
+            {
+                "_levenshtein": lambda m: m.dataset.metrics.levenshtein(),
+                "_levenshtein_kt": lambda m: m.dataset.metrics.levenshtein(tokenizer="key_term"),
+            },
+        )
+        metric = sample_dataset.metrics.get("_two_pipelines")()
+        with pytest.raises(ValueError, match="key_term"):
+            metric.alignment
+
+    def test_transitive_distinct_alignments_raise(self, sample_dataset, register_alignment_probe):
+        """An alignment reached only through a dependency still counts toward ambiguity."""
+        register_alignment_probe(
+            "_transitive_two",
+            {
+                "_wil": lambda m: m.dataset.metrics.wil(),
+                "_error_align": lambda m: m.dataset.metrics.error_align(),
+            },
+        )
+        metric = sample_dataset.metrics.get("_transitive_two")()
+        with pytest.raises(ValueError, match="ambiguous"):
+            metric.alignment
+
+    def test_same_alignment_via_two_paths_resolves(self, sample_dataset, register_alignment_probe):
+        """One alignment instance reached along several paths is not ambiguous."""
+        register_alignment_probe(
+            "_shared_alignment",
+            {
+                "_levenshtein": lambda m: m.dataset.metrics.levenshtein(),
+                "_mer": lambda m: m.dataset.metrics.mer(),
+            },
+        )
+        metric = sample_dataset.metrics.get("_shared_alignment")()
+        assert metric.alignment is sample_dataset.metrics.levenshtein()
+
+    def test_override_chooses_alignment(self, sample_dataset, register_alignment_probe):
+        """Overriding alignment resolves the ambiguity."""
+        register_alignment_probe(
+            "_chosen_alignment",
+            {
+                "_levenshtein": lambda m: m.dataset.metrics.levenshtein(),
+                "_error_align": lambda m: m.dataset.metrics.error_align(),
+            },
+            alignment=lambda m: m._error_align,
+        )
+        metric = sample_dataset.metrics.get("_chosen_alignment")()
+        assert metric.alignment is sample_dataset.metrics.error_align()
