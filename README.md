@@ -1,5 +1,5 @@
 
-<img src=".github/assets/logo.svg" alt="BeWER" width="100%"/>
+<img src="https://raw.githubusercontent.com/corticph/bewer/main/.github/assets/logo.svg" alt="BeWER" width="100%"/>
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-%203.10%20|%203.11%20|%203.12%20|%203.13%20|%203.14-green" alt="Python Versions">
