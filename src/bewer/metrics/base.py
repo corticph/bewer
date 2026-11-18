@@ -12,6 +12,7 @@ from bewer.preprocessing.context import set_pipeline
 from bewer.reporting.python.tables import print_metric_table
 
 if TYPE_CHECKING:
+    from bewer.alignment import Alignment
     from bewer.core.dataset import Dataset
     from bewer.core.example import Example
 
@@ -241,6 +242,9 @@ class Metric(ABC):
     param_schema: type["MetricParams"] | None = None
     short_name_base: str
     long_name_base: str
+    #: Whether this metric produces an alignment (its example-level main value is an
+    #: ``Alignment``). Set on alignment metrics so dependent metrics can inherit them.
+    is_alignment: bool = False
 
     def __init__(
         self,
@@ -368,6 +372,58 @@ class Metric(ABC):
     def dependencies(cls) -> list[str]:
         """Get the dependency metric names defined in the class and its bases."""
         return _get_dependencies(cls)
+
+    def _resolve_alignment(self) -> "Optional[Metric]":
+        """Find the alignment metric this metric is computed from.
+
+        An alignment metric resolves to itself. Otherwise the whole dependency graph
+        (``metric_property(is_dependency=True)``, followed transitively) is searched
+        and every distinct alignment metric instance in it is collected.
+
+        Returns:
+            The alignment Metric this metric is computed from, or None if it has none.
+
+        Raises:
+            ValueError: If the dependency graph holds more than one distinct alignment
+                metric. Override ``alignment`` on the metric to choose one.
+        """
+        if self.is_alignment:
+            return self
+        found: dict[int, Metric] = {}
+        visited: set[int] = set()
+        stack: list[Metric] = [self]
+        while stack:
+            metric = stack.pop()
+            if id(metric) in visited:
+                continue
+            visited.add(id(metric))
+            for dep_name in metric.dependencies():
+                dep = getattr(metric, dep_name)
+                if not isinstance(dep, Metric):
+                    continue
+                if dep.is_alignment:
+                    found[id(dep)] = dep
+                else:
+                    stack.append(dep)
+        if len(found) > 1:
+            names = "; ".join(sorted(f"{m.short_name} [{', '.join(m.pipeline)}]" for m in found.values()))
+            raise ValueError(
+                f"{type(self).__name__} depends on {len(found)} distinct alignment metrics ({names}), "
+                "so its alignment is ambiguous. Override `alignment` to choose one."
+            )
+        return next(iter(found.values()), None)
+
+    @metric_property(is_value=True, private=True)
+    def alignment(self) -> "Optional[Metric]":
+        """The alignment metric this metric is computed from, or None if it has none.
+
+        An alignment metric resolves to itself. The resolved instance is cached
+        via the standard metric-value machinery, so bootstrap shadows clear it
+        like any other cached value. A metric computed from several distinct
+        alignments raises ``ValueError`` here and must override this property to
+        choose one.
+        """
+        return self._resolve_alignment()
 
     @classmethod
     def _get_row_values(cls) -> tuple[str, str, str] | None:
@@ -503,6 +559,19 @@ class ExampleMetric(ABC):
     def dependencies(cls) -> list[str]:
         """Get the dependency metric names defined in the class and its bases."""
         return _get_dependencies(cls)
+
+    @property
+    def alignment(self) -> "Optional[Alignment]":
+        """The example's Alignment from this metric's alignment metric, or None if it has none.
+
+        Resolves the parent metric's alignment metric (see ``Metric.alignment``) and
+        returns the Alignment computed for this example by it. Alignment metrics
+        return their own main value through this property.
+        """
+        alignment_metric = self.parent_metric.alignment
+        if alignment_metric is None:
+            return None
+        return alignment_metric[self.example.index].alignment
 
 
 _PIPELINE_STAGES = (

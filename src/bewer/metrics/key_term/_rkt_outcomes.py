@@ -82,7 +82,7 @@ class _RKTOutcomes_(ExampleMetric):
         key_term_matches = self.ref_matches
         if not key_term_matches:
             return []
-        alignment = self.parent_metric._error_align[self.example.index].alignment
+        alignment = self.alignment
         outcomes: list[TermOutcome] = []
         for kt_match in key_term_matches:
             op_start = alignment.ref_index_mapping.get(kt_match.start)
