@@ -138,6 +138,20 @@ class TestResolveConfig:
         base = get_config("base")
         assert config.tokenizers == base.tokenizers
 
+    def test_es_config_changes_normalizer(self):
+        """Spanish config changes the default normalizer."""
+        config = get_config("es")
+        normalizer = config.normalizers["default"]
+        transliterate = [t for t in normalizer.transforms if t.fn == transliterate_latin_letters]
+        assert len(transliterate) == 1
+        assert transliterate[0].params.get("preserve") == "áéíóúüñ"
+
+    def test_es_config_inherits_tokenizers(self):
+        """Spanish config inherits tokenizers from base."""
+        config = get_config("es")
+        base = get_config("base")
+        assert config.tokenizers == base.tokenizers
+
     def test_fr_config_changes_tokenizer_and_normalizer(self):
         """French config changes both tokenizer and normalizer."""
         config = get_config("fr")
