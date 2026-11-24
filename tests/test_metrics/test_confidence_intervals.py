@@ -5,6 +5,7 @@ import random
 import pytest
 
 from bewer import Dataset, Vocabulary, get_config
+from bewer.metrics.base import METRIC_REGISTRY, Metric, metric_property
 from bewer.metrics.confidence import (
     ConfidenceInterval,
     _percentile,
@@ -329,3 +330,39 @@ class TestAggregationCorrectness:
 
         assert ci.low == pytest.approx(expected_low)
         assert ci.high == pytest.approx(expected_high)
+
+    def test_alignment_reading_main_value_bootstraps(self, dataset_with_more_variation):
+        """A main value reading self.alignment must track the resampled dataset.
+
+        Regression test: _make_shadow used to carry the original's cached
+        _resolved_alignment into the shadow, so such a metric kept reading the
+        original dataset's counts on every resample, yielding a constant
+        bootstrap distribution and a zero-width interval.
+        """
+        name = "_ci_alignment_repro"
+
+        @METRIC_REGISTRY.register(name)
+        class _CIAlignmentRepro(Metric):
+            short_name_base = "CIAlignmentRepro"
+            long_name_base = "CI Alignment Repro"
+            description = "Main value reads the resolved alignment metric's num_edits."
+            example_cls = None
+
+            @metric_property(is_dependency=True)
+            def _levenshtein(self):
+                return self.dataset.metrics.levenshtein()
+
+            @metric_property(is_main=True)
+            def value(self) -> float:
+                return self.alignment.num_edits
+
+        try:
+            metric = dataset_with_more_variation.metrics.get(name)()
+            assert metric.value == dataset_with_more_variation.metrics.levenshtein().num_edits
+            ci = metric.compute_confidence_interval(seed=0, n_resamples=500)
+            # 20 examples, half with 0 edits and half with 2 edits: resampling must
+            # produce variation, not the constant point value.
+            assert ci.width > 0.0
+        finally:
+            del METRIC_REGISTRY.metric_metadata[name]
+            del METRIC_REGISTRY.metric_classes[name]

@@ -34,7 +34,7 @@ class _KTOutcomes_(ExampleMetric):
     @metric_property(is_value=True)
     def num_ref_tokens(self) -> int:
         """Number of tokens in the reference text."""
-        alignment = self.parent_metric._levenshtein[self.example.index].alignment
+        alignment = self.alignment
         return alignment.num_matches + alignment.num_substitutions + alignment.num_deletions
 
     @metric_property(is_value=True)
@@ -52,7 +52,7 @@ class _KTOutcomes_(ExampleMetric):
         if not ref_matches and not hyp_matches:
             return {"tp": [], "fn": [], "fp": []}
 
-        alignment = self.parent_metric._levenshtein[self.example.index].alignment
+        alignment = self.alignment
         tp: list[Alignment] = []
         fn: list[Alignment] = []
         for kt_match in ref_matches:
@@ -109,7 +109,7 @@ class _KTOutcomes_(ExampleMetric):
         if not I_R and not I_H:
             return {"tp": [], "fn": [], "fp": []}
 
-        alignment = self.parent_metric._levenshtein[self.example.index].alignment
+        alignment = self.alignment
         tp: list[Alignment] = []
         fn: list[Alignment] = []
         fp: list[Alignment] = []

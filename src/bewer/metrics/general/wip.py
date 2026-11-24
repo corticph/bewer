@@ -7,21 +7,16 @@ reference implementation, which computes WIP from a word-level Levenshtein align
 
 from __future__ import annotations
 
-from bewer.alignment import Alignment
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
 __all__ = ["WIP"]
 
 
 class WIP_(ExampleMetric):
-    @metric_property
-    def _alignment(self) -> Alignment:
-        return self.parent_metric._alignment[self.example.index].alignment
-
     @metric_property(is_value=True)
     def num_matches(self) -> int:
         """Get the number of matched tokens between the hypothesis and reference text."""
-        return self._alignment.num_matches
+        return self.alignment.num_matches
 
     @metric_property(is_value=True)
     def ref_length(self) -> int:

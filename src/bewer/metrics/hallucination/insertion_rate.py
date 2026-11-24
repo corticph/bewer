@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from bewer.alignment import Alignment
 from bewer.alignment.op_type import OpType
 from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 from bewer.metrics.hallucination._insertion_params import InsertionParams
@@ -9,15 +8,11 @@ __all__ = ["InsertionRate"]
 
 
 class InsertionRate_(ExampleMetric):
-    @metric_property
-    def _alignment(self) -> Alignment:
-        return self.parent_metric._alignment[self.example.index].alignment
-
     def _insertion_runs(self) -> list[int]:
         """Get the lengths of all contiguous insertion runs in the example alignment."""
         runs = []
         current = 0
-        for op in self._alignment:
+        for op in self.alignment:
             if op.type == OpType.INSERT:
                 current += 1
             elif current > 0:
@@ -31,7 +26,7 @@ class InsertionRate_(ExampleMetric):
     def num_insertions(self) -> int:
         """Get the number of insertions in runs of length >= min_run_length."""
         if self.params.min_run_length == 1:
-            return self._alignment.num_insertions
+            return self.alignment.num_insertions
         return sum(length for length in self._insertion_runs() if length >= self.params.min_run_length)
 
     @metric_property(is_value=True)
