@@ -8,7 +8,7 @@ __all__ = ["WER"]
 
 
 class WER_(ExampleMetric):
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference text."""
         return Levenshtein.distance(
@@ -16,12 +16,12 @@ class WER_(ExampleMetric):
             self.example.hyp.tokens.normalized,
         )
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def ref_length(self) -> int:
         """Get the number of tokens in the reference text."""
         return len(self.example.ref.tokens)
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the example-level word error rate."""
         if self.ref_length == 0:
@@ -39,17 +39,17 @@ class WER(Metric):
     )
     example_cls = WER_
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference texts."""
         return sum(em.num_edits for em in self)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def ref_length(self) -> int:
         """Get the number of tokens in the reference texts."""
         return sum(em.ref_length for em in self)
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the word error rate."""
         if self.ref_length == 0:

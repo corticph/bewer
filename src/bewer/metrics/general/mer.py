@@ -8,7 +8,7 @@ reference implementation, which computes MER from a word-level Levenshtein align
 from __future__ import annotations
 
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_property
 
 __all__ = ["MER"]
 
@@ -18,17 +18,17 @@ class MER_(ExampleMetric):
     def _alignment(self) -> Alignment:
         return self.parent_metric._alignment[self.example.index].alignment
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference text."""
         return self._alignment.num_edits
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_matches(self) -> int:
         """Get the number of matched tokens between the hypothesis and reference text."""
         return self._alignment.num_matches
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the example-level match error rate."""
         denom = self.num_edits + self.num_matches
@@ -48,26 +48,19 @@ class MER(Metric):
         "Morris, Maier and Green (2004, From WER and RIL to MER and WIL)."
     )
     example_cls = MER_
+    _alignment = dependency("levenshtein", type="alignment")
 
-    @metric_property(is_dependency=True)
-    def _alignment(self):
-        return self.dataset.metrics.levenshtein(
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
-
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_edits(self) -> int:
         """Get the number of edits between the hypothesis and reference texts."""
         return sum(em.num_edits for em in self)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_matches(self) -> int:
         """Get the number of matched tokens between the hypothesis and reference texts."""
         return sum(em.num_matches for em in self)
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the match error rate."""
         denom = self.num_edits + self.num_matches

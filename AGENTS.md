@@ -79,6 +79,15 @@ poetry run twine check dist/*  # Validate built packages
 - Automatic caching to avoid recomputation
 - Supports both dataset-level and example-level metrics
 
+**Declaring metric properties and dependencies** (`src/bewer/metrics/base.py`)
+- `@metric_property(type=...)` takes one of `"value"`, `"main"` (also a value), `"dependency"` or `"alignment"` (a dependency on an alignment metric). Without `type` it is an internal cached property.
+- Declare dependencies with `dependency()`, not a decorated function. The borrowed metric always runs with the owner's pipeline:
+  - `dependency("wip")`: `target` is the registry name of the one metric to borrow.
+  - `dependency(selected_by="alignment", type="alignment")`: the value of the owner's `alignment` param is the registry name. The param must be typed `Literal[...]`; its values are the possible targets.
+  - `forward=("vocab", ...)`: owner params passed to the target under the same names.
+- `Metric.dependency_edges()` returns each dependency's `type` and possible `targets` without building anything. The graph is checked once per class on first construction: unregistered targets, unknown forwarded params and cycles raise `ValueError`.
+- A dependency that needs custom logic keeps the function form, `@metric_property(type="dependency", targets=(...))`; without `targets` it is skipped by the graph check.
+
 **Built-in Metrics** (`src/bewer/metrics/`)
 - `general/`: WER (`wer.py`), CER (`cer.py`), PER (`punctuation_error_rate.py`), MER (`mer.py`), WIP (`wip.py`), WIL (`wil.py`)
 - `alignment/`: Levenshtein distance (`levenshtein.py`), error alignment (`error_align.py`, uses external error-align package)

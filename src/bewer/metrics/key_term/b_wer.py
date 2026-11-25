@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_property
 
 from ._keyterm_params import KeyTermParams
 
@@ -8,17 +8,17 @@ __all__ = ["BWER"]
 
 
 class BWER_(ExampleMetric):
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_biased_edits(self) -> int:
         """Edits attributed to the biased (vocabulary) side in this example."""
         return self.parent_metric._bu_wer_outcomes[self.example.index].num_biased_edits
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_biased_ref_tokens(self) -> int:
         """Reference tokens attributed to the biased side in this example."""
         return self.parent_metric._bu_wer_outcomes[self.example.index].num_biased_ref_tokens
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Example-level biased word error rate (B-WER)."""
         if self.num_biased_ref_tokens == 0:
@@ -43,30 +43,20 @@ class BWER(Metric):
         "that term."
     )
     example_cls = BWER_
-
     param_schema = KeyTermParams
+    _bu_wer_outcomes = dependency("_bu_wer_outcomes", forward=("vocab",))
 
-    @metric_property(is_dependency=True)
-    def _bu_wer_outcomes(self):
-        """Get the shared _BUWEROutcomes metric instance."""
-        return self.dataset.metrics._bu_wer_outcomes(
-            vocab=self.params.vocab,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
-
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_biased_edits(self) -> int:
         """Total edits attributed to the biased (vocabulary) side."""
         return self._bu_wer_outcomes.num_biased_edits
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_biased_ref_tokens(self) -> int:
         """Total reference tokens attributed to the biased side."""
         return self._bu_wer_outcomes.num_biased_ref_tokens
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Biased word error rate (B-WER)."""
         if self.num_biased_ref_tokens == 0:

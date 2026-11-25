@@ -217,7 +217,7 @@ class TestEdgeCases:
 
 
 class TestMetricsWithoutMainValueRaise:
-    """Dataset-level metrics with no @metric_property(is_main=True) cannot have a CI."""
+    """Dataset-level metrics with no @metric_property(type="main") cannot have a CI."""
 
     def test_error_align_raises(self, sample_dataset):
         with pytest.raises(ValueError, match="no main metric value"):

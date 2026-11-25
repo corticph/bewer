@@ -342,7 +342,7 @@ class TestRequiredHyperparams:
         from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample(ExampleMetric):
-            @metric_property(is_main=True)
+            @metric_property(type="main")
             def value(self) -> float:
                 return 0.5
 
@@ -357,7 +357,7 @@ class TestRequiredHyperparams:
             class param_schema(MetricParams):
                 threshold: float
 
-            @metric_property(is_main=True)
+            @metric_property(type="main")
             def value(self) -> float:
                 threshold = self.params.threshold
                 return sum(em.value for em in self if em.value >= threshold)
@@ -373,7 +373,7 @@ class TestRequiredHyperparams:
         from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample2(ExampleMetric):
-            @metric_property(is_main=True)
+            @metric_property(type="main")
             def value(self) -> float:
                 return 0.5
 
@@ -388,7 +388,7 @@ class TestRequiredHyperparams:
             class param_schema(MetricParams):
                 threshold: float
 
-            @metric_property(is_main=True)
+            @metric_property(type="main")
             def value(self) -> float:
                 threshold = self.params.threshold
                 return threshold * 2
@@ -402,7 +402,7 @@ class TestRequiredHyperparams:
         from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample3(ExampleMetric):
-            @metric_property(is_main=True)
+            @metric_property(type="main")
             def value(self) -> float:
                 return 0.5
 
@@ -418,7 +418,7 @@ class TestRequiredHyperparams:
                 threshold: float
                 min_length: int = 1
 
-            @metric_property(is_main=True)
+            @metric_property(type="main")
             def value(self) -> float:
                 threshold = self.params.threshold
                 min_length = self.params.min_length
@@ -442,7 +442,7 @@ class TestRequiredHyperparams:
         from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
 
         class TestMetricExample4(ExampleMetric):
-            @metric_property(is_main=True)
+            @metric_property(type="main")
             def value(self) -> float:
                 return 0.5
 
@@ -459,7 +459,7 @@ class TestRequiredHyperparams:
                 beta: int = 2
                 gamma: float = 3.0
 
-            @metric_property(is_main=True)
+            @metric_property(type="main")
             def value(self) -> float:
                 return 1.0
 

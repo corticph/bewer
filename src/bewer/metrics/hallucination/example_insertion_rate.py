@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_property
 from bewer.metrics.hallucination._insertion_params import InsertionParams
 
 __all__ = ["ExampleInsertionRate"]
 
 
 class ExampleInsertionRate_(ExampleMetric):
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_insertions(self) -> int:
         """Get the number of qualifying insertions in this example."""
         return self.parent_metric._insertion_rate[self.example.index].num_insertions
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def has_insertions(self) -> bool:
         """Whether the example has any qualifying insertions."""
         return self.num_insertions > 0
@@ -36,30 +36,20 @@ class ExampleInsertionRate(Metric):
         "package)."
     )
     example_cls = ExampleInsertionRate_
-
     param_schema = InsertionParams
+    _insertion_rate = dependency("insertion_rate", forward=("min_run_length", "alignment"))
 
-    @metric_property(is_dependency=True)
-    def _insertion_rate(self):
-        return self.dataset.metrics.insertion_rate(
-            min_run_length=self.params.min_run_length,
-            alignment=self.params.alignment,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
-
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_examples_with_insertions(self) -> int:
         """Get the number of examples with at least one qualifying insertion."""
         return sum(1 for em in self if em.has_insertions)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_examples(self) -> int:
         """Get the total number of examples."""
         return len(self)
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the fraction of examples with at least one qualifying insertion."""
         if self.num_examples == 0:

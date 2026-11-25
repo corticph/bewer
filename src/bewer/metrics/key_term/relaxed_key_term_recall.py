@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_property
 
 from ._keyterm_params import KeyTermSubsetParams
 from ._rkt_outcomes import TermOutcome
@@ -18,29 +18,29 @@ def _is_tp(ts: TermOutcome, threshold: float) -> bool:
 
 
 class RKTR_(ExampleMetric):
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def tp_alignments(self) -> list[Alignment]:
         """Get alignment segments for each key term classified as TP."""
         outcomes = self.parent_metric._rkt_outcomes[self.example.index].term_outcomes
         return [ts.segment for ts in outcomes if _is_tp(ts, self.params.threshold)]
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def fn_alignments(self) -> list[Alignment]:
         """Get alignment segments for each key term classified as FN."""
         outcomes = self.parent_metric._rkt_outcomes[self.example.index].term_outcomes
         return [ts.segment for ts in outcomes if not _is_tp(ts, self.params.threshold)]
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_relaxed_matches(self) -> int:
         """Get the number of key terms classified as TP in the hypothesis text."""
         return len(self.tp_alignments)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference text."""
         return self.parent_metric._rkt_outcomes[self.example.index].num_ref_terms
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the example-level relaxed key term recall."""
         if self.num_ref_terms == 0:
@@ -58,6 +58,7 @@ class RKTR(Metric):
         "threshold. Alignment is derived from error_align. With threshold=0.0, RKTR is equivalent to KTR."
     )
     example_cls = RKTR_
+    _rkt_outcomes = dependency("_rkt_outcomes", forward=("vocab", "allow_subset_matches"))
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -77,18 +78,7 @@ class RKTR(Metric):
                 raise ValueError(f"threshold must be between 0.0 and 1.0, got {self.threshold}.")
             super().validate()
 
-    @metric_property(is_dependency=True)
-    def _rkt_outcomes(self):
-        """Get the shared _RKTOutcomes metric instance."""
-        return self.dataset.metrics._rkt_outcomes(
-            vocab=self.params.vocab,
-            allow_subset_matches=self.params.allow_subset_matches,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
-
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_relaxed_matches(self) -> int:
         """Get the number of key terms classified as TP across all hypothesis texts."""
         return sum(
@@ -96,12 +86,12 @@ class RKTR(Metric):
             for ex in self._src
         )
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_ref_terms(self) -> int:
         """Get the number of key terms in the reference texts."""
         return self._rkt_outcomes.num_ref_terms
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the relaxed key term recall."""
         if self.num_ref_terms == 0:

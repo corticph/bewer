@@ -3,7 +3,18 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import MISSING, dataclass, fields
 from functools import cached_property, update_wrapper
-from typing import TYPE_CHECKING, Any, Iterator, Optional, Union, get_type_hints
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterator,
+    Literal,
+    NamedTuple,
+    Optional,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 from typeguard import check_type
 
@@ -20,6 +31,10 @@ __all__ = [
     "ExampleMetric",
     "MetricParams",
     "metric_property",
+    "MetricPropertyType",
+    "dependency",
+    "Dependency",
+    "DependencyEdge",
     "METRIC_REGISTRY",
     "MetricRegistry",
     "list_registered_metrics",
@@ -29,46 +44,67 @@ __all__ = [
 ]
 
 
+MetricPropertyType = Literal["value", "main", "dependency", "alignment"]
+"""The kinds of ``metric_property``.
+
+- ``"value"``: a metric value, listed for introspection.
+- ``"main"``: the metric's main value (at most one per class); also a value.
+- ``"dependency"``: a borrowed metric this metric is computed from.
+- ``"alignment"``: a dependency whose target is an alignment metric.
+"""
+
+_PROPERTY_TYPES: tuple[str, ...] = get_args(MetricPropertyType)
+_VALUE_TYPES = ("value", "main")
+_DEPENDENCY_TYPES = ("dependency", "alignment")
+
+
 class metric_property(cached_property):
     """Unified decorator for metric properties.
 
     Combines caching, pipeline context, value classification, and dependency
-    registration into a single decorator with expressive arguments.
+    registration into a single decorator.
 
     Common usage patterns::
 
-        @metric_property(is_main=True)          # the metric's main value
-        @metric_property(is_value=True)          # a regular metric value
+        @metric_property(type="main")           # the metric's main value
+        @metric_property(type="value")          # a regular metric value
         @metric_property                        # internal computed property (caching + pipeline only)
-        @metric_property(is_dependency=True)    # borrowed metric dependency
+
+    Declare dependencies with :func:`dependency` instead of a decorated function. A
+    dependency that needs custom logic can still use the function form, and should
+    name the registry metrics it can return in ``targets``::
+
+        @metric_property(type="dependency", targets=("wip",))
+        def _wip(self): ...
 
     Args:
-        is_main: Mark this as the metric's main value (at most one per class).
-            Implies ``is_value=True``.
-        private: Explicitly control privacy. If None, inferred from leading underscore.
+        type: The kind of property (see ``MetricPropertyType``). ``None`` makes an
+            internal computed property that is cached but not registered.
+        private: Explicitly control privacy of a value. If None, inferred from a
+            leading underscore.
         set_pipeline: Wrap computation in ``set_pipeline(*obj.pipeline)``. Default True.
-        is_value: Register in ``_metric_values`` for introspection. Default False.
-        is_dependency: Register in ``_dependencies`` as a borrowed metric dependency.
-            Implies ``set_pipeline=False`` and ``is_value=False``.
+            Dependencies never set the pipeline: the borrowed metric sets its own.
+        targets: Function-form dependencies only. The registry names the function can
+            return, so the dependency graph is known without building metrics.
     """
 
     def __init__(
         self,
         func=None,
         *,
-        is_main: bool = False,
+        type: MetricPropertyType | None = None,
         private: bool | None = None,
         set_pipeline: bool = True,
-        is_value: bool = False,
-        is_dependency: bool = False,
+        targets: tuple[str, ...] | None = None,
     ):
-        self._is_main = is_main
+        if type is not None and type not in _PROPERTY_TYPES:
+            raise ValueError(f"Unknown metric_property type {type!r}. Valid types: {list(_PROPERTY_TYPES)}.")
+        if targets is not None and type not in _DEPENDENCY_TYPES:
+            raise ValueError("`targets` applies only to dependency types ('dependency', 'alignment').")
+        self._type = type
         self._private = private
-        # Dependencies don't need pipeline context — the borrowed metric sets its own.
-        self._set_pipeline = set_pipeline and not is_dependency
-        # A main value is a value; dependencies are not values.
-        self._is_value = (is_value or is_main) and not is_dependency
-        self._is_dependency = is_dependency
+        self._set_pipeline = set_pipeline and type not in _DEPENDENCY_TYPES
+        self._targets = tuple(targets) if targets is not None else None
         if func is not None:
             super().__init__(func)
             update_wrapper(self, func)
@@ -78,10 +114,26 @@ class metric_property(cached_property):
         update_wrapper(self, func)
         return self
 
+    @property
+    def type(self) -> MetricPropertyType | None:
+        """The kind of property, or None for an internal computed property."""
+        return self._type
+
+    def dependency_targets(self, owner: type) -> tuple[str, ...] | None:
+        """Get the registry names this dependency can resolve to, without building it.
+
+        Args:
+            owner: The metric class the dependency is read through.
+
+        Returns:
+            The registry names, or None when a function-form dependency declares no targets.
+        """
+        return self._targets
+
     def __set_name__(self, owner: type, name: str):
         super().__set_name__(owner, name)
 
-        if self._is_dependency:
+        if self._type in _DEPENDENCY_TYPES:
             deps = owner.__dict__.get("_dependencies")
             if deps is None:
                 deps = []
@@ -89,7 +141,7 @@ class metric_property(cached_property):
             deps.append(name)
             return  # Dependencies are not values
 
-        if self._is_value:
+        if self._type in _VALUE_TYPES:
             # Determine privacy: explicit flag takes precedence, otherwise infer from leading underscore.
             private = self._private if self._private is not None else name.startswith("_")
 
@@ -98,7 +150,7 @@ class metric_property(cached_property):
                 metric_values = {"other": [], "main": None, "private": []}
                 owner._metric_values = metric_values
 
-            if self._is_main:
+            if self._type == "main":
                 if metric_values["main"] is not None:
                     raise ValueError(f"Multiple main metric values defined in {owner.__name__}.")
                 metric_values["main"] = name
@@ -125,6 +177,103 @@ class metric_property(cached_property):
         return value
 
 
+class Dependency(metric_property):
+    """A metric borrowed by registry name, built from the owner's pipeline and params.
+
+    Create it with :func:`dependency`. On first access it builds the target through
+    ``dataset.metrics`` with the owner's standardizer, tokenizer and normalizer, plus
+    the forwarded params, and caches the instance like any ``metric_property``.
+    """
+
+    def __init__(
+        self,
+        target: str | None,
+        *,
+        selected_by: str | None,
+        forward: tuple[str, ...],
+        type: MetricPropertyType,
+    ):
+        if (target is None) == (selected_by is None):
+            raise ValueError("Pass exactly one of `target` or `selected_by`.")
+        if type not in _DEPENDENCY_TYPES:
+            raise ValueError(f"A dependency's type must be one of {list(_DEPENDENCY_TYPES)}, got {type!r}.")
+        self.target = target
+        self.selected_by = selected_by
+        self.forward = tuple(forward)
+        super().__init__(self._build, type=type)
+        source = repr(target) if target is not None else f"the value of params.{selected_by}"
+        self.__doc__ = f"Borrowed metric {source}, built with this metric's pipeline."
+
+    def dependency_targets(self, owner: type) -> tuple[str, ...]:
+        """Get the registry names this dependency can resolve to, without building it.
+
+        A ``target`` dependency has exactly one. A ``selected_by`` dependency has the
+        values allowed by its param's ``Literal`` type in ``owner.param_schema``.
+
+        Args:
+            owner: The metric class the dependency is read through.
+
+        Raises:
+            TypeError: If the ``selected_by`` param is missing or not ``Literal``-typed.
+        """
+        if self.target is not None:
+            return (self.target,)
+        schema = getattr(owner, "param_schema", None)
+        hint = get_type_hints(schema).get(self.selected_by) if schema is not None else None
+        if get_origin(hint) is not Literal:
+            raise TypeError(
+                f"{owner.__name__}.{self.attrname}: selected_by={self.selected_by!r} needs a param "
+                f"typed Literal[...] in param_schema, listing the registry names it can select."
+            )
+        return get_args(hint)
+
+    def _build(self, metric: "Metric") -> "Metric":
+        """Build the borrowed metric for one owner instance."""
+        name = self.target if self.target is not None else getattr(metric.params, self.selected_by)
+        forwarded = {param: getattr(metric.params, param) for param in self.forward}
+        return metric.dataset.metrics.get(name)(
+            **forwarded,
+            standardizer=metric.standardizer,
+            tokenizer=metric.tokenizer,
+            normalizer=metric.normalizer,
+        )
+
+
+def dependency(
+    target: str | None = None,
+    *,
+    selected_by: str | None = None,
+    forward: tuple[str, ...] = (),
+    type: MetricPropertyType = "dependency",
+) -> Dependency:
+    """Declare a metric this metric is computed from.
+
+    The borrowed metric always runs with the owner's pipeline (standardizer, tokenizer
+    and normalizer). Name it in one of two ways:
+
+    - ``target``: the registry name of the one metric to borrow.
+    - ``selected_by``: the name of an owner param whose value is the registry name.
+      The param must be typed ``Literal[...]``; its allowed values are the possible targets.
+
+    Examples::
+
+        _wip = dependency("wip")
+        _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches"))
+        _alignment = dependency("levenshtein", type="alignment")
+        _alignment = dependency(selected_by="alignment", type="alignment")
+
+    Args:
+        target: Registry name of the borrowed metric.
+        selected_by: Name of the owner param that holds the registry name.
+        forward: Owner params passed to the borrowed metric under the same names.
+        type: ``"dependency"``, or ``"alignment"`` when the target is an alignment metric.
+
+    Returns:
+        The dependency descriptor to assign as a class attribute.
+    """
+    return Dependency(target, selected_by=selected_by, forward=forward, type=type)
+
+
 def _get_dependencies(cls) -> list[str]:
     """Get dependency metric names defined in the class and its bases."""
     deps = []
@@ -133,6 +282,79 @@ def _get_dependencies(cls) -> list[str]:
         if _deps:
             deps.extend(_deps)
     return list(dict.fromkeys(deps))
+
+
+class DependencyEdge(NamedTuple):
+    """A dependency of a metric class, known without building any metric.
+
+    Attributes:
+        type: ``"dependency"``, or ``"alignment"`` when the target is an alignment metric.
+        targets: Registry names the dependency can resolve to, or None when a
+            function-form dependency declares none.
+    """
+
+    type: MetricPropertyType
+    targets: tuple[str, ...] | None
+
+
+_CHECKED_DEPENDENCY_GRAPHS: set[type] = set()
+
+
+def _check_dependency_graph(cls: type["Metric"]) -> None:
+    """Check the static dependency graph reachable from a metric class.
+
+    Runs once per class, and again after any new registration. Edges without declared
+    targets (function-form dependencies) are skipped.
+
+    Raises:
+        ValueError: If a dependency names an unregistered metric, forwards a param that
+            the owner or the target lacks, or the graph has a cycle.
+    """
+    if cls in _CHECKED_DEPENDENCY_GRAPHS:
+        return
+
+    def visit(metric_cls: type["Metric"], path: tuple[type["Metric"], ...]) -> None:
+        if metric_cls in path:
+            chain = " -> ".join(c.__name__ for c in (*path[path.index(metric_cls) :], metric_cls))
+            raise ValueError(f"Dependency cycle: {chain}.")
+        if metric_cls in _CHECKED_DEPENDENCY_GRAPHS:
+            return
+        path = (*path, metric_cls)
+        for attr, edge in metric_cls.dependency_edges().items():
+            descriptor = getattr(metric_cls, attr)
+            forward = getattr(descriptor, "forward", ())
+            _check_forwarded_params(metric_cls, attr, forward)
+            for target in edge.targets or ():
+                if target not in METRIC_REGISTRY.metric_classes:
+                    raise ValueError(f"{metric_cls.__name__}.{attr} depends on unregistered metric {target!r}.")
+                target_cls = METRIC_REGISTRY.metric_classes[target]
+                _check_forwarded_params(target_cls, attr, forward, owner=metric_cls)
+                visit(target_cls, path)
+        _CHECKED_DEPENDENCY_GRAPHS.add(metric_cls)
+
+    visit(cls, ())
+
+
+def _check_forwarded_params(
+    metric_cls: type["Metric"], attr: str, forward: tuple[str, ...], owner: type["Metric"] | None = None
+) -> None:
+    """Check that every forwarded param is a field of ``metric_cls.param_schema``.
+
+    Args:
+        metric_cls: The class whose params must include the forwarded names.
+        attr: The dependency attribute, for the error message.
+        forward: The forwarded param names.
+        owner: The class declaring the dependency, when ``metric_cls`` is its target.
+    """
+    if not forward:
+        return
+    schema = metric_cls.param_schema
+    known = {f.name for f in fields(schema)} if schema is not None else set()
+    missing = [param for param in forward if param not in known]
+    if missing:
+        declared_on = (owner or metric_cls).__name__
+        role = "target " + metric_cls.__name__ if owner is not None else metric_cls.__name__
+        raise ValueError(f"{declared_on}.{attr} forwards {missing}, which {role} does not accept.")
 
 
 def _get_metric_values(cls, include_private: bool = False) -> dict[str, Union[str, list[str]]]:
@@ -212,6 +434,12 @@ class MetricParams:
         for f in fields(self):
             value = getattr(self, f.name)
             expected_type = hints[f.name]
+            if get_origin(expected_type) is Literal:
+                allowed = get_args(expected_type)
+                # Match the type as well, so that True and 1.0 do not pass as Literal[1].
+                if not any(type(value) is type(option) and value == option for option in allowed):
+                    raise ValueError(f"Parameter '{f.name}' must be one of {list(allowed)}, got {value!r}.")
+                continue
             try:
                 check_type(value, expected_type)
             except Exception:
@@ -262,6 +490,7 @@ class Metric(ABC):
             normalizer: Normalizer pipeline name.
             **params: Optional parameters for metric configuration.
         """
+        _check_dependency_graph(type(self))
         self.name = name or type(self).__name__.lower()
         self._examples = {}
 
@@ -368,6 +597,26 @@ class Metric(ABC):
     def dependencies(cls) -> list[str]:
         """Get the dependency metric names defined in the class and its bases."""
         return _get_dependencies(cls)
+
+    @classmethod
+    def dependency_edges(cls) -> dict[str, DependencyEdge]:
+        """Get each dependency's type and possible targets, without building any metric.
+
+        A subclass can override an inherited dependency with a plain ``property`` or an
+        untyped ``metric_property``. That override has no dependency metadata, so its edge
+        has type ``"dependency"`` and unknown targets.
+
+        Returns:
+            A mapping from dependency attribute name to its ``DependencyEdge``.
+        """
+        edges = {}
+        for name in cls.dependencies():
+            descriptor = getattr(cls, name)
+            if isinstance(descriptor, metric_property) and descriptor.type in _DEPENDENCY_TYPES:
+                edges[name] = DependencyEdge(type=descriptor.type, targets=descriptor.dependency_targets(cls))
+            else:
+                edges[name] = DependencyEdge(type="dependency", targets=None)
+        return edges
 
     @classmethod
     def _get_row_values(cls) -> tuple[str, str, str] | None:
@@ -799,6 +1048,8 @@ class MetricRegistry:
 
         self.metric_metadata[name] = metadata
         self.metric_classes[name] = metric_cls
+        # A new or replaced class can change any checked graph that reaches its name.
+        _CHECKED_DEPENDENCY_GRAPHS.clear()
 
     def resolve_params(self, name: str, **kwargs) -> dict:
         """Resolve kwargs against all defaults to get canonical form.
