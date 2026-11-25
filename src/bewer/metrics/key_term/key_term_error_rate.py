@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_property
 
 from ._keyterm_params import KeyTermSubsetParams
 
@@ -10,17 +10,17 @@ __all__ = ["KTER"]
 
 
 class KTER_(ExampleMetric):
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_errors(self) -> int:
         """Get the number of key terms incorrectly transcribed in the hypothesis text."""
         return self.parent_metric._kt_outcomes[self.example.index].num_fn
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_key_terms(self) -> int:
         """Get the number of key terms in the reference text."""
         return self.parent_metric._kt_outcomes[self.example.index].num_ref_terms
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the example-level key term error rate."""
         outcomes = self.parent_metric._kt_outcomes[self.example.index]
@@ -60,29 +60,19 @@ class KTER(Metric):
 
         partial_credit: bool = False
 
-    @metric_property(is_dependency=True)
-    def _kt_outcomes(self):
-        """Get the shared _KTOutcomes metric instance."""
-        return self.dataset.metrics._kt_outcomes(
-            vocab=self.params.vocab,
-            allow_subset_matches=self.params.allow_subset_matches,
-            partial_credit=self.params.partial_credit,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_errors(self) -> int:
         """Get the number of key terms incorrectly transcribed in the hypothesis texts."""
         return self._kt_outcomes.num_fn
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_key_terms(self) -> int:
         """Get the number of key terms in the reference texts."""
         return self._kt_outcomes.num_ref_terms
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the key term error rate."""
         denom = self._kt_outcomes.num_tp + self._kt_outcomes.num_fn

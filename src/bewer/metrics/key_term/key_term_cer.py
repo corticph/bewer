@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_property
 
 from ._keyterm_params import KeyTermSubsetParams
 
@@ -10,17 +10,17 @@ __all__ = ["KTCER"]
 
 
 class KTCER_(ExampleMetric):
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_char_edits(self) -> int:
         """Get the total character edits across all key term occurrences in the example."""
         return sum(ts.char_edits for ts in self.parent_metric._rkt_outcomes[self.example.index].term_outcomes)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def ref_chars(self) -> int:
         """Get the total reference character count across all key term occurrences in the example."""
         return sum(ts.ref_chars for ts in self.parent_metric._rkt_outcomes[self.example.index].term_outcomes)
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the example-level key term character error rate."""
         if self.ref_chars == 0:
@@ -49,28 +49,19 @@ class KTCER(Metric):
             allow_subset_matches: Whether to allow subset matches.
         """
 
-    @metric_property(is_dependency=True)
-    def _rkt_outcomes(self):
-        """Get the shared _RKTOutcomes metric instance."""
-        return self.dataset.metrics._rkt_outcomes(
-            vocab=self.params.vocab,
-            allow_subset_matches=self.params.allow_subset_matches,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+    _rkt_outcomes = dependency("_rkt_outcomes", forward=("vocab", "allow_subset_matches"))
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_char_edits(self) -> int:
         """Get the total character edits across all key term occurrences."""
         return sum(em.num_char_edits for em in self)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def ref_chars(self) -> int:
         """Get the total reference character count across all key term occurrences."""
         return sum(em.ref_chars for em in self)
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the key term character error rate."""
         if self.ref_chars == 0:

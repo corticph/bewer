@@ -8,7 +8,7 @@ reference implementation, which computes WIP from a word-level Levenshtein align
 from __future__ import annotations
 
 from bewer.alignment import Alignment
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_property
 
 __all__ = ["WIP"]
 
@@ -18,22 +18,22 @@ class WIP_(ExampleMetric):
     def _alignment(self) -> Alignment:
         return self.parent_metric._alignment[self.example.index].alignment
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_matches(self) -> int:
         """Get the number of matched tokens between the hypothesis and reference text."""
         return self._alignment.num_matches
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def ref_length(self) -> int:
         """Get the number of tokens in the reference text."""
         return len(self.example.ref.tokens.normalized)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def hyp_length(self) -> int:
         """Get the number of tokens in the hypothesis text."""
         return len(self.example.hyp.tokens.normalized)
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the example-level word information preserved."""
         if self.ref_length == 0 and self.hyp_length == 0:
@@ -56,30 +56,24 @@ class WIP(Metric):
     )
     example_cls = WIP_
 
-    @metric_property(is_dependency=True)
-    def _alignment(self):
-        return self.dataset.metrics.levenshtein(
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+    _alignment = dependency("levenshtein", type="alignment")
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_matches(self) -> int:
         """Get the number of matched tokens between the hypothesis and reference texts."""
         return sum(em.num_matches for em in self)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def ref_length(self) -> int:
         """Get the number of tokens in the reference texts."""
         return sum(em.ref_length for em in self)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def hyp_length(self) -> int:
         """Get the number of tokens in the hypothesis texts."""
         return sum(em.hyp_length for em in self)
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the word information preserved."""
         if self.ref_length == 0 and self.hyp_length == 0:

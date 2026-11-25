@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, NamedTuple
 
 from bewer.alignment import OpType
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_property
 
 from ._keyterm_params import KeyTermParams
 
@@ -30,12 +30,12 @@ class BUWEROutcome(NamedTuple):
 
 
 class _BUWEROutcomes_(ExampleMetric):
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def ref_matches(self) -> list[KeyTermMatch]:
         """Vocabulary term occurrences found in the reference text."""
         return self.parent_metric._matcher.find_matches(self.example.ref)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def hyp_matches(self) -> list[KeyTermMatch]:
         """Vocabulary term occurrences found in the hypothesis text."""
         return self.parent_metric._matcher.find_matches(self.example.hyp)
@@ -89,22 +89,22 @@ class _BUWEROutcomes_(ExampleMetric):
                 num_unbiased_ref_tokens += 1
         return BUWEROutcome(num_biased_edits, num_unbiased_edits, num_biased_ref_tokens, num_unbiased_ref_tokens)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_biased_edits(self) -> int:
         """Edits attributed to the biased (vocabulary) side."""
         return self._counts.num_biased_edits
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_unbiased_edits(self) -> int:
         """Edits attributed to the unbiased (non-vocabulary) side."""
         return self._counts.num_unbiased_edits
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_biased_ref_tokens(self) -> int:
         """Reference tokens attributed to the biased (vocabulary) side."""
         return self._counts.num_biased_ref_tokens
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_unbiased_ref_tokens(self) -> int:
         """Reference tokens attributed to the unbiased (non-vocabulary) side."""
         return self._counts.num_unbiased_ref_tokens
@@ -136,31 +136,24 @@ class _BUWEROutcomes(Metric):
         vocab = self.dataset.config.vocabularies[self.params.vocab]
         return vocab.build_matcher(self.dataset)
 
-    @metric_property(is_dependency=True)
-    def _alignment(self):
-        """The shared Levenshtein alignment instance, as in `_kt_outcomes`."""
-        return self.dataset.metrics.levenshtein(
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+    _alignment = dependency("levenshtein", type="alignment")
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_biased_edits(self) -> int:
         """Total edits attributed to the biased (vocabulary) side."""
         return sum(em.num_biased_edits for em in self)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_unbiased_edits(self) -> int:
         """Total edits attributed to the unbiased (non-vocabulary) side."""
         return sum(em.num_unbiased_edits for em in self)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_biased_ref_tokens(self) -> int:
         """Total reference tokens attributed to the biased (vocabulary) side."""
         return sum(em.num_biased_ref_tokens for em in self)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_unbiased_ref_tokens(self) -> int:
         """Total reference tokens attributed to the unbiased (non-vocabulary) side."""
         return sum(em.num_unbiased_ref_tokens for em in self)

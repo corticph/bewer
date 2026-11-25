@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_property
 
 from ._keyterm_params import KeyTermSubsetParams
 
@@ -10,17 +10,17 @@ __all__ = ["KTFPR"]
 
 
 class KTFPR_(ExampleMetric):
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_fp(self) -> int:
         """Get the number of spurious key term token positions in the hypothesis text."""
         return self.parent_metric._kt_outcomes[self.example.index].num_fp
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_ref_tokens(self) -> int:
         """Get the number of reference tokens (N_R) for this example."""
         return self.parent_metric._kt_outcomes[self.example.index].num_ref_tokens
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the example-level key term false-positive rate."""
         if self.num_ref_tokens == 0:
@@ -63,29 +63,19 @@ class KTFPR(Metric):
                 )
             super().validate()
 
-    @metric_property(is_dependency=True)
-    def _kt_outcomes(self):
-        """Get the shared _KTOutcomes metric instance."""
-        return self.dataset.metrics._kt_outcomes(
-            vocab=self.params.vocab,
-            allow_subset_matches=self.params.allow_subset_matches,
-            partial_credit=self.params.partial_credit,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_fp(self) -> int:
         """Get the total number of spurious key term token positions across all hypothesis texts."""
         return sum(em.num_fp for em in self)
 
-    @metric_property(is_value=True)
+    @metric_property(type="value")
     def num_ref_tokens(self) -> int:
         """Get the total number of reference tokens (N_R) across the dataset."""
         return sum(em.num_ref_tokens for em in self)
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the key term false-positive rate."""
         if self.num_ref_tokens == 0:

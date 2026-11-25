@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_property
 
 from ._keyterm_params import KeyTermSubsetParams
 
@@ -10,7 +10,7 @@ __all__ = ["KTF"]
 
 
 class KTF_(ExampleMetric):
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the example-level key term F-score."""
         outcomes = self.parent_metric._kt_outcomes[self.example.index]
@@ -58,19 +58,9 @@ class KTF(Metric):
                 raise ValueError(f"beta must be positive, got {self.beta}.")
             super().validate()
 
-    @metric_property(is_dependency=True)
-    def _kt_outcomes(self):
-        """Get the shared _KTOutcomes metric instance."""
-        return self.dataset.metrics._kt_outcomes(
-            vocab=self.params.vocab,
-            allow_subset_matches=self.params.allow_subset_matches,
-            partial_credit=self.params.partial_credit,
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the key term F-score."""
         beta_sq = self.params.beta**2

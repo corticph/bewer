@@ -1,12 +1,19 @@
 """Tests for bewer.metrics.base module."""
 
+from dataclasses import dataclass
+
 import pytest
 
+from bewer import Dataset, Vocabulary
 from bewer.metrics.base import (
     METRIC_REGISTRY,
+    DependencyEdge,
     ExampleMetric,
     Metric,
+    MetricParams,
     MetricRegistry,
+    _check_dependency_graph,
+    dependency,
     list_registered_metrics,
     metric_property,
 )
@@ -43,11 +50,11 @@ class TestMetricPropertyDecorator:
         """Underscore-named metric_property is excluded from metric_values()['other'] by default."""
 
         class DummyMetric(ExampleMetric):
-            @metric_property(is_value=True)
+            @metric_property(type="value")
             def public_val(self):
                 return 1
 
-            @metric_property(is_value=True)
+            @metric_property(type="value")
             def _private_val(self):
                 return 2
 
@@ -60,11 +67,11 @@ class TestMetricPropertyDecorator:
         """Underscore-named metric_property is included when include_private=True."""
 
         class DummyMetric(ExampleMetric):
-            @metric_property(is_value=True)
+            @metric_property(type="value")
             def public_val(self):
                 return 1
 
-            @metric_property(is_value=True)
+            @metric_property(type="value")
             def _private_val(self):
                 return 2
 
@@ -73,10 +80,10 @@ class TestMetricPropertyDecorator:
         assert "public_val" in mv["other"]
 
     def test_explicit_private_false_overrides_underscore(self):
-        """@metric_property(is_value=True, private=False) on an underscore name forces it into 'other'."""
+        """@metric_property(type="value", private=False) on an underscore name forces it into 'other'."""
 
         class DummyMetric(ExampleMetric):
-            @metric_property(is_value=True, private=False)
+            @metric_property(type="value", private=False)
             def _not_actually_private(self):
                 return 1
 
@@ -84,10 +91,10 @@ class TestMetricPropertyDecorator:
         assert "_not_actually_private" in mv["other"]
 
     def test_explicit_private_true_on_public_name(self):
-        """@metric_property(is_value=True, private=True) on a public name routes it to 'private'."""
+        """@metric_property(type="value", private=True) on a public name routes it to 'private'."""
 
         class DummyMetric(ExampleMetric):
-            @metric_property(is_value=True, private=True)
+            @metric_property(type="value", private=True)
             def hidden_val(self):
                 return 1
 
@@ -100,7 +107,7 @@ class TestMetricPropertyDecorator:
         """Private metric values are deduplicated when inherited across multiple bases."""
 
         class Base(ExampleMetric):
-            @metric_property(is_value=True)
+            @metric_property(type="value")
             def _shared(self):
                 return 1
 
@@ -112,21 +119,21 @@ class TestMetricPropertyDecorator:
 
 
 class TestDependencyDecorator:
-    """Tests for the dependency flag on metric_property."""
+    """Tests for function-form dependencies (metric_property(type="dependency"))."""
 
     def test_dependency_registered_on_class(self):
-        """Test that is_dependency=True registers the property name in _dependencies."""
+        """Test that type="dependency" registers the property name in _dependencies."""
 
         class DummyMetric(Metric):
             short_name_base = "TEST"
             long_name_base = "Test Metric"
             description = "Test"
 
-            @metric_property(is_dependency=True)
+            @metric_property(type="dependency")
             def _dep_a(self):
                 pass
 
-            @metric_property(is_dependency=True)
+            @metric_property(type="dependency")
             def _dep_b(self):
                 pass
 
@@ -140,15 +147,15 @@ class TestDependencyDecorator:
             long_name_base = "Test Metric"
             description = "Test"
 
-            @metric_property(is_dependency=True)
+            @metric_property(type="dependency")
             def _z(self):
                 pass
 
-            @metric_property(is_dependency=True)
+            @metric_property(type="dependency")
             def _a(self):
                 pass
 
-            @metric_property(is_dependency=True)
+            @metric_property(type="dependency")
             def _m(self):
                 pass
 
@@ -162,7 +169,7 @@ class TestDependencyDecorator:
             long_name_base = "Base Metric"
             description = "Base"
 
-            @metric_property(is_dependency=True)
+            @metric_property(type="dependency")
             def _base_dep(self):
                 pass
 
@@ -171,7 +178,7 @@ class TestDependencyDecorator:
             long_name_base = "Child Metric"
             description = "Child"
 
-            @metric_property(is_dependency=True)
+            @metric_property(type="dependency")
             def _child_dep(self):
                 pass
 
@@ -186,7 +193,7 @@ class TestDependencyDecorator:
             long_name_base = "Mixin"
             description = "Mixin"
 
-            @metric_property(is_dependency=True)
+            @metric_property(type="dependency")
             def _shared(self):
                 pass
 
@@ -195,7 +202,7 @@ class TestDependencyDecorator:
             long_name_base = "Child"
             description = "Child"
 
-            @metric_property(is_dependency=True)
+            @metric_property(type="dependency")
             def _shared(self):
                 pass
 
@@ -203,7 +210,7 @@ class TestDependencyDecorator:
         assert deps.count("_shared") == 1
 
     def test_dependency_caches_result(self):
-        """Test that @metric_property(is_dependency=True) caches like cached_property."""
+        """Test that @metric_property(type="dependency") caches like cached_property."""
         call_count = 0
 
         class DummyMetric(Metric):
@@ -211,7 +218,7 @@ class TestDependencyDecorator:
             long_name_base = "Test Metric"
             description = "Test"
 
-            @metric_property(is_dependency=True)
+            @metric_property(type="dependency")
             def _dep(self):
                 nonlocal call_count
                 call_count += 1
@@ -229,6 +236,212 @@ class TestDependencyDecorator:
         from bewer.metrics.key_term.key_term_precision import KTP
 
         assert "_kt_outcomes" in KTP.dependencies()
+
+
+class TestMetricPropertyType:
+    """Tests for the type argument of metric_property and its deprecated flags."""
+
+    def test_unknown_type_raises(self):
+        """An unknown type is rejected when the decorator is built."""
+        with pytest.raises(ValueError, match="Unknown metric_property type 'values'"):
+            metric_property(type="values")
+
+    def test_targets_only_for_dependency_types(self):
+        """targets is rejected on a non-dependency property."""
+        with pytest.raises(ValueError, match="`targets` applies only to dependency types"):
+            metric_property(type="value", targets=("wer",))
+
+    def test_type_and_legacy_flag_conflict(self):
+        """Passing both type and a deprecated flag is an error."""
+        with pytest.raises(ValueError, match="either `type` or the deprecated"):
+            metric_property(type="value", is_main=True)
+
+    @pytest.mark.parametrize(
+        ("flag", "expected"),
+        [("is_main", "main"), ("is_value", "value"), ("is_dependency", "dependency")],
+    )
+    def test_legacy_flags_map_to_type_and_log(self, caplog, flag, expected):
+        """Each deprecated flag still works, maps to its type, and logs a deprecation."""
+        with caplog.at_level("WARNING", logger="bewer.metrics.base"):
+
+            class LegacyMetric(Metric):
+                short_name_base = long_name_base = description = "Legacy"
+
+                @metric_property(**{flag: True})
+                def prop(self):
+                    pass
+
+        assert LegacyMetric.prop.type == expected
+        assert f"LegacyMetric.prop: metric_property({flag}=True) is deprecated" in caplog.text
+        assert f"metric_property(type='{expected}')" in caplog.text
+
+    def test_legacy_dependency_wins_over_value(self):
+        """The old precedence holds: is_dependency=True with is_value=True is a dependency."""
+        prop = metric_property(is_dependency=True, is_value=True)
+        assert prop.type == "dependency"
+
+
+@pytest.fixture
+def register_probe():
+    """Register throwaway metric classes under private names; unregister them afterwards."""
+    registered = []
+
+    def register(name, metric_cls):
+        METRIC_REGISTRY.register_metric(metric_cls, name)
+        registered.append(name)
+        return metric_cls
+
+    yield register
+    for name in registered:
+        del METRIC_REGISTRY.metric_metadata[name]
+        del METRIC_REGISTRY.metric_classes[name]
+
+
+class TestDependencyDeclaration:
+    """Tests for dependency(): declaration, static edges, building and graph checks."""
+
+    def test_target_and_selected_by_are_exclusive(self):
+        """Exactly one of target and selected_by is required."""
+        with pytest.raises(ValueError, match="exactly one of `target` or `selected_by`"):
+            dependency()
+        with pytest.raises(ValueError, match="exactly one of `target` or `selected_by`"):
+            dependency("wip", selected_by="alignment")
+
+    def test_type_must_be_a_dependency_type(self):
+        """A dependency cannot be typed as a value."""
+        with pytest.raises(ValueError, match="A dependency's type must be one of"):
+            dependency("wip", type="value")
+
+    def test_edges_for_target(self):
+        """A target dependency has one static target."""
+        from bewer.metrics.general.wil import WIL
+
+        assert WIL.dependencies() == ["_wip"]
+        assert WIL.dependency_edges() == {"_wip": DependencyEdge(type="dependency", targets=("wip",))}
+
+    def test_edges_mark_alignment(self):
+        """An alignment dependency carries type 'alignment'."""
+        from bewer.metrics.general.mer import MER
+
+        assert MER.dependency_edges()["_alignment"] == DependencyEdge(type="alignment", targets=("levenshtein",))
+
+    def test_edges_for_selected_by_come_from_literal(self):
+        """A selected_by dependency's targets are the Literal values of its param."""
+        from bewer.metrics.hallucination.insertion_rate import InsertionRate
+
+        edge = InsertionRate.dependency_edges()["_alignment"]
+        assert edge == DependencyEdge(type="alignment", targets=("levenshtein", "error_align"))
+
+    def test_selected_by_needs_literal_param(self):
+        """selected_by on a param that is not Literal-typed fails when edges are read."""
+
+        @dataclass
+        class Params(MetricParams):
+            alignment: str = "levenshtein"
+
+        class Probe(Metric):
+            short_name_base = long_name_base = description = "Probe"
+            param_schema = Params
+            _alignment = dependency(selected_by="alignment", type="alignment")
+
+        with pytest.raises(TypeError, match=r"selected_by='alignment' needs a param typed Literal\[\.\.\.\]"):
+            Probe.dependency_edges()
+
+    def test_function_form_edges(self):
+        """A function-form dependency reports its declared targets, or None without them."""
+
+        class Probe(Metric):
+            short_name_base = long_name_base = description = "Probe"
+
+            @metric_property(type="dependency", targets=("wip",))
+            def _declared(self):
+                pass
+
+            @metric_property(type="dependency")
+            def _undeclared(self):
+                pass
+
+        assert Probe.dependency_edges() == {
+            "_declared": DependencyEdge(type="dependency", targets=("wip",)),
+            "_undeclared": DependencyEdge(type="dependency", targets=None),
+        }
+
+    def test_builds_target_with_owner_pipeline_and_forwarded_params(self, sample_dataset):
+        """The built dependency is the shared instance for the owner's pipeline and params."""
+        config = sample_dataset.config.clone().add_vocabulary(Vocabulary(name="terms", terms=["quick"]))
+        dataset = Dataset(config=config)
+        dataset.add("the quick brown fox", "the quick brown dog")
+        ktr = dataset.metrics.key_term_recall(vocab="terms", partial_credit=True)
+        expected = dataset.metrics._kt_outcomes(
+            vocab="terms", allow_subset_matches=False, partial_credit=True, tokenizer="key_term"
+        )
+        assert ktr._kt_outcomes is expected
+
+    def test_builds_selected_target(self, sample_dataset):
+        """selected_by builds the metric named by the param value."""
+        levenshtein_rate = sample_dataset.metrics.insertion_rate()
+        error_align_rate = sample_dataset.metrics.insertion_rate(alignment="error_align")
+        assert levenshtein_rate._alignment is sample_dataset.metrics.levenshtein()
+        assert error_align_rate._alignment is sample_dataset.metrics.error_align()
+
+    def test_unregistered_target_raises_on_construction(self, sample_dataset, register_probe):
+        """A target missing from the registry fails when the metric is built, not on first access."""
+
+        class Probe(Metric):
+            short_name_base = long_name_base = description = "Probe"
+            _missing = dependency("_no_such_metric")
+
+        register_probe("_probe_missing", Probe)
+        with pytest.raises(ValueError, match="Probe._missing depends on unregistered metric '_no_such_metric'"):
+            sample_dataset.metrics.get("_probe_missing")()
+
+    def test_forward_unknown_to_owner_raises(self, sample_dataset, register_probe):
+        """Forwarding a param the owner does not have is an error."""
+
+        class Probe(Metric):
+            short_name_base = long_name_base = description = "Probe"
+            _wip = dependency("wip", forward=("vocab",))
+
+        register_probe("_probe_forward_owner", Probe)
+        with pytest.raises(ValueError, match=r"Probe._wip forwards \['vocab'\], which Probe does not accept"):
+            sample_dataset.metrics.get("_probe_forward_owner")()
+
+    def test_forward_unknown_to_target_raises(self, sample_dataset, register_probe):
+        """Forwarding a param the target does not accept is an error."""
+
+        @dataclass
+        class Params(MetricParams):
+            vocab: str = "terms"
+
+        class Probe(Metric):
+            short_name_base = long_name_base = description = "Probe"
+            param_schema = Params
+            _wip = dependency("wip", forward=("vocab",))
+
+        register_probe("_probe_forward_target", Probe)
+        with pytest.raises(ValueError, match=r"Probe._wip forwards \['vocab'\], which target WIP does not accept"):
+            sample_dataset.metrics.get("_probe_forward_target")()
+
+    def test_cycle_raises(self, sample_dataset, register_probe):
+        """A dependency cycle is reported with its chain."""
+
+        class ProbeA(Metric):
+            short_name_base = long_name_base = description = "ProbeA"
+            _b = dependency("_probe_cycle_b")
+
+        class ProbeB(Metric):
+            short_name_base = long_name_base = description = "ProbeB"
+            _a = dependency("_probe_cycle_a")
+
+        register_probe("_probe_cycle_a", ProbeA)
+        register_probe("_probe_cycle_b", ProbeB)
+        with pytest.raises(ValueError, match="Dependency cycle: ProbeA -> ProbeB -> ProbeA"):
+            sample_dataset.metrics.get("_probe_cycle_a")()
+
+    def test_all_registered_graphs_are_valid(self):
+        """Every built-in metric's static dependency graph checks cleanly."""
+        for metric_cls in METRIC_REGISTRY.metric_classes.values():
+            _check_dependency_graph(metric_cls)
 
 
 class TestMetricRegistry:
@@ -631,7 +844,7 @@ class TestParamFormattingEdgeCases:
         )
 
         class _FactoryProbe_(ExampleMetric):
-            @metric_property(is_main=True)
+            @metric_property(type="main")
             def value(self) -> float:
                 return 0.0
 

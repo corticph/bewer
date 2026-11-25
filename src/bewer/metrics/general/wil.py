@@ -8,7 +8,7 @@ computes WIL as exactly that difference.
 
 from __future__ import annotations
 
-from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, metric_property
+from bewer.metrics.base import METRIC_REGISTRY, ExampleMetric, Metric, dependency, metric_property
 
 __all__ = ["WIL"]
 
@@ -19,7 +19,7 @@ class WIL_(ExampleMetric):
         """The example-level word information preserved this metric negates."""
         return self.parent_metric._wip[self.example.index].value
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the example-level word information lost."""
         return 1.0 - self._wip
@@ -36,16 +36,9 @@ class WIL(Metric):
     )
     example_cls = WIL_
 
-    @metric_property(is_dependency=True)
-    def _wip(self):
-        """The shared WIP metric instance this metric negates."""
-        return self.dataset.metrics.wip(
-            standardizer=self.standardizer,
-            tokenizer=self.tokenizer,
-            normalizer=self.normalizer,
-        )
+    _wip = dependency("wip")
 
-    @metric_property(is_main=True)
+    @metric_property(type="main")
     def value(self) -> float:
         """Get the word information lost."""
         return 1.0 - self._wip.value
