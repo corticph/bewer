@@ -40,6 +40,20 @@ def dataset_with_key_terms():
     return dataset
 
 
+@pytest.fixture
+def dataset_with_insertions():
+    """Dataset with distinct per-example insertion counts (0, 3, 1, 2, 5), so a
+    wrong-example lookup produces a detectably different value.
+    """
+    dataset = Dataset()
+    dataset.add("hello world", "hello world")  # 0 insertions
+    dataset.add("the quick brown fox", "the quick brown fox a b c")  # 3 insertions
+    dataset.add("testing one two three", "testing one two three x")  # 1 insertion
+    dataset.add("alpha beta gamma", "alpha beta gamma p q")  # 2 insertions
+    dataset.add("one two three four", "one two three four s t u v w")  # 5 insertions
+    return dataset
+
+
 class TestConfidenceIntervalDataclass:
     """Tests for the ConfidenceInterval dataclass itself."""
 
@@ -329,3 +343,90 @@ class TestAggregationCorrectness:
 
         assert ci.low == pytest.approx(expected_low)
         assert ci.high == pytest.approx(expected_high)
+
+
+class TestExampleInsertionRateBootstrap:
+    """Bootstrap CI tests for ExampleInsertionRate, whose ExampleMetrics borrow
+    per-example values through the dataset-level insertion_rate dependency.
+    """
+
+    def test_ci_basic(self, dataset_with_insertions):
+        """The CI brackets the point estimate, which is 4/5 (four of the five
+        examples have at least one insertion)."""
+        eir = dataset_with_insertions.metrics.example_insertion_rate()
+        ci = eir.compute_confidence_interval(seed=0, n_resamples=200)
+        assert ci.point == pytest.approx(4 / 5)
+        assert ci.low <= ci.point <= ci.high
+
+    def test_ci_reproducible_with_seed(self, dataset_with_insertions):
+        """Seeded runs reproduce identical bounds."""
+        eir = dataset_with_insertions.metrics.example_insertion_rate()
+        a = eir.compute_confidence_interval(seed=7, n_resamples=50)
+        b = eir.compute_confidence_interval(seed=7, n_resamples=50)
+        assert (a.low, a.high) == (b.low, b.high)
+
+    def test_ci_matches_honest_reaggregation(self, dataset_with_insertions):
+        """Shadow values must equal an honest re-aggregation of the warm
+        per-example values over each resample (the live-path invariant).
+        """
+        dataset = dataset_with_insertions
+        eir = dataset.metrics.example_insertion_rate()
+        seed, n_resamples = 0, 50
+
+        ci = eir.compute_confidence_interval(seed=seed, n_resamples=n_resamples)
+
+        warm_has = [em.has_insertions for em in eir]
+        n = len(dataset.examples)
+        rng = random.Random(seed)
+        samples = []
+        for _ in range(n_resamples):
+            resampled = rng.choices(dataset.examples, k=n)
+            samples.append(sum(warm_has[ex.index] for ex in resampled) / n)
+        samples.sort()
+        assert ci.low == pytest.approx(_percentile(samples, 0.025))
+        assert ci.high == pytest.approx(_percentile(samples, 0.975))
+
+
+class TestShadowExampleLookups:
+    """Regression tests for issue #107: under a bootstrap shadow, integer
+    indices must resolve against the original dataset's positions, since
+    example.index is unaffected by resampling while _src holds the resample.
+    """
+
+    def test_fresh_example_metric_under_shadow_uses_own_example(self, dataset_with_insertions):
+        """A fresh ExampleMetric constructed under a shadow (the cache-miss
+        path) must read its own example's values, not the values of whichever
+        example sits at that index position in the resample.
+        """
+        from bewer.metrics.confidence import _make_shadow
+        from bewer.metrics.hallucination.example_insertion_rate import ExampleInsertionRate_
+
+        dataset = dataset_with_insertions
+        eir = dataset.metrics.example_insertion_rate()
+        eir.value  # warm the per-example caches, as the bootstrap does
+        warm = [em.num_insertions for em in eir]
+
+        resampled = random.Random(0).choices(dataset.examples, k=len(dataset.examples))
+        assert [ex.index for ex in resampled] != list(range(len(dataset.examples)))
+        shadow = _make_shadow(eir, resampled)
+
+        for ex in resampled:
+            em = ExampleInsertionRate_(parent_metric=shadow, src=ex)
+            assert em.num_insertions == warm[ex.index]
+
+    def test_int_indexed_borrow_under_shadow_uses_own_example(self, dataset_with_insertions):
+        """``metric[example.index]`` under a shadow returns the ExampleMetric
+        for that example, not the one at that position in the resample.
+        """
+        from bewer.metrics.confidence import _make_shadow
+
+        dataset = dataset_with_insertions
+        eir = dataset.metrics.example_insertion_rate()
+        eir.value  # warm
+        warm = [em.num_insertions for em in eir]
+
+        resampled = random.Random(0).choices(dataset.examples, k=len(dataset.examples))
+        shadow = _make_shadow(eir, resampled)
+
+        for ex in resampled:
+            assert shadow._insertion_rate[ex.index].num_insertions == warm[ex.index]
