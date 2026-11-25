@@ -80,7 +80,7 @@ poetry run twine check dist/*  # Validate built packages
 - Supports both dataset-level and example-level metrics
 
 **Declaring metric properties and dependencies** (`src/bewer/metrics/base.py`)
-- `@metric_property(type=...)` takes one of `"value"`, `"main"` (also a value), `"dependency"` or `"alignment"` (a dependency on an alignment metric). Without `type` it is an internal cached property.
+- `@metric_property(type=...)` takes a `MetricPropertyType` (a `StrEnum`) member or its string value: `"value"`, `"main"` (also a value), `"dependency"` or `"alignment"` (a dependency on an alignment metric). `.is_value` and `.is_dependency` on the member hold these "also a" rules. Without `type` it is an internal cached property.
 - Declare dependencies with `dependency()`, not a decorated function. The borrowed metric always runs with the owner's pipeline:
   - `dependency("wip")`: `target` is the registry name of the one metric to borrow.
   - `dependency(selected_by="alignment", type="alignment")`: the value of the owner's `alignment` param is the registry name. The param must be typed `Literal[...]`; its values are the possible targets.
@@ -186,7 +186,7 @@ config = BewerConfig(
 **Build System**:
 - Uses both Poetry (development) and Hatch (packaging)
 - Version managed by hatch-vcs from git tags
-- Supports Python 3.10-3.14
+- Supports Python 3.11-3.14
 
 ## Important Notes
 

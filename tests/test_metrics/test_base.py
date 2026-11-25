@@ -12,6 +12,7 @@ from bewer.metrics.base import (
     ExampleMetric,
     Metric,
     MetricParams,
+    MetricPropertyType,
     MetricRegistry,
     _check_dependency_graph,
     dependency,
@@ -252,6 +253,26 @@ class TestMetricPropertyType:
         with pytest.raises(ValueError, match="`targets` applies only to dependency types"):
             metric_property(type="value", targets=("wer",))
 
+    def test_member_and_string_are_interchangeable(self):
+        """A member and its string value give the same type, which equals the plain string."""
+        assert metric_property(type=MetricPropertyType.MAIN).type is MetricPropertyType.MAIN
+        assert metric_property(type="main").type is MetricPropertyType.MAIN
+        assert MetricPropertyType.MAIN == "main"
+
+    @pytest.mark.parametrize(
+        ("member", "is_value", "is_dependency"),
+        [
+            (MetricPropertyType.VALUE, True, False),
+            (MetricPropertyType.MAIN, True, False),
+            (MetricPropertyType.DEPENDENCY, False, True),
+            (MetricPropertyType.ALIGNMENT, False, True),
+        ],
+    )
+    def test_member_roles(self, member, is_value, is_dependency):
+        """Main is also a value; alignment is also a dependency."""
+        assert member.is_value is is_value
+        assert member.is_dependency is is_dependency
+
 
 @pytest.fixture
 def register_probe():
@@ -296,6 +317,7 @@ class TestDependencyDeclaration:
         from bewer.metrics.general.mer import MER
 
         assert MER.dependency_edges()["_alignment"] == DependencyEdge(type="alignment", targets=("levenshtein",))
+        assert MER.dependency_edges()["_alignment"].type is MetricPropertyType.ALIGNMENT
 
     def test_edges_for_selected_by_come_from_literal(self):
         """A selected_by dependency's targets are the Literal values of its param."""
