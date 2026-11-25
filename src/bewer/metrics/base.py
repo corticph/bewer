@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import MISSING, dataclass, fields
+from enum import StrEnum
 from functools import cached_property, update_wrapper
 from typing import (
     TYPE_CHECKING,
@@ -47,18 +48,45 @@ __all__ = [
 ]
 
 
-MetricPropertyType = Literal["value", "main", "dependency", "alignment"]
-"""The kinds of ``metric_property``.
+class MetricPropertyType(StrEnum):
+    """The kinds of ``metric_property``.
 
-- ``"value"``: a metric value, listed for introspection.
-- ``"main"``: the metric's main value (at most one per class); also a value.
-- ``"dependency"``: a borrowed metric this metric is computed from.
-- ``"alignment"``: a dependency whose target is an alignment metric.
-"""
+    Members compare equal to their values, so ``type="main"`` and
+    ``type=MetricPropertyType.MAIN`` are interchangeable.
+    """
 
-_PROPERTY_TYPES: tuple[str, ...] = get_args(MetricPropertyType)
-_VALUE_TYPES = ("value", "main")
-_DEPENDENCY_TYPES = ("dependency", "alignment")
+    VALUE = "value"
+    """A metric value, listed for introspection."""
+    MAIN = "main"
+    """The metric's main value (at most one per class); also a value."""
+    DEPENDENCY = "dependency"
+    """A borrowed metric this metric is computed from."""
+    ALIGNMENT = "alignment"
+    """A dependency whose target is an alignment metric."""
+
+    @property
+    def is_value(self) -> bool:
+        """Whether properties of this type are registered as metric values."""
+        return self in (MetricPropertyType.VALUE, MetricPropertyType.MAIN)
+
+    @property
+    def is_dependency(self) -> bool:
+        """Whether properties of this type are registered as dependencies."""
+        return self in (MetricPropertyType.DEPENDENCY, MetricPropertyType.ALIGNMENT)
+
+    @classmethod
+    def parse(cls, value: "MetricPropertyType | str") -> "MetricPropertyType":
+        """Convert a member or its string value to a member.
+
+        Raises:
+            ValueError: If ``value`` names no member.
+        """
+        try:
+            return cls(value)
+        except ValueError:
+            raise ValueError(
+                f"Unknown metric_property type {value!r}. Valid types: {[m.value for m in cls]}."
+            ) from None
 
 
 def _type_from_legacy_flags(
@@ -69,11 +97,11 @@ def _type_from_legacy_flags(
     Keeps the old precedence: a dependency is never a value, and a main value is a value.
     """
     if is_dependency:
-        return "dependency"
+        return MetricPropertyType.DEPENDENCY
     if is_main:
-        return "main"
+        return MetricPropertyType.MAIN
     if is_value:
-        return "value"
+        return MetricPropertyType.VALUE
     return None
 
 
@@ -97,8 +125,8 @@ class metric_property(cached_property):
         def _wip(self): ...
 
     Args:
-        type: The kind of property (see ``MetricPropertyType``). ``None`` makes an
-            internal computed property that is cached but not registered.
+        type: The kind of property: a ``MetricPropertyType`` member or its string value.
+            ``None`` makes an internal computed property that is cached but not registered.
         private: Explicitly control privacy of a value. If None, inferred from a
             leading underscore.
         set_pipeline: Wrap computation in ``set_pipeline(*obj.pipeline)``. Default True.
@@ -114,7 +142,7 @@ class metric_property(cached_property):
         self,
         func=None,
         *,
-        type: MetricPropertyType | None = None,
+        type: MetricPropertyType | str | None = None,
         private: bool | None = None,
         set_pipeline: bool = True,
         targets: tuple[str, ...] | None = None,
@@ -128,13 +156,12 @@ class metric_property(cached_property):
             if type is not None:
                 raise ValueError("Pass either `type` or the deprecated `is_*` flags, not both.")
             type = _type_from_legacy_flags(is_main, is_value, is_dependency)
-        if type is not None and type not in _PROPERTY_TYPES:
-            raise ValueError(f"Unknown metric_property type {type!r}. Valid types: {list(_PROPERTY_TYPES)}.")
-        if targets is not None and type not in _DEPENDENCY_TYPES:
+        self._type = MetricPropertyType.parse(type) if type is not None else None
+        is_dependency_type = self._type is not None and self._type.is_dependency
+        if targets is not None and not is_dependency_type:
             raise ValueError("`targets` applies only to dependency types ('dependency', 'alignment').")
-        self._type = type
         self._private = private
-        self._set_pipeline = set_pipeline and type not in _DEPENDENCY_TYPES
+        self._set_pipeline = set_pipeline and not is_dependency_type
         self._targets = tuple(targets) if targets is not None else None
         if func is not None:
             super().__init__(func)
@@ -166,7 +193,7 @@ class metric_property(cached_property):
 
         if self._legacy_flags:
             flags = ", ".join(f"{flag}={value}" for flag, value in self._legacy_flags.items())
-            replacement = f"type={self._type!r}" if self._type is not None else "no arguments"
+            replacement = f"type={self._type.value!r}" if self._type is not None else "no arguments"
             logger.warning(
                 "%s.%s: metric_property(%s) is deprecated; use metric_property(%s).",
                 owner.__qualname__,
@@ -175,7 +202,10 @@ class metric_property(cached_property):
                 replacement,
             )
 
-        if self._type in _DEPENDENCY_TYPES:
+        if self._type is None:
+            return  # Internal computed property: cached, not registered
+
+        if self._type.is_dependency:
             deps = owner.__dict__.get("_dependencies")
             if deps is None:
                 deps = []
@@ -183,7 +213,7 @@ class metric_property(cached_property):
             deps.append(name)
             return  # Dependencies are not values
 
-        if self._type in _VALUE_TYPES:
+        if self._type.is_value:
             # Determine privacy: explicit flag takes precedence, otherwise infer from leading underscore.
             private = self._private if self._private is not None else name.startswith("_")
 
@@ -192,7 +222,7 @@ class metric_property(cached_property):
                 metric_values = {"other": [], "main": None, "private": []}
                 owner._metric_values = metric_values
 
-            if self._type == "main":
+            if self._type is MetricPropertyType.MAIN:
                 if metric_values["main"] is not None:
                     raise ValueError(f"Multiple main metric values defined in {owner.__name__}.")
                 metric_values["main"] = name
@@ -233,12 +263,14 @@ class Dependency(metric_property):
         *,
         selected_by: str | None,
         forward: tuple[str, ...],
-        type: MetricPropertyType,
+        type: MetricPropertyType | str,
     ):
         if (target is None) == (selected_by is None):
             raise ValueError("Pass exactly one of `target` or `selected_by`.")
-        if type not in _DEPENDENCY_TYPES:
-            raise ValueError(f"A dependency's type must be one of {list(_DEPENDENCY_TYPES)}, got {type!r}.")
+        type = MetricPropertyType.parse(type)
+        if not type.is_dependency:
+            valid = [m.value for m in MetricPropertyType if m.is_dependency]
+            raise ValueError(f"A dependency's type must be one of {valid}, got {type.value!r}.")
         self.target = target
         self.selected_by = selected_by
         self.forward = tuple(forward)
@@ -286,7 +318,7 @@ def dependency(
     *,
     selected_by: str | None = None,
     forward: tuple[str, ...] = (),
-    type: MetricPropertyType = "dependency",
+    type: MetricPropertyType | str = MetricPropertyType.DEPENDENCY,
 ) -> Dependency:
     """Declare a metric this metric is computed from.
 
@@ -330,7 +362,8 @@ class DependencyEdge(NamedTuple):
     """A dependency of a metric class, known without building any metric.
 
     Attributes:
-        type: ``"dependency"``, or ``"alignment"`` when the target is an alignment metric.
+        type: ``MetricPropertyType.DEPENDENCY``, or ``MetricPropertyType.ALIGNMENT`` when
+            the target is an alignment metric.
         targets: Registry names the dependency can resolve to, or None when a
             function-form dependency declares none.
     """
