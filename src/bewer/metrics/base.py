@@ -436,7 +436,8 @@ class MetricParams:
             expected_type = hints[f.name]
             if get_origin(expected_type) is Literal:
                 allowed = get_args(expected_type)
-                if value not in allowed:
+                # Match the type as well, so that True and 1.0 do not pass as Literal[1].
+                if not any(type(value) is type(option) and value == option for option in allowed):
                     raise ValueError(f"Parameter '{f.name}' must be one of {list(allowed)}, got {value!r}.")
                 continue
             try:
@@ -601,13 +602,20 @@ class Metric(ABC):
     def dependency_edges(cls) -> dict[str, DependencyEdge]:
         """Get each dependency's type and possible targets, without building any metric.
 
+        A subclass can override an inherited dependency with a plain ``property`` or an
+        untyped ``metric_property``. That override has no dependency metadata, so its edge
+        has type ``"dependency"`` and unknown targets.
+
         Returns:
             A mapping from dependency attribute name to its ``DependencyEdge``.
         """
         edges = {}
         for name in cls.dependencies():
             descriptor = getattr(cls, name)
-            edges[name] = DependencyEdge(type=descriptor.type, targets=descriptor.dependency_targets(cls))
+            if isinstance(descriptor, metric_property) and descriptor.type in _DEPENDENCY_TYPES:
+                edges[name] = DependencyEdge(type=descriptor.type, targets=descriptor.dependency_targets(cls))
+            else:
+                edges[name] = DependencyEdge(type="dependency", targets=None)
         return edges
 
     @classmethod

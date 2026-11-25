@@ -1,6 +1,7 @@
 """Tests for bewer.metrics.base module."""
 
 from dataclasses import dataclass
+from typing import Literal
 
 import pytest
 
@@ -318,6 +319,17 @@ class TestDependencyDeclaration:
         with pytest.raises(TypeError, match=r"selected_by='alignment' needs a param typed Literal\[\.\.\.\]"):
             Probe.dependency_edges()
 
+    @pytest.mark.parametrize("value", [True, 1.0])
+    def test_literal_param_rejects_equal_value_of_other_type(self, value):
+        """A Literal param checks the value's type, so True and 1.0 do not pass as Literal[1]."""
+
+        @dataclass
+        class Params(MetricParams):
+            level: Literal[1, 2] = 1
+
+        with pytest.raises(ValueError, match=r"Parameter 'level' must be one of \[1, 2\]"):
+            Params(level=value)
+
     def test_function_form_edges(self):
         """A function-form dependency reports its declared targets, or None without them."""
 
@@ -336,6 +348,19 @@ class TestDependencyDeclaration:
             "_declared": DependencyEdge(type="dependency", targets=("wip",)),
             "_undeclared": DependencyEdge(type="dependency", targets=None),
         }
+
+    def test_plain_override_of_inherited_dependency(self, sample_dataset, register_probe):
+        """A plain property that overrides an inherited dependency has unknown targets and still builds."""
+        from bewer.metrics.general.wil import WIL
+
+        class Probe(WIL):
+            @property
+            def _wip(self):
+                return self.dataset.metrics.wip()
+
+        assert Probe.dependency_edges() == {"_wip": DependencyEdge(type="dependency", targets=None)}
+        register_probe("_probe_plain_override", Probe)
+        assert sample_dataset.metrics.get("_probe_plain_override")()._wip is sample_dataset.metrics.wip()
 
     def test_builds_target_with_owner_pipeline_and_forwarded_params(self, sample_dataset):
         """The built dependency is the shared instance for the owner's pipeline and params."""
