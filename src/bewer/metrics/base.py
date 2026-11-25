@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
 from dataclasses import MISSING, dataclass, fields
 from enum import StrEnum
@@ -27,8 +26,6 @@ from bewer.reporting.python.tables import print_metric_table
 if TYPE_CHECKING:
     from bewer.core.dataset import Dataset
     from bewer.core.example import Example
-
-logger = logging.getLogger(__name__)
 
 __all__ = [
     "Metric",
@@ -89,22 +86,6 @@ class MetricPropertyType(StrEnum):
             ) from None
 
 
-def _type_from_legacy_flags(
-    is_main: bool | None, is_value: bool | None, is_dependency: bool | None
-) -> MetricPropertyType | None:
-    """Map the deprecated boolean flags to a ``metric_property`` type.
-
-    Keeps the old precedence: a dependency is never a value, and a main value is a value.
-    """
-    if is_dependency:
-        return MetricPropertyType.DEPENDENCY
-    if is_main:
-        return MetricPropertyType.MAIN
-    if is_value:
-        return MetricPropertyType.VALUE
-    return None
-
-
 class metric_property(cached_property):
     """Unified decorator for metric properties.
 
@@ -133,9 +114,6 @@ class metric_property(cached_property):
             Dependencies never set the pipeline: the borrowed metric sets its own.
         targets: Function-form dependencies only. The registry names the function can
             return, so the dependency graph is known without building metrics.
-        is_main: Deprecated. Use ``type="main"``.
-        is_value: Deprecated. Use ``type="value"``.
-        is_dependency: Deprecated. Use ``type="dependency"`` or :func:`dependency`.
     """
 
     def __init__(
@@ -146,16 +124,7 @@ class metric_property(cached_property):
         private: bool | None = None,
         set_pipeline: bool = True,
         targets: tuple[str, ...] | None = None,
-        is_main: bool | None = None,
-        is_value: bool | None = None,
-        is_dependency: bool | None = None,
     ):
-        legacy_flags = {"is_main": is_main, "is_value": is_value, "is_dependency": is_dependency}
-        self._legacy_flags = {flag: value for flag, value in legacy_flags.items() if value is not None}
-        if self._legacy_flags:
-            if type is not None:
-                raise ValueError("Pass either `type` or the deprecated `is_*` flags, not both.")
-            type = _type_from_legacy_flags(is_main, is_value, is_dependency)
         self._type = MetricPropertyType.parse(type) if type is not None else None
         is_dependency_type = self._type is not None and self._type.is_dependency
         if targets is not None and not is_dependency_type:
@@ -190,17 +159,6 @@ class metric_property(cached_property):
 
     def __set_name__(self, owner: type, name: str):
         super().__set_name__(owner, name)
-
-        if self._legacy_flags:
-            flags = ", ".join(f"{flag}={value}" for flag, value in self._legacy_flags.items())
-            replacement = f"type={self._type.value!r}" if self._type is not None else "no arguments"
-            logger.warning(
-                "%s.%s: metric_property(%s) is deprecated; use metric_property(%s).",
-                owner.__qualname__,
-                name,
-                flags,
-                replacement,
-            )
 
         if self._type is None:
             return  # Internal computed property: cached, not registered
