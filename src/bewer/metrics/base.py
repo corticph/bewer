@@ -637,7 +637,7 @@ class Metric(ABC):
 
         A subclass can override an inherited dependency with a plain ``property`` or an
         untyped ``metric_property``. That override has no dependency metadata, so its edge
-        has type ``"dependency"`` and unknown targets.
+        has type ``MetricPropertyType.DEPENDENCY`` and unknown targets.
 
         Returns:
             A mapping from dependency attribute name to its ``DependencyEdge``.
@@ -645,10 +645,11 @@ class Metric(ABC):
         edges = {}
         for name in cls.dependencies():
             descriptor = getattr(cls, name)
-            if isinstance(descriptor, metric_property) and descriptor.type in _DEPENDENCY_TYPES:
+            prop_type = descriptor.type if isinstance(descriptor, metric_property) else None
+            if prop_type is not None and prop_type.is_dependency:
                 edges[name] = DependencyEdge(type=descriptor.type, targets=descriptor.dependency_targets(cls))
             else:
-                edges[name] = DependencyEdge(type="dependency", targets=None)
+                edges[name] = DependencyEdge(type=MetricPropertyType.DEPENDENCY, targets=None)
         return edges
 
     @classmethod
