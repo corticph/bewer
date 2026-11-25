@@ -239,7 +239,7 @@ class TestDependencyDecorator:
 
 
 class TestMetricPropertyType:
-    """Tests for the type argument of metric_property and its deprecated flags."""
+    """Tests for the type argument of metric_property."""
 
     def test_unknown_type_raises(self):
         """An unknown type is rejected when the decorator is built."""
@@ -250,35 +250,6 @@ class TestMetricPropertyType:
         """targets is rejected on a non-dependency property."""
         with pytest.raises(ValueError, match="`targets` applies only to dependency types"):
             metric_property(type="value", targets=("wer",))
-
-    def test_type_and_legacy_flag_conflict(self):
-        """Passing both type and a deprecated flag is an error."""
-        with pytest.raises(ValueError, match="either `type` or the deprecated"):
-            metric_property(type="value", is_main=True)
-
-    @pytest.mark.parametrize(
-        ("flag", "expected"),
-        [("is_main", "main"), ("is_value", "value"), ("is_dependency", "dependency")],
-    )
-    def test_legacy_flags_map_to_type_and_log(self, caplog, flag, expected):
-        """Each deprecated flag still works, maps to its type, and logs a deprecation."""
-        with caplog.at_level("WARNING", logger="bewer.metrics.base"):
-
-            class LegacyMetric(Metric):
-                short_name_base = long_name_base = description = "Legacy"
-
-                @metric_property(**{flag: True})
-                def prop(self):
-                    pass
-
-        assert LegacyMetric.prop.type == expected
-        assert f"LegacyMetric.prop: metric_property({flag}=True) is deprecated" in caplog.text
-        assert f"metric_property(type='{expected}')" in caplog.text
-
-    def test_legacy_dependency_wins_over_value(self):
-        """The old precedence holds: is_dependency=True with is_value=True is a dependency."""
-        prop = metric_property(is_dependency=True, is_value=True)
-        assert prop.type == "dependency"
 
 
 @pytest.fixture
