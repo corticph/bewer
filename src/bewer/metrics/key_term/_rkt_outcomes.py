@@ -112,6 +112,7 @@ class _RKTOutcomes(Metric):
         "Not intended for direct use."
     )
     example_cls = _RKTOutcomes_
+    _error_align = dependency("error_align", type="alignment")
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -127,8 +128,6 @@ class _RKTOutcomes(Metric):
         """Build (and cache) the key-term matcher for this metric's vocabulary + pipeline."""
         vocab = self.dataset.config.vocabularies[self.params.vocab]
         return vocab.build_matcher(self.dataset)
-
-    _error_align = dependency("error_align", type="alignment")
 
     @metric_property(type="value")
     def num_ref_terms(self) -> int:

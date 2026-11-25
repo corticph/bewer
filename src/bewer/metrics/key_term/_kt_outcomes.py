@@ -189,6 +189,7 @@ class _KTOutcomes(Metric):
         "'hello world' but hyp only matches the subset 'world')."
     )
     example_cls = _KTOutcomes_
+    _levenshtein = dependency("levenshtein", type="alignment")
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -208,8 +209,6 @@ class _KTOutcomes(Metric):
         """Build (and cache) the key-term matcher for this metric's vocabulary + pipeline."""
         vocab = self.dataset.config.vocabularies[self.params.vocab]
         return vocab.build_matcher(self.dataset)
-
-    _levenshtein = dependency("levenshtein", type="alignment")
 
     @metric_property(type="value")
     def num_ref_tokens(self) -> int:

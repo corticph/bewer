@@ -48,7 +48,6 @@ class MER(Metric):
         "Morris, Maier and Green (2004, From WER and RIL to MER and WIL)."
     )
     example_cls = MER_
-
     _alignment = dependency("levenshtein", type="alignment")
 
     @metric_property(type="value")

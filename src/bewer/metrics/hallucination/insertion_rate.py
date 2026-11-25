@@ -64,7 +64,6 @@ class InsertionRate(Metric):
     example_cls = InsertionRate_
 
     param_schema = InsertionParams
-
     _alignment = dependency(selected_by="alignment", type="alignment")
 
     @metric_property(type="value")

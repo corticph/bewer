@@ -35,7 +35,6 @@ class WIL(Metric):
         "Morris, Maier and Green (2004, From WER and RIL to MER and WIL)."
     )
     example_cls = WIL_
-
     _wip = dependency("wip")
 
     @metric_property(type="main")

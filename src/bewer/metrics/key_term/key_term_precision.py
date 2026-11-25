@@ -41,6 +41,7 @@ class KTP(Metric):
         "key term spans, giving proportional credit for partially correct multi-token terms."
     )
     example_cls = KTP_
+    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -55,8 +56,6 @@ class KTP(Metric):
         """
 
         partial_credit: bool = False
-
-    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
     @metric_property(type="value")
     def num_matches(self) -> int:

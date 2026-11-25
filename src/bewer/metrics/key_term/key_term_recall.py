@@ -42,6 +42,7 @@ class KTR(Metric):
         "KTR is the complement of KTER (Key-Term Error Rate): KTR = 1 - KTER."
     )
     example_cls = KTR_
+    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -56,8 +57,6 @@ class KTR(Metric):
         """
 
         partial_credit: bool = False
-
-    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
     @metric_property(type="value")
     def num_matches(self) -> int:

@@ -55,7 +55,6 @@ class WIP(Metric):
         "and Green (2004, From WER and RIL to MER and WIL)."
     )
     example_cls = WIP_
-
     _alignment = dependency("levenshtein", type="alignment")
 
     @metric_property(type="value")

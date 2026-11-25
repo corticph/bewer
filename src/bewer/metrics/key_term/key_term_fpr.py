@@ -40,6 +40,7 @@ class KTFPR(Metric):
         "occurrence level, not the token-position level, so dividing by N_R has no principled interpretation."
     )
     example_cls = KTFPR_
+    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -62,8 +63,6 @@ class KTFPR(Metric):
                     "level, so dividing by the reference token count N_R has no principled interpretation."
                 )
             super().validate()
-
-    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
     @metric_property(type="value")
     def num_fp(self) -> int:

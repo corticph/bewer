@@ -127,6 +127,7 @@ class _BUWEROutcomes(Metric):
         "removal. Not intended for direct use."
     )
     example_cls = _BUWEROutcomes_
+    _alignment = dependency("levenshtein", type="alignment")
 
     param_schema = KeyTermParams
 
@@ -135,8 +136,6 @@ class _BUWEROutcomes(Metric):
         """Build (and cache) the vocabulary matcher for this metric's vocabulary + pipeline."""
         vocab = self.dataset.config.vocabularies[self.params.vocab]
         return vocab.build_matcher(self.dataset)
-
-    _alignment = dependency("levenshtein", type="alignment")
 
     @metric_property(type="value")
     def num_biased_edits(self) -> int:

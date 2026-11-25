@@ -39,6 +39,7 @@ class KTCER(Metric):
         "providing a continuous measure of transcription accuracy for domain-critical terminology."
     )
     example_cls = KTCER_
+    _rkt_outcomes = dependency("_rkt_outcomes", forward=("vocab", "allow_subset_matches"))
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -48,8 +49,6 @@ class KTCER(Metric):
             vocab: The vocabulary name to use for key term identification.
             allow_subset_matches: Whether to allow subset matches.
         """
-
-    _rkt_outcomes = dependency("_rkt_outcomes", forward=("vocab", "allow_subset_matches"))
 
     @metric_property(type="value")
     def num_char_edits(self) -> int:

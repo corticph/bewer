@@ -44,6 +44,7 @@ class KTER(Metric):
         "KTER is the complement of KTR: KTER = 1 - KTR."
     )
     example_cls = KTER_
+    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -59,8 +60,6 @@ class KTER(Metric):
         """
 
         partial_credit: bool = False
-
-    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
     @metric_property(type="value")
     def num_errors(self) -> int:

@@ -34,6 +34,7 @@ class KTF(Metric):
         "Computed as: (1 + beta²) × TP / ((1 + beta²) × TP + beta² × FN + FP)."
     )
     example_cls = KTF_
+    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -57,8 +58,6 @@ class KTF(Metric):
             if self.beta <= 0:
                 raise ValueError(f"beta must be positive, got {self.beta}.")
             super().validate()
-
-    _kt_outcomes = dependency("_kt_outcomes", forward=("vocab", "allow_subset_matches", "partial_credit"))
 
     @metric_property(type="main")
     def value(self) -> float:

@@ -44,7 +44,6 @@ class UWER(Metric):
     example_cls = UWER_
 
     param_schema = KeyTermParams
-
     _bu_wer_outcomes = dependency("_bu_wer_outcomes", forward=("vocab",))
 
     @metric_property(type="value")

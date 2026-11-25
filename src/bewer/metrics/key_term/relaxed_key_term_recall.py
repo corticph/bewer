@@ -58,6 +58,7 @@ class RKTR(Metric):
         "threshold. Alignment is derived from error_align. With threshold=0.0, RKTR is equivalent to KTR."
     )
     example_cls = RKTR_
+    _rkt_outcomes = dependency("_rkt_outcomes", forward=("vocab", "allow_subset_matches"))
 
     @dataclass
     class param_schema(KeyTermSubsetParams):
@@ -76,8 +77,6 @@ class RKTR(Metric):
             if not 0.0 <= self.threshold <= 1.0:
                 raise ValueError(f"threshold must be between 0.0 and 1.0, got {self.threshold}.")
             super().validate()
-
-    _rkt_outcomes = dependency("_rkt_outcomes", forward=("vocab", "allow_subset_matches"))
 
     @metric_property(type="value")
     def num_relaxed_matches(self) -> int:
