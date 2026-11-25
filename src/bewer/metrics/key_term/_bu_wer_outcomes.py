@@ -127,9 +127,8 @@ class _BUWEROutcomes(Metric):
         "removal. Not intended for direct use."
     )
     example_cls = _BUWEROutcomes_
-    _alignment = dependency("levenshtein", type="alignment")
-
     param_schema = KeyTermParams
+    _alignment = dependency("levenshtein", type="alignment")
 
     @metric_property
     def _matcher(self):

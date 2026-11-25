@@ -36,7 +36,6 @@ class ExampleInsertionRate(Metric):
         "package)."
     )
     example_cls = ExampleInsertionRate_
-
     param_schema = InsertionParams
     _insertion_rate = dependency("insertion_rate", forward=("min_run_length", "alignment"))
 

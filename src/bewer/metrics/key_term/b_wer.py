@@ -43,7 +43,6 @@ class BWER(Metric):
         "that term."
     )
     example_cls = BWER_
-
     param_schema = KeyTermParams
     _bu_wer_outcomes = dependency("_bu_wer_outcomes", forward=("vocab",))
 

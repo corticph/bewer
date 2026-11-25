@@ -62,7 +62,6 @@ class InsertionRate(Metric):
         "(via the error-align package)."
     )
     example_cls = InsertionRate_
-
     param_schema = InsertionParams
     _alignment = dependency(selected_by="alignment", type="alignment")
 
